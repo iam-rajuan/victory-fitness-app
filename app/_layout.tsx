@@ -10,7 +10,7 @@ import {
 } from '@expo-google-fonts/inter';
 import { Colors } from '../constants/Colors';
 import { clearAuthTokens, fetchCurrentUser, getAuthUser, getValidAuthTokens, setAuthFailureHandler } from '../lib/api';
-import { getPostAuthRoute, isAdminRestrictedFromApp, isPublicRoute, isRouteAllowedForPlan } from '../lib/access';
+import { getPostAuthRoute, isAdminRestrictedFromApp, isPublicRoute, isRouteAllowedForPlan, isSubscriptionActive } from '../lib/access';
 import { appendRunLog, formatRunLogMessage } from '../lib/runLog';
 import { LanguageProvider } from '../lib/i18n';
 import { blurActiveElementBeforeNavigation, replaceRoute } from '../lib/navigation';
@@ -123,6 +123,11 @@ export default function RootLayout() {
         }
 
         if (isPublicRoute(pathname)) {
+          if (pathname === '/onboarding' && !isSubscriptionActive(user)) {
+            setCheckingAccess(false);
+            return false;
+          }
+
           const target = getPostAuthRoute(user);
           if (pathname === target) {
             setCheckingAccess(false);

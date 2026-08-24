@@ -130,6 +130,7 @@ export type AuthUser = {
   is_verified: boolean;
   is_admin?: boolean;
   country?: string;
+  country_code?: string | null;
   profileImage?: string;
   onboarding_completed?: boolean;
   points?: number;
@@ -148,8 +149,22 @@ export type AuthUser = {
   subscription_billing_cycle?: string;
   subscription_is_purchased?: boolean;
   subscription_purchase_source?: string;
+  trial_tier_granted?: string | null;
+  trial_start_at?: string | null;
+  trial_end_at?: string | null;
+  trial_outcome?: string | null;
   marketing_consent?: boolean;
   subscription_access?: string[];
+  gold_trial?: {
+    tier_granted?: string | null;
+    start_at?: string | null;
+    end_at?: string | null;
+    outcome?: string | null;
+    active?: boolean;
+    days_remaining?: number;
+    trial_type?: string | null;
+    is_beta_tester?: boolean;
+  };
   subscription?: {
     tier?: string;
     role?: string;
@@ -529,6 +544,7 @@ function normalizeAuthUser(user: Partial<AuthUser> & { id?: string; name?: strin
     is_verified: Boolean(user.is_verified),
     is_admin: Boolean(user.is_admin),
     country: String(user.country ?? ''),
+    country_code: user.country_code ? String(user.country_code).toUpperCase() : null,
     profileImage: String(user.profileImage ?? ''),
     onboarding_completed: normalizeBoolean(user.onboarding_completed),
     points: Math.max(Number(user.points ?? 0) || 0, 0),
@@ -555,12 +571,38 @@ function normalizeAuthUser(user: Partial<AuthUser> & { id?: string; name?: strin
     subscription_billing_cycle: String(user.subscription_billing_cycle ?? normalizedSubscription?.billing_cycle ?? 'yearly'),
     subscription_is_purchased: normalizeBoolean(user.subscription_is_purchased ?? normalizedSubscription?.is_purchased),
     subscription_purchase_source: String(user.subscription_purchase_source ?? normalizedSubscription?.purchase_source ?? ''),
+    trial_tier_granted: user.trial_tier_granted == null ? null : String(user.trial_tier_granted),
+    trial_start_at: user.trial_start_at ? String(user.trial_start_at) : null,
+    trial_end_at: user.trial_end_at ? String(user.trial_end_at) : null,
+    trial_outcome: user.trial_outcome == null ? null : String(user.trial_outcome),
     marketing_consent: Boolean(user.marketing_consent),
     subscription_access: Array.isArray(user.subscription_access)
       ? user.subscription_access.map((item) => String(item))
       : Array.isArray(normalizedSubscription?.access)
         ? normalizedSubscription.access.map((item) => String(item))
         : [],
+    gold_trial: (user as { gold_trial?: AuthUser['gold_trial'] }).gold_trial
+      ? {
+          tier_granted: (user as { gold_trial?: AuthUser['gold_trial'] }).gold_trial?.tier_granted == null
+            ? null
+            : String((user as { gold_trial?: AuthUser['gold_trial'] }).gold_trial?.tier_granted),
+          start_at: (user as { gold_trial?: AuthUser['gold_trial'] }).gold_trial?.start_at
+            ? String((user as { gold_trial?: AuthUser['gold_trial'] }).gold_trial?.start_at)
+            : null,
+          end_at: (user as { gold_trial?: AuthUser['gold_trial'] }).gold_trial?.end_at
+            ? String((user as { gold_trial?: AuthUser['gold_trial'] }).gold_trial?.end_at)
+            : null,
+          outcome: (user as { gold_trial?: AuthUser['gold_trial'] }).gold_trial?.outcome == null
+            ? null
+            : String((user as { gold_trial?: AuthUser['gold_trial'] }).gold_trial?.outcome),
+          active: normalizeBoolean((user as { gold_trial?: AuthUser['gold_trial'] }).gold_trial?.active),
+          days_remaining: Math.max(Number((user as { gold_trial?: AuthUser['gold_trial'] }).gold_trial?.days_remaining ?? 0) || 0, 0),
+          trial_type: (user as { gold_trial?: AuthUser['gold_trial'] }).gold_trial?.trial_type == null
+            ? null
+            : String((user as { gold_trial?: AuthUser['gold_trial'] }).gold_trial?.trial_type),
+          is_beta_tester: normalizeBoolean((user as { gold_trial?: AuthUser['gold_trial'] }).gold_trial?.is_beta_tester),
+        }
+      : undefined,
     subscription: normalizedSubscription
       ? {
           tier: String(normalizedSubscription.tier ?? 'NONE'),
@@ -888,10 +930,11 @@ export async function updateCurrentUserProfile(payload: {
   name?: string;
   email?: string;
   country?: string;
+  country_code?: string;
   profileImage?: string;
   onboarding_completed?: boolean;
 }) {
-  const user = await apiRequest<AuthUser & { role?: string; is_admin?: boolean; country?: string; profileImage?: string; onboarding_completed?: boolean }>(
+  const user = await apiRequest<AuthUser & { role?: string; is_admin?: boolean; country?: string; country_code?: string | null; profileImage?: string; onboarding_completed?: boolean }>(
     '/me',
     {
       method: 'PATCH',
@@ -1637,6 +1680,11 @@ export type AuthResponse = {
     subscription_is_purchased?: boolean;
     subscription_purchase_source?: string;
     subscription_access?: string[];
+    trial_tier_granted?: string | null;
+    trial_start_at?: string | null;
+    trial_end_at?: string | null;
+    trial_outcome?: string | null;
+    gold_trial?: AuthUser['gold_trial'];
     subscription?: {
       tier?: string;
       role?: string;

@@ -110,7 +110,6 @@ export const PLAN_CARDS: AppPlanCard[] = [
     tabAccess: [...GOLD_AND_ABOVE_TAB_ACCESS],
     routeAccess: [...PLATINUM_ROUTE_ACCESS],
   },
-  /*
   {
     tier: 'INNER_CIRCLE',
     title: 'Victory Inner Circle',
@@ -122,7 +121,6 @@ export const PLAN_CARDS: AppPlanCard[] = [
     tabAccess: [...GOLD_AND_ABOVE_TAB_ACCESS],
     routeAccess: [...INNER_CIRCLE_ROUTE_ACCESS],
   },
-  */
 ];
 
 const ALLOWED_PUBLIC_PATHS = ['/login', '/register', '/verification', '/forgot-password', '/onboarding', '/splash'];
@@ -222,7 +220,12 @@ export function isPlanSelectionRoute(pathname: string): boolean {
   return pathname === PLAN_PATH;
 }
 
-function hasPreviouslySelectedPlan(user?: Pick<AuthUser, 'subscription_tier' | 'subscription_status' | 'subscription_is_purchased'> | null) {
+function hasPreviouslySelectedPlan(
+  user?: Pick<
+    AuthUser,
+    'subscription_tier' | 'subscription_status' | 'subscription_is_purchased'
+  > | null,
+) {
   const tier = normalizeSubscriptionTier(user?.subscription_tier);
   const status = String(user?.subscription_status ?? '').trim().toUpperCase();
   return tier !== 'NONE' && (status === 'ACTIVE' || Boolean(user?.subscription_is_purchased));
@@ -240,7 +243,17 @@ export function isAdminRestrictedFromApp(user?: Pick<AuthUser, 'is_admin'> | nul
   return Boolean(user?.is_admin);
 }
 
-export function getPostAuthRoute(user?: Pick<AuthUser, 'id' | 'is_admin' | 'subscription_tier' | 'subscription_status' | 'subscription_is_purchased' | 'onboarding_completed'> | null): string {
+export function getPostAuthRoute(
+  user?: Pick<
+    AuthUser,
+    'id'
+    | 'is_admin'
+    | 'subscription_tier'
+    | 'subscription_status'
+    | 'subscription_is_purchased'
+    | 'onboarding_completed'
+  > | null,
+): string {
   if (!user) {
     return '/login';
   }

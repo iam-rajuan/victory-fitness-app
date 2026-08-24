@@ -18,9 +18,15 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { ApiError, createStripeCheckoutSession, fetchCurrentUser, fetchSubscriptionPlans, SubscriptionPlan } from '../lib/api';
-import { AppPlanCard, BillingCycle, getSubscriptionCard, PLAN_CARDS, SubscriptionTier } from '../lib/access';
+import {
+  AppPlanCard,
+  BillingCycle,
+  getSubscriptionCard,
+  PLAN_CARDS,
+  SubscriptionTier,
+} from '../lib/access';
 import { useLanguage } from '../lib/i18n';
-import { goBackOrReplace, replaceRoute } from '../lib/navigation';
+import { replaceRoute } from '../lib/navigation';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = Math.min(SCREEN_WIDTH * 0.84, 340);
@@ -160,7 +166,7 @@ function getTierDesign(tier: SubscriptionTier) {
 
 export default function PlanSelectionScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ checkout?: string }>();
+  const params = useLocalSearchParams<{ checkout?: string; entry?: string }>();
   const { t } = useLanguage();
   const flatListRef = useRef<FlatList>(null);
 
@@ -173,6 +179,10 @@ export default function PlanSelectionScreen() {
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('yearly');
   const [planItems, setPlanItems] = useState<SubscriptionPlan[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
+  const entry = String(params.entry ?? '').trim().toLowerCase();
+  const isOnboardingEntry = entry === 'onboarding';
+  const requiresPlanSelection = isOnboardingEntry || currentTier === 'NONE';
+  const fallbackRoute = requiresPlanSelection ? '/onboarding' : '/(tabs)';
 
   const loadSubscriptionState = useCallback(async (showLoading = true) => {
     if (showLoading) {
@@ -283,7 +293,6 @@ export default function PlanSelectionScreen() {
   );
   const selectedPlanPricing = useMemo(() => getPlanPricing(selectedPlan, billingCycle), [selectedPlan, billingCycle]);
   const selectedTierDesign = useMemo(() => getTierDesign(selectedTier), [selectedTier]);
-
   const scrollToPlanIndex = (index: number) => {
     if (index >= 0 && index < plans.length) {
       setActiveIndex(index);
@@ -342,6 +351,14 @@ export default function PlanSelectionScreen() {
     }
   };
 
+  const handleHeaderBack = useCallback(() => {
+    replaceRoute(router, fallbackRoute);
+  }, [fallbackRoute, router]);
+
+  const handleHeaderClose = useCallback(() => {
+    replaceRoute(router, fallbackRoute);
+  }, [fallbackRoute, router]);
+
   if (loading) {
     return (
       <SafeAreaView style={styles.screen}>
@@ -362,18 +379,20 @@ export default function PlanSelectionScreen() {
             <TouchableOpacity
               activeOpacity={0.7}
               style={styles.topNavBtn}
-              onPress={() => goBackOrReplace(router, '/(tabs)')}
+              onPress={handleHeaderBack}
             >
               <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
             </TouchableOpacity>
 
-            <TouchableOpacity
-              activeOpacity={0.7}
-              style={styles.topNavBtn}
-              onPress={() => goBackOrReplace(router, '/(tabs)')}
-            >
-              <Ionicons name="close" size={22} color="#FFFFFF" />
-            </TouchableOpacity>
+            {requiresPlanSelection ? <View style={styles.topNavBtnPlaceholder} /> : (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={styles.topNavBtn}
+                onPress={handleHeaderClose}
+              >
+                <Ionicons name="close" size={22} color="#FFFFFF" />
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Header / Hero */}
@@ -435,7 +454,6 @@ export default function PlanSelectionScreen() {
                 const current = currentTier === card.tier;
                 const design = getTierDesign(card.tier);
                 const pricing = getPlanPricing(card, billingCycle);
-
                 const actionLabel = current
                   ? t('CURRENT PLAN')
                   : card.isApplicationOnly
@@ -553,7 +571,9 @@ export default function PlanSelectionScreen() {
                           current && { backgroundColor: 'rgba(56, 189, 248, 0.15)', borderWidth: 1, borderColor: '#38BDF8' },
                           !active && !current && { backgroundColor: '#1E293B', borderWidth: 1, borderColor: '#334155' },
                         ]}
-                        onPress={() => scrollToPlanIndex(index)}
+                        onPress={() => {
+                          scrollToPlanIndex(index);
+                        }}
                       >
                         <Text
                           style={[
@@ -710,6 +730,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  topNavBtnPlaceholder: {
+    width: 40,
+    height: 40,
   },
 
   /* Hero Section */

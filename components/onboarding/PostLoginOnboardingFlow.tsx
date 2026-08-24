@@ -40,7 +40,158 @@ const HEALTH_CONCERN_OPTIONS = ['Knee', 'Back', 'Shoulder', 'Heart condition', '
 const DAYS_OPTIONS = ['1-2 days', '3-4 days', '5+ days'];
 const SESSION_OPTIONS = ['20 minutes', '30 minutes', '45 minutes', '60+ minutes'];
 const EQUIPMENT_OPTIONS = ['No equipment', 'Home gym', 'Full gym', 'Outdoors'];
-const STEP_TITLES = ['Language', 'Profile', 'Health', 'Recommendation'];
+const STEP_TITLES = ['Language', 'Country', 'Profile', 'Health', 'Recommendation'];
+
+const POPULAR_COUNTRIES = [
+  { name: 'United States', code: 'US' },
+  { name: 'United Kingdom', code: 'GB' },
+  { name: 'Germany', code: 'DE' },
+  { name: 'Canada', code: 'CA' },
+  { name: 'Australia', code: 'AU' },
+  { name: 'Italy', code: 'IT' },
+];
+
+const ALL_COUNTRIES = [
+  { name: 'Afghanistan', code: 'AF' },
+  { name: 'Albania', code: 'AL' },
+  { name: 'Algeria', code: 'DZ' },
+  { name: 'Andorra', code: 'AD' },
+  { name: 'Angola', code: 'AO' },
+  { name: 'Argentina', code: 'AR' },
+  { name: 'Armenia', code: 'AM' },
+  { name: 'Australia', code: 'AU' },
+  { name: 'Austria', code: 'AT' },
+  { name: 'Azerbaijan', code: 'AZ' },
+  { name: 'Bahamas', code: 'BS' },
+  { name: 'Bahrain', code: 'BH' },
+  { name: 'Bangladesh', code: 'BD' },
+  { name: 'Barbados', code: 'BB' },
+  { name: 'Belgium', code: 'BE' },
+  { name: 'Belize', code: 'BZ' },
+  { name: 'Benin', code: 'BJ' },
+  { name: 'Bhutan', code: 'BT' },
+  { name: 'Bolivia', code: 'BO' },
+  { name: 'Bosnia and Herzegovina', code: 'BA' },
+  { name: 'Botswana', code: 'BW' },
+  { name: 'Brazil', code: 'BR' },
+  { name: 'Brunei', code: 'BN' },
+  { name: 'Bulgaria', code: 'BG' },
+  { name: 'Burkina Faso', code: 'BF' },
+  { name: 'Burundi', code: 'BI' },
+  { name: 'Cambodia', code: 'KH' },
+  { name: 'Cameroon', code: 'CM' },
+  { name: 'Canada', code: 'CA' },
+  { name: 'Cape Verde', code: 'CV' },
+  { name: 'Chile', code: 'CL' },
+  { name: 'China', code: 'CN' },
+  { name: 'Colombia', code: 'CO' },
+  { name: 'Costa Rica', code: 'CR' },
+  { name: 'Croatia', code: 'HR' },
+  { name: 'Cuba', code: 'CU' },
+  { name: 'Cyprus', code: 'CY' },
+  { name: 'Czech Republic', code: 'CZ' },
+  { name: 'Denmark', code: 'DK' },
+  { name: 'Djibouti', code: 'DJ' },
+  { name: 'Dominica', code: 'DM' },
+  { name: 'Dominican Republic', code: 'DO' },
+  { name: 'Ecuador', code: 'EC' },
+  { name: 'Egypt', code: 'EG' },
+  { name: 'El Salvador', code: 'SV' },
+  { name: 'Estonia', code: 'EE' },
+  { name: 'Ethiopia', code: 'ET' },
+  { name: 'Fiji', code: 'FJ' },
+  { name: 'Finland', code: 'FI' },
+  { name: 'France', code: 'FR' },
+  { name: 'Georgia', code: 'GE' },
+  { name: 'Germany', code: 'DE' },
+  { name: 'Ghana', code: 'GH' },
+  { name: 'Greece', code: 'GR' },
+  { name: 'Guatemala', code: 'GT' },
+  { name: 'Honduras', code: 'HN' },
+  { name: 'Hungary', code: 'HU' },
+  { name: 'Iceland', code: 'IS' },
+  { name: 'India', code: 'IN' },
+  { name: 'Indonesia', code: 'ID' },
+  { name: 'Iran', code: 'IR' },
+  { name: 'Iraq', code: 'IQ' },
+  { name: 'Ireland', code: 'IE' },
+  { name: 'Israel', code: 'IL' },
+  { name: 'Italy', code: 'IT' },
+  { name: 'Jamaica', code: 'JM' },
+  { name: 'Japan', code: 'JP' },
+  { name: 'Jordan', code: 'JO' },
+  { name: 'Kazakhstan', code: 'KZ' },
+  { name: 'Kenya', code: 'KE' },
+  { name: 'Kuwait', code: 'KW' },
+  { name: 'Latvia', code: 'LV' },
+  { name: 'Lebanon', code: 'LB' },
+  { name: 'Libya', code: 'LY' },
+  { name: 'Liechtenstein', code: 'LI' },
+  { name: 'Lithuania', code: 'LT' },
+  { name: 'Luxembourg', code: 'LU' },
+  { name: 'Macedonia', code: 'MK' },
+  { name: 'Madagascar', code: 'MG' },
+  { name: 'Malaysia', code: 'MY' },
+  { name: 'Maldives', code: 'MV' },
+  { name: 'Malta', code: 'MT' },
+  { name: 'Mexico', code: 'MX' },
+  { name: 'Moldova', code: 'MD' },
+  { name: 'Monaco', code: 'MC' },
+  { name: 'Mongolia', code: 'MN' },
+  { name: 'Montenegro', code: 'ME' },
+  { name: 'Morocco', code: 'MA' },
+  { name: 'Nepal', code: 'NP' },
+  { name: 'Netherlands', code: 'NL' },
+  { name: 'New Zealand', code: 'NZ' },
+  { name: 'Nicaragua', code: 'NI' },
+  { name: 'Nigeria', code: 'NG' },
+  { name: 'Norway', code: 'NO' },
+  { name: 'Oman', code: 'OM' },
+  { name: 'Pakistan', code: 'PK' },
+  { name: 'Panama', code: 'PA' },
+  { name: 'Paraguay', code: 'PY' },
+  { name: 'Peru', code: 'PE' },
+  { name: 'Philippines', code: 'PH' },
+  { name: 'Poland', code: 'PL' },
+  { name: 'Portugal', code: 'PT' },
+  { name: 'Qatar', code: 'QA' },
+  { name: 'Romania', code: 'RO' },
+  { name: 'Russia', code: 'RU' },
+  { name: 'Rwanda', code: 'RW' },
+  { name: 'Saudi Arabia', code: 'SA' },
+  { name: 'Senegal', code: 'SN' },
+  { name: 'Serbia', code: 'RS' },
+  { name: 'Singapore', code: 'SG' },
+  { name: 'Slovakia', code: 'SK' },
+  { name: 'Slovenia', code: 'SI' },
+  { name: 'Somalia', code: 'SO' },
+  { name: 'South Africa', code: 'ZA' },
+  { name: 'South Korea', code: 'KR' },
+  { name: 'Spain', code: 'ES' },
+  { name: 'Sri Lanka', code: 'LK' },
+  { name: 'Sudan', code: 'SD' },
+  { name: 'Sweden', code: 'SE' },
+  { name: 'Switzerland', code: 'CH' },
+  { name: 'Syria', code: 'SY' },
+  { name: 'Taiwan', code: 'TW' },
+  { name: 'Tajikistan', code: 'TJ' },
+  { name: 'Tanzania', code: 'TZ' },
+  { name: 'Thailand', code: 'TH' },
+  { name: 'Tunisia', code: 'TN' },
+  { name: 'Turkey', code: 'TR' },
+  { name: 'Uganda', code: 'UG' },
+  { name: 'Ukraine', code: 'UA' },
+  { name: 'United Arab Emirates', code: 'AE' },
+  { name: 'United Kingdom', code: 'GB' },
+  { name: 'United States', code: 'US' },
+  { name: 'Uruguay', code: 'UY' },
+  { name: 'Uzbekistan', code: 'UZ' },
+  { name: 'Venezuela', code: 'VE' },
+  { name: 'Vietnam', code: 'VN' },
+  { name: 'Yemen', code: 'YE' },
+  { name: 'Zambia', code: 'ZM' },
+  { name: 'Zimbabwe', code: 'ZW' }
+];
 
 function isSupportedAppLanguage(value: OnboardingLanguage): value is LanguageCode {
   return value === 'en' || value === 'de';
@@ -105,6 +256,8 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
   const [saveError, setSaveError] = useState('');
   const [data, setData] = useState<OnboardingData | null>(null);
   const [showGenderModal, setShowGenderModal] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState(user.country || '');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -178,6 +331,12 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
     }
 
     if (step === 1) {
+      if (!selectedCountry || !selectedCountry.trim()) {
+        nextErrors.country = 'Please select your country.';
+      }
+    }
+
+    if (step === 2) {
       const age = Number(data.personalProfile.age);
       const height = Number(data.personalProfile.height);
       const weight = Number(data.personalProfile.weight);
@@ -201,7 +360,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
       }
     }
 
-    if (step === 2) {
+    if (step === 3) {
       if (!data.anamnese.primaryGoal) {
         nextErrors.primaryGoal = 'Please choose your primary goal.';
       }
@@ -238,6 +397,21 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
       await setLanguage(data.language);
     }
 
+    if (step === 1) {
+      setSaving(true);
+      try {
+        const countryObj = ALL_COUNTRIES.find(c => c.name === selectedCountry);
+        await updateCurrentUserProfile({
+          country: selectedCountry,
+          ...(countryObj ? { country_code: countryObj.code } : {})
+        });
+      } catch (err) {
+        setSaveError('Unable to save your country selection. Please try again.');
+        setSaving(false);
+        return;
+      }
+    }
+
     if (step === STEP_TITLES.length - 1) {
       setSaving(true);
       try {
@@ -259,7 +433,12 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
           suggestion: finalData.suggestion,
           completed: true,
         });
-        const updatedUser = await updateCurrentUserProfile({ onboarding_completed: true });
+        const countryObj = ALL_COUNTRIES.find(c => c.name === selectedCountry);
+        const updatedUser = await updateCurrentUserProfile({
+          country: selectedCountry,
+          ...(countryObj ? { country_code: countryObj.code } : {}),
+          onboarding_completed: true
+        });
         replaceRoute(router, getPostAuthRoute(updatedUser));
       } catch {
         setSaveError('Unable to save your onboarding details. Please try again.');
@@ -272,7 +451,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
     const nextStep = step + 1;
     const nextData: OnboardingData = {
       ...data,
-      suggestion: nextStep >= 3 ? suggestion : data.suggestion,
+      suggestion: nextStep >= 4 ? suggestion : data.suggestion,
     };
     setSaving(true);
     try {
@@ -339,6 +518,16 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
     }));
   };
 
+  const filteredCountries = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return [];
+    }
+    const query = searchQuery.toLowerCase().trim();
+    return ALL_COUNTRIES.filter((country) =>
+      country.name.toLowerCase().includes(query)
+    ).slice(0, 5);
+  }, [searchQuery]);
+
   if (loading || !data) {
     return (
       <View style={styles.loadingWrap}>
@@ -386,6 +575,68 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
           ) : null}
 
           {step === 1 ? (
+            <View>
+              <Text style={styles.stepTitle}>Select your country</Text>
+              <Text style={styles.stepText}>Choose your country to help us customize recommendations and local activity.</Text>
+              
+              <AuthInput
+                placeholder="Search country..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                icon="search-outline"
+                error={errors.country}
+              />
+
+              <View style={{ marginTop: 6 }}>
+                {searchQuery.trim().length > 0 ? (
+                  <View>
+                    <Text style={styles.sectionHeader}>Search Results</Text>
+                    {filteredCountries.length > 0 ? (
+                      <View style={styles.optionGridSingle}>
+                        {filteredCountries.map((c) => {
+                          const isSelected = selectedCountry === c.name;
+                          return (
+                            <Pressable
+                              key={c.code}
+                              onPress={() => setSelectedCountry(c.name)}
+                              style={[styles.optionCard, isSelected && styles.optionCardActive]}
+                            >
+                              <Text style={[styles.optionLabel, isSelected && styles.optionLabelActive]}>{c.name}</Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    ) : (
+                      <Text style={styles.noResultsText}>No countries match your search.</Text>
+                    )}
+                  </View>
+                ) : (
+                  <View>
+                    <Text style={styles.sectionHeader}>Popular countries</Text>
+                    <View style={styles.optionGridSingle}>
+                      {POPULAR_COUNTRIES.map((c) => {
+                        const isSelected = selectedCountry === c.name;
+                        return (
+                          <Pressable
+                            key={c.code}
+                            onPress={() => setSelectedCountry(c.name)}
+                            style={[
+                              styles.optionCard,
+                              isSelected && styles.optionCardActive
+                            ]}
+                          >
+                            <Text style={[styles.optionLabel, isSelected && styles.optionLabelActive]}>{c.name}</Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+                )}
+              </View>
+            </View>
+          ) : null}
+
+          {step === 2 ? (
             <View>
               <Text style={styles.stepTitle}>Personal profile</Text>
               <Text style={styles.stepText}>These answers set your personalized targets and can be updated later from your profile.</Text>
@@ -461,7 +712,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
             </View>
           ) : null}
 
-          {step === 2 ? (
+          {step === 3 ? (
             <View>
               <Text style={styles.stepTitle}>Sport and health anamnese</Text>
               <Text style={styles.stepText}>Answer these five questions so we can shape the right plan recommendation.</Text>
@@ -560,7 +811,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
             </View>
           ) : null}
 
-          {step === 3 && suggestion ? (
+          {step === 4 && suggestion ? (
             <View>
               <Text style={styles.stepTitle}>Suggested tier</Text>
               <Text style={styles.stepText}>Based on your answers, this is the strongest starting point for your next step inside the app.</Text>
@@ -573,6 +824,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
               <View style={styles.reviewCard}>
                 <Text style={styles.reviewTitle}>Review answers</Text>
                 <Text style={styles.reviewLine}>Language: {LANGUAGE_OPTIONS.find((option) => option.value === data.language)?.label ?? '-'}</Text>
+                <Text style={styles.reviewLine}>Country: {selectedCountry || '-'}</Text>
                 <Text style={styles.reviewLine}>Age: {data.personalProfile.age || '-'}</Text>
                 <Text style={styles.reviewLine}>Gender: {data.personalProfile.gender || '-'}</Text>
                 <Text style={styles.reviewLine}>Height: {data.personalProfile.height ? `${data.personalProfile.height} ${data.personalProfile.heightUnit}` : '-'}</Text>
@@ -593,7 +845,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
           </Pressable>
           <View style={styles.primaryButtonWrap}>
             <AuthButton
-              title={step === 3 ? 'Continue to Subscription' : 'Next'}
+              title={step === 4 ? 'Continue to Subscription' : 'Next'}
               onPress={() => void handleNext()}
               disabled={saving}
               loading={saving}
@@ -1036,5 +1288,23 @@ const styles = StyleSheet.create({
   primaryButtonWrap: {
     flex: 1,
     height: 56,
+  },
+  sectionHeader: {
+    color: Colors.text,
+    fontFamily: 'Inter_700Bold',
+    fontSize: 13,
+    textTransform: 'uppercase',
+    letterSpacing: 1.1,
+    marginTop: 14,
+    marginBottom: 10,
+    opacity: 0.8,
+  },
+  noResultsText: {
+    color: Colors.textMuted,
+    fontFamily: 'Inter_400Regular',
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 18,
+    marginBottom: 8,
   },
 });

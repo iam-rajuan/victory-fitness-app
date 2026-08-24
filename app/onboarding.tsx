@@ -28,7 +28,7 @@ import {
   getValidAuthTokens,
   updateCurrentUserProfile,
 } from '../lib/api';
-import { getPostAuthRoute } from '../lib/access';
+import { getPostAuthRoute, isSubscriptionActive } from '../lib/access';
 import { replaceRoute } from '../lib/navigation';
 import PostLoginOnboardingFlow from '../components/onboarding/PostLoginOnboardingFlow';
 
@@ -128,6 +128,11 @@ export default function OnboardingScreen() {
       if (tokens) {
         try {
           const user = await fetchCurrentUser();
+          if (!isSubscriptionActive(user)) {
+            setAuthenticatedUser(user);
+            setCheckingAuth(false);
+            return;
+          }
           const target = getPostAuthRoute(user);
           if (target !== '/onboarding') {
             replaceRoute(router, target);
@@ -233,7 +238,7 @@ export default function OnboardingScreen() {
       const user = await updateCurrentUserProfile({ onboarding_completed: true });
       replaceRoute(router, getPostAuthRoute(user));
     } catch {
-      replaceRoute(router, '/plan');
+      replaceRoute(router, '/plan?entry=onboarding');
     } finally {
       setCompleting(false);
     }
