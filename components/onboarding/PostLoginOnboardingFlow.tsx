@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import { AuthButton } from '../AuthButton';
 import { AuthInput } from '../AuthInput';
-import { AuthUser, fetchCurrentUserOnboarding, updateCurrentUserOnboarding, updateCurrentUserProfile } from '../../lib/api';
+import { AuthUser, fetchCurrentUser, fetchCurrentUserOnboarding, updateCurrentUserOnboarding, updateCurrentUserProfile } from '../../lib/api';
 import {
   OnboardingAnamnese,
   OnboardingData,
@@ -241,8 +241,14 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
     let cancelled = false;
 
     const load = async () => {
-      const stored = await fetchCurrentUserOnboarding().catch(() => null);
+      const [stored, latestUser] = await Promise.all([
+        fetchCurrentUserOnboarding().catch(() => null),
+        fetchCurrentUser().catch(() => null),
+      ]);
       if (!cancelled) {
+        if (latestUser && latestUser.country) {
+          setSelectedCountry(latestUser.country);
+        }
         const nextData: OnboardingData = stored ? {
           userId: stored.userId,
           currentStep: stored.currentStep,
