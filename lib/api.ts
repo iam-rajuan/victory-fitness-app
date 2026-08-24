@@ -957,6 +957,8 @@ function normalizeOnboardingState(state: OnboardingState): OnboardingState {
     userId: String(state.userId || '').trim(),
     currentStep: Math.max(Number(state.currentStep || 0) || 0, 0),
     language: (String(state.language || '').trim() as OnboardingData['language']) || '',
+    country: String((state as OnboardingState & { country?: string }).country || '').trim(),
+    countryCode: String((state as OnboardingState & { countryCode?: string | null }).countryCode || '').trim().toUpperCase() || null,
     personalProfile: {
       age: String(personalProfile.age || '').trim(),
       gender: String(personalProfile.gender || '').trim(),
@@ -993,6 +995,8 @@ export async function fetchCurrentUserOnboarding() {
 export async function updateCurrentUserOnboarding(payload: {
   currentStep?: number;
   language?: OnboardingData['language'];
+  country?: string;
+  countryCode?: string | null;
   personalProfile?: OnboardingPersonalProfile;
   anamnese?: OnboardingAnamnese;
   suggestion?: OnboardingSuggestion | null;
@@ -1049,6 +1053,20 @@ export async function createStripeCheckoutSession(payload: {
       body: payload,
     }
   );
+}
+
+export async function startPhaseOneBetaSubscription() {
+  const user = await apiRequest<AuthUser & { role?: string; is_admin?: boolean; country?: string; country_code?: string | null; profileImage?: string; onboarding_completed?: boolean }>(
+    '/me/trial/phase-one-beta/start',
+    {
+      method: 'POST',
+    }
+  );
+  authUser = normalizeAuthUser(user);
+  authUserLoaded = true;
+  currentUserFetchedAt = Date.now();
+  await persistAuthUser(authUser);
+  return user;
 }
 
 export async function fetchSubscriptionPlans() {

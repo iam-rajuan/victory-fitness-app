@@ -17,7 +17,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { ApiError, createStripeCheckoutSession, fetchCurrentUser, fetchSubscriptionPlans, SubscriptionPlan } from '../lib/api';
+import { ApiError, createStripeCheckoutSession, fetchCurrentUser, fetchSubscriptionPlans, startPhaseOneBetaSubscription, SubscriptionPlan } from '../lib/api';
 import {
   AppPlanCard,
   BillingCycle,
@@ -96,6 +96,19 @@ function getPlanPricing(plan: AppPlanViewModel, cycle: BillingCycle) {
 
 function getTierDesign(tier: SubscriptionTier) {
   switch (tier) {
+    case 'GOLD_BETA':
+      return {
+        bg: '#0B132B',
+        accentColor: '#22D3EE',
+        badgeBg: 'rgba(34, 211, 238, 0.16)',
+        borderColor: '#1E293B',
+        activeBorderColor: '#22D3EE',
+        glowColor: 'rgba(34, 211, 238, 0.35)',
+        iconName: 'flash-outline' as const,
+        tag: 'BETA ACCESS',
+        pillBg: '#22D3EE',
+        pillText: '#021417',
+      };
     case 'SILVER':
       return {
         bg: '#0F172A',
@@ -164,6 +177,18 @@ function getTierDesign(tier: SubscriptionTier) {
   }
 }
 
+function getDisplayTierForUser(user: {
+  subscription_tier?: string | null;
+  subscription_purchase_source?: string | null;
+}): SubscriptionTier {
+  if (String(user.subscription_purchase_source ?? '').trim().toLowerCase() === 'beta_trial') {
+    return 'GOLD_BETA';
+  }
+
+  const tier = String(user.subscription_tier ?? 'NONE').toUpperCase().replace(/\s+/g, '_') as SubscriptionTier;
+  return tier === 'NONE' ? 'NONE' : tier;
+}
+
 export default function PlanSelectionScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ checkout?: string; entry?: string }>();
@@ -173,7 +198,7 @@ export default function PlanSelectionScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [confirmVisible, setConfirmVisible] = useState(false);
-  const [selectedTier, setSelectedTier] = useState<SubscriptionTier>('SILVER');
+  const [selectedTier, setSelectedTier] = useState<SubscriptionTier>('GOLD_BETA');
   const [currentTier, setCurrentTier] = useState<SubscriptionTier>('NONE');
   const [userName, setUserName] = useState('Member');
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
@@ -195,10 +220,9 @@ export default function PlanSelectionScreen() {
         fetchCurrentUser(),
         fetchSubscriptionPlans(),
       ]);
-      const tier = String(user.subscription_tier ?? 'NONE').toUpperCase().replace(/\s+/g, '_') as SubscriptionTier;
-      const normalizedTier = tier === 'NONE' ? 'NONE' : tier;
+      const normalizedTier = getDisplayTierForUser(user);
       setCurrentTier(normalizedTier);
-      setSelectedTier(normalizedTier === 'NONE' ? 'SILVER' : normalizedTier);
+      setSelectedTier(normalizedTier === 'NONE' ? 'GOLD_BETA' : normalizedTier);
       setUserName(String(user.name || 'Member'));
       setPlanItems(Array.isArray(plansResponse?.items) ? plansResponse.items : []);
       return user;
@@ -289,7 +313,7 @@ export default function PlanSelectionScreen() {
   }, [planItems]);
 
   const selectedPlan = useMemo(
-    () => plans.find((plan) => plan.tier === selectedTier) ?? plans[0] ?? { ...getSubscriptionCard('SILVER'), planId: 'SILVER', priceMonthly: null, priceYearly: null, discountedPriceMonthly: null, discountedPriceYearly: null, discountPercentage: null, discountStartDate: null, discountEndDate: null, isDiscountActive: false, isApplicationOnly: false, isMostPopular: false, iconType: '', isDashboardConfigured: false },
+    () => plans.find((plan) => plan.tier === selectedTier) ?? plans[0] ?? { ...getSubscriptionCard('GOLD_BETA'), planId: 'GOLD_BETA', priceMonthly: null, priceYearly: null, discountedPriceMonthly: null, discountedPriceYearly: null, discountPercentage: null, discountStartDate: null, discountEndDate: null, isDiscountActive: false, isApplicationOnly: false, isMostPopular: false, iconType: '', isDashboardConfigured: false },
     [plans, selectedTier]
   );
   const selectedPlanPricing = useMemo(() => getPlanPricing(selectedPlan, billingCycle), [selectedPlan, billingCycle]);
@@ -345,6 +369,24 @@ export default function PlanSelectionScreen() {
         'This plan is application-only. Please submit an application or contact the Victory Fitness team.',
       );
       setConfirmVisible(false);
+      return;
+    }
+
+    if (selectedPlan.planId === 'plan-gold-beta-21-day') {
+      setSaving(true);
+      try {
+        await startPhaseOneBetaSubscription();
+        Alert.alert('Beta activated', 'Your 21-Day Gold Beta access is active now.');
+        replaceRoute(router, '/(tabs)');
+      } catch (error) {
+        const message = error instanceof Error
+          ? error.message
+          : 'Unable to activate the 21-Day Gold Beta right now.';
+        Alert.alert('Activation failed', message);
+      } finally {
+        setSaving(false);
+        setConfirmVisible(false);
+      }
       return;
     }
 

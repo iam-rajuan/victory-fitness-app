@@ -253,6 +253,8 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
           userId: stored.userId,
           currentStep: stored.currentStep,
           language: stored.language,
+          country: stored.country,
+          countryCode: stored.countryCode,
           personalProfile: stored.personalProfile,
           anamnese: stored.anamnese,
           suggestion: stored.suggestion,
@@ -261,6 +263,8 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
           userId: user.id,
           currentStep: 0,
           language: '',
+          country: '',
+          countryCode: null,
           personalProfile: { age: '', gender: '', height: '', heightUnit: 'cm', weight: '', weightUnit: 'kg' },
           anamnese: {
             primaryGoal: '',
@@ -274,6 +278,9 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
           suggestion: null,
           updatedAt: null,
         };
+        if (nextData.country) {
+          setSelectedCountry(nextData.country);
+        }
         setData(nextData);
         setStep(Math.min(nextData.currentStep ?? 0, STEP_TITLES.length - 1));
         setLoading(false);
@@ -295,6 +302,8 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
     await updateCurrentUserOnboarding({
       currentStep: draft.currentStep,
       language: draft.language,
+      country: draft.country,
+      countryCode: draft.countryCode,
       personalProfile: draft.personalProfile,
       anamnese: draft.anamnese,
       suggestion: draft.suggestion,
@@ -381,14 +390,23 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
       await setLanguage(data.language);
     }
 
+    let workingData = data;
+
     if (step === 1) {
       setSaving(true);
       try {
         const countryObj = ALL_COUNTRIES.find(c => c.name === selectedCountry);
+        const nextData: OnboardingData = {
+          ...workingData,
+          country: selectedCountry.trim(),
+          countryCode: countryObj?.code ?? null,
+        };
         await updateCurrentUserProfile({
           country: selectedCountry,
           ...(countryObj ? { country_code: countryObj.code } : {})
         });
+        workingData = nextData;
+        setData(nextData);
       } catch (err) {
         setSaveError('Unable to save your country selection. Please try again.');
         setSaving(false);
@@ -399,8 +417,11 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
     if (step === STEP_TITLES.length - 1) {
       setSaving(true);
       try {
+        const countryObj = ALL_COUNTRIES.find(c => c.name === selectedCountry);
         const finalData: OnboardingData = {
-          ...data,
+          ...workingData,
+          country: selectedCountry.trim(),
+          countryCode: countryObj?.code ?? null,
           suggestion,
           currentStep: STEP_TITLES.length - 1,
           updatedAt: new Date().toISOString(),
@@ -408,6 +429,8 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
         await updateCurrentUserOnboarding({
           currentStep: finalData.currentStep,
           language: finalData.language,
+          country: selectedCountry.trim(),
+          countryCode: countryObj?.code ?? null,
           personalProfile: {
             ...finalData.personalProfile,
             weight: convertWeightToKilograms(finalData.personalProfile.weight, finalData.personalProfile.weightUnit),
@@ -417,7 +440,6 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
           suggestion: finalData.suggestion,
           completed: true,
         });
-        const countryObj = ALL_COUNTRIES.find(c => c.name === selectedCountry);
         const updatedUser = await updateCurrentUserProfile({
           country: selectedCountry,
           ...(countryObj ? { country_code: countryObj.code } : {}),
@@ -434,7 +456,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
 
     const nextStep = step + 1;
     const nextData: OnboardingData = {
-      ...data,
+      ...workingData,
       suggestion: nextStep >= 4 ? suggestion : data.suggestion,
     };
     setSaving(true);
@@ -817,7 +839,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
               <View style={styles.reviewCard}>
                 <Text style={styles.reviewTitle}>Review answers</Text>
                 <Text style={styles.reviewLine}>Language: {LANGUAGE_OPTIONS.find((option) => option.value === data.language)?.label ?? '-'}</Text>
-                <Text style={styles.reviewLine}>Country: {selectedCountry || '-'}</Text>
+                <Text style={styles.reviewLine}>Country: {data.country || selectedCountry || '-'}</Text>
                 <Text style={styles.reviewLine}>Age: {data.personalProfile.age || '-'}</Text>
                 <Text style={styles.reviewLine}>Gender: {data.personalProfile.gender || '-'}</Text>
                 <Text style={styles.reviewLine}>Height: {data.personalProfile.height ? `${data.personalProfile.height} ${data.personalProfile.heightUnit}` : '-'}</Text>

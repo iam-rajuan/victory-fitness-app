@@ -33,6 +33,8 @@ export type OnboardingData = {
   userId: string;
   currentStep: number;
   language: OnboardingLanguage | '';
+  country: string;
+  countryCode: string | null;
   personalProfile: OnboardingPersonalProfile;
   anamnese: OnboardingAnamnese;
   suggestion: OnboardingSuggestion | null;
@@ -78,6 +80,8 @@ function normalizeOnboardingData(raw: unknown): OnboardingData | null {
     userId: String(source.userId ?? '').trim(),
     currentStep: Math.max(Number(source.currentStep ?? 0) || 0, 0),
     language: (String(source.language ?? '').trim() as OnboardingLanguage | '') || '',
+    country: String(source.country ?? '').trim(),
+    countryCode: String(source.countryCode ?? '').trim().toUpperCase() || null,
     personalProfile: {
       age: String((source.personalProfile as Record<string, unknown> | undefined)?.age ?? '').trim(),
       gender: String((source.personalProfile as Record<string, unknown> | undefined)?.gender ?? '').trim(),
@@ -114,6 +118,8 @@ function buildEmptyOnboardingData(userId: string): OnboardingData {
     userId,
     currentStep: 0,
     language: '',
+    country: '',
+    countryCode: null,
     personalProfile: { ...EMPTY_PERSONAL_PROFILE },
     anamnese: { ...EMPTY_ANAMNESE },
     suggestion: null,

@@ -1,6 +1,6 @@
 import type { AuthUser } from './api';
 
-export type SubscriptionTier = 'NONE' | 'SILVER' | 'GOLD' | 'PLATINUM' | 'INNER_CIRCLE';
+export type SubscriptionTier = 'NONE' | 'GOLD_BETA' | 'SILVER' | 'GOLD' | 'PLATINUM' | 'INNER_CIRCLE';
 export type BillingCycle = 'monthly' | 'yearly';
 
 export type AppPlanCard = {
@@ -19,12 +19,25 @@ export type AppPlanCard = {
 
 const SILVER_FEATURE_ACCESS = ['home', 'workout', 'challenge', 'community', 'profile'] as const;
 const GOLD_FEATURE_ACCESS = [...SILVER_FEATURE_ACCESS, 'mealPlan'] as const;
+const GOLD_BETA_FEATURE_ACCESS = [...GOLD_FEATURE_ACCESS] as const;
 const PLATINUM_FEATURE_ACCESS = [...GOLD_FEATURE_ACCESS, 'nutrition_tracker', 'meal_analysis', 'workoutplan', 'longevity'] as const;
 const INNER_CIRCLE_FEATURE_ACCESS = [...PLATINUM_FEATURE_ACCESS, 'application', 'coach_victor', 'longevity_plan'] as const;
 
+const GOLD_BETA_TAB_ACCESS = ['index', 'workout', 'challenge', 'mealPlan', 'profile'] as const;
 const SILVER_TAB_ACCESS = ['index', 'workout', 'challenge', 'profile'] as const;
 const GOLD_AND_ABOVE_TAB_ACCESS = ['index', 'workout', 'challenge', 'mealPlan', 'profile'] as const;
 
+const GOLD_BETA_ROUTE_ACCESS = [
+  '/',
+  '/workout',
+  '/workout-library',
+  '/challenge',
+  '/challenges',
+  '/community',
+  '/mealPlan',
+  '/profile',
+  '/journal',
+] as const;
 const SILVER_ROUTE_ACCESS = [
   '/',
   '/workout',
@@ -73,6 +86,23 @@ const FEATURE_ROUTE_ACCESS: Record<string, readonly string[]> = {
 };
 
 export const PLAN_CARDS: AppPlanCard[] = [
+  {
+    tier: 'GOLD_BETA',
+    title: '21-Day Gold Beta',
+    monthlyPrice: 'EUR 0 / month',
+    yearlyPrice: 'EUR 0 / year',
+    description: 'Free 21-day Gold beta access for approved testers during Phase 1.',
+    features: [
+      'All Silver features',
+      'Accountability System (Tracking, Reminders)',
+      'Community Challenges and Nutrition',
+      'Basic wearable data (sleep and activity)',
+    ],
+    accent: '#22D3EE',
+    featureAccess: [...GOLD_BETA_FEATURE_ACCESS],
+    tabAccess: [...GOLD_BETA_TAB_ACCESS],
+    routeAccess: [...GOLD_BETA_ROUTE_ACCESS],
+  },
   {
     tier: 'SILVER',
     title: 'Victory Silver',
@@ -129,7 +159,7 @@ const PLAN_PATH = '/plan';
 
 export function normalizeSubscriptionTier(value?: string | null): SubscriptionTier {
   const tier = String(value ?? '').trim().toUpperCase().replace(/\s+/g, '_');
-  if (tier === 'SILVER' || tier === 'GOLD' || tier === 'PLATINUM' || tier === 'INNER_CIRCLE') {
+  if (tier === 'GOLD_BETA' || tier === 'SILVER' || tier === 'GOLD' || tier === 'PLATINUM' || tier === 'INNER_CIRCLE') {
     return tier;
   }
   return 'NONE';
