@@ -176,7 +176,7 @@ export default function PlanSelectionScreen() {
   const [selectedTier, setSelectedTier] = useState<SubscriptionTier>('SILVER');
   const [currentTier, setCurrentTier] = useState<SubscriptionTier>('NONE');
   const [userName, setUserName] = useState('Member');
-  const [billingCycle, setBillingCycle] = useState<BillingCycle>('yearly');
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
   const [planItems, setPlanItems] = useState<SubscriptionPlan[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [hasInitialScrolled, setHasInitialScrolled] = useState(false);

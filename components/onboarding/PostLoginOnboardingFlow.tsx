@@ -204,28 +204,6 @@ type Props = {
 type ValidationErrors = Record<string, string>;
 
 function getSuggestedTier(anamnese: OnboardingAnamnese): OnboardingSuggestion {
-  const goal = anamnese.primaryGoal;
-  const activityLevel = anamnese.activityLevel;
-  const needsRecoveryPlan = goal === 'Recovery and rehab' || anamnese.healthConcerns.includes('Heart condition');
-  const advancedUser = goal === 'Build muscle' || goal === 'Improve endurance' || activityLevel === 'Very active';
-
-  if (needsRecoveryPlan) {
-    return {
-      tier: 'GOLD',
-      title: 'Victory Gold Trial',
-      reason: 'A safer structured starting point is best here so you can use guided training and nutrition support without overloading your plan.',
-      note: 'Recovery and rehab guidance inside the app does not replace medical advice. If pain or a medical condition is active, follow your clinician’s guidance first.',
-    };
-  }
-
-  if (advancedUser) {
-    return {
-      tier: 'PLATINUM',
-      title: 'Victory Platinum',
-      reason: 'Your answers point to a more demanding training setup, so the deeper tracking and personalized planning tools will fit better.',
-    };
-  }
-
   return {
     tier: 'GOLD',
     title: 'Victory Gold Trial',
@@ -815,8 +793,17 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
             <View>
               <Text style={styles.stepTitle}>Suggested tier</Text>
               <Text style={styles.stepText}>Based on your answers, this is the strongest starting point for your next step inside the app.</Text>
-              <View style={styles.recommendationCard}>
-                <Text style={styles.recommendationEyebrow}>RECOMMENDED</Text>
+              <View style={[
+                styles.recommendationCard,
+                suggestion.tier === 'GOLD' && {
+                  backgroundColor: 'rgba(245, 158, 11, 0.08)',
+                  borderColor: 'rgba(245, 158, 11, 0.35)',
+                }
+              ]}>
+                <Text style={[
+                  styles.recommendationEyebrow,
+                  suggestion.tier === 'GOLD' && { color: '#F59E0B' }
+                ]}>RECOMMENDED</Text>
                 <Text style={styles.recommendationTitle}>{suggestion.title}</Text>
                 <Text style={styles.recommendationReason}>{suggestion.reason}</Text>
                 {suggestion.note ? <Text style={styles.recommendationNote}>{suggestion.note}</Text> : null}
