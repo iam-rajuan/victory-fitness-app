@@ -114,89 +114,89 @@ export default function TabsLayout() {
           tabBarShowLabel: false,
         }}
       >
-      <Tabs.Screen
-        name="index"
-        options={{
-          tabBarIcon: ({ color, focused }) => (
-            <View style={focused ? styles.activeTab : undefined}>
-              <Ionicons name={focused ? 'home' : 'home-outline'} size={24} color={color} />
-            </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="workout"
-        options={{
-          tabBarIcon: ({ color, focused }) => (
-            <View style={focused ? styles.activeTab : undefined}>
-              <Ionicons name={focused ? 'barbell' : 'barbell-outline'} size={24} color={color} />
-            </View>
-          ),
-        }}
-        listeners={{
-          tabPress: (event) => {
-            if (isVisible('workout')) {
-              return;
-            }
-            event.preventDefault();
-            setRestrictedSection(t('Workout'));
-          },
-        }}
-      />
-      <Tabs.Screen
-        name="challenge"
-        options={{
-          tabBarIcon: ({ color, focused }) => (
-            <View style={focused ? styles.activeTab : undefined}>
-              <Ionicons name={focused ? 'trophy' : 'trophy-outline'} size={24} color={color} />
-            </View>
-          ),
-        }}
-        listeners={{
-          tabPress: (event) => {
-            if (isVisible('challenge')) {
-              return;
-            }
-            event.preventDefault();
-            setRestrictedSection(t('Challenges'));
-          },
-        }}
-      />
-      <Tabs.Screen
-        name="mealPlan"
-        options={{
-          tabBarIcon: ({ color, focused }) => (
-            <View style={focused ? styles.activeTab : undefined}>
-              <Ionicons name={focused ? 'restaurant' : 'restaurant-outline'} size={24} color={color} />
-            </View>
-          ),
-        }}
-        listeners={{
-          tabPress: (event) => {
-            if (isVisible('mealPlan')) {
-              return;
-            }
-            event.preventDefault();
-            setRestrictedSection(t('Meal Plan'));
-          },
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          tabBarIcon: ({ color, focused }) => (
-            <View style={focused ? styles.activeTab : undefined}>
-              <View style={styles.profileBadge}>
-                {profileImage ? (
-                  <Image source={{ uri: profileImage }} style={styles.profileAvatar} />
-                ) : (
-                  <Ionicons name={focused ? 'person' : 'person-outline'} size={24} color={color} />
-                )}
+        <Tabs.Screen
+          name="index"
+          options={{
+            tabBarIcon: ({ color, focused }) => (
+              <View style={focused ? styles.activeTab : undefined}>
+                <Ionicons name={focused ? 'home' : 'home-outline'} size={24} color={color} />
               </View>
-            </View>
-          ),
-        }}
-      />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="workout"
+          options={{
+            tabBarIcon: ({ color, focused }) => (
+              <View style={focused ? styles.activeTab : undefined}>
+                <Ionicons name={focused ? 'barbell' : 'barbell-outline'} size={24} color={color} />
+              </View>
+            ),
+          }}
+          listeners={{
+            tabPress: (event) => {
+              if (isVisible('workout')) {
+                return;
+              }
+              event.preventDefault();
+              setRestrictedSection(t('Workout'));
+            },
+          }}
+        />
+        <Tabs.Screen
+          name="challenge"
+          options={{
+            tabBarIcon: ({ color, focused }) => (
+              <View style={focused ? styles.activeTab : undefined}>
+                <Ionicons name={focused ? 'trophy' : 'trophy-outline'} size={24} color={color} />
+              </View>
+            ),
+          }}
+          listeners={{
+            tabPress: (event) => {
+              if (isVisible('challenge')) {
+                return;
+              }
+              event.preventDefault();
+              setRestrictedSection(t('Challenges'));
+            },
+          }}
+        />
+        <Tabs.Screen
+          name="mealPlan"
+          options={{
+            tabBarIcon: ({ color, focused }) => (
+              <View style={focused ? styles.activeTab : undefined}>
+                <Ionicons name={focused ? 'restaurant' : 'restaurant-outline'} size={24} color={color} />
+              </View>
+            ),
+          }}
+          listeners={{
+            tabPress: (event) => {
+              if (isVisible('mealPlan')) {
+                return;
+              }
+              event.preventDefault();
+              setRestrictedSection(t('Meal Plan'));
+            },
+          }}
+        />
+        <Tabs.Screen
+          name="profile"
+          options={{
+            tabBarIcon: ({ color, focused }) => (
+              <View style={focused ? styles.activeTab : undefined}>
+                <View style={styles.profileBadge}>
+                  {profileImage ? (
+                    <Image source={{ uri: profileImage }} style={styles.profileAvatar} />
+                  ) : (
+                    <Ionicons name={focused ? 'person' : 'person-outline'} size={24} color={color} />
+                  )}
+                </View>
+              </View>
+            ),
+          }}
+        />
       </Tabs>
       <AccessRestrictionModal
         visible={Boolean(restrictedSection)}
@@ -217,12 +217,18 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: '#0A0A14',
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.08)',
     height: 64,
     paddingBottom: 8,
     paddingTop: 8,
+    zIndex: 1000,
+    elevation: 1000,
   },
   activeTab: {
     backgroundColor: 'rgba(0, 240, 208, 0.12)',
