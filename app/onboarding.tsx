@@ -456,8 +456,7 @@ function Header({ showSkip, onSkip }: { showSkip: boolean; onSkip: () => void })
   return (
     <View style={styles.header}>
       <View style={styles.logoContainer}>
-        <Ionicons name="flash-sharp" size={20} color={TEAL} style={styles.logoIcon} />
-        <Text style={styles.logo}>VICTORY FITNESS</Text>
+        <Image source={require('../assets/logo_dark.png')} style={{ width: 130, height: 35 }} resizeMode="contain" />
       </View>
       {showSkip ? (
         <Pressable onPress={onSkip} hitSlop={12}>

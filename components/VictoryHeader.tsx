@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { fetchAppNotifications } from '../lib/api';
@@ -31,8 +31,7 @@ export default function VictoryHeader() {
     <View style={styles.header}>
       <View style={styles.headerRow}>
         <View style={styles.brandBlock}>
-          <Text style={styles.brandTitle}>V I C T O R Y</Text>
-          <Text style={styles.brandSubtitle}>F I T N E S S</Text>
+          <Image source={require('../assets/logo_dark.png')} style={{ width: 140, height: 42 }} resizeMode="contain" />
         </View>
         <TouchableOpacity
           style={styles.notificationButton}

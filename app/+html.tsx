@@ -24,6 +24,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Victory Fitness" />
         <link rel="manifest" href="/manifest.webmanifest" />
+        <link rel="icon" type="image/png" href="/favicon.png?v=4" sizes="64x64" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
         <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js" />
         <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js" />

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
+import { View, Text, StyleSheet, Animated, Platform, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { clearAuthTokens, fetchCurrentUser, getValidAuthTokens } from '../lib/api';
@@ -71,8 +71,7 @@ export default function SplashScreen() {
     <View style={styles.container}>
       <StatusBar style="light" />
       <Animated.View style={[styles.logoContainer, { transform: [{ scale: pulseAnim }] }]}>
-        <Text style={styles.brandTitle}>V I C T O R Y</Text>
-        <Text style={styles.brandSubtitle}>F I T N E S S</Text>
+        <Image source={require('../assets/logo_dark.png')} style={{ width: 220, height: 75 }} resizeMode="contain" />
         <View style={styles.pulseDot} />
       </Animated.View>
     </View>
