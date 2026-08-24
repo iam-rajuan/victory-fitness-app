@@ -179,6 +179,7 @@ export default function PlanSelectionScreen() {
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('yearly');
   const [planItems, setPlanItems] = useState<SubscriptionPlan[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [hasInitialScrolled, setHasInitialScrolled] = useState(false);
   const entry = String(params.entry ?? '').trim().toLowerCase();
   const isOnboardingEntry = entry === 'onboarding';
   const requiresPlanSelection = isOnboardingEntry || currentTier === 'NONE';
@@ -297,9 +298,26 @@ export default function PlanSelectionScreen() {
     if (index >= 0 && index < plans.length) {
       setActiveIndex(index);
       setSelectedTier(plans[index].tier);
-      flatListRef.current?.scrollToIndex({ index, animated: true });
+      flatListRef.current?.scrollToOffset({ offset: index * (CARD_WIDTH + CARD_GAP), animated: true });
     }
   };
+
+  // Centering active card on screen once plans are loaded and calculated
+  useEffect(() => {
+    if (plans.length > 0 && !hasInitialScrolled) {
+      const initialIndex = plans.findIndex((p) => p.tier === selectedTier);
+      if (initialIndex >= 0) {
+        setTimeout(() => {
+          flatListRef.current?.scrollToOffset({
+            offset: initialIndex * (CARD_WIDTH + CARD_GAP),
+            animated: false,
+          });
+          setActiveIndex(initialIndex);
+        }, 120);
+      }
+      setHasInitialScrolled(true);
+    }
+  }, [plans, selectedTier, hasInitialScrolled]);
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetX = event.nativeEvent.contentOffset.x;
@@ -446,6 +464,7 @@ export default function PlanSelectionScreen() {
               snapToInterval={CARD_WIDTH + CARD_GAP}
               snapToAlignment="center"
               decelerationRate="fast"
+              disableIntervalMomentum={true}
               onScroll={handleScroll}
               scrollEventThrottle={16}
               contentContainerStyle={[styles.cardsRow, { paddingHorizontal: HORIZONTAL_PADDING }]}
@@ -572,7 +591,22 @@ export default function PlanSelectionScreen() {
                           !active && !current && { backgroundColor: '#1E293B', borderWidth: 1, borderColor: '#334155' },
                         ]}
                         onPress={() => {
-                          scrollToPlanIndex(index);
+                          if (current) {
+                            Alert.alert(t('Subscription active'), t('This is already your active plan.'));
+                            return;
+                          }
+                          if (active) {
+                            if (card.isApplicationOnly) {
+                              Alert.alert(
+                                t('Application required'),
+                                t('This plan is application-only. Please submit an application or contact the Victory Fitness team.')
+                              );
+                              return;
+                            }
+                            setConfirmVisible(true);
+                          } else {
+                            scrollToPlanIndex(index);
+                          }
                         }}
                       >
                         <Text
@@ -613,65 +647,14 @@ export default function PlanSelectionScreen() {
             </View>
           </View>
 
-          {/* Selected Plan Summary Card */}
-          <View style={[styles.summaryCard, { borderColor: selectedTierDesign.activeBorderColor }]}>
-            <View style={styles.summaryTopRow}>
-              <View style={styles.summaryBadgeRow}>
-                <Ionicons name={selectedTierDesign.iconName} size={18} color={selectedTierDesign.accentColor} />
-                <Text style={styles.summaryLabel}>{t('SELECTED PLAN')}</Text>
-              </View>
-              <Text style={[styles.summaryTierTitle, { color: selectedTierDesign.accentColor }]}>
-                {selectedPlan.title}
-              </Text>
-            </View>
 
-            {selectedPlanPricing.hasActiveDiscount ? (
-              <View style={styles.summaryOfferBanner}>
-                <Ionicons name="pricetag" size={14} color="#047857" />
-                <Text style={styles.summaryOfferText}>
-                  {`Special Offer Applied: Save ${formatEuroAmount(selectedPlanPricing.savings)} ${t('per')} ${selectedPlanPricing.cycleLabel}`}
-                </Text>
-              </View>
-            ) : null}
-
-            <Text style={styles.summaryPriceText}>
-              {formatPrice(selectedPlanPricing.finalPrice, billingCycle)}
-            </Text>
-            <Text style={styles.summaryAccessText}>
-              <Text style={styles.summaryBold}>{t('Access Included: ')}</Text>
-              {selectedPlan.features.join(' • ')}
-            </Text>
-          </View>
-
-          {/* Bottom Action Confirm Button */}
-          <TouchableOpacity
-            style={[styles.confirmButton, currentTier === selectedTier && currentTier !== 'NONE' && styles.confirmButtonDisabled]}
-            onPress={() => {
-              if (currentTier === selectedTier && currentTier !== 'NONE') {
-                Alert.alert('Subscription active', 'This is already your active plan.');
-                return;
-              }
-              setConfirmVisible(true);
-            }}
-            activeOpacity={0.88}
-          >
-            <Text style={styles.confirmButtonText}>
-              {currentTier === selectedTier
-                ? currentTier === 'NONE'
-                  ? t('CONFIRM PAYMENT')
-                  : t('CURRENT ACTIVE PLAN')
-                : currentTier === 'NONE'
-                  ? t('CONFIRM PAYMENT')
-                  : `${t('UPGRADE TO')} ${selectedPlan.title.toUpperCase()}`}
-            </Text>
-            <Ionicons name="arrow-forward-sharp" size={18} color="#021417" />
-          </TouchableOpacity>
         </ScrollView>
 
         {/* Confirmation Modal */}
         <Modal visible={confirmVisible} transparent animationType="fade" onRequestClose={() => setConfirmVisible(false)}>
           <View style={styles.modalBackdrop}>
             <View style={[styles.modalCard, { borderColor: selectedTierDesign.activeBorderColor }]}>
+              {/* Header */}
               <View style={styles.modalHeaderRow}>
                 <View style={[styles.iconCircle, { backgroundColor: selectedTierDesign.badgeBg, borderColor: selectedTierDesign.accentColor }]}>
                   <Ionicons name={selectedTierDesign.iconName} size={24} color={selectedTierDesign.accentColor} />
@@ -679,11 +662,73 @@ export default function PlanSelectionScreen() {
                 <Text style={styles.modalTitle}>{t('Confirm Membership')}</Text>
               </View>
 
-              <Text style={styles.modalText}>
-                {selectedPlanPricing.hasActiveDiscount
-                  ? `Activate ${selectedPlan.title} now at ${formatPrice(selectedPlanPricing.finalPrice, billingCycle)} instead of ${formatPrice(selectedPlanPricing.originalPrice, billingCycle)}. This dashboard offer is applied immediately after confirmation and unlocks all allowed features.`
-                  : `Activate ${selectedPlan.title} now at ${formatPrice(selectedPlanPricing.finalPrice, billingCycle)}. Your membership will be updated immediately upon confirmation.`}
+              {/* Receipt / Invoice Container */}
+              <View style={styles.checkoutReceipt}>
+                <View style={styles.receiptRow}>
+                  <Text style={styles.receiptLabel}>{t('Membership Plan')}</Text>
+                  <Text style={[styles.receiptValue, { color: selectedTierDesign.accentColor, fontFamily: 'Inter_700Bold' }]}>
+                    {selectedPlan.title.toUpperCase()}
+                  </Text>
+                </View>
+
+                <View style={styles.receiptRow}>
+                  <Text style={styles.receiptLabel}>{t('Billing Cycle')}</Text>
+                  <Text style={styles.receiptValue}>
+                    {billingCycle === 'monthly' ? t('Monthly') : t('Yearly')}
+                  </Text>
+                </View>
+
+                {selectedPlanPricing.hasActiveDiscount ? (
+                  <>
+                    <View style={styles.receiptRow}>
+                      <Text style={styles.receiptLabel}>{t('Regular Price')}</Text>
+                      <Text style={[styles.receiptValue, styles.strikethrough]}>
+                        {formatEuroAmount(selectedPlanPricing.originalPrice)}
+                      </Text>
+                    </View>
+                    <View style={styles.receiptRow}>
+                      <Text style={styles.receiptLabel}>{t('Special Offer Discount')}</Text>
+                      <Text style={[styles.receiptValue, { color: '#10B981', fontFamily: 'Inter_600SemiBold' }]}>
+                        {`- ${formatEuroAmount(selectedPlanPricing.savings)}`}
+                      </Text>
+                    </View>
+                  </>
+                ) : null}
+
+                <View style={styles.receiptDivider} />
+
+                <View style={styles.receiptRowTotal}>
+                  <Text style={styles.receiptLabelTotal}>{t('Total Due Now')}</Text>
+                  <Text style={styles.receiptValueTotal}>
+                    {formatEuroAmount(selectedPlanPricing.finalPrice)}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Subtext info */}
+              <Text style={styles.modalInfoSubtext}>
+                {billingCycle === 'monthly'
+                  ? t('Renews automatically every month. Cancel anytime in your profile settings.')
+                  : t('Renews automatically every year. Cancel anytime in your profile settings.')}
               </Text>
+
+              {/* Features list summary */}
+              <View style={styles.modalFeaturesContainer}>
+                <Text style={styles.modalFeaturesTitle}>{t('Included Access:')}</Text>
+                {selectedPlan.features.slice(0, 3).map((feature: string) => (
+                  <View key={feature} style={styles.modalFeatureRow}>
+                    <Ionicons name="checkmark-circle" size={14} color={selectedTierDesign.accentColor} />
+                    <Text style={styles.modalFeatureText} numberOfLines={1}>
+                      {t(feature)}
+                    </Text>
+                  </View>
+                ))}
+                {selectedPlan.features.length > 3 ? (
+                  <Text style={styles.modalFeaturesMore}>
+                    {`+ ${selectedPlan.features.length - 3} ${t('more features')}`}
+                  </Text>
+                ) : null}
+              </View>
 
               <View style={styles.modalActions}>
                 <TouchableOpacity
@@ -1185,4 +1230,94 @@ const styles = StyleSheet.create({
     backgroundColor: '#18D2EF',
   },
   modalPrimaryText: { color: '#021417', fontSize: 14, fontFamily: 'Inter_700Bold' },
+
+  /* Receipt / Invoice Container */
+  checkoutReceipt: {
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 16,
+    marginTop: 18,
+    gap: 12,
+  },
+  receiptRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  receiptRowTotal: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 4,
+  },
+  receiptLabel: {
+    color: '#94A3B8',
+    fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+  },
+  receiptValue: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  strikethrough: {
+    textDecorationLine: 'line-through',
+    color: '#64748B',
+  },
+  receiptDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    marginVertical: 4,
+  },
+  receiptLabelTotal: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontFamily: 'Inter_700Bold',
+  },
+  receiptValueTotal: {
+    color: '#18D2EF',
+    fontSize: 18,
+    fontFamily: 'Inter_700Bold',
+  },
+  modalInfoSubtext: {
+    color: '#64748B',
+    fontSize: 11,
+    lineHeight: 16,
+    fontFamily: 'Inter_400Regular',
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  modalFeaturesContainer: {
+    marginTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.05)',
+    paddingTop: 14,
+  },
+  modalFeaturesTitle: {
+    color: '#E2E8F0',
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
+    marginBottom: 8,
+  },
+  modalFeatureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  modalFeatureText: {
+    color: '#94A3B8',
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    flex: 1,
+  },
+  modalFeaturesMore: {
+    color: '#64748B',
+    fontSize: 11,
+    fontFamily: 'Inter_500Medium',
+    marginLeft: 20,
+    marginTop: 2,
+  },
 });
