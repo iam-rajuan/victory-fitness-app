@@ -98,16 +98,16 @@ function getTierDesign(tier: SubscriptionTier) {
   switch (tier) {
     case 'GOLD_BETA':
       return {
-        bg: '#0B132B',
-        accentColor: '#22D3EE',
-        badgeBg: 'rgba(34, 211, 238, 0.16)',
-        borderColor: '#1E293B',
-        activeBorderColor: '#22D3EE',
-        glowColor: 'rgba(34, 211, 238, 0.35)',
-        iconName: 'flash-outline' as const,
+        bg: '#1C1917',
+        accentColor: '#F59E0B',
+        badgeBg: 'rgba(245, 158, 11, 0.18)',
+        borderColor: '#44403C',
+        activeBorderColor: '#F59E0B',
+        glowColor: 'rgba(245, 158, 11, 0.35)',
+        iconName: 'ribbon-outline' as const,
         tag: 'BETA ACCESS',
-        pillBg: '#22D3EE',
-        pillText: '#021417',
+        pillBg: '#F59E0B',
+        pillText: '#000000',
       };
     case 'SILVER':
       return {
