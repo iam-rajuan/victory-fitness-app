@@ -20,12 +20,14 @@ import { AuthButton } from '../../components/AuthButton';
 import { ErrorPopupModal } from '../../components/ErrorPopupModal';
 import { apiRequest } from '../../lib/api';
 import { formatAppError } from '../../lib/error';
+import { useLanguage } from '../../lib/i18n';
 
 const { height } = Dimensions.get('window');
 
 export default function RegisterScreen() {
   const router = useRouter();
   const { source } = useLocalSearchParams<{ source?: string }>();
+  const { useDefaultLanguage } = useLanguage();
   const [name, setName] = useState('');
   const [surname, setSurname] = useState('');
   const [email, setEmail] = useState('');
@@ -35,6 +37,10 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const [errorDialog, setErrorDialog] = useState<{ title: string; message: string } | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  React.useEffect(() => {
+    useDefaultLanguage();
+  }, [useDefaultLanguage]);
 
   const handleRegister = async () => {
     const normalizedEmail = email.trim().toLowerCase();

@@ -1,10 +1,24 @@
 import React from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { setApiLanguage } from './api';
+import { getAuthUser, setApiLanguage } from './api';
 
 export type LanguageCode = 'en' | 'de';
 
-const LANGUAGE_STORAGE_KEY = 'victory-language';
+const DEFAULT_LANGUAGE: LanguageCode = 'en';
+const LANGUAGE_STORAGE_KEY_PREFIX = 'victory-language:user:';
+
+function getLanguageStorageKeyForUser(userId: string) {
+  return `${LANGUAGE_STORAGE_KEY_PREFIX}${userId}`;
+}
+
+async function getSavedLanguageForUser(userId?: string | null): Promise<LanguageCode | null> {
+  if (!userId) {
+    return null;
+  }
+
+  const stored = await AsyncStorage.getItem(getLanguageStorageKeyForUser(userId));
+  return stored === 'de' || stored === 'en' ? stored : null;
+}
 
 const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
   en: {
@@ -1784,6 +1798,8 @@ const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
 type LanguageContextValue = {
   language: LanguageCode;
   setLanguage: (language: LanguageCode) => Promise<void>;
+  useDefaultLanguage: () => void;
+  syncLanguageWithCurrentUser: (userId?: string | null) => Promise<LanguageCode>;
   t: (key: string, params?: Record<string, string | number>) => string;
   ready: boolean;
 };
@@ -1802,7 +1818,7 @@ function interpolate(template: string, params?: Record<string, string | number>)
 }
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = React.useState<LanguageCode>('en');
+  const [language, setLanguageState] = React.useState<LanguageCode>(DEFAULT_LANGUAGE);
   const [ready, setReady] = React.useState(false);
 
   React.useEffect(() => {
@@ -1810,10 +1826,12 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
     const loadLanguage = async () => {
       try {
-        const stored = await AsyncStorage.getItem(LANGUAGE_STORAGE_KEY);
-        if (!cancelled && (stored === 'de' || stored === 'en')) {
-          setLanguageState(stored);
-          setApiLanguage(stored);
+        const user = await getAuthUser();
+        const nextLanguage = await getSavedLanguageForUser(user?.id);
+        const resolvedLanguage = nextLanguage ?? DEFAULT_LANGUAGE;
+        if (!cancelled) {
+          setLanguageState(resolvedLanguage);
+          setApiLanguage(resolvedLanguage);
         }
       } finally {
         if (!cancelled) {
@@ -1829,10 +1847,26 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const useDefaultLanguage = React.useCallback(() => {
+    setLanguageState(DEFAULT_LANGUAGE);
+    setApiLanguage(DEFAULT_LANGUAGE);
+  }, []);
+
+  const syncLanguageWithCurrentUser = React.useCallback(async (userId?: string | null) => {
+    const resolvedUserId = userId ?? (await getAuthUser())?.id ?? null;
+    const nextLanguage = await getSavedLanguageForUser(resolvedUserId) ?? DEFAULT_LANGUAGE;
+    setLanguageState(nextLanguage);
+    setApiLanguage(nextLanguage);
+    return nextLanguage;
+  }, []);
+
   const setLanguage = React.useCallback(async (nextLanguage: LanguageCode) => {
     setLanguageState(nextLanguage);
     setApiLanguage(nextLanguage);
-    await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, nextLanguage);
+    const user = await getAuthUser();
+    if (user?.id) {
+      await AsyncStorage.setItem(getLanguageStorageKeyForUser(user.id), nextLanguage);
+    }
   }, []);
 
   const t = React.useCallback(
@@ -1844,8 +1878,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   );
 
   const value = React.useMemo(
-    () => ({ language, setLanguage, t, ready }),
-    [language, ready, setLanguage, t],
+    () => ({ language, setLanguage, useDefaultLanguage, syncLanguageWithCurrentUser, t, ready }),
+    [language, ready, setLanguage, syncLanguageWithCurrentUser, t, useDefaultLanguage],
   );
 
   return React.createElement(LanguageContext.Provider, { value }, children);

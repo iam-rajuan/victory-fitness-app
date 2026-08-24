@@ -845,6 +845,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
     paddingHorizontal: 20,
+    paddingTop: 10,
   },
   billingSegmentTrack: {
     flexDirection: 'row',
@@ -855,7 +856,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#1E293B',
     width: '100%',
-    maxWidth: 360,
+    maxWidth: 390,
   },
   billingSegmentBtn: {
     flex: 1,
@@ -882,14 +883,18 @@ const styles = StyleSheet.create({
     color: '#021417',
   },
   yearlySaveBadge: {
+    position: 'absolute',
+    top: -12,
+    right: 12,
     backgroundColor: '#10B981',
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: 999,
+    zIndex: 10,
   },
   yearlySaveBadgeText: {
     color: '#022C22',
-    fontSize: 9,
+    fontSize: 8,
     fontFamily: 'Inter_700Bold',
     letterSpacing: 0.5,
   },
@@ -1363,3 +1368,4 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 });
+

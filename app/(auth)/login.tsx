@@ -27,7 +27,7 @@ const { height } = Dimensions.get('window');
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, useDefaultLanguage, syncLanguageWithCurrentUser } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -47,6 +47,7 @@ export default function LoginScreen() {
       if (tokens?.access_token && user) {
         if (isAdminRestrictedFromApp(user)) {
           await clearAuthTokens();
+          useDefaultLanguage();
           if (!cancelled) {
             setErrorDialog({
               title: t('App access restricted'),
@@ -57,10 +58,12 @@ export default function LoginScreen() {
           return;
         }
 
+        await syncLanguageWithCurrentUser(user.id);
         replaceRoute(router, getPostAuthRoute(user));
         return;
       }
 
+      useDefaultLanguage();
       setCheckingAuth(false);
     };
 
@@ -69,7 +72,7 @@ export default function LoginScreen() {
     return () => {
       cancelled = true;
     };
-  }, [router, t]);
+  }, [router, syncLanguageWithCurrentUser, t, useDefaultLanguage]);
 
   const handleLogin = async () => {
     const normalizedEmail = email.trim().toLowerCase();
@@ -96,6 +99,7 @@ export default function LoginScreen() {
       });
       if (isAdminRestrictedFromApp(auth.user)) {
         await clearAuthTokens();
+        useDefaultLanguage();
         setErrorDialog({
           title: t('App access restricted'),
           message: t('Admin accounts can only sign in to the Victory Fitness dashboard.'),
@@ -103,6 +107,7 @@ export default function LoginScreen() {
         return;
       }
       await setAuthTokens(auth);
+      await syncLanguageWithCurrentUser(auth.user.id);
       if (auth.returning_user) {
         Alert.alert(
           auth.returning_user.title,

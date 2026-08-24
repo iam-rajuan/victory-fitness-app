@@ -165,12 +165,38 @@ export function normalizeSubscriptionTier(value?: string | null): SubscriptionTi
   return 'NONE';
 }
 
-export function isSubscriptionActive(user?: Pick<AuthUser, 'is_admin' | 'subscription_tier' | 'subscription_status'> | null): boolean {
+export function isGoldTrialActive(
+  user?: {
+    subscription_purchase_source?: string | null;
+    gold_trial?: AuthUser['gold_trial'] | null;
+    trial_tier_granted?: string | null;
+  } | null,
+): boolean {
+  if (!user) {
+    return false;
+  }
+
+  if (String(user.subscription_purchase_source ?? '').trim().toLowerCase() === 'beta_trial') {
+    return false;
+  }
+
+  if (typeof user.gold_trial?.active === 'boolean') {
+    return user.gold_trial.active && String(user.gold_trial?.tier_granted ?? user.trial_tier_granted ?? '').trim().toLowerCase() === 'gold';
+  }
+
+  return false;
+}
+
+export function isSubscriptionActive(user?: Pick<AuthUser, 'is_admin' | 'subscription_tier' | 'subscription_status' | 'subscription_purchase_source' | 'gold_trial' | 'trial_tier_granted'> | null): boolean {
   if (!user) {
     return false;
   }
 
   if (user.is_admin) {
+    return true;
+  }
+
+  if (isGoldTrialActive(user)) {
     return true;
   }
 
@@ -191,11 +217,15 @@ function getConfiguredFeatureAccess(
 }
 
 function getEffectiveFeatureAccess(
-  user?: Pick<AuthUser, 'subscription_access' | 'subscription' | 'subscription_tier'> | null,
+  user?: Pick<AuthUser, 'subscription_access' | 'subscription' | 'subscription_tier' | 'subscription_purchase_source' | 'gold_trial' | 'trial_tier_granted'> | null,
 ): string[] {
   const configuredAccess = getConfiguredFeatureAccess(user);
   if (configuredAccess.length > 0) {
     return configuredAccess;
+  }
+
+  if (isGoldTrialActive(user)) {
+    return getSubscriptionCard('GOLD').featureAccess;
   }
 
   return getSubscriptionCard(normalizeSubscriptionTier(user?.subscription_tier)).featureAccess;
@@ -229,7 +259,7 @@ export function getPlanPrice(card: AppPlanCard, cycle: BillingCycle): string {
   return card.yearlyPrice;
 }
 
-export function getAllowedTabNames(user?: Pick<AuthUser, 'is_admin' | 'subscription_tier' | 'subscription_status' | 'subscription_access' | 'subscription'> | null): string[] {
+export function getAllowedTabNames(user?: Pick<AuthUser, 'is_admin' | 'subscription_tier' | 'subscription_status' | 'subscription_access' | 'subscription' | 'subscription_purchase_source' | 'gold_trial' | 'trial_tier_granted'> | null): string[] {
   if (!isSubscriptionActive(user)) {
     return [];
   }
@@ -243,6 +273,10 @@ export function getAllowedTabNames(user?: Pick<AuthUser, 'is_admin' | 'subscript
     return configuredTabs;
   }
 
+  if (isGoldTrialActive(user)) {
+    return [...GOLD_AND_ABOVE_TAB_ACCESS];
+  }
+
   return getSubscriptionCard(normalizeSubscriptionTier(user?.subscription_tier)).tabAccess;
 }
 
@@ -253,15 +287,30 @@ export function isPlanSelectionRoute(pathname: string): boolean {
 function hasPreviouslySelectedPlan(
   user?: Pick<
     AuthUser,
-    'subscription_tier' | 'subscription_status' | 'subscription_is_purchased'
+    'subscription_tier' | 'subscription_status' | 'subscription_is_purchased' | 'subscription_purchase_source' | 'gold_trial' | 'trial_tier_granted'
   > | null,
 ) {
+  if (isGoldTrialActive(user)) {
+    return true;
+  }
+
   const tier = normalizeSubscriptionTier(user?.subscription_tier);
   const status = String(user?.subscription_status ?? '').trim().toUpperCase();
   return tier !== 'NONE' && (status === 'ACTIVE' || Boolean(user?.subscription_is_purchased));
 }
 
-function hasCompletedSetup(user?: Pick<AuthUser, 'onboarding_completed' | 'subscription_tier' | 'subscription_status' | 'subscription_is_purchased'> | null) {
+function hasCompletedSetup(
+  user?: Pick<
+    AuthUser,
+    'onboarding_completed'
+    | 'subscription_tier'
+    | 'subscription_status'
+    | 'subscription_is_purchased'
+    | 'subscription_purchase_source'
+    | 'gold_trial'
+    | 'trial_tier_granted'
+  > | null,
+) {
   return Boolean(user?.onboarding_completed) || hasPreviouslySelectedPlan(user);
 }
 
@@ -282,6 +331,9 @@ export function getPostAuthRoute(
     | 'subscription_status'
     | 'subscription_is_purchased'
     | 'onboarding_completed'
+    | 'subscription_purchase_source'
+    | 'gold_trial'
+    | 'trial_tier_granted'
   > | null,
 ): string {
   if (!user) {
@@ -296,7 +348,23 @@ export function getPostAuthRoute(
   return isSubscriptionActive(user) ? '/(tabs)' : PLAN_PATH;
 }
 
-export function isRouteAllowedForPlan(pathname: string, user?: Pick<AuthUser, 'id' | 'is_admin' | 'subscription_tier' | 'subscription_status' | 'subscription_is_purchased' | 'onboarding_completed' | 'subscription_access' | 'subscription'> | null): boolean {
+export function isRouteAllowedForPlan(
+  pathname: string,
+  user?: Pick<
+    AuthUser,
+    'id'
+    | 'is_admin'
+    | 'subscription_tier'
+    | 'subscription_status'
+    | 'subscription_is_purchased'
+    | 'onboarding_completed'
+    | 'subscription_access'
+    | 'subscription'
+    | 'subscription_purchase_source'
+    | 'gold_trial'
+    | 'trial_tier_granted'
+  > | null,
+): boolean {
   if (user && !hasCompletedSetup(user)) {
     return pathname === '/onboarding' || pathname === '/login' || pathname === '/register' || pathname === '/verification' || pathname === '/forgot-password';
   }
@@ -321,14 +389,31 @@ export function isRouteAllowedForPlan(pathname: string, user?: Pick<AuthUser, 'i
     const configuredRoutes = getRoutesForFeatureAccess(getConfiguredFeatureAccess(user));
     const routeAccess = configuredRoutes.length > 0
       ? configuredRoutes
-      : getSubscriptionCard(normalizeSubscriptionTier(user?.subscription_tier)).routeAccess;
+      : isGoldTrialActive(user)
+        ? [...GOLD_ROUTE_ACCESS]
+        : getSubscriptionCard(normalizeSubscriptionTier(user?.subscription_tier)).routeAccess;
     return routeAccess.some((route) => pathname === route || pathname.startsWith(`${route}/`));
   }
 
   return false;
 }
 
-export function canAccessPlanRoute(pathname: string, user?: Pick<AuthUser, 'id' | 'is_admin' | 'subscription_tier' | 'subscription_status' | 'onboarding_completed' | 'subscription_access' | 'subscription'> | null): boolean {
+export function canAccessPlanRoute(
+  pathname: string,
+  user?: Pick<
+    AuthUser,
+    'id'
+    | 'is_admin'
+    | 'subscription_tier'
+    | 'subscription_status'
+    | 'onboarding_completed'
+    | 'subscription_access'
+    | 'subscription'
+    | 'subscription_purchase_source'
+    | 'gold_trial'
+    | 'trial_tier_granted'
+  > | null,
+): boolean {
   if (!user) {
     return false;
   }
@@ -338,7 +423,7 @@ export function canAccessPlanRoute(pathname: string, user?: Pick<AuthUser, 'id' 
 
 export function canAccessFeature(
   feature: string,
-  user?: Pick<AuthUser, 'is_admin' | 'subscription_tier' | 'subscription_status' | 'subscription_access' | 'subscription'> | null,
+  user?: Pick<AuthUser, 'is_admin' | 'subscription_tier' | 'subscription_status' | 'subscription_access' | 'subscription' | 'subscription_purchase_source' | 'gold_trial' | 'trial_tier_granted'> | null,
 ): boolean {
   if (!isSubscriptionActive(user)) {
     return false;

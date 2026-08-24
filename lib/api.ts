@@ -1055,6 +1055,15 @@ export async function createStripeCheckoutSession(payload: {
   );
 }
 
+export async function startGoldTrial() {
+  const response = await apiRequest<{ trial: AuthUser['gold_trial'] }>('/me/trial/gold/start', {
+    method: 'POST',
+  });
+  currentUserRequestPromise = null;
+  currentUserFetchedAt = 0;
+  return response;
+}
+
 export async function startPhaseOneBetaSubscription() {
   const user = await apiRequest<AuthUser & { role?: string; is_admin?: boolean; country?: string; country_code?: string | null; profileImage?: string; onboarding_completed?: boolean }>(
     '/me/trial/phase-one-beta/start',

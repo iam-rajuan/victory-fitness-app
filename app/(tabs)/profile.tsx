@@ -705,20 +705,23 @@ export default function ProfileScreen() {
         <TouchableOpacity style={styles.metricsModalOverlay} activeOpacity={1} onPress={() => setShowLanguageModal(false)}>
           <View style={styles.genderModalCard}>
             <Text style={styles.genderModalTitle}>{t('SELECT LANGUAGE')}</Text>
-            {LANGUAGE_OPTIONS.map((option) => (
-              <TouchableOpacity
-                key={option.key}
-                style={styles.genderModalOption}
-                onPress={() => void handleSelectLanguage(option.key)}
-              >
-                <Text style={[styles.genderModalOptionText, language === option.key && styles.genderModalOptionTextActive]}>
-                  {t(option.label).toUpperCase()}
-                </Text>
-                {language === option.key ? (
-                  <Ionicons name="checkmark-circle" size={20} color={Colors.accentBlue} />
-                ) : null}
-              </TouchableOpacity>
-            ))}
+            <View style={styles.profileLanguageSwitch}>
+              {LANGUAGE_OPTIONS.map((option) => {
+                const active = language === option.key;
+                return (
+                  <TouchableOpacity
+                    key={option.key}
+                    activeOpacity={0.85}
+                    style={[styles.profileLanguageOption, active && styles.profileLanguageOptionActive]}
+                    onPress={() => void handleSelectLanguage(option.key)}
+                  >
+                    <Text style={[styles.profileLanguageOptionText, active && styles.profileLanguageOptionTextActive]}>
+                      {option.key.toUpperCase()}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
         </TouchableOpacity>
       </Modal>
@@ -1055,6 +1058,37 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     textAlign: 'center',
     marginBottom: 18,
+  },
+  profileLanguageSwitch: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(18, 22, 34, 0.7)',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    padding: 4,
+    gap: 8,
+  },
+  profileLanguageOption: {
+    minWidth: 72,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileLanguageOptionActive: {
+    backgroundColor: Colors.primary,
+  },
+  profileLanguageOptionText: {
+    color: '#94A3B8',
+    fontSize: 13,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: 0.8,
+  },
+  profileLanguageOptionTextActive: {
+    color: '#021417',
   },
   genderModalOption: {
     flexDirection: 'row',
