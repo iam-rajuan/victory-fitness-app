@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   ImageBackground,
   ScrollView,
@@ -114,8 +115,11 @@ export default function RegisterScreen() {
           >
             {/* Branding Header */}
             <View style={styles.brandingContainer}>
-              <Text style={styles.brandTitle}>V I C T O R Y</Text>
-              <Text style={styles.brandSubtitle}>F I T N E S S</Text>
+              <Image
+                source={require('../../assets/logo_dark.png')}
+                style={styles.brandLogo}
+                resizeMode="contain"
+              />
             </View>
 
             {/* Heading */}
@@ -291,20 +295,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  brandTitle: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: Colors.primary,
-    letterSpacing: 8,
-    fontFamily: 'Inter_700Bold',
-  },
-  brandSubtitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.text,
-    letterSpacing: 6,
-    marginTop: 4,
-    fontFamily: 'Inter_600SemiBold',
+  brandLogo: {
+    width: 240,
+    height: 80,
   },
   heading: {
     fontSize: 30,

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, ImageBackground, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, ImageBackground, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { AuthButton } from '../components/AuthButton';
@@ -92,8 +92,11 @@ export default function ForgotPasswordScreen() {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboardView}>
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <View style={styles.brandingContainer}>
-              <Text style={styles.brand}>V I C T O R Y</Text>
-              <Text style={styles.brandSub}>F I T N E S S</Text>
+              <Image
+                source={require('../assets/logo_dark.png')}
+                style={styles.brandLogo}
+                resizeMode="contain"
+              />
             </View>
 
             <View style={styles.formCard}>
@@ -178,9 +181,8 @@ const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(7, 10, 15, 0.78)' },
   keyboardView: { flex: 1 },
   content: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  brandingContainer: { alignItems: 'center', marginBottom: 20 },
-  brand: { color: Colors.primary, fontSize: 26, letterSpacing: 8, fontFamily: 'Inter_700Bold' },
-  brandSub: { color: Colors.text, fontSize: 13, letterSpacing: 6, marginTop: 4, fontFamily: 'Inter_600SemiBold' },
+  brandingContainer: { alignItems: 'center', marginBottom: 28 },
+  brandLogo: { width: 190, height: 64 },
   formCard: {
     width: '100%',
     maxWidth: 420,

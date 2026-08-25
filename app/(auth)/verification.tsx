@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
+  Image,
   ImageBackground,
   KeyboardAvoidingView,
   Platform,
@@ -154,6 +155,15 @@ export default function VerificationScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
+            {/* Logo */}
+            <View style={styles.brandingContainer}>
+              <Image
+                source={require('../../assets/logo_dark.png')}
+                style={styles.brandLogo}
+                resizeMode="contain"
+              />
+            </View>
+
             {/* Lock Icon Badge Card */}
             <View style={styles.iconWrap}>
               <View style={styles.iconBadge}>
@@ -259,6 +269,14 @@ const styles = StyleSheet.create({
   iconWrap: {
     alignItems: 'center',
     marginBottom: 24,
+  },
+  brandingContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  brandLogo: {
+    width: 240,
+    height: 80,
   },
   iconBadge: {
     width: 86,
