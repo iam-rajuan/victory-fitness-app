@@ -77,10 +77,10 @@ export default function VictoryHeader({ showGreeting = false }: VictoryHeaderPro
       <View style={styles.headerRow}>
         {/* Left: Brand Logo */}
         <View style={styles.brandBlock}>
-          <Image 
-            source={require('../assets/logo_dark.png')} 
-            style={styles.brandLogo} 
-            resizeMode="contain" 
+          <Image
+            source={require('../assets/logo_dark.png')}
+            style={styles.brandLogo}
+            resizeMode="contain"
           />
         </View>
 
@@ -88,7 +88,7 @@ export default function VictoryHeader({ showGreeting = false }: VictoryHeaderPro
         <View style={styles.middleBlock}>
           {showGreeting && firstName ? (
             <View style={styles.greetingContainer}>
-              <Text style={styles.greetingPrefix}>{t('Good morning,')}</Text>
+              <Text style={styles.greetingPrefix}>{t('Good morning')}</Text>
               <Text style={styles.greetingName} numberOfLines={1}>
                 {firstName}
               </Text>
@@ -150,15 +150,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   greetingPrefix: {
-    fontSize: 10,
+    fontSize: 12,
     color: '#9CA3AF',
     fontFamily: 'Inter_400Regular',
-    lineHeight: 12,
+    lineHeight: 15,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   greetingName: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '700',
     color: '#00F0D0',
     fontFamily: 'Inter_700Bold',
