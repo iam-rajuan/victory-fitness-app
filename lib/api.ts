@@ -133,6 +133,11 @@ export type AuthUser = {
   country_code?: string | null;
   profileImage?: string;
   onboarding_completed?: boolean;
+  motivation_statement?: string | null;
+  identity_statement?: string | null;
+  workout_unlock_label?: string | null;
+  training_trigger_context?: string | null;
+  training_trigger_action?: string | null;
   points?: number;
   workouts_completed?: number;
   workouts_total?: number;
@@ -547,6 +552,11 @@ function normalizeAuthUser(user: Partial<AuthUser> & { id?: string; name?: strin
     country_code: user.country_code ? String(user.country_code).toUpperCase() : null,
     profileImage: String(user.profileImage ?? ''),
     onboarding_completed: normalizeBoolean(user.onboarding_completed),
+    motivation_statement: user.motivation_statement == null ? null : String(user.motivation_statement),
+    identity_statement: user.identity_statement == null ? null : String(user.identity_statement),
+    workout_unlock_label: user.workout_unlock_label == null ? null : String(user.workout_unlock_label),
+    training_trigger_context: user.training_trigger_context == null ? null : String(user.training_trigger_context),
+    training_trigger_action: user.training_trigger_action == null ? null : String(user.training_trigger_action),
     points: Math.max(Number(user.points ?? 0) || 0, 0),
     workouts_completed: Math.max(Number(user.workouts_completed ?? 0) || 0, 0),
     workouts_total: Math.max(Number(user.workouts_total ?? 0) || 0, 0),
@@ -933,6 +943,11 @@ export async function updateCurrentUserProfile(payload: {
   country_code?: string;
   profileImage?: string;
   onboarding_completed?: boolean;
+  motivation_statement?: string;
+  identity_statement?: string;
+  workout_unlock_label?: string;
+  training_trigger_context?: string;
+  training_trigger_action?: string;
 }) {
   const user = await apiRequest<AuthUser & { role?: string; is_admin?: boolean; country?: string; country_code?: string | null; profileImage?: string; onboarding_completed?: boolean }>(
     '/me',

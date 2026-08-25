@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import VictoryHeader from '../../components/VictoryHeader';
 import AccessRestrictionModal from '../../components/AccessRestrictionModal';
-import { BodyMetrics, fetchCurrentUser, fetchCurrentUserBodyMetrics, logout, updateCurrentUserBodyMetrics } from '../../lib/api';
+import { BodyMetrics, fetchCurrentUser, fetchCurrentUserBodyMetrics, logout, updateCurrentUserBodyMetrics, updateCurrentUserProfile } from '../../lib/api';
 import { canAccessFeature, canAccessPlanRoute } from '../../lib/access';
 import { useLanguage } from '../../lib/i18n';
 import { syncOnboardingProfileFields } from '../../lib/onboarding';
@@ -169,6 +169,11 @@ export default function ProfileScreen() {
     subscription_role?: string;
     subscription_status?: string;
     subscription_access?: string[];
+    motivation_statement?: string | null;
+    identity_statement?: string | null;
+    workout_unlock_label?: string | null;
+    training_trigger_context?: string | null;
+    training_trigger_action?: string | null;
     subscription?: {
       access?: string[];
     };
@@ -182,12 +187,21 @@ export default function ProfileScreen() {
   });
   const [showLanguageModal, setShowLanguageModal] = React.useState(false);
   const [showMetricsModal, setShowMetricsModal] = React.useState(false);
+  const [showHabitModal, setShowHabitModal] = React.useState(false);
   const [savingMetrics, setSavingMetrics] = React.useState(false);
+  const [savingHabits, setSavingHabits] = React.useState(false);
   const [metricsDraft, setMetricsDraft] = React.useState<BodyMetrics>({
     age: '',
     height: '',
     weight: '',
     gender: '',
+  });
+  const [habitDraft, setHabitDraft] = React.useState({
+    motivation_statement: '',
+    identity_statement: '',
+    workout_unlock_label: '',
+    training_trigger_context: '',
+    training_trigger_action: '',
   });
   const [showGenderModal, setShowGenderModal] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -326,6 +340,16 @@ export default function ProfileScreen() {
   const rankIcon = getDynamicRankIcon(rank);
   const currentPlanLabel = getSubscriptionTierLabel(String(me?.subscription_role ?? me?.subscription_tier ?? 'NONE'));
   const currentPlanBadgeStyle = getSubscriptionTierBadgeStyle(String(me?.subscription_role ?? me?.subscription_tier ?? 'NONE'));
+  const habitSummary = React.useMemo(() => {
+    const parts = [
+      me?.identity_statement?.trim() ? `Identity: ${me.identity_statement.trim()}` : '',
+      me?.workout_unlock_label?.trim() ? `Unlock: ${me.workout_unlock_label.trim()}` : '',
+      me?.training_trigger_context?.trim() || me?.training_trigger_action?.trim()
+        ? `Trigger: ${[me?.training_trigger_context?.trim(), me?.training_trigger_action?.trim()].filter(Boolean).join(' -> ')}`
+        : '',
+    ].filter(Boolean);
+    return parts.length > 0 ? parts : ['Add your identity, workout unlock, and if-then trigger.'];
+  }, [me?.identity_statement, me?.training_trigger_action, me?.training_trigger_context, me?.workout_unlock_label]);
   const profileStats = [
     { label: t('Exercises completed'), value: workoutsTotal > 0 ? `${workoutsCompleted}/${workoutsTotal}` : String(workoutsCompleted), icon: '\u{1F3CB}\uFE0F' },
     { label: t('Streak'), value: `${streakDays}d`, icon: '\u{1F525}' },
@@ -340,6 +364,17 @@ export default function ProfileScreen() {
   const openMetricsModal = () => {
     setMetricsDraft(bodyMetrics);
     setShowMetricsModal(true);
+  };
+
+  const openHabitModal = () => {
+    setHabitDraft({
+      motivation_statement: String(me?.motivation_statement ?? ''),
+      identity_statement: String(me?.identity_statement ?? ''),
+      workout_unlock_label: String(me?.workout_unlock_label ?? ''),
+      training_trigger_context: String(me?.training_trigger_context ?? ''),
+      training_trigger_action: String(me?.training_trigger_action ?? ''),
+    });
+    setShowHabitModal(true);
   };
 
   const handleSelectLanguage = async (languageKey: (typeof LANGUAGE_OPTIONS)[number]['key']) => {
@@ -375,6 +410,37 @@ export default function ProfileScreen() {
       Alert.alert(t('Save failed'), message);
     } finally {
       setSavingMetrics(false);
+    }
+  };
+
+  const handleSaveHabits = async () => {
+    if (savingHabits) {
+      return;
+    }
+
+    setSavingHabits(true);
+    try {
+      const updated = await updateCurrentUserProfile({
+        motivation_statement: habitDraft.motivation_statement.trim(),
+        identity_statement: habitDraft.identity_statement.trim(),
+        workout_unlock_label: habitDraft.workout_unlock_label.trim(),
+        training_trigger_context: habitDraft.training_trigger_context.trim(),
+        training_trigger_action: habitDraft.training_trigger_action.trim(),
+      });
+      setMe((current) => current ? {
+        ...current,
+        motivation_statement: updated.motivation_statement ?? null,
+        identity_statement: updated.identity_statement ?? null,
+        workout_unlock_label: updated.workout_unlock_label ?? null,
+        training_trigger_context: updated.training_trigger_context ?? null,
+        training_trigger_action: updated.training_trigger_action ?? null,
+      } : current);
+      setShowHabitModal(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to save your habit settings right now.';
+      Alert.alert(t('Save failed'), message);
+    } finally {
+      setSavingHabits(false);
     }
   };
 
@@ -458,6 +524,19 @@ export default function ProfileScreen() {
 
 
         {/* ── Coach Cards ── */}
+        <View style={styles.metricsCard}>
+          <View style={styles.metricsTitleRow}>
+            <Text style={styles.metricsTitle}>{t('Mindset & Habits')}</Text>
+          </View>
+          {habitSummary.map((line) => (
+            <Text key={line} style={styles.habitSummaryLine}>{line}</Text>
+          ))}
+          <TouchableOpacity style={styles.metricsEditBtn} activeOpacity={0.85} onPress={openHabitModal}>
+            <Ionicons name="sparkles-outline" size={16} color="#06B6D4" />
+            <Text style={styles.metricsEditText}>{t('Edit mindset settings')}</Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.coachSection}>
           <Text style={styles.sectionTitle}>{t('MY COACHES')}</Text>
           {canAccessCoachVictor ? <View style={[styles.coachCard, { backgroundColor: Colors.surface }]}>
@@ -726,6 +805,87 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </Modal>
 
+      <Modal visible={showHabitModal} transparent animationType="fade" onRequestClose={() => setShowHabitModal(false)}>
+        <TouchableOpacity style={styles.metricsModalOverlay} activeOpacity={1} onPress={() => setShowHabitModal(false)}>
+          <View style={styles.metricsModalCard}>
+            <View style={styles.metricsModalHeader}>
+              <Text style={styles.metricsModalTitle}>{t('MINDSET & HABITS')}</Text>
+              <TouchableOpacity activeOpacity={0.85} onPress={() => setShowHabitModal(false)} disabled={savingHabits}>
+                <Ionicons name="close" size={22} color="rgba(255,255,255,0.7)" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.habitFieldLabel}>{t('Commitment statement')}</Text>
+            <TextInput
+              style={styles.habitInput}
+              value={habitDraft.motivation_statement}
+              onChangeText={(value) => setHabitDraft((prev) => ({ ...prev, motivation_statement: value.slice(0, 240) }))}
+              placeholder="Why this matters to you"
+              placeholderTextColor={Colors.placeholder}
+              editable={!savingHabits}
+              multiline
+            />
+
+            <Text style={styles.habitFieldLabel}>{t('Identity statement')}</Text>
+            <TextInput
+              style={styles.habitInput}
+              value={habitDraft.identity_statement}
+              onChangeText={(value) => setHabitDraft((prev) => ({ ...prev, identity_statement: value.slice(0, 240) }))}
+              placeholder="Who are you becoming?"
+              placeholderTextColor={Colors.placeholder}
+              editable={!savingHabits}
+              multiline
+            />
+
+            <Text style={styles.habitFieldLabel}>{t('Workout unlock')}</Text>
+            <TextInput
+              style={styles.habitInput}
+              value={habitDraft.workout_unlock_label}
+              onChangeText={(value) => setHabitDraft((prev) => ({ ...prev, workout_unlock_label: value.slice(0, 120) }))}
+              placeholder="Example: After work reset"
+              placeholderTextColor={Colors.placeholder}
+              editable={!savingHabits}
+            />
+
+            <Text style={styles.habitFieldLabel}>{t('If-then trigger context')}</Text>
+            <TextInput
+              style={styles.habitInput}
+              value={habitDraft.training_trigger_context}
+              onChangeText={(value) => setHabitDraft((prev) => ({ ...prev, training_trigger_context: value.slice(0, 240) }))}
+              placeholder="If it is 6pm and I close my laptop..."
+              placeholderTextColor={Colors.placeholder}
+              editable={!savingHabits}
+              multiline
+            />
+
+            <Text style={styles.habitFieldLabel}>{t('If-then trigger action')}</Text>
+            <TextInput
+              style={styles.habitInput}
+              value={habitDraft.training_trigger_action}
+              onChangeText={(value) => setHabitDraft((prev) => ({ ...prev, training_trigger_action: value.slice(0, 240) }))}
+              placeholder="...then I start my workout within 10 minutes."
+              placeholderTextColor={Colors.placeholder}
+              editable={!savingHabits}
+              multiline
+            />
+
+            <View style={styles.metricsActionRow}>
+              <TouchableOpacity
+                style={styles.metricsCancelBtn}
+                activeOpacity={0.85}
+                onPress={() => setShowHabitModal(false)}
+                disabled={savingHabits}
+              >
+                <Text style={styles.metricsCancelBtnText}>{t('Cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.metricsSaveBtn} activeOpacity={0.85} onPress={handleSaveHabits} disabled={savingHabits}>
+                {savingHabits ? <ActivityIndicator size="small" color="#04111F" /> : <Text style={styles.metricsSaveBtnText}>{t('Save Changes')}</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       <Modal visible={showGenderModal} transparent animationType="fade" onRequestClose={() => setShowGenderModal(false)}>
         <TouchableOpacity style={styles.metricsModalOverlay} activeOpacity={1} onPress={() => setShowGenderModal(false)}>
           <View style={styles.genderModalCard}>
@@ -919,6 +1079,36 @@ const styles = StyleSheet.create({
   metricBigVal: { fontSize: 26, fontWeight: '800', color: '#fff', fontFamily: 'Inter_700Bold', lineHeight: 30 },
   metricUnit: { fontSize: 13, color: Colors.textMuted, fontWeight: '400', fontFamily: 'Inter_400Regular' },
   metricLabel: { fontSize: 10, color: Colors.textMuted, fontFamily: 'Inter_400Regular', textTransform: 'uppercase', letterSpacing: 0.6 },
+  habitSummaryLine: {
+    color: Colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 20,
+    fontFamily: 'Inter_400Regular',
+    marginBottom: 6,
+  },
+  habitFieldLabel: {
+    color: Colors.textMuted,
+    fontSize: 11,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: 1,
+    marginBottom: 8,
+    marginTop: 6,
+  },
+  habitInput: {
+    minHeight: 54,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#0D0D20',
+    color: '#fff',
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+    marginBottom: 10,
+    textAlignVertical: 'top',
+    outlineStyle: 'none' as any,
+  },
   metricsModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(3,6,20,0.72)',

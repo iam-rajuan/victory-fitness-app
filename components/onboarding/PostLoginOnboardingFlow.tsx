@@ -224,6 +224,17 @@ function convertWeightToKilograms(weight: string, unit: 'kg' | 'lb') {
   return numericWeight.toString();
 }
 
+function deriveCountryFromLocale() {
+  const locale = Intl.DateTimeFormat().resolvedOptions().locale || '';
+  const regionMatch = locale.match(/[-_]([A-Z]{2}|\d{3})$/i);
+  if (!regionMatch) {
+    return null;
+  }
+
+  const normalizedRegion = regionMatch[1].toUpperCase();
+  return ALL_COUNTRIES.find((country) => country.code === normalizedRegion) ?? null;
+}
+
 export default function PostLoginOnboardingFlow({ user }: Props) {
   const router = useRouter();
   const { setLanguage } = useLanguage();
@@ -296,6 +307,29 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
     };
   }, [user.id]);
 
+  useEffect(() => {
+    if (selectedCountry.trim() || data?.country?.trim()) {
+      return;
+    }
+
+    const detectedCountry = deriveCountryFromLocale();
+    if (!detectedCountry) {
+      return;
+    }
+
+    setSelectedCountry(detectedCountry.name);
+    setData((current) => {
+      if (!current || current.country.trim()) {
+        return current;
+      }
+      return {
+        ...current,
+        country: detectedCountry.name,
+        countryCode: detectedCountry.code,
+      };
+    });
+  }, [data?.country, selectedCountry]);
+
   const suggestion = useMemo(() => (data ? getSuggestedTier(data.anamnese) : null), [data]);
 
   const persistDraft = async (nextData: OnboardingData, nextStep = step) => {
@@ -338,8 +372,8 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
       const weight = Number(data.personalProfile.weight);
       if (!data.personalProfile.age.trim()) {
         nextErrors.age = 'Age is required.';
-      } else if (!Number.isFinite(age) || age < 13 || age > 120) {
-        nextErrors.age = 'Enter an age between 13 and 120.';
+      } else if (!Number.isFinite(age) || age < 16 || age > 120) {
+        nextErrors.age = 'Enter an age between 16 and 120.';
       }
       if (!data.personalProfile.gender.trim()) {
         nextErrors.gender = 'Gender is required.';

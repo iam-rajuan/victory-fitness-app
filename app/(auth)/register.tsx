@@ -25,10 +25,18 @@ import { useLanguage } from '../../lib/i18n';
 
 const { height } = Dimensions.get('window');
 
+function normalizePhoneToE164(value: string) {
+  return value.replace(/[\s()-]+/g, '');
+}
+
+function isE164PhoneNumber(value: string) {
+  return /^\+[1-9]\d{7,14}$/.test(value);
+}
+
 export default function RegisterScreen() {
   const router = useRouter();
   const { source } = useLocalSearchParams<{ source?: string }>();
-  const { useDefaultLanguage } = useLanguage();
+  const { useDefaultLanguage, syncLanguageWithCurrentUser, t } = useLanguage();
   const [name, setName] = useState('');
   const [surname, setSurname] = useState('');
   const [email, setEmail] = useState('');
@@ -45,12 +53,17 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     const normalizedEmail = email.trim().toLowerCase();
+    const normalizedMobile = normalizePhoneToE164(mobile.trim());
     const errors: Record<string, string> = {};
 
     if (!name.trim()) errors.name = 'Please enter your name.';
     if (!surname.trim()) errors.surname = 'Please enter your surname.';
     if (!normalizedEmail) errors.email = 'Please enter your email.';
-    if (!mobile.trim()) errors.mobile = 'Please enter your mobile number.';
+    if (!normalizedMobile) {
+      errors.mobile = 'Please enter your mobile number.';
+    } else if (!isE164PhoneNumber(normalizedMobile)) {
+      errors.mobile = 'Use international format like +233XXXXXXXXX.';
+    }
     if (!password) errors.password = 'Please enter your password.';
     if (!marketingConsent) errors.marketingConsent = 'You must check the agreement box to register.';
 
@@ -74,7 +87,7 @@ export default function RegisterScreen() {
           name: name.trim(),
           surname: surname.trim(),
           email: normalizedEmail,
-          mobile: mobile.trim(),
+          mobile: normalizedMobile,
           password,
           marketing_consent: marketingConsent,
           signup_source: String(source || 'organic').trim().slice(0, 120) || 'organic',
@@ -168,7 +181,7 @@ export default function RegisterScreen() {
                 error={fieldErrors.email}
               />
               <AuthInput
-                placeholder="Mobile"
+                placeholder="Mobile (+233...)"
                 value={mobile}
                 onChangeText={(val) => {
                   setMobile(val);
