@@ -476,6 +476,16 @@ export default function ProfileScreen() {
               style={styles.avatarImage}
             />
           </View>
+          <TouchableOpacity
+            style={styles.avatarManageBtn}
+            activeOpacity={0.88}
+            onPress={() => router.push('/profile/edit')}
+          >
+            <Ionicons name="camera-outline" size={15} color="#06B6D4" />
+            <Text style={styles.avatarManageBtnText}>
+              {me?.profileImage ? t('Update profile photo') : t('Upload profile photo')}
+            </Text>
+          </TouchableOpacity>
 
           {/* Name & Badge */}
           <Text style={styles.heroName}>{loadingMe ? t('Loading...') : displayName}</Text>
@@ -937,6 +947,23 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
     borderWidth: 1,
     borderColor: 'rgba(6,182,212,0.28)',
+  },
+  avatarManageBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(6,182,212,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(6,182,212,0.24)',
+  },
+  avatarManageBtnText: {
+    color: '#8CEBFF',
+    fontSize: 13,
+    fontFamily: 'Inter_700Bold',
   },
   rankRingOuter: {
     position: 'absolute',

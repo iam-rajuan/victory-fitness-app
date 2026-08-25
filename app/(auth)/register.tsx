@@ -187,7 +187,7 @@ export default function RegisterScreen() {
                   setMobile(val);
                   if (fieldErrors.mobile) setFieldErrors((prev) => ({ ...prev, mobile: '' }));
                 }}
-                allowedType="number"
+                allowedType="phone"
                 keyboardType="phone-pad"
                 autoComplete="tel"
                 icon="call-outline"

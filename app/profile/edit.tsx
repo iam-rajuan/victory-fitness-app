@@ -16,7 +16,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Colors } from '../../constants/Colors';
 import { ErrorPopupModal } from '../../components/ErrorPopupModal';
 import { ScreenState } from '../../components/ScreenState';
-import { fetchCurrentUser, updateCurrentUserProfile, uploadCurrentUserProfileImage } from '../../lib/api';
+import { deleteCurrentUserProfileImage, fetchCurrentUser, updateCurrentUserProfile, uploadCurrentUserProfileImage } from '../../lib/api';
 import { formatAppError } from '../../lib/error';
 import { useLanguage } from '../../lib/i18n';
 import { useAsyncScreenData } from '../../hooks/useAsyncScreenData';
@@ -26,11 +26,10 @@ export default function EditProfileScreen() {
   const router = useRouter();
   const { t } = useLanguage();
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [location, setLocation] = useState('');
   const [profileImage, setProfileImage] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [deletingImage, setDeletingImage] = useState(false);
   const [errorDialog, setErrorDialog] = useState<{ title: string; message: string } | null>(null);
   const {
     loading: loadingProfile,
@@ -41,8 +40,6 @@ export default function EditProfileScreen() {
     load: async () => {
       const me = await fetchCurrentUser();
       setName(me.name ?? '');
-      setEmail(me.email ?? '');
-      setLocation(me.country ?? '');
       setProfileImage(me.profileImage ?? '');
       return null;
     },
@@ -50,7 +47,7 @@ export default function EditProfileScreen() {
   });
 
   const handleSave = async () => {
-    if (savingProfile) {
+    if (savingProfile || uploadingImage || deletingImage) {
       return;
     }
 
@@ -58,8 +55,6 @@ export default function EditProfileScreen() {
     try {
       await updateCurrentUserProfile({
         name: name.trim(),
-        email: email.trim(),
-        country: location.trim(),
         profileImage: profileImage.trim() || undefined,
       });
       goBackOrReplace(router, '/profile');
@@ -71,7 +66,7 @@ export default function EditProfileScreen() {
   };
 
   const handleChangePhoto = async () => {
-    if (loadingProfile || savingProfile || uploadingImage) {
+    if (loadingProfile || savingProfile || uploadingImage || deletingImage) {
       return;
     }
 
@@ -116,6 +111,22 @@ export default function EditProfileScreen() {
     } catch (error) {
       setErrorDialog(formatAppError(error, t('Unable to upload your profile image right now.')));
       setUploadingImage(false);
+    }
+  };
+
+  const handleDeletePhoto = async () => {
+    if (!profileImage || loadingProfile || savingProfile || uploadingImage || deletingImage) {
+      return;
+    }
+
+    setDeletingImage(true);
+    try {
+      await deleteCurrentUserProfileImage();
+      setProfileImage('');
+    } catch (error) {
+      setErrorDialog(formatAppError(error, t('Unable to remove your profile image right now.')));
+    } finally {
+      setDeletingImage(false);
     }
   };
 
@@ -174,9 +185,48 @@ export default function EditProfileScreen() {
               )}
             </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={handleChangePhoto} disabled={uploadingImage || loadingProfile || savingProfile}>
-            <Text style={styles.changePhotoText}>{uploadingImage ? t('Uploading photo...') : t('Change Profile Photo')}</Text>
+          <TouchableOpacity
+            onPress={handleChangePhoto}
+            disabled={uploadingImage || deletingImage || loadingProfile || savingProfile}
+          >
+            <Text style={styles.changePhotoText}>
+              {uploadingImage
+                ? t('Uploading photo...')
+                : profileImage
+                  ? t('Update Profile Photo')
+                  : t('Upload Profile Photo')}
+            </Text>
           </TouchableOpacity>
+          <View style={styles.photoActionsRow}>
+            <TouchableOpacity
+              style={[styles.photoActionBtn, (uploadingImage || deletingImage || loadingProfile || savingProfile) && styles.photoActionBtnDisabled]}
+              onPress={handleChangePhoto}
+              disabled={uploadingImage || deletingImage || loadingProfile || savingProfile}
+            >
+              <Ionicons name="image-outline" size={16} color="#fff" />
+              <Text style={styles.photoActionBtnText}>
+                {profileImage ? t('Replace') : t('Upload')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.photoActionBtn,
+                styles.photoDeleteBtn,
+                (!profileImage || uploadingImage || deletingImage || loadingProfile || savingProfile) && styles.photoActionBtnDisabled,
+              ]}
+              onPress={handleDeletePhoto}
+              disabled={!profileImage || uploadingImage || deletingImage || loadingProfile || savingProfile}
+            >
+              {deletingImage ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="trash-outline" size={16} color="#fff" />
+                  <Text style={styles.photoActionBtnText}>{t('Delete')}</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.formSection}>
@@ -191,38 +241,13 @@ export default function EditProfileScreen() {
               editable={!loadingProfile && !savingProfile}
             />
           </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t('EMAIL ADDRESS')}</Text>
-            <TextInput
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-              placeholder={t('Your Email')}
-              placeholderTextColor="rgba(255,255,255,0.2)"
-              keyboardType="email-address"
-              editable={!loadingProfile && !savingProfile}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t('LOCATION (OPTIONAL)')}</Text>
-            <TextInput
-              style={styles.input}
-              value={location}
-              onChangeText={setLocation}
-              placeholder={t('City, Country')}
-              placeholderTextColor="rgba(255,255,255,0.2)"
-              editable={!loadingProfile && !savingProfile}
-            />
-          </View>
         </View>
 
         <TouchableOpacity
-          style={[styles.saveBtn, (loadingProfile || savingProfile) && styles.saveBtnDisabled]}
+          style={[styles.saveBtn, (loadingProfile || savingProfile || uploadingImage || deletingImage) && styles.saveBtnDisabled]}
           activeOpacity={0.8}
           onPress={handleSave}
-          disabled={loadingProfile || savingProfile}
+          disabled={loadingProfile || savingProfile || uploadingImage || deletingImage}
         >
           {savingProfile ? (
             <View style={styles.saveBtnRow}>
@@ -286,6 +311,36 @@ const styles = StyleSheet.create({
     color: Colors.accentBlue,
     fontSize: 14,
     fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+  },
+  photoActionsRow: {
+    marginTop: 14,
+    flexDirection: 'row',
+    gap: 12,
+  },
+  photoActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    minWidth: 118,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: '#13263A',
+    borderWidth: 1,
+    borderColor: 'rgba(6,182,212,0.34)',
+  },
+  photoDeleteBtn: {
+    backgroundColor: '#30161A',
+    borderColor: 'rgba(239,68,68,0.34)',
+  },
+  photoActionBtnDisabled: {
+    opacity: 0.5,
+  },
+  photoActionBtnText: {
+    color: '#fff',
+    fontSize: 13,
     fontFamily: 'Inter_700Bold',
   },
   formSection: {

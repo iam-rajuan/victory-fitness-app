@@ -1120,6 +1120,16 @@ export async function uploadCurrentUserProfileImage(payload: {
   return response;
 }
 
+export async function deleteCurrentUserProfileImage() {
+  const user = await updateCurrentUserProfile({
+    profileImage: '',
+  });
+  return {
+    image_url: user.profileImage || '',
+    user,
+  };
+}
+
 export async function fetchCurrentUserBodyMetrics() {
   const now = Date.now();
   if (bodyMetricsCache && bodyMetricsFetchedAt && now - bodyMetricsFetchedAt < BODY_METRICS_CACHE_TTL_MS) {

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Tabs } from 'expo-router';
+import { useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import { Image, StyleSheet, View } from 'react-native';
@@ -13,6 +14,7 @@ import { replaceRoute } from '../../lib/navigation';
 
 export default function TabsLayout() {
   const router = useRouter();
+  const segments = useSegments();
   const routerRef = React.useRef(router);
   const { t } = useLanguage();
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -24,6 +26,24 @@ export default function TabsLayout() {
   useEffect(() => {
     routerRef.current = router;
   }, [router]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const syncCachedProfileImage = async () => {
+      const cachedUser = await getAuthUser();
+      if (cancelled || !cachedUser) {
+        return;
+      }
+      setProfileImage(String(cachedUser.profileImage || '').trim());
+    };
+
+    void syncCachedProfileImage();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [segments]);
 
   useEffect(() => {
     let cancelled = false;

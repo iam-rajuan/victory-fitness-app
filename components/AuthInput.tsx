@@ -10,7 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
 
-export type AllowedInputType = 'string' | 'number' | 'decimal' | 'both';
+export type AllowedInputType = 'string' | 'number' | 'decimal' | 'phone' | 'both';
 
 export interface AuthInputProps extends TextInputProps {
   icon?: keyof typeof Ionicons.glyphMap;
@@ -33,6 +33,9 @@ export function sanitizeInput(text: string, type: AllowedInputType): string {
       return text
         .replace(/[^0-9.]/g, '')
         .replace(/(\..*)\./g, '$1');
+    case 'phone':
+      // Allow only digits, spaces, plus, minus, and parentheses
+      return text.replace(/[^0-9+\-()\s]/g, '');
     case 'both':
     default:
       return text;
@@ -69,6 +72,8 @@ export const AuthInput: React.FC<AuthInputProps> = ({
       computedKeyboardType = 'number-pad';
     } else if (allowedType === 'decimal') {
       computedKeyboardType = 'decimal-pad';
+    } else if (allowedType === 'phone') {
+      computedKeyboardType = 'phone-pad';
     }
   }
 
