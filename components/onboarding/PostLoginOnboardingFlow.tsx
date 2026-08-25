@@ -40,7 +40,7 @@ const HEALTH_CONCERN_OPTIONS = ['Knee', 'Back', 'Shoulder', 'Heart condition', '
 const DAYS_OPTIONS = ['1-2 days', '3-4 days', '5+ days'];
 const SESSION_OPTIONS = ['20 minutes', '30 minutes', '45 minutes', '60+ minutes'];
 const EQUIPMENT_OPTIONS = ['No equipment', 'Home gym', 'Full gym', 'Outdoors'];
-const STEP_TITLES = ['Language', 'Country', 'Profile', 'Health', 'Recommendation'];
+const STEP_TITLES = ['Language', 'Country', 'Profile', 'Health', 'Motivation', 'Recommendation'];
 
 const POPULAR_COUNTRIES = [
   { name: 'United States', code: 'US' },
@@ -255,6 +255,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
           language: stored.language,
           country: stored.country,
           countryCode: stored.countryCode,
+          motivationStatement: stored.motivationStatement,
           personalProfile: stored.personalProfile,
           anamnese: stored.anamnese,
           suggestion: stored.suggestion,
@@ -265,6 +266,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
           language: '',
           country: '',
           countryCode: null,
+          motivationStatement: '',
           personalProfile: { age: '', gender: '', height: '', heightUnit: 'cm', weight: '', weightUnit: 'kg' },
           anamnese: {
             primaryGoal: '',
@@ -304,6 +306,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
       language: draft.language,
       country: draft.country,
       countryCode: draft.countryCode,
+      motivationStatement: draft.motivationStatement,
       personalProfile: draft.personalProfile,
       anamnese: draft.anamnese,
       suggestion: draft.suggestion,
@@ -431,6 +434,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
           language: finalData.language,
           country: selectedCountry.trim(),
           countryCode: countryObj?.code ?? null,
+          motivationStatement: finalData.motivationStatement,
           personalProfile: {
             ...finalData.personalProfile,
             weight: convertWeightToKilograms(finalData.personalProfile.weight, finalData.personalProfile.weightUnit),
@@ -457,7 +461,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
     const nextStep = step + 1;
     const nextData: OnboardingData = {
       ...workingData,
-      suggestion: nextStep >= 4 ? suggestion : data.suggestion,
+      suggestion: nextStep >= STEP_TITLES.length - 1 ? suggestion : data.suggestion,
     };
     setSaving(true);
     try {
@@ -817,7 +821,25 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
             </View>
           ) : null}
 
-          {step === 4 && suggestion ? (
+          {step === 4 ? (
+            <View>
+              <Text style={styles.stepTitle}>What will this help you protect?</Text>
+              <Text style={styles.stepText}>Before we build your plan, write one short commitment in your own words. This step is optional and can be edited later.</Text>
+              <TextInput
+                value={data.motivationStatement}
+                onChangeText={(value) => void updateData((current) => ({ ...current, motivationStatement: value.slice(0, 240) }))}
+                placeholder="Example: stay healthy for my family, feel stronger again, or rebuild my routine"
+                placeholderTextColor={Colors.placeholder}
+                multiline
+                maxLength={240}
+                textAlignVertical="top"
+                style={styles.notesInput}
+              />
+              <Text style={styles.helperText}>We only reuse this in coaching and reminder copy as a supportive anchor, never to shame or pressure you.</Text>
+            </View>
+          ) : null}
+
+          {step === 5 && suggestion ? (
             <View>
               <Text style={styles.stepTitle}>Suggested tier</Text>
               <Text style={styles.stepText}>Based on your answers, this is the strongest starting point for your next step inside the app.</Text>
@@ -840,6 +862,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
                 <Text style={styles.reviewTitle}>Review answers</Text>
                 <Text style={styles.reviewLine}>Language: {LANGUAGE_OPTIONS.find((option) => option.value === data.language)?.label ?? '-'}</Text>
                 <Text style={styles.reviewLine}>Country: {data.country || selectedCountry || '-'}</Text>
+                <Text style={styles.reviewLine}>Commitment statement: {data.motivationStatement || '-'}</Text>
                 <Text style={styles.reviewLine}>Age: {data.personalProfile.age || '-'}</Text>
                 <Text style={styles.reviewLine}>Gender: {data.personalProfile.gender || '-'}</Text>
                 <Text style={styles.reviewLine}>Height: {data.personalProfile.height ? `${data.personalProfile.height} ${data.personalProfile.heightUnit}` : '-'}</Text>
@@ -860,7 +883,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
           </Pressable>
           <View style={styles.primaryButtonWrap}>
             <AuthButton
-              title={step === 4 ? 'Continue to Subscription' : 'Next'}
+              title={step === STEP_TITLES.length - 1 ? 'Continue to Subscription' : step === 4 ? 'Continue' : 'Next'}
               onPress={() => void handleNext()}
               disabled={saving}
               loading={saving}

@@ -132,7 +132,7 @@ export default function HomeScreen() {
           />
         }
         >
-        <VictoryHeader />
+        <VictoryHeader showGreeting={true} />
         <GreetingCard />
         <FeatureCards
           canAccessCoachVictor={canAccessCoachVictor}

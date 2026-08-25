@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Colors } from '../../constants/Colors';
-import { fetchCurrentUser, fetchHomepageQuote, getAuthUser } from '../../lib/api';
+import { fetchHomepageQuote } from '../../lib/api';
 import { useLanguage } from '../../lib/i18n';
 
 export default function GreetingCard() {
-  const [userName, setUserName] = useState('User');
   const [remoteQuote, setRemoteQuote] = useState<{ text: string; author: string } | null>(null);
   const { t } = useLanguage();
 
@@ -19,113 +18,79 @@ export default function GreetingCard() {
     return () => { isMounted = false; };
   }, []);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadUserName = async () => {
-      const cachedUser = await getAuthUser();
-      if (cachedUser?.name?.trim() && isMounted) {
-        setUserName(cachedUser.name.trim());
-      }
-
-      try {
-        const user = await fetchCurrentUser();
-        if (!isMounted) {
-          return;
-        }
-
-        const nextName = user?.name?.trim();
-        if (nextName) {
-          setUserName(nextName);
-        }
-      } catch {
-        if (cachedUser?.name?.trim() && isMounted) {
-          setUserName(cachedUser.name.trim());
-        }
-      }
-    };
-
-    void loadUserName();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
   return (
-    <View style={styles.greetingSection}>
-      <View style={styles.greetingRow}>
-        <Text style={styles.greetingPrefix}>{t('Good morning, ')}</Text>
-        <Text
-          style={styles.greetingName}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={0.65}
-        >
-          {userName}
-        </Text>
+    <View style={styles.quoteSection}>
+      <View style={styles.quoteHeader}>
+        <Text style={styles.quoteTitle}>{t('DAILY INSPIRATION')}</Text>
+        <Text style={styles.quoteIcon}>“</Text>
       </View>
       <View style={styles.quoteBox}>
         <Text style={styles.quoteText}>
-          {remoteQuote?.text || ''}
+          {remoteQuote?.text || t('STAY FOCUS AND KEEP PUSHING YOUR LIMITS TO UNLEASH YOUR TRUE POTENTIAL.')}
         </Text>
-        {remoteQuote?.author ? <Text style={styles.quoteAuthor}>- {remoteQuote.author}</Text> : null}
+        {remoteQuote?.author ? (
+          <Text style={styles.quoteAuthor}>— {remoteQuote.author}</Text>
+        ) : (
+          <Text style={styles.quoteAuthor}>— Victory Team</Text>
+        )}
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  greetingSection: {
-    backgroundColor: '#13132A',
+  quoteSection: {
+    backgroundColor: '#111122',
     borderRadius: 20,
-    padding: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
     marginBottom: 16,
-    height: 212,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: 'rgba(255,255,255,0.05)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 2,
+    position: 'relative',
     overflow: 'hidden',
   },
-  greetingRow: {
+  quoteHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
-    minWidth: 0,
-    minHeight: 28,
+    marginBottom: 10,
   },
-  greetingPrefix: {
-    fontSize: 17,
-    color: '#fff',
-    fontFamily: 'Inter_400Regular',
-  },
-  greetingName: {
-    flex: 1,
-    minWidth: 0,
-    fontSize: 17,
-    lineHeight: 21,
-    color: Colors.accentBlue,
+  quoteTitle: {
+    fontSize: 10,
     fontWeight: '700',
+    color: '#00F0D0',
+    letterSpacing: 1.5,
     fontFamily: 'Inter_700Bold',
+  },
+  quoteIcon: {
+    fontSize: 36,
+    color: 'rgba(0, 240, 208, 0.15)',
+    fontFamily: 'Inter_700Bold',
+    height: 30,
+    lineHeight: 36,
   },
   quoteBox: {
-    marginTop: 8,
-    flex: 1,
-    justifyContent: 'space-between',
+    justifyContent: 'center',
   },
   quoteText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#fff',
-    lineHeight: 27,
-    fontFamily: 'Inter_700Bold',
-    textTransform: 'uppercase',
-    maxHeight: 96,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#E5E7EB',
+    lineHeight: 22,
+    fontFamily: 'Inter_600SemiBold',
+    marginBottom: 8,
   },
   quoteAuthor: {
-    fontSize: 13,
-    color: Colors.textMuted,
-    marginTop: 12,
+    fontSize: 12,
+    color: '#9CA3AF',
     textAlign: 'right',
     fontFamily: 'Inter_400Regular',
+    fontStyle: 'italic',
   },
 });
