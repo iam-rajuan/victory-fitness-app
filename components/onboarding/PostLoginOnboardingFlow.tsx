@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-
 import { Colors } from '../../constants/Colors';
 import { AuthButton } from '../AuthButton';
 import { AuthInput } from '../AuthInput';
@@ -27,12 +26,10 @@ import {
 import { LanguageCode, useLanguage } from '../../lib/i18n';
 import { replaceRoute } from '../../lib/navigation';
 import { getPostAuthRoute } from '../../lib/access';
-
 const LANGUAGE_OPTIONS: Array<{ value: OnboardingLanguage; label: string }> = [
   { value: 'en', label: 'English' },
   { value: 'de', label: 'German' },
 ];
-
 const GENDER_OPTIONS = ['Male', 'Female', 'Non-binary', 'Prefer not to say'];
 const PRIMARY_GOAL_OPTIONS = ['Lose weight', 'Build muscle', 'Improve endurance', 'General health and energy', 'Recovery and rehab'];
 const ACTIVITY_LEVEL_OPTIONS = ['Sedentary', 'Lightly active', 'Moderately active', 'Very active'];
@@ -41,7 +38,6 @@ const DAYS_OPTIONS = ['1-2 days', '3-4 days', '5+ days'];
 const SESSION_OPTIONS = ['20 minutes', '30 minutes', '45 minutes', '60+ minutes'];
 const EQUIPMENT_OPTIONS = ['No equipment', 'Home gym', 'Full gym', 'Outdoors'];
 const STEP_TITLES = ['Language', 'Country', 'Profile', 'Health', 'Motivation', 'Recommendation'];
-
 const POPULAR_COUNTRIES = [
   { name: 'United States', code: 'US' },
   { name: 'United Kingdom', code: 'GB' },
@@ -50,7 +46,6 @@ const POPULAR_COUNTRIES = [
   { name: 'Australia', code: 'AU' },
   { name: 'Italy', code: 'IT' },
 ];
-
 const ALL_COUNTRIES = [
   { name: 'Afghanistan', code: 'AF' },
   { name: 'Albania', code: 'AL' },
@@ -192,17 +187,13 @@ const ALL_COUNTRIES = [
   { name: 'Zambia', code: 'ZM' },
   { name: 'Zimbabwe', code: 'ZW' }
 ];
-
 function isSupportedAppLanguage(value: OnboardingLanguage): value is LanguageCode {
   return value === 'en' || value === 'de';
 }
-
 type Props = {
   user: AuthUser;
 };
-
 type ValidationErrors = Record<string, string>;
-
 function getSuggestedTier(anamnese: OnboardingAnamnese): OnboardingSuggestion {
   return {
     tier: 'GOLD',
@@ -210,31 +201,25 @@ function getSuggestedTier(anamnese: OnboardingAnamnese): OnboardingSuggestion {
     reason: 'This is the best starting point for building consistency with nutrition and training support. If you are unsure, the 5-days paid trial with money back Guarantee (Gold Tier) lets you test the AI services first.',
   };
 }
-
 function convertWeightToKilograms(weight: string, unit: 'kg' | 'lb') {
   const numericWeight = Number.parseFloat(weight);
   if (!Number.isFinite(numericWeight)) {
     return weight.trim();
   }
-
   if (unit === 'lb') {
     return (numericWeight * 0.45359237).toFixed(1);
   }
-
   return numericWeight.toString();
 }
-
 function deriveCountryFromLocale() {
   const locale = Intl.DateTimeFormat().resolvedOptions().locale || '';
   const regionMatch = locale.match(/[-_]([A-Z]{2}|\d{3})$/i);
   if (!regionMatch) {
     return null;
   }
-
   const normalizedRegion = regionMatch[1].toUpperCase();
   return ALL_COUNTRIES.find((country) => country.code === normalizedRegion) ?? null;
 }
-
 export default function PostLoginOnboardingFlow({ user }: Props) {
   const router = useRouter();
   const { setLanguage } = useLanguage();
@@ -247,10 +232,8 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
   const [showGenderModal, setShowGenderModal] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState(user.country || '');
   const [searchQuery, setSearchQuery] = useState('');
-
   useEffect(() => {
     let cancelled = false;
-
     const load = async () => {
       const [stored, latestUser] = await Promise.all([
         fetchCurrentUserOnboarding().catch(() => null),
@@ -299,24 +282,19 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
         setLoading(false);
       }
     };
-
     void load();
-
     return () => {
       cancelled = true;
     };
   }, [user.id]);
-
   useEffect(() => {
     if (selectedCountry.trim() || data?.country?.trim()) {
       return;
     }
-
     const detectedCountry = deriveCountryFromLocale();
     if (!detectedCountry) {
       return;
     }
-
     setSelectedCountry(detectedCountry.name);
     setData((current) => {
       if (!current || current.country.trim()) {
@@ -329,9 +307,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
       };
     });
   }, [data?.country, selectedCountry]);
-
   const suggestion = useMemo(() => (data ? getSuggestedTier(data.anamnese) : null), [data]);
-
   const persistDraft = async (nextData: OnboardingData, nextStep = step) => {
     const draft: OnboardingData = { ...nextData, currentStep: nextStep };
     setData(draft);
@@ -347,25 +323,21 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
       completed: false,
     });
   };
-
   const validateCurrentStep = () => {
     if (!data) {
       return false;
     }
-
     const nextErrors: ValidationErrors = {};
     if (step === 0) {
       if (!data.language) {
         nextErrors.language = 'Please select your preferred language.';
       }
     }
-
     if (step === 1) {
       if (!selectedCountry || !selectedCountry.trim()) {
         nextErrors.country = 'Please select your country.';
       }
     }
-
     if (step === 2) {
       const age = Number(data.personalProfile.age);
       const height = Number(data.personalProfile.height);
@@ -389,7 +361,6 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
         nextErrors.weight = 'Enter a valid weight.';
       }
     }
-
     if (step === 3) {
       if (!data.anamnese.primaryGoal) {
         nextErrors.primaryGoal = 'Please choose your primary goal.';
@@ -407,28 +378,21 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
         nextErrors.equipmentAccess = 'Please choose your available environment.';
       }
     }
-
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
-
   const handleNext = async () => {
     if (!data || saving) {
       return;
     }
-
     if (!validateCurrentStep()) {
       return;
     }
-
     setSaveError('');
-
     if (step === 0 && data.language && isSupportedAppLanguage(data.language)) {
       await setLanguage(data.language);
     }
-
     let workingData = data;
-
     if (step === 1) {
       setSaving(true);
       try {
@@ -450,7 +414,6 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
         return;
       }
     }
-
     if (step === STEP_TITLES.length - 1) {
       setSaving(true);
       try {
@@ -491,7 +454,6 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
       }
       return;
     }
-
     const nextStep = step + 1;
     const nextData: OnboardingData = {
       ...workingData,
@@ -508,7 +470,6 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
       setSaving(false);
     }
   };
-
   const handleBack = async () => {
     if (!data || step === 0 || saving) {
       return;
@@ -526,7 +487,6 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
       setSaving(false);
     }
   };
-
   const updateData = async (updater: (current: OnboardingData) => OnboardingData) => {
     if (!data) {
       return;
@@ -537,7 +497,6 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
     };
     setData(nextData);
   };
-
   const toggleHealthConcern = (value: string) => {
     if (!data) {
       return;
@@ -546,13 +505,11 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
     let nextValues = current.includes(value)
       ? current.filter((item) => item !== value)
       : [...current, value];
-
     if (value === 'None') {
       nextValues = current.includes('None') ? [] : ['None'];
     } else {
       nextValues = nextValues.filter((item) => item !== 'None');
     }
-
     void updateData((currentData) => ({
       ...currentData,
       anamnese: {
@@ -561,7 +518,6 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
       },
     }));
   };
-
   const filteredCountries = useMemo(() => {
     if (!searchQuery.trim()) {
       return [];
@@ -571,7 +527,6 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
       country.name.toLowerCase().includes(query)
     ).slice(0, 5);
   }, [searchQuery]);
-
   if (loading || !data) {
     return (
       <View style={styles.loadingWrap}>
@@ -579,25 +534,24 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
       </View>
     );
   }
-
   return (
     <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <Text style={styles.eyebrow}>VICTORY FITNESS</Text>
         <Text style={styles.title}>Build your personalized start</Text>
         <Text style={styles.subtitle}>Complete these steps once and we will keep your plan setup on this device.</Text>
-
         <View style={styles.progressRow}>
           {STEP_TITLES.map((label, index) => (
             <View key={label} style={styles.progressItem}>
               <View style={[styles.progressDot, index <= step && styles.progressDotActive]}>
                 <Text style={[styles.progressDotText, index <= step && styles.progressDotTextActive]}>{index + 1}</Text>
               </View>
-              <Text style={[styles.progressLabel, index === step && styles.progressLabelActive]}>{label}</Text>
             </View>
           ))}
         </View>
-
+        <Text style={styles.currentStepText}>
+          Step {step + 1} of {STEP_TITLES.length}  •  {STEP_TITLES[step]}
+        </Text>
         <View style={styles.card}>
           {step === 0 ? (
             <View>
@@ -617,7 +571,6 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
               {errors.language ? <Text style={styles.errorText}>{errors.language}</Text> : null}
             </View>
           ) : null}
-
           {step === 1 ? (
             <View>
               <Text style={styles.stepTitle}>Select your country</Text>
@@ -630,7 +583,6 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
                 icon="search-outline"
                 error={errors.country}
               />
-
               <View style={{ marginTop: 6 }}>
                 {searchQuery.trim().length > 0 ? (
                   <View>
@@ -679,7 +631,6 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
               </View>
             </View>
           ) : null}
-
           {step === 2 ? (
             <View>
               <Text style={styles.stepTitle}>Personal profile</Text>
@@ -695,7 +646,6 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
                 icon="calendar-outline"
                 error={errors.age}
               />
-
               <Text style={styles.fieldLabel}>Gender</Text>
               <Pressable style={styles.dropdownField} onPress={() => setShowGenderModal(true)}>
                 <Text style={[styles.dropdownFieldText, !data.personalProfile.gender && styles.dropdownFieldPlaceholder]}>
@@ -704,7 +654,6 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
                 <Ionicons name="chevron-down" size={18} color={Colors.textSecondary} />
               </Pressable>
               {errors.gender ? <Text style={styles.errorText}>{errors.gender}</Text> : null}
-
               <Text style={styles.fieldLabel}>Height</Text>
               {/* Height - Decimals only, strings CANNOT be typed! */}
               <View style={styles.measurementField}>
@@ -725,7 +674,6 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
               </View>
               {errors.height ? <Text style={styles.errorText}>{errors.height}</Text> : null}
               <Text style={styles.helperText}>This helps us calculate your personalized nutrition and training targets - visible only to you.</Text>
-
               <Text style={styles.fieldLabel}>Weight</Text>
               {/* Weight - Decimals only, strings CANNOT be typed! */}
               <View style={styles.measurementField}>
@@ -755,12 +703,10 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
               {errors.weight ? <Text style={styles.errorText}>{errors.weight}</Text> : null}
             </View>
           ) : null}
-
           {step === 3 ? (
             <View>
               <Text style={styles.stepTitle}>Sport and health anamnese</Text>
               <Text style={styles.stepText}>Answer these five questions so we can shape the right plan recommendation.</Text>
-
               <Text style={styles.questionTitle}>1. What is your primary goal?</Text>
               <View style={styles.optionGridSingle}>
                 {PRIMARY_GOAL_OPTIONS.map((option) => (
@@ -774,7 +720,6 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
                 ))}
               </View>
               {errors.primaryGoal ? <Text style={styles.errorText}>{errors.primaryGoal}</Text> : null}
-
               <Text style={styles.questionTitle}>2. How would you describe your current activity level?</Text>
               <View style={styles.optionGridSingle}>
                 {ACTIVITY_LEVEL_OPTIONS.map((option) => (
@@ -788,7 +733,6 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
                 ))}
               </View>
               {errors.activityLevel ? <Text style={styles.errorText}>{errors.activityLevel}</Text> : null}
-
               <Text style={styles.questionTitle}>3. Do you currently have, or have you had in the last 12 months, any injuries, pain, or medical conditions we should know about?</Text>
               <View style={styles.optionGridSingle}>
                 {HEALTH_CONCERN_OPTIONS.map((option) => (
@@ -810,7 +754,6 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
                 multiline
                 style={styles.notesInput}
               />
-
               <Text style={styles.questionTitle}>4. How many days per week can you realistically commit?</Text>
               <View style={styles.optionGridSingle}>
                 {DAYS_OPTIONS.map((option) => (
@@ -824,7 +767,6 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
                 ))}
               </View>
               {errors.daysPerWeek ? <Text style={styles.errorText}>{errors.daysPerWeek}</Text> : null}
-
               <Text style={styles.questionTitle}>5. How much time can you commit per session?</Text>
               <View style={styles.optionGridSingle}>
                 {SESSION_OPTIONS.map((option) => (
@@ -838,7 +780,6 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
                 ))}
               </View>
               {errors.timePerSession ? <Text style={styles.errorText}>{errors.timePerSession}</Text> : null}
-
               <Text style={styles.questionTitle}>6. What equipment or environment do you have access to?</Text>
               <View style={styles.optionGridSingle}>
                 {EQUIPMENT_OPTIONS.map((option) => (
@@ -854,7 +795,6 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
               {errors.equipmentAccess ? <Text style={styles.errorText}>{errors.equipmentAccess}</Text> : null}
             </View>
           ) : null}
-
           {step === 4 ? (
             <View>
               <Text style={styles.stepTitle}>What will this help you protect?</Text>
@@ -872,7 +812,6 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
               <Text style={styles.helperText}>We only reuse this in coaching and reminder copy as a supportive anchor, never to shame or pressure you.</Text>
             </View>
           ) : null}
-
           {step === 5 && suggestion ? (
             <View>
               <Text style={styles.stepTitle}>Suggested tier</Text>
@@ -909,12 +848,8 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
             </View>
           ) : null}
         </View>
-
         {saveError ? <Text style={styles.saveError}>{saveError}</Text> : null}
         <View style={styles.actionsRow}>
-          <Pressable onPress={() => void handleBack()} disabled={step === 0 || saving} style={[styles.secondaryButton, step === 0 && styles.secondaryButtonDisabled]}>
-            <Text style={styles.secondaryButtonText}>Back</Text>
-          </Pressable>
           <View style={styles.primaryButtonWrap}>
             <AuthButton
               title={step === STEP_TITLES.length - 1 ? 'Continue to Subscription' : step === 4 ? 'Continue' : 'Next'}
@@ -923,6 +858,11 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
               loading={saving}
             />
           </View>
+          {step > 0 ? (
+            <Pressable onPress={() => void handleBack()} disabled={saving} style={styles.secondaryButton}>
+              <Text style={styles.secondaryButtonText}>Back</Text>
+            </Pressable>
+          ) : null}
         </View>
       </ScrollView>
       <Modal visible={showGenderModal} transparent animationType="fade" onRequestClose={() => setShowGenderModal(false)}>
@@ -948,7 +888,6 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
     </KeyboardAvoidingView>
   );
 }
-
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
@@ -1031,6 +970,16 @@ const styles = StyleSheet.create({
   },
   progressLabelActive: {
     color: Colors.primary,
+  },
+  currentStepText: {
+    color: Colors.primary,
+    fontFamily: 'Inter_700Bold',
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    textAlign: 'center',
+    marginTop: 2,
+    marginBottom: 20,
   },
   card: {
     backgroundColor: 'rgba(18, 22, 34, 0.85)',
@@ -1331,14 +1280,14 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   actionsRow: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
     gap: 12,
     marginTop: 24,
     width: '100%',
   },
   secondaryButton: {
-    width: 100,
+    width: '100%',
     height: 56,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1358,7 +1307,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   primaryButtonWrap: {
-    flex: 1,
+    width: '100%',
     height: 56,
   },
   sectionHeader: {

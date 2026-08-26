@@ -17,7 +17,6 @@ import { useModuleAccessGuard } from '../../lib/useModuleAccessGuard';
 import { useLanguage } from '../../lib/i18n';
 import { replaceRoute } from '../../lib/navigation';
 import { markWeightPromptHandled, shouldShowWeightUpdatePrompt, updateUserWeight } from '../../lib/onboarding';
-
 export default function HomeScreen() {
   const checkingAccess = useModuleAccessGuard('/');
   const router = useRouter();
@@ -34,10 +33,8 @@ export default function HomeScreen() {
   const [weightPromptSaving, setWeightPromptSaving] = React.useState(false);
   const [weightDraft, setWeightDraft] = React.useState('');
   const [weightPromptUserId, setWeightPromptUserId] = React.useState('');
-
   React.useEffect(() => {
     let cancelled = false;
-
     const loadAccess = async () => {
       try {
         const user = await fetchCurrentUser();
@@ -63,14 +60,11 @@ export default function HomeScreen() {
         }
       }
     };
-
     void loadAccess();
-
     return () => {
       cancelled = true;
     };
   }, []);
-
   const handleRefresh = React.useCallback(async () => {
     setRefreshing(true);
     setRefreshToken((current) => current + 1);
@@ -78,28 +72,23 @@ export default function HomeScreen() {
       setRefreshing(false);
     }, 700);
   }, []);
-
   const openRestrictedSection = React.useCallback((sectionName: string) => {
     setRestrictedSection(sectionName);
   }, []);
-
   const handleDismissWeightPrompt = React.useCallback(async () => {
     if (!weightPromptUserId) {
       setWeightPromptVisible(false);
       return;
     }
-
     await markWeightPromptHandled(weightPromptUserId);
     setWeightPromptVisible(false);
     setWeightPromptEditing(false);
     setWeightDraft('');
   }, [weightPromptUserId]);
-
   const handleSaveWeightPrompt = React.useCallback(async () => {
     if (!weightPromptUserId || !weightDraft.trim() || weightPromptSaving) {
       return;
     }
-
     setWeightPromptSaving(true);
     try {
       await Promise.allSettled([
@@ -113,11 +102,9 @@ export default function HomeScreen() {
       setWeightPromptSaving(false);
     }
   }, [weightDraft, weightPromptSaving, weightPromptUserId]);
-
   if (checkingAccess) {
     return null;
   }
-
   return (
     <View style={styles.container}>
       <ScrollView
@@ -157,7 +144,7 @@ export default function HomeScreen() {
         )}
         {/* <AccountabilitySection /> */}
         <InviteFriendsCard />
-        <View style={{ height: 20 }} />
+        <View style={{ height: 80 }} />
       </ScrollView>
       <AccessRestrictionModal
         visible={Boolean(restrictedSection)}
@@ -179,7 +166,6 @@ export default function HomeScreen() {
             <Text style={styles.promptText}>
               Would you like to update your current weight? This helps us keep your nutrition and training plans accurate.
             </Text>
-
             {weightPromptEditing ? (
               <TextInput
                 value={weightDraft}
@@ -189,7 +175,6 @@ export default function HomeScreen() {
                 style={styles.promptInput}
               />
             ) : null}
-
             <TouchableOpacity style={styles.promptPrimaryButton} onPress={() => (weightPromptEditing ? void handleSaveWeightPrompt() : setWeightPromptEditing(true))} disabled={weightPromptSaving}>
               <Text style={styles.promptPrimaryButtonText}>{weightPromptEditing ? 'Save Weight' : 'Update Now'}</Text>
             </TouchableOpacity>
@@ -205,7 +190,6 @@ export default function HomeScreen() {
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
