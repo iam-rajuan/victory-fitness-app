@@ -2,6 +2,7 @@ import React, { useEffect, useMemo } from 'react';
 import {
   ActivityIndicator,
   Image,
+  Linking,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -115,6 +116,7 @@ function isAllowedWorkoutPlayerRequest(url: string): boolean {
 export default function WorkoutPlayerScreen() {
   const router = useRouter();
   const { t } = useLanguage();
+  const [playerBlocked, setPlayerBlocked] = React.useState(false);
   const params = useLocalSearchParams<{
     id?: string;
     title?: string;
@@ -130,6 +132,7 @@ export default function WorkoutPlayerScreen() {
   const videoUrl = typeof params.videoUrl === 'string' ? params.videoUrl : '';
   const tag = typeof params.tag === 'string' ? params.tag : t('Workout');
   const thumbnail = typeof params.thumbnail === 'string' ? params.thumbnail : DEFAULT_THUMBNAIL;
+  const isVimeoStream = Boolean(vimeoId) || embedUrlIncludesVimeo(videoUrl);
 
   const embedUrl = useMemo(() => {
     if (videoUrl) {
@@ -142,6 +145,15 @@ export default function WorkoutPlayerScreen() {
     return `https://player.vimeo.com/video/${encodeURIComponent(vimeoId)}?autoplay=1&title=0&byline=0&portrait=0&playsinline=1&dnt=1`;
   }, [videoUrl, vimeoId]);
   const playerHtml = useMemo(() => (embedUrl ? buildWorkoutPlayerHtml(embedUrl) : ''), [embedUrl]);
+  const externalVideoUrl = useMemo(() => {
+    if (videoUrl) {
+      return buildExternalVideoUrl(videoUrl);
+    }
+    if (vimeoId) {
+      return `https://vimeo.com/${encodeURIComponent(vimeoId)}`;
+    }
+    return '';
+  }, [videoUrl, vimeoId]);
 
   useEffect(() => {
     if (typeof params.id !== 'string' || !params.id) {
@@ -190,6 +202,7 @@ export default function WorkoutPlayerScreen() {
             setSupportMultipleWindows={false}
             javaScriptCanOpenWindowsAutomatically={false}
             onShouldStartLoadWithRequest={(request: any) => isAllowedWorkoutPlayerRequest(request.url)}
+            onError={() => setPlayerBlocked(true)}
             startInLoadingState
             renderLoading={() => (
               <View style={styles.loadingWrap}>
@@ -206,8 +219,57 @@ export default function WorkoutPlayerScreen() {
           <Text style={styles.emptyText}>{t('This workout does not have an active in-app stream right now.')}</Text>
         </View>
       )}
+
+      {embedUrl && (playerBlocked || isVimeoStream) ? (
+        <View style={styles.fallbackCard}>
+          <View style={styles.fallbackHeaderRow}>
+            <View style={styles.fallbackIconWrap}>
+              <Ionicons name="shield-checkmark-outline" size={18} color={Colors.primary} />
+            </View>
+            <Text style={styles.fallbackTitle}>
+              {playerBlocked ? 'Protected stream blocked in-app' : 'Protected stream fallback'}
+            </Text>
+          </View>
+          <Text style={styles.fallbackText}>
+            {playerBlocked
+              ? 'This video is protected by the provider and cannot be embedded on this device or domain right now. Open it in your browser to continue watching.'
+              : 'Some Vimeo videos may be blocked inside the in-app player because of embed privacy settings. If playback fails, open the secure stream in your browser.'}
+          </Text>
+          {externalVideoUrl ? (
+            <TouchableOpacity
+              style={styles.fallbackButton}
+              activeOpacity={0.88}
+              onPress={() => {
+                void Linking.openURL(externalVideoUrl);
+              }}
+            >
+              <Ionicons name="open-outline" size={16} color="#03111D" />
+              <Text style={styles.fallbackButtonText}>Open secure stream</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      ) : null}
     </SafeAreaView>
   );
+}
+
+function embedUrlIncludesVimeo(value: string) {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized.includes('vimeo.com') || normalized.includes('player.vimeo.com/video/');
+}
+
+function buildExternalVideoUrl(value: string) {
+  const normalized = String(value || '').trim();
+  if (!normalized) {
+    return '';
+  }
+
+  const vimeoEmbedMatch = normalized.match(/player\.vimeo\.com\/video\/(\d+)/i);
+  if (vimeoEmbedMatch?.[1]) {
+    return `https://vimeo.com/${vimeoEmbedMatch[1]}`;
+  }
+
+  return normalized;
 }
 
 const styles = StyleSheet.create({
@@ -311,5 +373,57 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
     fontFamily: 'Inter_400Regular',
+  },
+  fallbackCard: {
+    marginHorizontal: 16,
+    marginTop: 14,
+    marginBottom: 16,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(34, 211, 238, 0.16)',
+    backgroundColor: '#0B1120',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap: 12,
+  },
+  fallbackHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  fallbackIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(34, 211, 238, 0.12)',
+  },
+  fallbackTitle: {
+    flex: 1,
+    color: '#F8FAFC',
+    fontSize: 15,
+    fontFamily: 'Inter_700Bold',
+  },
+  fallbackText: {
+    color: 'rgba(226,232,240,0.78)',
+    fontSize: 13,
+    lineHeight: 20,
+    fontFamily: 'Inter_400Regular',
+  },
+  fallbackButton: {
+    minHeight: 46,
+    borderRadius: 14,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  fallbackButtonText: {
+    color: '#03111D',
+    fontSize: 14,
+    fontFamily: 'Inter_700Bold',
   },
 });

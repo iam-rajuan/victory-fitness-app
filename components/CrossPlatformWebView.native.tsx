@@ -25,6 +25,8 @@ type CrossPlatformWebViewProps = {
   startInLoadingState?: boolean;
   renderLoading?: () => React.ReactElement | null;
   onShouldStartLoadWithRequest?: (request: RequestLike) => boolean;
+  onError?: () => void;
+  onLoadEnd?: () => void;
 };
 
 export default function CrossPlatformWebView(props: CrossPlatformWebViewProps) {

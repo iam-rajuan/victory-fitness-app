@@ -31,6 +31,8 @@ type CrossPlatformWebViewProps = {
   startInLoadingState?: boolean;
   renderLoading?: () => React.ReactElement | null;
   onShouldStartLoadWithRequest?: (request: RequestLike) => boolean;
+  onError?: () => void;
+  onLoadEnd?: () => void;
 };
 
 type ParsedMedia =
@@ -101,6 +103,8 @@ export default function CrossPlatformWebView({
   startInLoadingState,
   renderLoading,
   onShouldStartLoadWithRequest,
+  onError,
+  onLoadEnd,
 }: CrossPlatformWebViewProps) {
   const [isLoading, setIsLoading] = useState(Boolean(startInLoadingState));
 
@@ -165,6 +169,10 @@ export default function CrossPlatformWebView({
           style={styles.media}
           onLoadedData={() => setIsLoading(false)}
           onCanPlay={() => setIsLoading(false)}
+          onError={() => {
+            setIsLoading(false);
+            onError?.();
+          }}
         />
       ) : media.kind === 'audio' ? (
         <audio
@@ -174,6 +182,10 @@ export default function CrossPlatformWebView({
           style={styles.audio}
           onLoadedData={() => setIsLoading(false)}
           onCanPlay={() => setIsLoading(false)}
+          onError={() => {
+            setIsLoading(false);
+            onError?.();
+          }}
         />
       ) : (
         <iframe
@@ -183,7 +195,14 @@ export default function CrossPlatformWebView({
           allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
           scrolling="no"
           referrerPolicy="strict-origin-when-cross-origin"
-          onLoad={() => setIsLoading(false)}
+          onLoad={() => {
+            setIsLoading(false);
+            onLoadEnd?.();
+          }}
+          onError={() => {
+            setIsLoading(false);
+            onError?.();
+          }}
         />
       )}
     </View>

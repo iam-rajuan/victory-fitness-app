@@ -26,6 +26,8 @@ export type CrossPlatformWebViewProps = {
   startInLoadingState?: boolean;
   renderLoading?: () => React.ReactElement | null;
   onShouldStartLoadWithRequest?: (request: { url: string }) => boolean;
+  onError?: () => void;
+  onLoadEnd?: () => void;
 };
 
 // This default export is a type-only stub so TypeScript is happy.

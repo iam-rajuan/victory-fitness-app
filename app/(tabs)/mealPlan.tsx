@@ -969,7 +969,7 @@ function MealPlanResult({
               </Text>
             </View>
           )}
-          <View style={{ height: 100 }} />
+          <View style={{ height: 180 }} />
         </ScrollView>
 
         {/* Fixed Copy List Button */}
@@ -3042,7 +3042,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    bottom: Platform.OS === 'ios' ? 106 : 94,
+    bottom: Platform.OS === 'ios' ? 170 : 158,
     alignItems: 'center',
     zIndex: 5,
   },
@@ -3070,17 +3070,20 @@ const styles = StyleSheet.create({
 
   slBottomBar: {
     position: 'absolute',
-    bottom: 0,
+    bottom: 64,
     left: 0,
     right: 0,
     paddingHorizontal: 20,
-    paddingBottom: Platform.OS === 'ios' ? 32 : 20,
+    paddingBottom: 16,
     paddingTop: 16,
     backgroundColor: Colors.background,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.06)',
+    alignItems: 'center',
   },
   slCopyBtn: {
+    width: 200,
+    borderRadius: 999,
     shadowColor: '#D946EF',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.45,
@@ -3088,10 +3091,13 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   slCopyBtnGrad: {
-    borderRadius: 16,
-    paddingVertical: 16,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
+    borderRadius: 999,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
   },
   slCopyBtnText: {
     color: '#fff',
