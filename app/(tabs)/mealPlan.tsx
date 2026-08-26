@@ -26,7 +26,7 @@ import AccessRestrictionModal from '../../components/AccessRestrictionModal';
 import { ErrorPopupModal } from '../../components/ErrorPopupModal';
 import { ScreenState } from '../../components/ScreenState';
 import VictoryHeader from '../../components/VictoryHeader';
-import { apiRequest, fetchCurrentUser } from '../../lib/api';
+import { apiRequest, fetchCurrentUser, fetchCurrentUserOnboarding } from '../../lib/api';
 import { canAccessFeature } from '../../lib/access';
 import { formatAppError } from '../../lib/error';
 import { useLanguage } from '../../lib/i18n';
@@ -37,18 +37,15 @@ import { replaceRoute } from '../../lib/navigation';
 import {
   NutritionPlanApiResponse,
   analyzeMealImage,
+  createNutritionPlan,
   getMealAnalysisHistory,
   MealImageAnalysisResponse,
-  getNutritionPlanJob,
-  startNutritionPlanJob,
   updateNutritionMealCompletion,
 } from '../../lib/nutrition';
 
 const TOTAL_STEPS = 8;
 const PLAN_SUCCESS_SOUND = require('../../assets/sounds/plan-saved.wav');
 const PLAN_SUCCESS_HOLD_MS = 2500;
-const NUTRITION_PLAN_POLL_INTERVAL_MS = 3000;
-const NUTRITION_PLAN_POLL_MAX_ATTEMPTS = 60;
 const GENDER_PLACEHOLDER = 'Please select...';
 const PLAN_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
 const MEAL_KEYS = ['breakfast', 'lunch', 'dinner'] as const;
@@ -124,6 +121,7 @@ const HEALTH_CONDITIONS = [
   { id: 'h4', emoji: '🔥', label: 'Inflammation' },
   { id: 'h5', emoji: '🛡️', label: 'Low Immunity' },
   { id: 'h6', emoji: '😵', label: 'Digestive Issues' },
+  { id: 'none', emoji: '🟢', label: 'None / Healthy' },
 ];
 
 function getPlanLoadingMessages(t: (key: string) => string) {
@@ -1001,7 +999,7 @@ function MealPlanResult({
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
         <VictoryHeader />
 
         {loadingPlan && (
@@ -1592,7 +1590,8 @@ export default function JournalScreen() {
   const [step, setStep] = useState(1);
   const [generating, setGenerating] = useState(false);
   const [generationSuccess, setGenerationSuccess] = useState(false);
-  const [generationStage, setGenerationStage] = useState<'queued' | 'processing' | null>(null);
+  const [generationStage, setGenerationStage] = useState<'processing' | null>(null);
+  const [generationProgress, setGenerationProgress] = useState(0.12);
   const [done, setDone] = useState(false);
   const [hasSavedPlan, setHasSavedPlan] = useState(false);
   const [creatingNewPlan, setCreatingNewPlan] = useState(false);
@@ -1616,7 +1615,6 @@ export default function JournalScreen() {
   const [weight, setWeight] = useState('');
   const [healthConditions, setHealthConditions] = useState<Set<string>>(new Set());
 
-  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
   const syncLatestNutritionPlanCache = React.useCallback(async (plan: NutritionPlanApiResponse | null) => {
     if (!plan) {
       return;
@@ -1650,42 +1648,26 @@ export default function JournalScreen() {
       setHasSavedPlan(false);
       setGeneratedPlan(null);
       setDone(false);
+
+      try {
+        const onboarding = await fetchCurrentUserOnboarding();
+        if (onboarding && onboarding.personalProfile) {
+          const profile = onboarding.personalProfile;
+          if (profile.age) setAge(String(profile.age));
+          if (profile.gender) setGender(profile.gender);
+          if (profile.height) setHeight(String(profile.height));
+          if (profile.weight) setWeight(String(profile.weight));
+        }
+      } catch {
+        // Fallback silently if user has not completed onboarding
+      }
+
       return null;
     }
     await syncLatestNutritionPlanCache(latestPlan);
     applyLatestNutritionPlan(latestPlan);
     return latestPlan;
   };
-
-  const waitForNutritionPlanJob = async (jobId: string) => {
-    for (let attempt = 0; attempt < NUTRITION_PLAN_POLL_MAX_ATTEMPTS; attempt += 1) {
-      const job = await getNutritionPlanJob(jobId);
-      const status = String(job.status || '').toLowerCase();
-
-      setGenerationStage(status === 'queued' ? 'queued' : 'processing');
-
-      if (job.plan) {
-        return job.plan;
-      }
-
-      if (status === 'completed') {
-        const latestPlan = await loadLatestNutritionPlan();
-        if (latestPlan) {
-          return latestPlan;
-        }
-        throw new Error(t('Nutrition plan generation finished but no saved plan was returned.'));
-      }
-
-      if (status === 'failed') {
-        throw new Error(job.error || t('Nutrition plan generation failed.'));
-      }
-
-      await sleep(NUTRITION_PLAN_POLL_INTERVAL_MS);
-    }
-
-    throw new Error(t('Nutrition plan generation timed out while waiting for the saved plan.'));
-  };
-
 
   useEffect(() => {
     let cancelled = false;
@@ -1728,12 +1710,17 @@ export default function JournalScreen() {
   useEffect(() => {
     if (!generating) {
       setLoadingMessageIndex(0);
+      setGenerationProgress(0.12);
       return;
     }
 
     const interval = setInterval(() => {
       setLoadingMessageIndex((prev) => (prev + 1) % PLAN_LOADING_MESSAGES.length);
-    }, 2400);
+      setGenerationProgress((prev) => {
+        const next = prev + 0.045;
+        return next >= 0.9 ? 0.9 : next;
+      });
+    }, 1200);
 
     return () => clearInterval(interval);
   }, [generating]);
@@ -1780,7 +1767,21 @@ export default function JournalScreen() {
   const toggleHealth = (id: string) => {
     setHealthConditions((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (id === 'none') {
+        if (next.has('none')) {
+          next.delete('none');
+        } else {
+          next.clear();
+          next.add('none');
+        }
+      } else {
+        if (next.has(id)) {
+          next.delete(id);
+        } else {
+          next.delete('none');
+          next.add(id);
+        }
+      }
       return next;
     });
   };
@@ -1819,11 +1820,12 @@ export default function JournalScreen() {
     setGenerating(true);
     setGenerationSuccess(false);
     setGenerationStage('processing');
+    setGenerationProgress(0.16);
     setCreatingNewPlan(true);
     setErrorDialog(null);
 
     try {
-      const response = await startNutritionPlanJob({
+      const response = await createNutritionPlan({
         goal: selectedGoal,
         cuisine,
         favorite_meal: favoriteMeal,
@@ -1836,9 +1838,9 @@ export default function JournalScreen() {
         weight,
         health_conditions: Array.from(healthConditions),
       });
-      setGenerationStage(String(response.status || '').toLowerCase() === 'queued' ? 'queued' : 'processing');
+      setGenerationProgress(1);
 
-      const savedPlan = response.plan ?? (response.job_id ? await waitForNutritionPlanJob(response.job_id) : null);
+      const savedPlan = response.plan ?? null;
 
       if (!savedPlan) {
         throw new Error(t('Nutrition plan generation did not return a plan'));
@@ -1884,12 +1886,6 @@ export default function JournalScreen() {
         message: formatted.message,
       };
     }
-    if (formatted.message.toLowerCase().includes('waiting for the saved plan')) {
-      return {
-        title: t('Plan Still Generating'),
-        message: t('Your plan is still being generated on the server. Open the plan page again in a moment to load it.'),
-      };
-    }
     return formatted;
   };
 
@@ -1900,12 +1896,9 @@ export default function JournalScreen() {
   }
 
   if (generating) {
-    const isQueued = generationStage === 'queued';
-    const progressWidth = isQueued ? '28%' : '66%';
-    const stageLabel = isQueued ? t('Queued') : t('Processing');
-    const stageMessage = isQueued
-      ? t('Your plan request is waiting for the generation worker.')
-      : t('The backend is building your meal plan now.');
+    const progressWidth = `${Math.round(generationProgress * 100)}%`;
+    const stageLabel = t('Processing');
+    const stageMessage = t('The backend is building your meal plan now.');
 
     return (
       <View style={styles.loadingScreen}>
@@ -1984,7 +1977,7 @@ export default function JournalScreen() {
         />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <Text style={styles.stepCounter}>{t('Step {step} of {total}', { step, total: TOTAL_STEPS })}</Text>
 
         {step === 1 && (
@@ -2110,7 +2103,7 @@ export default function JournalScreen() {
           </View>
         )}
 
-        <View style={{ height: 110 }} />
+        <View style={{ height: 160 }} />
       </ScrollView>
 
       <View style={styles.bottomBar}>
@@ -2141,6 +2134,7 @@ export default function JournalScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  scrollView: { flex: 1 },
 
   /* Progress Bar */
   progressBarBg: { height: 6, backgroundColor: 'rgba(255,255,255,0.1)', width: '100%' },
@@ -2210,7 +2204,7 @@ const styles = StyleSheet.create({
   planLoading: { paddingVertical: 24, alignItems: 'center', justifyContent: 'center', gap: 12 },
   planLoadingText: { color: Colors.textMuted, fontSize: 14, fontFamily: 'Inter_400Regular' },
 
-  bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 20, paddingBottom: Platform.OS === 'ios' ? 32 : 20, backgroundColor: Colors.background, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)' },
+  bottomBar: { position: 'absolute', bottom: 64, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 14, backgroundColor: Colors.background, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)', zIndex: 10 },
   backBtn: { paddingHorizontal: 8, paddingVertical: 8 },
   backBtnText: { color: 'rgba(255,255,255,0.6)', fontSize: 16, fontFamily: 'Inter_400Regular' },
   backBtnDisabled: { color: 'rgba(255,255,255,0.2)' },
@@ -2661,8 +2655,18 @@ const styles = StyleSheet.create({
   shoppingBtn: { marginTop: 8, marginBottom: 12 },
   shoppingBtnGrad: { borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   shoppingBtnText: { color: '#fff', fontSize: 16, fontWeight: '800', fontFamily: 'Inter_700Bold' },
-  newPlanBtn: { alignItems: 'center', paddingVertical: 12 },
-  newPlanBtnText: { color: '#A855F7', fontSize: 14, fontWeight: '600' },
+  newPlanBtn: { 
+    marginTop: 6, 
+    marginBottom: 20, 
+    borderWidth: 1.5, 
+    borderColor: '#A855F7', 
+    borderRadius: 14, 
+    paddingVertical: 14, 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    backgroundColor: 'rgba(168, 85, 247, 0.04)'
+  },
+  newPlanBtnText: { color: '#A855F7', fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold' },
 
   /* Tracker */
   trackerSection: { backgroundColor: '#13132A', borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)' },

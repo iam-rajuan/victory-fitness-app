@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Animated,
+  Easing,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +27,7 @@ interface Message {
   id: string;
   text: string;
   sender: 'coach' | 'user';
+  status?: 'sent' | 'typing';
 }
 
 type ChatHistoryItem = {
@@ -44,6 +47,16 @@ const INITIAL_MESSAGES: Message[] = [
 
 const MessageBubble = memo(function MessageBubble({ item }: { item: Message }) {
   const isCoach = item.sender === 'coach';
+  if (item.status === 'typing') {
+    return (
+      <View style={[styles.messageContainer, styles.coachContainer]}>
+        <View style={[styles.bubble, styles.coachBubble, styles.typingBubble]}>
+          <TypingDots />
+        </View>
+      </View>
+    );
+  }
+
   const coachContent = useMemo(() => {
     if (!isCoach) {
       return null;
@@ -73,6 +86,69 @@ const MessageBubble = memo(function MessageBubble({ item }: { item: Message }) {
   );
 });
 
+const TypingDots = memo(function TypingDots() {
+  const pulseA = useRef(new Animated.Value(0.35)).current;
+  const pulseB = useRef(new Animated.Value(0.35)).current;
+  const pulseC = useRef(new Animated.Value(0.35)).current;
+
+  useEffect(() => {
+    const createPulse = (value: Animated.Value, delay: number) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(value, {
+            toValue: 1,
+            duration: 280,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.timing(value, {
+            toValue: 0.35,
+            duration: 280,
+            easing: Easing.in(Easing.quad),
+            useNativeDriver: true,
+          }),
+        ]),
+      );
+
+    const animations = [
+      createPulse(pulseA, 0),
+      createPulse(pulseB, 120),
+      createPulse(pulseC, 240),
+    ];
+
+    animations.forEach((animation) => animation.start());
+
+    return () => {
+      animations.forEach((animation) => animation.stop());
+    };
+  }, [pulseA, pulseB, pulseC]);
+
+  return (
+    <View style={styles.typingDotsRow}>
+      {[pulseA, pulseB, pulseC].map((value, index) => (
+        <Animated.View
+          key={`typing-dot-${index}`}
+          style={[
+            styles.typingDot,
+            {
+              opacity: value,
+              transform: [
+                {
+                  scale: value.interpolate({
+                    inputRange: [0.35, 1],
+                    outputRange: [0.88, 1.08],
+                  }),
+                },
+              ],
+            },
+          ]}
+        />
+      ))}
+    </View>
+  );
+});
+
 export default function ChatScreen() {
   const checkingAccess = useModuleAccessGuard('/chat');
   const router = useRouter();
@@ -81,6 +157,7 @@ export default function ChatScreen() {
   const [sending, setSending] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [errorDialog, setErrorDialog] = useState<{ title: string; message: string } | null>(null);
+  const listRef = useRef<FlatList<Message>>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -154,6 +231,30 @@ export default function ChatScreen() {
     }
   };
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      listRef.current?.scrollToEnd({ animated: true });
+    }, 40);
+
+    return () => clearTimeout(timer);
+  }, [messages, sending]);
+
+  const conversationMessages = useMemo(
+    () =>
+      sending
+        ? [
+            ...messages,
+            {
+              id: 'coach-typing-indicator',
+              text: '',
+              sender: 'coach' as const,
+              status: 'typing' as const,
+            },
+          ]
+        : messages,
+    [messages, sending],
+  );
+
   const renderMessage = useCallback(
     ({ item }: { item: Message }) => <MessageBubble item={item} />,
     []
@@ -214,7 +315,8 @@ export default function ChatScreen() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <FlatList
-          data={messages}
+          ref={listRef}
+          data={conversationMessages}
           renderItem={renderMessage}
           keyExtractor={keyExtractor}
           contentContainerStyle={styles.listContent}
@@ -233,22 +335,31 @@ export default function ChatScreen() {
 
         {/* Input Bar */}
         <View style={styles.inputBar}>
-          <View style={styles.inputWrapper}>
+          <View
+            style={[styles.inputWrapper, sending && styles.inputWrapperDisabled]}
+            pointerEvents={sending ? 'none' : 'auto'}
+          >
             <TextInput
               style={styles.input}
-              placeholder="Ask me anything..."
+              placeholder={sending ? 'Coach Victor is thinking...' : 'Ask me anything...'}
               placeholderTextColor="rgba(255, 255, 255, 0.4)"
               value={inputText}
-              onChangeText={setInputText}
+              onChangeText={(value) => {
+                if (sending) {
+                  return;
+                }
+                setInputText(value);
+              }}
               multiline
               editable={!sending}
             />
-            <TouchableOpacity onPress={sendMessage} style={styles.sendButton} disabled={sending}>
-              {sending ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Ionicons name="arrow-forward" size={20} color="#fff" />
-              )}
+            <TouchableOpacity
+              onPress={sendMessage}
+              style={[styles.sendButton, (!inputText.trim() || sending) && styles.sendButtonDisabled]}
+              disabled={sending || !inputText.trim()}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="arrow-forward" size={20} color={sending || !inputText.trim() ? 'rgba(255,255,255,0.4)' : '#fff'} />
             </TouchableOpacity>
           </View>
         </View>
@@ -505,6 +616,21 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.12)',
     marginVertical: 10,
   },
+  typingBubble: {
+    minWidth: 74,
+    paddingVertical: 16,
+  },
+  typingDotsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  typingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.accentBlue,
+  },
   inputBar: {
     padding: 16,
     borderTopWidth: 1,
@@ -524,6 +650,11 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     paddingHorizontal: 16,
     paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+  },
+  inputWrapperDisabled: {
+    opacity: 0.72,
   },
   input: {
     flex: 1,
@@ -543,6 +674,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
+  },
+  sendButtonDisabled: {
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
   },
 });
 

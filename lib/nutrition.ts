@@ -77,6 +77,7 @@ export async function createNutritionPlan(payload: Record<string, unknown>) {
   return apiRequest<{ plan: NutritionPlanApiResponse }>('/ai/nutrition/plan', {
     method: 'POST',
     body: payload,
+    timeoutMs: 120_000,
   });
 }
 

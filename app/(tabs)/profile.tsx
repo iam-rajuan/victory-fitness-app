@@ -5,12 +5,16 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   Image,
   ActivityIndicator,
   Modal,
   TextInput,
   Alert,
   RefreshControl,
+  KeyboardAvoidingView,
+  Keyboard,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -791,109 +795,142 @@ export default function ProfileScreen() {
       </Modal>
 
       <Modal visible={showLanguageModal} transparent animationType="fade" onRequestClose={() => setShowLanguageModal(false)}>
-        <TouchableOpacity style={styles.metricsModalOverlay} activeOpacity={1} onPress={() => setShowLanguageModal(false)}>
-          <View style={styles.genderModalCard}>
-            <Text style={styles.genderModalTitle}>{t('SELECT LANGUAGE')}</Text>
-            <View style={styles.profileLanguageSwitch}>
-              {LANGUAGE_OPTIONS.map((option) => {
-                const active = language === option.key;
-                return (
-                  <TouchableOpacity
-                    key={option.key}
-                    activeOpacity={0.85}
-                    style={[styles.profileLanguageOption, active && styles.profileLanguageOptionActive]}
-                    onPress={() => void handleSelectLanguage(option.key)}
-                  >
-                    <Text style={[styles.profileLanguageOptionText, active && styles.profileLanguageOptionTextActive]}>
-                      {option.key.toUpperCase()}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+        <TouchableWithoutFeedback onPress={() => setShowLanguageModal(false)}>
+          <View style={styles.metricsModalOverlay}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View style={styles.genderModalCard}>
+                <Text style={styles.genderModalTitle}>{t('SELECT LANGUAGE')}</Text>
+                <View style={styles.profileLanguageSwitch}>
+                  {LANGUAGE_OPTIONS.map((option) => {
+                    const active = language === option.key;
+                    return (
+                      <TouchableOpacity
+                        key={option.key}
+                        activeOpacity={0.85}
+                        style={[styles.profileLanguageOption, active && styles.profileLanguageOptionActive]}
+                        onPress={() => void handleSelectLanguage(option.key)}
+                      >
+                        <Text style={[styles.profileLanguageOptionText, active && styles.profileLanguageOptionTextActive]}>
+                          {option.key.toUpperCase()}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
           </View>
-        </TouchableOpacity>
+        </TouchableWithoutFeedback>
       </Modal>
 
       <Modal visible={showHabitModal} transparent animationType="fade" onRequestClose={() => setShowHabitModal(false)}>
-        <TouchableOpacity style={styles.metricsModalOverlay} activeOpacity={1} onPress={() => setShowHabitModal(false)}>
-          <View style={styles.metricsModalCard}>
-            <View style={styles.metricsModalHeader}>
-              <Text style={styles.metricsModalTitle}>{t('MINDSET & HABITS')}</Text>
-              <TouchableOpacity activeOpacity={0.85} onPress={() => setShowHabitModal(false)} disabled={savingHabits}>
-                <Ionicons name="close" size={22} color="rgba(255,255,255,0.7)" />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.habitFieldLabel}>{t('Commitment statement')}</Text>
-            <TextInput
-              style={styles.habitInput}
-              value={habitDraft.motivation_statement}
-              onChangeText={(value) => setHabitDraft((prev) => ({ ...prev, motivation_statement: value.slice(0, 240) }))}
-              placeholder="Why this matters to you"
-              placeholderTextColor={Colors.placeholder}
-              editable={!savingHabits}
-              multiline
-            />
-
-            <Text style={styles.habitFieldLabel}>{t('Identity statement')}</Text>
-            <TextInput
-              style={styles.habitInput}
-              value={habitDraft.identity_statement}
-              onChangeText={(value) => setHabitDraft((prev) => ({ ...prev, identity_statement: value.slice(0, 240) }))}
-              placeholder="Who are you becoming?"
-              placeholderTextColor={Colors.placeholder}
-              editable={!savingHabits}
-              multiline
-            />
-
-            <Text style={styles.habitFieldLabel}>{t('Workout unlock')}</Text>
-            <TextInput
-              style={styles.habitInput}
-              value={habitDraft.workout_unlock_label}
-              onChangeText={(value) => setHabitDraft((prev) => ({ ...prev, workout_unlock_label: value.slice(0, 120) }))}
-              placeholder="Example: After work reset"
-              placeholderTextColor={Colors.placeholder}
-              editable={!savingHabits}
-            />
-
-            <Text style={styles.habitFieldLabel}>{t('If-then trigger context')}</Text>
-            <TextInput
-              style={styles.habitInput}
-              value={habitDraft.training_trigger_context}
-              onChangeText={(value) => setHabitDraft((prev) => ({ ...prev, training_trigger_context: value.slice(0, 240) }))}
-              placeholder="If it is 6pm and I close my laptop..."
-              placeholderTextColor={Colors.placeholder}
-              editable={!savingHabits}
-              multiline
-            />
-
-            <Text style={styles.habitFieldLabel}>{t('If-then trigger action')}</Text>
-            <TextInput
-              style={styles.habitInput}
-              value={habitDraft.training_trigger_action}
-              onChangeText={(value) => setHabitDraft((prev) => ({ ...prev, training_trigger_action: value.slice(0, 240) }))}
-              placeholder="...then I start my workout within 10 minutes."
-              placeholderTextColor={Colors.placeholder}
-              editable={!savingHabits}
-              multiline
-            />
-
-            <View style={styles.metricsActionRow}>
-              <TouchableOpacity
-                style={styles.metricsCancelBtn}
-                activeOpacity={0.85}
-                onPress={() => setShowHabitModal(false)}
-                disabled={savingHabits}
+        <TouchableWithoutFeedback onPress={() => {
+          Keyboard.dismiss();
+          setShowHabitModal(false);
+        }}>
+          <View style={styles.metricsModalOverlay}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
+                style={styles.habitKeyboardWrap}
               >
-                <Text style={styles.metricsCancelBtnText}>{t('Cancel')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.metricsSaveBtn} activeOpacity={0.85} onPress={handleSaveHabits} disabled={savingHabits}>
-                {savingHabits ? <ActivityIndicator size="small" color="#04111F" /> : <Text style={styles.metricsSaveBtnText}>{t('Save Changes')}</Text>}
-              </TouchableOpacity>
-            </View>
+                <View style={[styles.metricsModalCard, styles.habitModalCard]}>
+                  <View style={styles.metricsModalHeader}>
+                    <Text style={styles.metricsModalTitle}>{t('MINDSET & HABITS')}</Text>
+                    <TouchableOpacity activeOpacity={0.85} onPress={() => setShowHabitModal(false)} disabled={savingHabits}>
+                      <Ionicons name="close" size={22} color="rgba(255,255,255,0.7)" />
+                    </TouchableOpacity>
+                  </View>
+
+                  <ScrollView
+                    style={styles.habitModalScroll}
+                    contentContainerStyle={styles.habitModalScrollContent}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                  >
+                    <Text style={styles.habitFieldLabel}>{t('Commitment statement')}</Text>
+                    <TextInput
+                      style={styles.habitInput}
+                      value={habitDraft.motivation_statement}
+                      onChangeText={(value) => setHabitDraft((prev) => ({ ...prev, motivation_statement: value.slice(0, 240) }))}
+                      placeholder="Why this matters to you"
+                      placeholderTextColor={Colors.placeholder}
+                      editable={!savingHabits}
+                      multiline
+                      textAlignVertical="top"
+                      returnKeyType="done"
+                    />
+
+                    <Text style={styles.habitFieldLabel}>{t('Identity statement')}</Text>
+                    <TextInput
+                      style={styles.habitInput}
+                      value={habitDraft.identity_statement}
+                      onChangeText={(value) => setHabitDraft((prev) => ({ ...prev, identity_statement: value.slice(0, 240) }))}
+                      placeholder="Who are you becoming?"
+                      placeholderTextColor={Colors.placeholder}
+                      editable={!savingHabits}
+                      multiline
+                      textAlignVertical="top"
+                      returnKeyType="done"
+                    />
+
+                    <Text style={styles.habitFieldLabel}>{t('Workout unlock')}</Text>
+                    <TextInput
+                      style={styles.habitInput}
+                      value={habitDraft.workout_unlock_label}
+                      onChangeText={(value) => setHabitDraft((prev) => ({ ...prev, workout_unlock_label: value.slice(0, 120) }))}
+                      placeholder="Example: After work reset"
+                      placeholderTextColor={Colors.placeholder}
+                      editable={!savingHabits}
+                      returnKeyType="done"
+                    />
+
+                    <Text style={styles.habitFieldLabel}>{t('If-then trigger context')}</Text>
+                    <TextInput
+                      style={styles.habitInput}
+                      value={habitDraft.training_trigger_context}
+                      onChangeText={(value) => setHabitDraft((prev) => ({ ...prev, training_trigger_context: value.slice(0, 240) }))}
+                      placeholder="If it is 6pm and I close my laptop..."
+                      placeholderTextColor={Colors.placeholder}
+                      editable={!savingHabits}
+                      multiline
+                      textAlignVertical="top"
+                      returnKeyType="done"
+                    />
+
+                    <Text style={styles.habitFieldLabel}>{t('If-then trigger action')}</Text>
+                    <TextInput
+                      style={styles.habitInput}
+                      value={habitDraft.training_trigger_action}
+                      onChangeText={(value) => setHabitDraft((prev) => ({ ...prev, training_trigger_action: value.slice(0, 240) }))}
+                      placeholder="...then I start my workout within 10 minutes."
+                      placeholderTextColor={Colors.placeholder}
+                      editable={!savingHabits}
+                      multiline
+                      textAlignVertical="top"
+                      returnKeyType="done"
+                    />
+                  </ScrollView>
+
+                  <View style={styles.metricsActionRow}>
+                    <TouchableOpacity
+                      style={styles.metricsCancelBtn}
+                      activeOpacity={0.85}
+                      onPress={() => setShowHabitModal(false)}
+                      disabled={savingHabits}
+                    >
+                      <Text style={styles.metricsCancelBtnText}>{t('Cancel')}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.metricsSaveBtn} activeOpacity={0.85} onPress={handleSaveHabits} disabled={savingHabits}>
+                      {savingHabits ? <ActivityIndicator size="small" color="#04111F" /> : <Text style={styles.metricsSaveBtnText}>{t('Save Changes')}</Text>}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </KeyboardAvoidingView>
+            </TouchableWithoutFeedback>
           </View>
-        </TouchableOpacity>
+        </TouchableWithoutFeedback>
       </Modal>
 
       <Modal visible={showGenderModal} transparent animationType="fade" onRequestClose={() => setShowGenderModal(false)}>
@@ -1142,6 +1179,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
   },
+  habitKeyboardWrap: {
+    width: '100%',
+    justifyContent: 'center',
+  },
   metricsModalCard: {
     backgroundColor: '#151629',
     borderRadius: 24,
@@ -1149,6 +1190,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
     overflow: 'hidden',
+  },
+  habitModalCard: {
+    maxHeight: '82%',
+  },
+  habitModalScroll: {
+    flexGrow: 0,
+  },
+  habitModalScrollContent: {
+    paddingBottom: 8,
   },
   metricsModalHeader: {
     flexDirection: 'row',

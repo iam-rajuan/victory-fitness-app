@@ -17,7 +17,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
-import CrossPlatformWebView from '../../../components/CrossPlatformWebView.native';
+import CrossPlatformWebView from '../../../components/CrossPlatformWebView';
 import { Colors } from '../../../constants/Colors';
 import { apiRequest, fetchCurrentUser } from '../../../lib/api';
 import { useLanguage } from '../../../lib/i18n';
@@ -106,6 +106,11 @@ type CompletedReportEntry = {
 type CelebrationState = {
   dayNumber: number;
   points: number;
+};
+
+type ReportActionState = {
+  action: 'download' | 'share' | 'community' | '';
+  target: string;
 };
 
 const GOOGLE_PLAY_URL = 'https://play.google.com/store';
@@ -271,6 +276,24 @@ function getDayProgressFraction(day: ChallengePlanDay, progress?: ChallengePlanD
   }
 
   return progress.completed ? 1 : 0;
+}
+
+function getChallengeCurrentCalendarDay(
+  startedAt: string | undefined,
+  totalDays: number,
+  fallbackDayNumber: number,
+) {
+  if (!startedAt) {
+    return Math.min(Math.max(1, fallbackDayNumber), totalDays);
+  }
+
+  const startDate = new Date(startedAt);
+  const startLocalDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+  const today = new Date();
+  const todayLocalDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const msDiff = todayLocalDate.getTime() - startLocalDate.getTime();
+  const elapsedDays = Math.max(0, Math.floor(msDiff / (1000 * 60 * 60 * 24)));
+  return Math.min(Math.max(1, elapsedDays + 1), totalDays);
 }
 
 function xmlEscape(value: string) {
@@ -466,16 +489,17 @@ export default function ChallengeProgressScreen() {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   }, [requestedDayParam]);
   const cachedThread = challengeId ? getCachedResourceSnapshot<ChallengeProgressThread>(getChallengeProgressCacheKey(challengeId)) : null;
+  const initialCachedThreadRef = React.useRef<ChallengeProgressThread | null>(cachedThread ?? null);
 
-  const [thread, setThread] = useState<ChallengeProgressThread | null>(cachedThread ?? null);
-  const [loading, setLoading] = useState(!cachedThread);
+  const [thread, setThread] = useState<ChallengeProgressThread | null>(initialCachedThreadRef.current);
+  const [loading, setLoading] = useState(!initialCachedThreadRef.current);
   const [refreshing, setRefreshing] = useState(false);
   const [completionUpdatingKey, setCompletionUpdatingKey] = useState('');
   const [expandedDays, setExpandedDays] = useState<Record<number, boolean>>({});
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const [videoModal, setVideoModal] = useState<{ title: string; videoUrl: string } | null>(null);
   const [dayCompletionConfirm, setDayCompletionConfirm] = useState<CompletionConfirmState | null>(null);
-  const [reportAction, setReportAction] = useState<'download' | 'share' | 'community' | ''>('');
+  const [reportAction, setReportAction] = useState<ReportActionState>({ action: '', target: '' });
   const [celebration, setCelebration] = useState<CelebrationState | null>(null);
   const celebrationAnimation = React.useRef(new Animated.Value(0)).current;
   const [errorDialog, setErrorDialog] = useState<{ title: string; message: string } | null>(null);
@@ -496,6 +520,22 @@ export default function ChallengeProgressScreen() {
     [thread],
   );
 
+  const readOnlyReason = useMemo(() => {
+    if (!thread) {
+      return '';
+    }
+    if (thread.status === 'ARCHIVED') {
+      return 'This challenge has been archived. Progress is read-only.';
+    }
+    if (thread.viewer_membership_status !== 'ACTIVE') {
+      return 'Your membership is no longer active. Progress is read-only.';
+    }
+    if (thread.status !== 'ACTIVE') {
+      return 'This challenge is not currently active for progress updates.';
+    }
+    return '';
+  }, [thread]);
+
   const dayProgressMap = useMemo(() => {
     const map = new Map<number, ChallengePlanDayProgress>();
     for (const dayProgress of thread?.viewer_plan_progress || []) {
@@ -514,17 +554,10 @@ export default function ChallengeProgressScreen() {
 
   const currentCalendarDay = useMemo(() => {
     const totalDays = thread?.duration_days || thread?.plan_days.length || 1;
-    if (!thread?.started_at) {
-      return Math.min(currentPlanDayNumber || 1, totalDays);
-    }
-    const startDate = new Date(thread.started_at);
-    const startLocalDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-    const today = new Date();
-    const todayLocalDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const msDiff = todayLocalDate.getTime() - startLocalDate.getTime();
-    const elapsedDays = Math.max(0, Math.floor(msDiff / (1000 * 60 * 60 * 24)));
-    return Math.min(Math.max(1, elapsedDays + 1), totalDays);
+    return getChallengeCurrentCalendarDay(thread?.started_at, totalDays, currentPlanDayNumber || 1);
   }, [thread?.started_at, currentPlanDayNumber, thread?.duration_days, thread?.plan_days.length]);
+
+  const hasConfiguredPlanDays = (thread?.plan_days.length || 0) > 0;
 
   const celebrationDay = useMemo(
     () => thread?.plan_days.find((day) => day.day_number === celebration?.dayNumber) ?? null,
@@ -534,6 +567,18 @@ export default function ChallengeProgressScreen() {
   const celebrationExercises = useMemo(
     () => (celebrationDay?.sections || []).flatMap((section) => section.exercises.map((exercise) => exercise.name)).slice(0, 5),
     [celebrationDay],
+  );
+
+  const celebrationStreakCount = useMemo(() => {
+    const completedChallengeDays = thread?.viewer_progress_days_completed || 0;
+    const completedCelebrationDay = celebration?.dayNumber || 0;
+    return Math.max(completedChallengeDays, completedCelebrationDay, 0);
+  }, [celebration?.dayNumber, thread?.viewer_progress_days_completed]);
+
+  const anyReportActionBusy = reportAction.action !== '';
+  const isReportActionBusy = useCallback(
+    (action: ReportActionState['action'], target: string) => reportAction.action === action && reportAction.target === target,
+    [reportAction.action, reportAction.target],
   );
 
   const exercisesToDisplay = useMemo(() => {
@@ -554,7 +599,11 @@ export default function ChallengeProgressScreen() {
     [thread?.plan_days, thread?.points],
   );
 
-  const getInitialExpandedDays = useCallback((planDays: ChallengePlanDay[], progressDays: ChallengePlanDayProgress[]) => {
+  const getInitialExpandedDays = useCallback((
+    planDays: ChallengePlanDay[],
+    progressDays: ChallengePlanDayProgress[],
+    calendarDayNumber: number,
+  ) => {
     const expanded: Record<number, boolean> = {};
     if (requestedDayNumber && planDays.some((day) => day.day_number === requestedDayNumber)) {
       expanded[requestedDayNumber] = true;
@@ -562,7 +611,7 @@ export default function ChallengeProgressScreen() {
 
     for (const day of planDays) {
       const isCompleted = progressDays.find((item) => item.day_number === day.day_number)?.completed;
-      if (day.day_number <= currentCalendarDay && !isCompleted) {
+      if (day.day_number <= calendarDayNumber && !isCompleted) {
         expanded[day.day_number] = true;
       }
     }
@@ -577,14 +626,14 @@ export default function ChallengeProgressScreen() {
     }
 
     return expanded;
-  }, [requestedDayNumber, currentCalendarDay]);
+  }, [requestedDayNumber]);
 
   const loadThread = useCallback(async (showLoader = false) => {
     if (!challengeId) {
       return;
     }
 
-    if (showLoader && !cachedThread) {
+    if (showLoader && !initialCachedThreadRef.current) {
       setLoading(true);
     } else {
       setRefreshing(true);
@@ -592,12 +641,22 @@ export default function ChallengeProgressScreen() {
 
     try {
       const response = await fetchChallengeProgressData<ChallengeProgressThread>(challengeId);
+      const progressByDay = new Map<number, ChallengePlanDayProgress>();
+      for (const dayProgress of response.viewer_plan_progress || []) {
+        progressByDay.set(dayProgress.day_number, dayProgress);
+      }
+      const nextIncompleteDay = response.plan_days.find((day) => !progressByDay.get(day.day_number)?.completed);
+      const calendarDayNumber = getChallengeCurrentCalendarDay(
+        response.started_at,
+        response.duration_days || response.plan_days.length || 1,
+        nextIncompleteDay?.day_number || 1,
+      );
       setThread(response);
       setExpandedDays((current) => {
         if (Object.keys(current).length > 0) {
           return current;
         }
-        return getInitialExpandedDays(response.plan_days, response.viewer_plan_progress);
+        return getInitialExpandedDays(response.plan_days, response.viewer_plan_progress, calendarDayNumber);
       });
     } catch (error) {
       setErrorDialog(formatAppError(error, 'Failed to load challenge progress.'));
@@ -605,15 +664,7 @@ export default function ChallengeProgressScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [cachedThread, challengeId, getInitialExpandedDays]);
-
-  useEffect(() => {
-    if (!thread) {
-      return;
-    }
-
-    setExpandedDays(getInitialExpandedDays(thread.plan_days, thread.viewer_plan_progress));
-  }, [getInitialExpandedDays, thread]);
+  }, [challengeId, getInitialExpandedDays]);
 
   useEffect(() => {
     void loadThread(true);
@@ -792,13 +843,13 @@ export default function ChallengeProgressScreen() {
     void toggleDayCompletion(dayNumber, completed);
   }, [closeDayCompletionConfirm, dayCompletionConfirm, toggleDayCompletion, toggleSectionCompletion]);
 
-  const handleDownloadReport = useCallback(async () => {
+  const handleDownloadReport = useCallback(async (dayNumber?: number, target = 'summary') => {
     if (!thread) {
       return;
     }
-    setReportAction('download');
+    setReportAction({ action: 'download', target });
     try {
-      const asset = await buildChallengeProgressReportAsset(thread.challenge_id, celebration?.dayNumber);
+      const asset = await buildChallengeProgressReportAsset(thread.challenge_id, dayNumber);
       if (Platform.OS === 'web' && typeof document !== 'undefined') {
         const blob = await getWebReportBlob(asset.fileUri);
         const objectUrl = URL.createObjectURL(blob);
@@ -823,18 +874,18 @@ export default function ChallengeProgressScreen() {
     } catch (error) {
       setErrorDialog(formatAppError(error, 'Failed to export the progress report.'));
     } finally {
-      setReportAction('');
+      setReportAction({ action: '', target: '' });
     }
-  }, [thread, exercisesToDisplay, currentUser, t]);
+  }, [thread]);
 
-  const handleShareCard = useCallback(async () => {
+  const handleShareCard = useCallback(async (dayNumber?: number, target = 'summary') => {
     if (!thread) {
       return;
     }
 
-    setReportAction('share');
+    setReportAction({ action: 'share', target });
     try {
-      const asset = await buildChallengeProgressReportAsset(thread.challenge_id, celebration?.dayNumber);
+      const asset = await buildChallengeProgressReportAsset(thread.challenge_id, dayNumber);
       const webNavigator = Platform.OS === 'web' && typeof navigator !== 'undefined'
         ? navigator as Navigator & {
             share?: (data: { title?: string; text?: string; url?: string; files?: File[] }) => Promise<void>;
@@ -862,16 +913,16 @@ export default function ChallengeProgressScreen() {
     } catch (error) {
       setErrorDialog(formatAppError(error, 'Failed to share the progress card.'));
     } finally {
-      setReportAction('');
+      setReportAction({ action: '', target: '' });
     }
-  }, [thread, exercisesToDisplay, currentUser, t]);
+  }, [thread]);
 
   const handleShareReportToCommunity = useCallback(async () => {
     if (!thread) {
       return;
     }
 
-    setReportAction('community');
+    setReportAction({ action: 'community', target: 'header-community' });
     try {
       const asset = await buildChallengeProgressReportAsset(thread.challenge_id, celebration?.dayNumber);
       router.push({
@@ -888,9 +939,9 @@ export default function ChallengeProgressScreen() {
     } catch (error) {
       setErrorDialog(formatAppError(error, 'Failed to prepare the progress report for community sharing.'));
     } finally {
-      setReportAction('');
+      setReportAction({ action: '', target: '' });
     }
-  }, [router, thread, exercisesToDisplay, currentUser, t]);
+  }, [router, thread, celebration?.dayNumber]);
 
   if (loading && !thread) {
     return (
@@ -934,10 +985,10 @@ export default function ChallengeProgressScreen() {
 
           {/* Floating Actions Header (Download, Share, Close) */}
           <View style={styles.floatingHeaderActions}>
-            <TouchableOpacity style={styles.floatingActionButton} onPress={() => void handleDownloadReport()} disabled={reportAction !== ''}>
+            <TouchableOpacity style={styles.floatingActionButton} onPress={() => void handleDownloadReport(celebration?.dayNumber, 'celebration-download')} disabled={anyReportActionBusy}>
               <Ionicons name="download-outline" size={18} color="#fff" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.floatingActionButton} onPress={() => void handleShareCard()} disabled={reportAction !== ''}>
+            <TouchableOpacity style={styles.floatingActionButton} onPress={() => void handleShareCard(celebration?.dayNumber, 'celebration-share')} disabled={anyReportActionBusy}>
               <Ionicons name="share-social-outline" size={18} color="#fff" />
             </TouchableOpacity>
             <TouchableOpacity style={styles.floatingActionButton} onPress={() => setCelebration(null)}>
@@ -980,13 +1031,18 @@ export default function ChallengeProgressScreen() {
             <View style={styles.newPostcardMetricsRow}>
               <View style={styles.newPostcardMetricTile}>
                 <Text style={styles.newPostcardMetricLabel}>{t('WORKOUT_CARD_STREAK').toUpperCase()}</Text>
-                <Text style={styles.newPostcardMetricValue}>
-                  <Text style={{ color: '#00F0D0' }}>{currentUser?.streak_days ?? 3}</Text> 🔥
+                <Text style={styles.newPostcardMetricValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+                  <Text style={{ color: '#00F0D0' }}>{celebrationStreakCount}</Text> 🔥
                 </Text>
               </View>
               <View style={styles.newPostcardMetricTile}>
                 <Text style={styles.newPostcardMetricLabel}>{t('WORKOUT_CARD_INTENSITY').toUpperCase()}</Text>
-                <Text style={styles.newPostcardMetricValueGut}>
+                <Text
+                  style={styles.newPostcardMetricValueGut}
+                  numberOfLines={2}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.58}
+                >
                   {thread?.difficulty ? t(thread.difficulty) : t('WORKOUT_CARD_GOOD')}
                 </Text>
               </View>
@@ -1079,11 +1135,11 @@ export default function ChallengeProgressScreen() {
           <Text style={styles.headerTitle}>{thread?.title || 'Challenge Progress'}</Text>
           <Text style={styles.headerMeta}>{thread?.category || 'Challenge'} progress</Text>
         </View>
-        <TouchableOpacity onPress={() => void handleDownloadReport()} style={styles.headerIcon} disabled={!thread || reportAction !== ''}>
-          {reportAction === 'download' ? <ActivityIndicator color={Colors.primary} size="small" /> : <Ionicons name="download-outline" size={20} color="#fff" />}
+        <TouchableOpacity onPress={() => void handleDownloadReport(undefined, 'header-download')} style={styles.headerIcon} disabled={!thread || anyReportActionBusy}>
+          {isReportActionBusy('download', 'header-download') ? <ActivityIndicator color={Colors.primary} size="small" /> : <Ionicons name="download-outline" size={20} color="#fff" />}
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => void handleShareReportToCommunity()} style={styles.headerIcon} disabled={!thread || reportAction !== ''}>
-          {reportAction === 'community' ? <ActivityIndicator color={Colors.primary} size="small" /> : <Ionicons name="share-social-outline" size={20} color="#fff" />}
+        <TouchableOpacity onPress={() => void handleShareReportToCommunity()} style={styles.headerIcon} disabled={!thread || anyReportActionBusy}>
+          {isReportActionBusy('community', 'header-community') ? <ActivityIndicator color={Colors.primary} size="small" /> : <Ionicons name="share-social-outline" size={20} color="#fff" />}
         </TouchableOpacity>
         <TouchableOpacity onPress={() => void loadThread(false)} style={styles.headerIcon}>
           {refreshing ? <ActivityIndicator color={Colors.primary} size="small" /> : <Ionicons name="refresh" size={20} color="#fff" />}
@@ -1127,21 +1183,21 @@ export default function ChallengeProgressScreen() {
                 <Text style={styles.pageCardActionsTitle}>Share your progress</Text>
                 <View style={styles.cardActions}>
                   <TouchableOpacity
-                    style={[styles.cardActionButton, reportAction === 'download' && styles.cardActionButtonBusy]}
-                    onPress={() => void handleDownloadReport()}
-                    disabled={reportAction !== ''}
+                    style={[styles.cardActionButton, isReportActionBusy('download', 'summary-download') && styles.cardActionButtonBusy]}
+                    onPress={() => void handleDownloadReport(undefined, 'summary-download')}
+                    disabled={anyReportActionBusy}
                     accessibilityLabel="Download progress card"
                   >
-                    {reportAction === 'download' ? <ActivityIndicator size="small" color={Colors.primary} /> : <Ionicons name="download-outline" size={21} color={Colors.primary} />}
+                    {isReportActionBusy('download', 'summary-download') ? <ActivityIndicator size="small" color={Colors.primary} /> : <Ionicons name="download-outline" size={21} color={Colors.primary} />}
                     <Text style={styles.cardActionText}>Download</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.cardActionButton, reportAction === 'share' && styles.cardActionButtonBusy]}
-                    onPress={() => void handleShareCard()}
-                    disabled={reportAction !== ''}
+                    style={[styles.cardActionButton, isReportActionBusy('share', 'summary-share') && styles.cardActionButtonBusy]}
+                    onPress={() => void handleShareCard(undefined, 'summary-share')}
+                    disabled={anyReportActionBusy}
                     accessibilityLabel="Share progress card"
                   >
-                    {reportAction === 'share' ? <ActivityIndicator size="small" color={Colors.primary} /> : <Ionicons name="share-social-outline" size={21} color={Colors.primary} />}
+                    {isReportActionBusy('share', 'summary-share') ? <ActivityIndicator size="small" color={Colors.primary} /> : <Ionicons name="share-social-outline" size={21} color={Colors.primary} />}
                     <Text style={styles.cardActionText}>Share</Text>
                   </TouchableOpacity>
                 </View>
@@ -1151,13 +1207,7 @@ export default function ChallengeProgressScreen() {
             {!canUpdateProgress ? (
               <View style={styles.statusNotice}>
                 <Text style={styles.statusNoticeText}>
-                  {thread.status === 'UPCOMING'
-                    ? 'This challenge is upcoming. Progress tracking unlocks when the challenge becomes active.'
-                    : thread.status === 'ARCHIVED'
-                      ? 'This challenge has been archived. Progress is read-only.'
-                      : thread.viewer_membership_status !== 'ACTIVE'
-                        ? 'Your membership is no longer active. Progress is read-only.'
-                        : 'Progress is read-only right now.'}
+                  {readOnlyReason || 'Progress is read-only right now.'}
                 </Text>
               </View>
             ) : null}
@@ -1167,8 +1217,9 @@ export default function ChallengeProgressScreen() {
               <Text style={styles.legendText}>Tap a day row or the arrow to open its sections. Using the section button will mark that full day complete for your progress.</Text>
             </View>
 
-            <View style={styles.dayList}>
-              {thread.plan_days.map((day) => {
+            {hasConfiguredPlanDays ? (
+              <View style={styles.dayList}>
+                {thread.plan_days.map((day) => {
                 const dayProgress = dayProgressMap.get(day.day_number);
                 const isExpanded = Boolean(expandedDays[day.day_number]);
                 const isCurrentDay = currentCalendarDay === day.day_number && !dayProgress?.completed;
@@ -1186,13 +1237,18 @@ export default function ChallengeProgressScreen() {
                 }, 0);
                 const allSectionsCompleted = day.sections.every((section) => completedSectionIds.includes(section.id));
 
-                return (
-                  <View key={`day-${day.day_number}`} style={[
-                    styles.dayCard,
-                    dayProgress?.completed && styles.dayCardCompleted,
-                    isMissed && styles.dayCardMissed,
-                  ]}>
-                    <TouchableOpacity style={styles.dayRow} activeOpacity={0.88} onPress={() => toggleDayExpanded(day.day_number)}>
+                  return (
+                    <View key={`day-${day.day_number}`} style={[
+                      styles.dayCard,
+                      dayProgress?.completed && styles.dayCardCompleted,
+                      isMissed && styles.dayCardMissed,
+                    ]}>
+                    <TouchableOpacity
+                      style={styles.dayRow}
+                      activeOpacity={0.88}
+                      onPress={() => toggleDayExpanded(day.day_number)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
                       <View style={styles.dayLeft}>
                         <View style={[
                           styles.dayNumberBadge,
@@ -1245,9 +1301,15 @@ export default function ChallengeProgressScreen() {
                           const sectionCompleted = Boolean(completedSectionIds.includes(section.id));
                           const completedCount = sectionCompleted ? section.exercises.length : getSectionCompletedCount(section, completedExerciseIds);
                           const totalCount = section.exercises.length;
+                          const canCompleteSection = totalCount === 0 || completedCount >= totalCount;
                           return (
                             <View key={section.id} style={[styles.sectionCard, sectionCompleted && styles.sectionCardCompleted]}>
-                              <TouchableOpacity style={styles.sectionRow} activeOpacity={0.88} onPress={() => toggleSectionExpanded(sectionKey)}>
+                              <TouchableOpacity
+                                style={styles.sectionRow}
+                                activeOpacity={0.88}
+                                onPress={() => toggleSectionExpanded(sectionKey)}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                              >
                                 <View style={styles.sectionLeft}>
                                   <View style={[styles.sectionStatusDot, sectionCompleted && styles.sectionStatusDotCompleted]} />
                                   <View style={styles.sectionTextWrap}>
@@ -1269,24 +1331,34 @@ export default function ChallengeProgressScreen() {
                                 <Text style={styles.sectionMetaText}>
                                   {totalCount > 0 ? `${completedCount}/${totalCount} exercises` : `${section.estimated_minutes} min`}
                                 </Text>
-                                <TouchableOpacity
-                                  style={[
-                                    styles.compactButton,
-                                    dayProgress?.completed && styles.compactButtonCompleted,
-                                    (!canUpdateProgress || dayProgress?.completed) && styles.buttonDisabled,
-                                  ]}
-                                  disabled={!canUpdateProgress || dayProgress?.completed || completionUpdatingKey === `section-${day.day_number}-${section.id}`}
-                                  onPress={() => confirmSectionDayCompletion(day.day_number, section.id, !Boolean(dayProgress?.completed))}
-                                >
-                                  {completionUpdatingKey === `section-${day.day_number}-${section.id}` ? (
-                                    <ActivityIndicator size="small" color={dayProgress?.completed ? '#001311' : Colors.primary} />
-                                  ) : (
-                                    <Text style={[styles.compactButtonText, dayProgress?.completed && styles.compactButtonTextCompleted]}>
-                                      {dayProgress?.completed ? 'Day completed' : 'Complete day'}
-                                    </Text>
-                                  )}
-                                </TouchableOpacity>
+                                {canUpdateProgress ? (
+                                  <TouchableOpacity
+                                    style={[
+                                      styles.compactButton,
+                                      dayProgress?.completed && styles.compactButtonCompleted,
+                                      (dayProgress?.completed || !canCompleteSection) && styles.buttonDisabled,
+                                    ]}
+                                    disabled={Boolean(dayProgress?.completed) || !canCompleteSection || completionUpdatingKey === `section-${day.day_number}-${section.id}`}
+                                    onPress={() => confirmSectionDayCompletion(day.day_number, section.id, !Boolean(dayProgress?.completed))}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                  >
+                                    {completionUpdatingKey === `section-${day.day_number}-${section.id}` ? (
+                                      <ActivityIndicator size="small" color={dayProgress?.completed ? '#001311' : Colors.primary} />
+                                    ) : (
+                                      <Text style={[styles.compactButtonText, dayProgress?.completed && styles.compactButtonTextCompleted]}>
+                                        {dayProgress?.completed ? 'Day completed' : 'Complete section'}
+                                      </Text>
+                                    )}
+                                  </TouchableOpacity>
+                                ) : (
+                                  <View style={styles.readOnlyBadge}>
+                                    <Text style={styles.readOnlyBadgeText}>Read only</Text>
+                                  </View>
+                                )}
                               </View>
+                              {!sectionCompleted && totalCount > 0 && completedCount < totalCount ? (
+                                <Text style={styles.helperText}>Complete every exercise in this section before marking the section complete.</Text>
+                              ) : null}
 
                               {sectionExpanded ? (
                                 <View style={styles.exerciseList}>
@@ -1295,30 +1367,6 @@ export default function ChallengeProgressScreen() {
                                     const exerciseKey = `exercise-${day.day_number}-${exercise.id}`;
                                     return (
                                       <View key={exercise.id} style={[styles.exerciseCard, exerciseCompleted && styles.exerciseCardCompleted]}>
-                                        <TouchableOpacity
-                                          style={[
-                                            styles.exerciseCheck,
-                                            exerciseCompleted && styles.exerciseCheckCompleted,
-                                            (!canUpdateProgress || exerciseCompleted) && styles.buttonDisabled,
-                                          ]}
-                                          disabled={!canUpdateProgress || exerciseCompleted || completionUpdatingKey === exerciseKey}
-                                          onPress={() => void toggleExerciseCompletion(day.day_number, section.id, exercise.id, !exerciseCompleted)}
-                                        >
-                                          {completionUpdatingKey === exerciseKey ? (
-                                            <ActivityIndicator size="small" color={exerciseCompleted ? '#001311' : Colors.primary} />
-                                          ) : (
-                                            <View style={styles.exerciseCheckContent}>
-                                              <Ionicons
-                                                name={exerciseCompleted ? 'checkmark-circle' : 'ellipse-outline'}
-                                                size={16}
-                                                color={exerciseCompleted ? '#001311' : Colors.primary}
-                                              />
-                                              <Text style={[styles.exerciseCheckText, exerciseCompleted && styles.exerciseCheckTextCompleted]}>
-                                                {exerciseCompleted ? 'Completed' : 'Complete'}
-                                              </Text>
-                                            </View>
-                                          )}
-                                        </TouchableOpacity>
                                         <View style={styles.exerciseTextWrap}>
                                           <View style={styles.exerciseTopRow}>
                                             <Text style={styles.exerciseName}>{exercise.name}</Text>
@@ -1326,12 +1374,51 @@ export default function ChallengeProgressScreen() {
                                           </View>
                                           <Text style={styles.exerciseDetails}>{exercise.details}</Text>
                                           {exercise.notes ? <Text style={styles.exerciseNotes}>{exercise.notes}</Text> : null}
-                                          {exercise.workout_vimeo_id || exercise.workout_video_url ? (
-                                            <TouchableOpacity onPress={() => openLinkedWorkout(exercise)} style={styles.videoButton} activeOpacity={0.85}>
-                                              <Ionicons name="play-circle" size={15} color="#001311" />
-                                              <Text style={styles.videoButtonText}>Instruction video</Text>
-                                            </TouchableOpacity>
-                                          ) : null}
+                                          <View style={styles.exerciseActionRow}>
+                                            {canUpdateProgress ? (
+                                              <TouchableOpacity
+                                                style={[
+                                                  styles.exerciseCheck,
+                                                  styles.exerciseCheckWide,
+                                                  exerciseCompleted && styles.exerciseCheckCompleted,
+                                                  exerciseCompleted && styles.buttonDisabled,
+                                                ]}
+                                                disabled={exerciseCompleted || completionUpdatingKey === exerciseKey}
+                                                onPress={() => void toggleExerciseCompletion(day.day_number, section.id, exercise.id, !exerciseCompleted)}
+                                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                              >
+                                                {completionUpdatingKey === exerciseKey ? (
+                                                  <ActivityIndicator size="small" color={exerciseCompleted ? '#001311' : Colors.primary} />
+                                                ) : (
+                                                  <View style={styles.exerciseCheckContent}>
+                                                    <Ionicons
+                                                      name={exerciseCompleted ? 'checkmark-circle' : 'ellipse-outline'}
+                                                      size={16}
+                                                      color={exerciseCompleted ? '#001311' : Colors.primary}
+                                                    />
+                                                    <Text style={[styles.exerciseCheckText, exerciseCompleted && styles.exerciseCheckTextCompleted]}>
+                                                      {exerciseCompleted ? 'Completed' : 'Complete exercise'}
+                                                    </Text>
+                                                  </View>
+                                                )}
+                                              </TouchableOpacity>
+                                            ) : (
+                                              <View style={[styles.readOnlyBadge, styles.readOnlyBadgeLarge]}>
+                                                <Text style={styles.readOnlyBadgeText}>Read only</Text>
+                                              </View>
+                                            )}
+                                            {exercise.workout_vimeo_id || exercise.workout_video_url ? (
+                                              <TouchableOpacity
+                                                onPress={() => openLinkedWorkout(exercise)}
+                                                style={styles.videoButton}
+                                                activeOpacity={0.85}
+                                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                              >
+                                                <Ionicons name="play-circle" size={15} color="#001311" />
+                                                <Text style={styles.videoButtonText}>Instruction video</Text>
+                                              </TouchableOpacity>
+                                            ) : null}
+                                          </View>
                                         </View>
                                       </View>
                                     );
@@ -1342,58 +1429,73 @@ export default function ChallengeProgressScreen() {
                           );
                         })}
 
-                        <TouchableOpacity
-                          style={[
-                            styles.dayDoneButton,
-                            dayProgress?.completed && styles.dayDoneButtonCompleted,
-                            (!canUpdateProgress || (!dayProgress?.completed && !allSectionsCompleted)) && styles.buttonDisabled,
-                          ]}
-                          disabled={!canUpdateProgress || completionUpdatingKey === `day-${day.day_number}` || (!dayProgress?.completed && !allSectionsCompleted)}
-                          onPress={() => confirmDayCompletion(day.day_number, !Boolean(dayProgress?.completed))}
-                        >
-                          {completionUpdatingKey === `day-${day.day_number}` ? (
-                            <ActivityIndicator size="small" color={dayProgress?.completed ? '#001311' : Colors.primary} />
-                          ) : (
-                            <>
-                              <Ionicons
-                                name={dayProgress?.completed ? 'checkmark-circle' : 'checkmark-circle-outline'}
-                                size={18}
-                                color={dayProgress?.completed ? '#001311' : Colors.primary}
-                              />
-                              <Text style={[styles.dayDoneButtonText, dayProgress?.completed && styles.dayDoneButtonTextCompleted]}>
-                                {dayProgress?.completed ? 'Day completed' : 'Mark day done'}
-                              </Text>
-                            </>
-                          )}
-                        </TouchableOpacity>
+                        {canUpdateProgress ? (
+                          <TouchableOpacity
+                            style={[
+                              styles.dayDoneButton,
+                              dayProgress?.completed && styles.dayDoneButtonCompleted,
+                              (dayProgress?.completed || !allSectionsCompleted) && styles.buttonDisabled,
+                            ]}
+                            disabled={Boolean(dayProgress?.completed) || completionUpdatingKey === `day-${day.day_number}` || !allSectionsCompleted}
+                            onPress={() => confirmDayCompletion(day.day_number, true)}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          >
+                            {completionUpdatingKey === `day-${day.day_number}` ? (
+                              <ActivityIndicator size="small" color={dayProgress?.completed ? '#001311' : Colors.primary} />
+                            ) : (
+                              <>
+                                <Ionicons
+                                  name={dayProgress?.completed ? 'checkmark-circle' : 'checkmark-circle-outline'}
+                                  size={18}
+                                  color={dayProgress?.completed ? '#001311' : Colors.primary}
+                                />
+                                <Text style={[styles.dayDoneButtonText, dayProgress?.completed && styles.dayDoneButtonTextCompleted]}>
+                                  {dayProgress?.completed ? 'Day completed' : 'Mark day done'}
+                                </Text>
+                              </>
+                            )}
+                          </TouchableOpacity>
+                        ) : (
+                          <View style={styles.readOnlyNoticeInline}>
+                            <Text style={styles.readOnlyNoticeInlineText}>{readOnlyReason || 'Progress is read-only right now.'}</Text>
+                          </View>
+                        )}
                         {dayProgress?.completed ? (
                           <View style={styles.completedDayActions}>
                             <TouchableOpacity
-                              style={[styles.cardActionButton, reportAction === 'download' && styles.cardActionButtonBusy]}
-                              onPress={() => void handleDownloadReport()}
-                              disabled={reportAction !== ''}
+                              style={[styles.cardActionButton, isReportActionBusy('download', `day-${day.day_number}-download`) && styles.cardActionButtonBusy]}
+                              onPress={() => void handleDownloadReport(day.day_number, `day-${day.day_number}-download`)}
+                              disabled={anyReportActionBusy}
                               accessibilityLabel="Download completed challenge card"
                             >
-                              {reportAction === 'download' ? <ActivityIndicator size="small" color={Colors.primary} /> : <Ionicons name="download-outline" size={20} color={Colors.primary} />}
+                              {isReportActionBusy('download', `day-${day.day_number}-download`) ? <ActivityIndicator size="small" color={Colors.primary} /> : <Ionicons name="download-outline" size={20} color={Colors.primary} />}
                               <Text style={styles.cardActionText}>Download</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                              style={[styles.cardActionButton, reportAction === 'share' && styles.cardActionButtonBusy]}
-                              onPress={() => void handleShareCard()}
-                              disabled={reportAction !== ''}
+                              style={[styles.cardActionButton, isReportActionBusy('share', `day-${day.day_number}-share`) && styles.cardActionButtonBusy]}
+                              onPress={() => void handleShareCard(day.day_number, `day-${day.day_number}-share`)}
+                              disabled={anyReportActionBusy}
                               accessibilityLabel="Share completed challenge card"
                             >
-                              {reportAction === 'share' ? <ActivityIndicator size="small" color={Colors.primary} /> : <Ionicons name="share-social-outline" size={20} color={Colors.primary} />}
+                              {isReportActionBusy('share', `day-${day.day_number}-share`) ? <ActivityIndicator size="small" color={Colors.primary} /> : <Ionicons name="share-social-outline" size={20} color={Colors.primary} />}
                               <Text style={styles.cardActionText}>Share</Text>
                             </TouchableOpacity>
                           </View>
                         ) : null}
                       </View>
                     ) : null}
-                  </View>
-                );
-              })}
-            </View>
+                    </View>
+                  );
+                })}
+              </View>
+            ) : (
+              <View style={styles.emptyPlanNotice}>
+                <Text style={styles.emptyPlanNoticeTitle}>Challenge plan not configured yet</Text>
+                <Text style={styles.emptyPlanNoticeText}>
+                  This challenge does not have real day sections in the backend yet, so there is nothing to track until the plan is added.
+                </Text>
+              </View>
+            )}
           </>
         ) : null}
       </ScrollView>
@@ -1598,6 +1700,25 @@ const styles = StyleSheet.create({
   },
   legendTitle: { color: '#fff', fontSize: 14, fontFamily: 'Inter_700Bold' },
   legendText: { color: Colors.textSecondary, fontSize: 12, lineHeight: 18, fontFamily: 'Inter_400Regular', marginTop: 6 },
+  emptyPlanNotice: {
+    borderRadius: 16,
+    backgroundColor: '#101827',
+    borderWidth: 1,
+    borderColor: 'rgba(245,158,11,0.2)',
+    padding: 16,
+    gap: 8,
+  },
+  emptyPlanNoticeTitle: {
+    color: '#F8FAFC',
+    fontSize: 15,
+    fontFamily: 'Inter_700Bold',
+  },
+  emptyPlanNoticeText: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 18,
+    fontFamily: 'Inter_400Regular',
+  },
   dayList: { gap: 12 },
   dayCard: {
     borderRadius: 18,
@@ -1715,6 +1836,25 @@ const styles = StyleSheet.create({
   },
   compactButtonText: { color: '#001311', fontSize: 11, fontFamily: 'Inter_700Bold' },
   compactButtonTextCompleted: { color: '#DCFCE7' },
+  readOnlyBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(148,163,184,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(148,163,184,0.24)',
+  },
+  readOnlyBadgeLarge: {
+    minHeight: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+  },
+  readOnlyBadgeText: {
+    color: '#CBD5E1',
+    fontSize: 11,
+    fontFamily: 'Inter_700Bold',
+  },
   exerciseList: { gap: 8, marginTop: 4 },
   exerciseCard: {
     borderRadius: 12,
@@ -1722,17 +1862,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.05)',
     padding: 10,
-    flexDirection: 'row',
-    gap: 10,
-    alignItems: 'flex-start',
   },
   exerciseCardCompleted: {
     backgroundColor: '#0E1A16',
     borderColor: 'rgba(34,197,94,0.2)',
   },
+  exerciseActionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 10,
+  },
   exerciseCheck: {
     minWidth: 34,
-    minHeight: 34,
+    minHeight: 40,
     paddingHorizontal: 10,
     borderRadius: 17,
     justifyContent: 'center',
@@ -1744,6 +1887,10 @@ const styles = StyleSheet.create({
   exerciseCheckCompleted: {
     backgroundColor: Colors.primary,
     borderColor: Colors.primary,
+  },
+  exerciseCheckWide: {
+    minWidth: 150,
+    paddingHorizontal: 14,
   },
   exerciseCheckContent: {
     flexDirection: 'row',
@@ -1795,6 +1942,21 @@ const styles = StyleSheet.create({
   },
   dayDoneButtonText: { color: Colors.primary, fontSize: 12, fontFamily: 'Inter_700Bold' },
   dayDoneButtonTextCompleted: { color: '#001311' },
+  readOnlyNoticeInline: {
+    marginTop: 4,
+    borderRadius: 12,
+    backgroundColor: 'rgba(148,163,184,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(148,163,184,0.18)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  readOnlyNoticeInlineText: {
+    color: '#CBD5E1',
+    fontSize: 12,
+    lineHeight: 18,
+    fontFamily: 'Inter_500Medium',
+  },
   completedDayActions: { flexDirection: 'row', gap: 10, marginTop: 10 },
   celebrationBackdrop: { flex: 1, backgroundColor: '#050B14', alignItems: 'center', justifyContent: 'center', padding: 20, overflow: 'hidden' },
   confettiPiece: { position: 'absolute', top: -20, width: 8, height: 16, borderRadius: 2 },
@@ -1877,14 +2039,15 @@ const styles = StyleSheet.create({
   /* New Postcard Redesign Styles */
   newPostcardLogoContainer: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
+    paddingHorizontal: 20,
   },
   newPostcardBrandText: {
     color: '#F8FAFC',
-    fontSize: 34,
+    fontSize: 30,
     fontFamily: 'Inter_900Black',
     fontWeight: '900',
-    letterSpacing: -1,
+    letterSpacing: -0.8,
     textAlign: 'center',
     marginTop: 4,
   },
@@ -1893,8 +2056,9 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.06)',
-    padding: 24,
-    marginBottom: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 22,
+    marginBottom: 14,
     width: '100%',
   },
   newPostcardLabel: {
@@ -1908,8 +2072,8 @@ const styles = StyleSheet.create({
   },
   newPostcardTitle: {
     color: '#fff',
-    fontSize: 22,
-    lineHeight: 28,
+    fontSize: 20,
+    lineHeight: 26,
     fontFamily: 'Inter_900Black',
     fontWeight: '900',
     textAlign: 'center',
@@ -1922,9 +2086,9 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   newPostcardExercises: {
-    gap: 12,
+    gap: 10,
     width: '100%',
-    paddingLeft: 12,
+    paddingLeft: 8,
   },
   newPostcardExerciseRow: {
     flexDirection: 'row',
@@ -1940,69 +2104,79 @@ const styles = StyleSheet.create({
   newPostcardExerciseText: {
     flex: 1,
     color: '#CBD5E1',
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: 'Inter_700Bold',
     fontWeight: '700',
-    letterSpacing: 0.5,
+    letterSpacing: 0.25,
   },
   newPostcardMetricsRow: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 16,
+    marginBottom: 14,
     width: '100%',
+    alignItems: 'stretch',
   },
   newPostcardMetricTile: {
     flex: 1,
+    minWidth: 0,
+    minHeight: 88,
     backgroundColor: '#111113',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.06)',
     borderRadius: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   newPostcardMetricLabel: {
     color: 'rgba(255, 255, 255, 0.4)',
     fontSize: 9,
-    letterSpacing: 1.5,
+    letterSpacing: 1.2,
     fontFamily: 'Inter_700Bold',
     fontWeight: '700',
-    marginBottom: 4,
+    marginBottom: 6,
     textAlign: 'center',
   },
   newPostcardMetricValue: {
     color: '#fff',
-    fontSize: 22,
+    fontSize: 20,
+    lineHeight: 24,
     fontFamily: 'Inter_900Black',
     fontWeight: '900',
+    textAlign: 'center',
   },
   newPostcardMetricValueGut: {
     color: '#FF4B72',
-    fontSize: 22,
+    fontSize: 18,
+    lineHeight: 20,
     fontFamily: 'Inter_900Black',
     fontWeight: '900',
+    textAlign: 'center',
+    width: '100%',
   },
   newPostcardUserPill: {
     backgroundColor: '#00B7F0',
     borderRadius: 999,
     paddingVertical: 10,
-    paddingHorizontal: 28,
+    paddingHorizontal: 24,
+    maxWidth: '82%',
     alignSelf: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   newPostcardUserPillText: {
     color: '#000000',
     fontSize: 12,
     fontFamily: 'Inter_900Black',
     fontWeight: '900',
-    letterSpacing: 1.5,
+    letterSpacing: 1.1,
     textAlign: 'center',
   },
   newPostcardUrl: {
     color: 'rgba(255, 255, 255, 0.3)',
     textAlign: 'center',
-    fontSize: 10,
-    letterSpacing: 3,
+    fontSize: 9,
+    letterSpacing: 2.2,
     fontFamily: 'Inter_700Bold',
     marginTop: 8,
   },
