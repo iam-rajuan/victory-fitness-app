@@ -9,6 +9,7 @@ import {
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
 import { Colors } from '../constants/Colors';
+import PwaInstallPrompt from '../components/PwaInstallPrompt';
 import { clearAuthTokens, fetchCurrentUser, getAuthUser, getValidAuthTokens, setAuthFailureHandler } from '../lib/api';
 import { getPostAuthRoute, isAdminRestrictedFromApp, isPublicRoute, isRouteAllowedForPlan, isSubscriptionActive } from '../lib/access';
 import { appendRunLog, formatRunLogMessage } from '../lib/runLog';
@@ -314,6 +315,7 @@ export default function RootLayout() {
             animation: 'none',
           }}
         />
+        <PwaInstallPrompt />
         {toastNotification ? (
           <TouchableOpacity
             style={styles.notificationToast}
