@@ -6,11 +6,11 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
-  Dimensions,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
@@ -22,8 +22,6 @@ import { formatAppError } from '../../lib/error';
 import { createStrengthWorkoutPlan } from '../../lib/workout-plans';
 import { useModuleAccessGuard } from '../../lib/useModuleAccessGuard';
 import { useLanguage } from '../../lib/i18n';
-
-const { width } = Dimensions.get('window');
 
 const TOTAL_STEPS = 9;
 
@@ -63,6 +61,7 @@ export default function StrengthWizard() {
   const checkingAccess = useModuleAccessGuard('/workoutplan');
   const router = useRouter();
   const { t } = useLanguage();
+  const { width } = useWindowDimensions();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<any>({
     equipment: [],
@@ -180,6 +179,10 @@ export default function StrengthWizard() {
   };
 
   const progress = (step / TOTAL_STEPS) * 100;
+  const isCompactWidth = width < 380;
+  const contentPadding = isCompactWidth ? 16 : 24;
+  const equipmentCardWidth = Math.max(132, (width - (contentPadding * 2) - 12) / 2);
+  const footerShouldStack = width < 360;
 
   const renderStep = () => {
     if (loading) {
@@ -201,7 +204,7 @@ export default function StrengthWizard() {
               {GOALS.map((g) => (
                 <TouchableOpacity
                   key={g.id}
-                  style={[styles.wideCard, formData.goal === g.id && styles.activeCard]}
+                  style={[styles.wideCard, isCompactWidth && styles.wideCardCompact, formData.goal === g.id && styles.activeCard]}
                   onPress={() => updateData('goal', g.id)}
                 >
                   <View>
@@ -222,7 +225,7 @@ export default function StrengthWizard() {
               {['BEGINNER', 'INTERMEDIATE', 'ADVANCED'].map((l) => (
                 <TouchableOpacity
                   key={l}
-                  style={[styles.wideCard, formData.level === l && styles.activeCard]}
+                  style={[styles.wideCard, isCompactWidth && styles.wideCardCompact, formData.level === l && styles.activeCard]}
                   onPress={() => updateData('level', l)}
                 >
                   <Text style={[styles.cardTitle, formData.level === l && styles.activeCardTitle]}>{t(l)}</Text>
@@ -240,7 +243,7 @@ export default function StrengthWizard() {
               {SPLITS.map((s) => (
                 <TouchableOpacity
                   key={s.id}
-                  style={[styles.wideCard, formData.split === s.id && styles.activeCard]}
+                  style={[styles.wideCard, isCompactWidth && styles.wideCardCompact, formData.split === s.id && styles.activeCard]}
                   onPress={() => updateData('split', s.id)}
                 >
                   <View>
@@ -318,7 +321,11 @@ export default function StrengthWizard() {
                   return (
                     <TouchableOpacity
                       key={e.id}
-                      style={[styles.equipmentCard, isSelected && styles.activeEquipmentCard]}
+                      style={[
+                        styles.equipmentCard,
+                        { width: equipmentCardWidth },
+                        isSelected && styles.activeEquipmentCard,
+                      ]}
                       onPress={() => toggleListValue('equipment', e.id)}
                     >
                       <View style={[styles.checkbox, isSelected && styles.activeCheckbox]}>
@@ -361,7 +368,7 @@ export default function StrengthWizard() {
                 return (
                   <TouchableOpacity
                     key={day}
-                    style={[styles.wideCard, isSelected && styles.activeCard]}
+                    style={[styles.wideCard, isCompactWidth && styles.wideCardCompact, isSelected && styles.activeCard]}
                     onPress={() => toggleListValue('days', day)}
                   >
                     <View style={[styles.checkbox, isSelected && styles.activeCheckbox]}>
@@ -418,7 +425,7 @@ export default function StrengthWizard() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         {/* Step Header */}
         {!loading && (
-          <View style={styles.header}>
+          <View style={[styles.header, { paddingHorizontal: contentPadding, paddingBottom: isCompactWidth ? 18 : 24 }]}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
               <Ionicons name="add" size={28} color="#fff" style={{ transform: [{ rotate: '45deg' }] }} />
             </TouchableOpacity>
@@ -434,17 +441,25 @@ export default function StrengthWizard() {
           </View>
         )}
 
-        <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContainer, { paddingHorizontal: contentPadding, paddingBottom: footerShouldStack ? 132 : 100 }]}
+          showsVerticalScrollIndicator={false}
+        >
           {renderStep()}
         </ScrollView>
 
         {!loading && (
-          <View style={styles.footer}>
+          <View style={[styles.footer, footerShouldStack && styles.footerStack, { paddingHorizontal: contentPadding }]}>
             <TouchableOpacity onPress={prevStep} disabled={step === 1}>
               <Text style={[styles.footerBtnText, step === 1 && { opacity: 0.3 }]}>{t('Back')}</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[styles.mainBtn, !canNext() && styles.mainBtnDisabled]}
+              style={[
+                styles.mainBtn,
+                isCompactWidth && styles.mainBtnCompact,
+                footerShouldStack && styles.mainBtnStack,
+                !canNext() && styles.mainBtnDisabled,
+              ]}
               onPress={nextStep}
               activeOpacity={0.8}
               disabled={!canNext()}
@@ -506,7 +521,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.accentBlue,
   },
   scrollContainer: {
-    paddingHorizontal: 24,
     paddingBottom: 100,
   },
   stepContent: {
@@ -542,6 +556,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
+  },
+  wideCardCompact: {
+    paddingHorizontal: 18,
+    paddingVertical: 20,
   },
   activeCard: {
     borderColor: Colors.accentBlue,
@@ -595,7 +613,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   equipmentCard: {
-    width: (width - 60) / 2,
     backgroundColor: '#2A2E33',
     borderRadius: 16,
     padding: 16,
@@ -662,9 +679,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
     paddingBottom: Platform.OS === 'ios' ? 40 : 24,
     paddingTop: 16,
+  },
+  footerStack: {
+    gap: 16,
+    alignItems: 'stretch',
   },
   footerBtnText: {
     color: 'rgba(255,255,255,0.5)',
@@ -683,6 +703,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
+  },
+  mainBtnCompact: {
+    minWidth: 160,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+  },
+  mainBtnStack: {
+    width: '100%',
   },
   mainBtnDisabled: {
     opacity: 0.45,

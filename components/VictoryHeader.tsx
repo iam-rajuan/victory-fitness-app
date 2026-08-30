@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { fetchAppNotifications, getAuthUser, fetchCurrentUser } from '../lib/api';
@@ -14,8 +14,16 @@ interface VictoryHeaderProps {
 export default function VictoryHeader({ showGreeting = false }: VictoryHeaderProps) {
   const router = useRouter();
   const { t } = useLanguage();
+  const { width } = useWindowDimensions();
   const [unreadCount, setUnreadCount] = useState(0);
   const [userName, setUserName] = useState('');
+  const isCompactWidth = width < 380;
+  const sideBlockWidth = Math.max(72, Math.min(100, width * 0.22));
+  const logoWidth = Math.max(74, Math.min(95, width * 0.24));
+  const logoHeight = isCompactWidth ? 24 : 28;
+  const buttonSize = isCompactWidth ? 36 : 40;
+  const greetingPrefixSize = isCompactWidth ? 11 : 12;
+  const greetingNameSize = isCompactWidth ? 15 : 16;
 
   React.useEffect(() => {
     let cancelled = false;
@@ -74,12 +82,12 @@ export default function VictoryHeader({ showGreeting = false }: VictoryHeaderPro
 
   return (
     <View style={styles.header}>
-      <View style={styles.headerRow}>
+      <View style={[styles.headerRow, isCompactWidth && styles.headerRowCompact]}>
         {/* Left: Brand Logo */}
-        <View style={styles.brandBlock}>
+        <View style={[styles.brandBlock, { width: sideBlockWidth }]}>
           <Image
             source={require('../assets/logo_dark.png')}
-            style={styles.brandLogo}
+            style={[styles.brandLogo, { width: logoWidth, height: logoHeight }]}
             resizeMode="contain"
           />
         </View>
@@ -88,8 +96,15 @@ export default function VictoryHeader({ showGreeting = false }: VictoryHeaderPro
         <View style={styles.middleBlock}>
           {showGreeting && firstName ? (
             <View style={styles.greetingContainer}>
-              <Text style={styles.greetingPrefix}>{t('Good morning')}</Text>
-              <Text style={styles.greetingName} numberOfLines={1}>
+              <Text
+                style={[
+                  styles.greetingPrefix,
+                  { fontSize: greetingPrefixSize, lineHeight: greetingPrefixSize + 3 },
+                ]}
+              >
+                {t('Good morning')}
+              </Text>
+              <Text style={[styles.greetingName, { fontSize: greetingNameSize, lineHeight: greetingNameSize + 2 }]} numberOfLines={1}>
                 {firstName}
               </Text>
             </View>
@@ -97,15 +112,18 @@ export default function VictoryHeader({ showGreeting = false }: VictoryHeaderPro
         </View>
 
         {/* Right: Notifications */}
-        <View style={styles.rightBlock}>
+        <View style={[styles.rightBlock, { width: sideBlockWidth }]}>
           <TouchableOpacity
-            style={styles.notificationButton}
+            style={[
+              styles.notificationButton,
+              { width: buttonSize, height: buttonSize, borderRadius: buttonSize / 2 },
+            ]}
             onPress={() => router.push('/notifications')}
             accessibilityRole="button"
             accessibilityLabel="Open notifications"
             hitSlop={10}
           >
-            <Ionicons name="notifications-outline" size={20} color="#fff" />
+            <Ionicons name="notifications-outline" size={isCompactWidth ? 18 : 20} color="#fff" />
             {unreadCount > 0 ? (
               <View style={styles.unreadBadge}>
                 <Text style={styles.unreadBadgeText}>
@@ -126,19 +144,19 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   headerRow: {
-    height: 48,
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  headerRowCompact: {
+    gap: 10,
+  },
   brandBlock: {
-    width: 100,
     alignItems: 'flex-start',
     justifyContent: 'center',
   },
   brandLogo: {
-    width: 95,
-    height: 28,
   },
   middleBlock: {
     flex: 1,
@@ -150,31 +168,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   greetingPrefix: {
-    fontSize: 12,
     color: '#9CA3AF',
     fontFamily: 'Inter_400Regular',
-    lineHeight: 15,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   greetingName: {
-    fontSize: 16,
     fontWeight: '700',
     color: '#00F0D0',
     fontFamily: 'Inter_700Bold',
-    lineHeight: 18,
   },
   rightBlock: {
-    width: 100,
     alignItems: 'flex-end',
     justifyContent: 'center',
   },
   notificationButton: {
-    width: 40,
-    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.12)',

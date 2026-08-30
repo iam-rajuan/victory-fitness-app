@@ -1896,7 +1896,7 @@ export default function JournalScreen() {
   }
 
   if (generating) {
-    const progressWidth = `${Math.round(generationProgress * 100)}%`;
+    const progressWidth = `${Math.round(generationProgress * 100)}%` as const;
     const stageLabel = t('Processing');
     const stageMessage = t('The backend is building your meal plan now.');
 

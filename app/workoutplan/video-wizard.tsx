@@ -6,10 +6,10 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
-  Dimensions,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
@@ -19,8 +19,6 @@ import VictoryHeader from '../../components/VictoryHeader';
 import { createVideoWorkoutPlan } from '../../lib/workout-plans';
 import { useModuleAccessGuard } from '../../lib/useModuleAccessGuard';
 import { useLanguage } from '../../lib/i18n';
-
-const { width, height } = Dimensions.get('window');
 
 const TOTAL_STEPS = 8;
 
@@ -66,6 +64,7 @@ export default function WorkoutVideoWizard() {
   const checkingAccess = useModuleAccessGuard('/workoutplan');
   const router = useRouter();
   const { t } = useLanguage();
+  const { width } = useWindowDimensions();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<any>({
     countryCode: '+49',
@@ -115,6 +114,9 @@ export default function WorkoutVideoWizard() {
   };
 
   const progress = (step / TOTAL_STEPS) * 100;
+  const isCompactWidth = width < 380;
+  const contentPadding = isCompactWidth ? 16 : 24;
+  const footerShouldStack = width < 360;
 
   const renderStep = () => {
     if (loading) {
@@ -311,7 +313,7 @@ export default function WorkoutVideoWizard() {
         style={{ flex: 1 }}
       >
         {/* Step Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingHorizontal: contentPadding, paddingBottom: isCompactWidth ? 16 : 20 }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
             <Ionicons name="close" size={28} color="#fff" />
           </TouchableOpacity>
@@ -326,7 +328,7 @@ export default function WorkoutVideoWizard() {
         </View>
 
         <ScrollView 
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingHorizontal: contentPadding, paddingBottom: footerShouldStack ? 132 : 120 }]}
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
@@ -335,7 +337,7 @@ export default function WorkoutVideoWizard() {
 
         {/* Navigation Footer */}
         {step <= TOTAL_STEPS && !loading && (
-          <View style={styles.footer}>
+          <View style={[styles.footer, footerShouldStack && styles.footerStack, { paddingHorizontal: isCompactWidth ? 20 : 40 }]}>
             <TouchableOpacity onPress={prevStep} disabled={step === 1}>
               <Text style={[styles.navBtnText, step === 1 && { opacity: 0.2 }]}>{t('Back')}</Text>
             </TouchableOpacity>
@@ -359,9 +361,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
     paddingTop: 10,
-    paddingBottom: 20,
     gap: 15,
   },
   closeBtn: {
@@ -386,7 +386,6 @@ const styles = StyleSheet.create({
     width: 32,
   },
   scrollContent: {
-    paddingHorizontal: 24,
     paddingBottom: 120, 
     flexGrow: 1,
   },
@@ -505,12 +504,15 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 40,
     paddingBottom: Platform.OS === 'ios' ? 40 : 24,
     backgroundColor: '#000',
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.05)',
     paddingTop: 16,
+  },
+  footerStack: {
+    gap: 16,
+    alignItems: 'stretch',
   },
   navBtnText: {
     color: 'rgba(255,255,255,0.4)',

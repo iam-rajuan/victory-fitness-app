@@ -117,6 +117,8 @@ function getDynamicRankIcon(rank: string) {
 function getSubscriptionTierLabel(tier: string) {
   const normalized = tier.trim().toUpperCase().replace(/\s+/g, '_');
   switch (normalized) {
+    case 'GOLD_BETA':
+      return '21-Day Gold Beta';
     case 'SILVER':
       return 'Silver';
     case 'GOLD':
@@ -134,6 +136,8 @@ function getSubscriptionTierLabel(tier: string) {
 function getSubscriptionTierBadgeStyle(tier: string) {
   const normalized = tier.trim().toUpperCase().replace(/\s+/g, '_');
   switch (normalized) {
+    case 'GOLD_BETA':
+      return { backgroundColor: 'rgba(245,158,11,0.16)', borderColor: 'rgba(245,158,11,0.34)' };
     case 'SILVER':
       return { backgroundColor: 'rgba(148,163,184,0.16)', borderColor: 'rgba(148,163,184,0.34)' };
     case 'GOLD':
@@ -172,7 +176,12 @@ export default function ProfileScreen() {
     subscription_tier?: string;
     subscription_role?: string;
     subscription_status?: string;
+    subscription_purchase_source?: string;
     subscription_access?: string[];
+    gold_trial?: {
+      active?: boolean;
+      is_beta_tester?: boolean;
+    };
     motivation_statement?: string | null;
     identity_statement?: string | null;
     workout_unlock_label?: string | null;
@@ -342,8 +351,19 @@ export default function ProfileScreen() {
   const progressFraction = Math.min(Math.max(me?.rank_progress_fraction ?? 0, 0), 1);
   const pointsToNextRank = Math.max(me?.points_to_next_rank ?? 0, 0);
   const rankIcon = getDynamicRankIcon(rank);
-  const currentPlanLabel = getSubscriptionTierLabel(String(me?.subscription_role ?? me?.subscription_tier ?? 'NONE'));
-  const currentPlanBadgeStyle = getSubscriptionTierBadgeStyle(String(me?.subscription_role ?? me?.subscription_tier ?? 'NONE'));
+  const effectiveProfilePlanTier = React.useMemo(() => {
+    const purchaseSource = String(me?.subscription_purchase_source ?? '').trim().toLowerCase();
+    if (
+      String(me?.subscription_tier ?? '').trim().toUpperCase() === 'GOLD_BETA' ||
+      purchaseSource === 'beta_trial' ||
+      me?.gold_trial?.is_beta_tester
+    ) {
+      return 'GOLD_BETA';
+    }
+    return String(me?.subscription_role ?? me?.subscription_tier ?? 'NONE');
+  }, [me?.gold_trial?.is_beta_tester, me?.subscription_purchase_source, me?.subscription_role, me?.subscription_tier]);
+  const currentPlanLabel = getSubscriptionTierLabel(effectiveProfilePlanTier);
+  const currentPlanBadgeStyle = getSubscriptionTierBadgeStyle(effectiveProfilePlanTier);
   const habitSummary = React.useMemo(() => {
     const parts = [
       me?.identity_statement?.trim() ? `Identity: ${me.identity_statement.trim()}` : '',

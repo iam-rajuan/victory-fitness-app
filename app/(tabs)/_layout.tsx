@@ -3,7 +3,7 @@ import { Tabs } from 'expo-router';
 import { useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
-import { Image, StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import AccessRestrictionModal from '../../components/AccessRestrictionModal';
 import { fetchCurrentUser, getAuthUser, getValidAuthTokens } from '../../lib/api';
@@ -17,11 +17,17 @@ export default function TabsLayout() {
   const segments = useSegments();
   const routerRef = React.useRef(router);
   const { t } = useLanguage();
+  const { width } = useWindowDimensions();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [profileImage, setProfileImage] = useState('');
   const [allowedTabs, setAllowedTabs] = useState<string[] | null>(null);
   const [restrictedSection, setRestrictedSection] = useState('');
   const hasStartedPreloadRef = React.useRef(false);
+  const isCompactWidth = width < 380;
+  const tabBarHeight = isCompactWidth ? 60 : 64;
+  const tabIconSize = isCompactWidth ? 22 : 24;
+  const activeTabPadding = isCompactWidth ? 7 : 8;
+  const profileBadgeSize = isCompactWidth ? 30 : 32;
 
   useEffect(() => {
     routerRef.current = router;
@@ -128,7 +134,14 @@ export default function TabsLayout() {
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarStyle: styles.tabBar,
+          tabBarStyle: [
+            styles.tabBar,
+            {
+              height: tabBarHeight,
+              paddingBottom: isCompactWidth ? 7 : 8,
+              paddingTop: isCompactWidth ? 7 : 8,
+            },
+          ],
           tabBarActiveTintColor: Colors.primary,
           tabBarInactiveTintColor: Colors.textMuted,
           tabBarShowLabel: false,
@@ -138,8 +151,8 @@ export default function TabsLayout() {
           name="index"
           options={{
             tabBarIcon: ({ color, focused }) => (
-              <View style={focused ? styles.activeTab : undefined}>
-                <Ionicons name={focused ? 'home' : 'home-outline'} size={24} color={color} />
+              <View style={focused ? [styles.activeTab, { padding: activeTabPadding }] : undefined}>
+                <Ionicons name={focused ? 'home' : 'home-outline'} size={tabIconSize} color={color} />
               </View>
             ),
           }}
@@ -148,8 +161,8 @@ export default function TabsLayout() {
           name="workout"
           options={{
             tabBarIcon: ({ color, focused }) => (
-              <View style={focused ? styles.activeTab : undefined}>
-                <Ionicons name={focused ? 'barbell' : 'barbell-outline'} size={24} color={color} />
+              <View style={focused ? [styles.activeTab, { padding: activeTabPadding }] : undefined}>
+                <Ionicons name={focused ? 'barbell' : 'barbell-outline'} size={tabIconSize} color={color} />
               </View>
             ),
           }}
@@ -167,8 +180,8 @@ export default function TabsLayout() {
           name="challenge"
           options={{
             tabBarIcon: ({ color, focused }) => (
-              <View style={focused ? styles.activeTab : undefined}>
-                <Ionicons name={focused ? 'trophy' : 'trophy-outline'} size={24} color={color} />
+              <View style={focused ? [styles.activeTab, { padding: activeTabPadding }] : undefined}>
+                <Ionicons name={focused ? 'trophy' : 'trophy-outline'} size={tabIconSize} color={color} />
               </View>
             ),
           }}
@@ -186,8 +199,8 @@ export default function TabsLayout() {
           name="mealPlan"
           options={{
             tabBarIcon: ({ color, focused }) => (
-              <View style={focused ? styles.activeTab : undefined}>
-                <Ionicons name={focused ? 'restaurant' : 'restaurant-outline'} size={24} color={color} />
+              <View style={focused ? [styles.activeTab, { padding: activeTabPadding }] : undefined}>
+                <Ionicons name={focused ? 'restaurant' : 'restaurant-outline'} size={tabIconSize} color={color} />
               </View>
             ),
           }}
@@ -205,12 +218,21 @@ export default function TabsLayout() {
           name="profile"
           options={{
             tabBarIcon: ({ color, focused }) => (
-              <View style={focused ? styles.activeTab : undefined}>
-                <View style={styles.profileBadge}>
+              <View style={focused ? [styles.activeTab, { padding: activeTabPadding }] : undefined}>
+                <View
+                  style={[
+                    styles.profileBadge,
+                    {
+                      width: profileBadgeSize,
+                      height: profileBadgeSize,
+                      borderRadius: profileBadgeSize / 2,
+                    },
+                  ]}
+                >
                   {profileImage ? (
                     <Image source={{ uri: profileImage }} style={styles.profileAvatar} />
                   ) : (
-                    <Ionicons name={focused ? 'person' : 'person-outline'} size={24} color={color} />
+                    <Ionicons name={focused ? 'person' : 'person-outline'} size={tabIconSize} color={color} />
                   )}
                 </View>
               </View>
@@ -244,21 +266,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#0A0A14',
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.08)',
-    height: 64,
-    paddingBottom: 8,
-    paddingTop: 8,
     zIndex: 1000,
     elevation: 1000,
   },
   activeTab: {
     backgroundColor: 'rgba(0, 240, 208, 0.12)',
     borderRadius: 16,
-    padding: 8,
   },
   profileBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',

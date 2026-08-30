@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
   FlatList,
   Linking,
   Modal,
@@ -12,6 +11,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -27,11 +27,6 @@ import {
 } from '../lib/access';
 import { useLanguage } from '../lib/i18n';
 import { replaceRoute } from '../lib/navigation';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = Math.min(SCREEN_WIDTH * 0.84, 340);
-const CARD_GAP = 14;
-const HORIZONTAL_PADDING = Math.max((SCREEN_WIDTH - CARD_WIDTH) / 2, 16);
 
 type AppPlanViewModel = AppPlanCard & {
   planId: string;
@@ -194,6 +189,11 @@ export default function PlanSelectionScreen() {
   const params = useLocalSearchParams<{ checkout?: string; entry?: string }>();
   const { t } = useLanguage();
   const flatListRef = useRef<FlatList>(null);
+  const { width: screenWidth } = useWindowDimensions();
+  const isCompactWidth = screenWidth < 380;
+  const cardGap = isCompactWidth ? 12 : 14;
+  const cardWidth = Math.min(Math.max(screenWidth - (isCompactWidth ? 38 : 52), 280), 340);
+  const horizontalPadding = Math.max((screenWidth - cardWidth) / 2, isCompactWidth ? 12 : 16);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -322,7 +322,7 @@ export default function PlanSelectionScreen() {
     if (index >= 0 && index < plans.length) {
       setActiveIndex(index);
       setSelectedTier(plans[index].tier);
-      flatListRef.current?.scrollToOffset({ offset: index * (CARD_WIDTH + CARD_GAP), animated: true });
+      flatListRef.current?.scrollToOffset({ offset: index * (cardWidth + cardGap), animated: true });
     }
   };
 
@@ -333,7 +333,7 @@ export default function PlanSelectionScreen() {
       if (initialIndex >= 0) {
         setTimeout(() => {
           flatListRef.current?.scrollToOffset({
-            offset: initialIndex * (CARD_WIDTH + CARD_GAP),
+            offset: initialIndex * (cardWidth + cardGap),
             animated: false,
           });
           setActiveIndex(initialIndex);
@@ -341,11 +341,11 @@ export default function PlanSelectionScreen() {
       }
       setHasInitialScrolled(true);
     }
-  }, [plans, selectedTier, hasInitialScrolled]);
+  }, [cardGap, cardWidth, plans, selectedTier, hasInitialScrolled]);
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetX = event.nativeEvent.contentOffset.x;
-    const index = Math.round(offsetX / (CARD_WIDTH + CARD_GAP));
+    const index = Math.round(offsetX / (cardWidth + cardGap));
     if (index >= 0 && index < plans.length && index !== activeIndex) {
       setActiveIndex(index);
       setSelectedTier(plans[index].tier);
@@ -433,7 +433,13 @@ export default function PlanSelectionScreen() {
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.page}>
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            { paddingTop: isCompactWidth ? 12 : 16, paddingBottom: isCompactWidth ? 28 : 40 },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
           {/* Top Navigation Bar with Back & Close buttons */}
           <View style={styles.topNavBar}>
             <TouchableOpacity
@@ -456,7 +462,7 @@ export default function PlanSelectionScreen() {
           </View>
 
           {/* Header / Hero */}
-          <View style={styles.hero}>
+          <View style={[styles.hero, { paddingHorizontal: isCompactWidth ? 16 : 22 }]}>
             <View style={styles.kickerBadge}>
               <Ionicons name="sparkles" size={12} color="#18D2EF" />
               <Text style={styles.kicker}>{t('VICTORY FITNESS MEMBERSHIP')}</Text>
@@ -503,13 +509,13 @@ export default function PlanSelectionScreen() {
               keyExtractor={(item) => item.tier}
               horizontal
               showsHorizontalScrollIndicator={false}
-              snapToInterval={CARD_WIDTH + CARD_GAP}
+              snapToInterval={cardWidth + cardGap}
               snapToAlignment="center"
               decelerationRate="fast"
               disableIntervalMomentum={true}
               onScroll={handleScroll}
               scrollEventThrottle={16}
-              contentContainerStyle={[styles.cardsRow, { paddingHorizontal: HORIZONTAL_PADDING }]}
+              contentContainerStyle={[styles.cardsRow, { paddingHorizontal: horizontalPadding }]}
               renderItem={({ item: card, index }) => {
                 const active = selectedTier === card.tier;
                 const current = currentTier === card.tier;
@@ -529,7 +535,8 @@ export default function PlanSelectionScreen() {
                     style={[
                       styles.card,
                       {
-                        width: CARD_WIDTH,
+                        width: cardWidth,
+                        marginRight: cardGap,
                         backgroundColor: design.bg,
                         borderColor: active ? design.activeBorderColor : design.borderColor,
                         borderWidth: active ? 2 : 1,
@@ -909,7 +916,6 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 24,
     padding: 22,
-    marginRight: CARD_GAP,
     minHeight: 520,
     justifyContent: 'space-between',
     position: 'relative',
