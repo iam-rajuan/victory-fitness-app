@@ -19,19 +19,13 @@ import { Colors } from '../../constants/Colors';
 import { AuthInput } from '../../components/AuthInput';
 import { AuthButton } from '../../components/AuthButton';
 import { ErrorPopupModal } from '../../components/ErrorPopupModal';
+import { InternationalPhoneField } from '../../components/InternationalPhoneField';
 import { apiRequest } from '../../lib/api';
 import { formatAppError } from '../../lib/error';
 import { useLanguage } from '../../lib/i18n';
+import { isE164PhoneNumber } from '../../lib/phone';
 
 const { height } = Dimensions.get('window');
-
-function normalizePhoneToE164(value: string) {
-  return value.replace(/[\s()-]+/g, '');
-}
-
-function isE164PhoneNumber(value: string) {
-  return /^\+[1-9]\d{7,14}$/.test(value);
-}
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -53,7 +47,7 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     const normalizedEmail = email.trim().toLowerCase();
-    const normalizedMobile = normalizePhoneToE164(mobile.trim());
+    const normalizedMobile = mobile.trim();
     const errors: Record<string, string> = {};
 
     if (!name.trim()) errors.name = 'Please enter your name.';
@@ -180,18 +174,17 @@ export default function RegisterScreen() {
                 icon="mail-outline"
                 error={fieldErrors.email}
               />
-              <AuthInput
-                placeholder="Mobile (+233...)"
+              <InternationalPhoneField
+                label="Mobile Number"
                 value={mobile}
                 onChangeText={(val) => {
                   setMobile(val);
                   if (fieldErrors.mobile) setFieldErrors((prev) => ({ ...prev, mobile: '' }));
                 }}
-                allowedType="phone"
-                keyboardType="phone-pad"
-                autoComplete="tel"
-                icon="call-outline"
+                placeholder="24 123 4567"
+                helperText="Choose your country code first, then enter the rest of your phone number."
                 error={fieldErrors.mobile}
+                defaultCountryCode="+233"
               />
               <AuthInput
                 placeholder="Password"

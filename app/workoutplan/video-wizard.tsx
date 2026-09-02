@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
+import { InternationalPhoneField } from '../../components/InternationalPhoneField';
 import VictoryHeader from '../../components/VictoryHeader';
 import { createVideoWorkoutPlan } from '../../lib/workout-plans';
 import { useModuleAccessGuard } from '../../lib/useModuleAccessGuard';
@@ -67,7 +68,6 @@ export default function WorkoutVideoWizard() {
   const { width } = useWindowDimensions();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<any>({
-    countryCode: '+49',
     phone: '',
   });
   const [loading, setLoading] = useState(false);
@@ -98,7 +98,6 @@ export default function WorkoutVideoWizard() {
         duration: formData.duration,
         time: formData.time,
         notes: formData.notes,
-        countryCode: formData.countryCode,
         phone: formData.phone,
         equipment: formData.equipment,
       });
@@ -251,26 +250,13 @@ export default function WorkoutVideoWizard() {
             <Text style={styles.subtitle}>
               {t('Provide your phone number to receive motivational messages (Gold Tier & higher).')}
             </Text>
-            <View style={styles.phoneInputRow}>
-              <View style={styles.countryCodeContainer}>
-                <TextInput
-                  style={styles.countryCodeInput}
-                  value={formData.countryCode}
-                  onChangeText={(text) => updateData('countryCode', text)}
-                  placeholder="+49"
-                  placeholderTextColor="rgba(255,255,255,0.2)"
-                  keyboardType="phone-pad"
-                />
-              </View>
-              <TextInput
-                style={styles.phoneInput}
-                placeholder="123456789"
-                placeholderTextColor="rgba(255,255,255,0.2)"
-                keyboardType="phone-pad"
-                value={formData.phone || ''}
-                onChangeText={(text) => updateData('phone', text)}
-              />
-            </View>
+            <InternationalPhoneField
+              value={formData.phone || ''}
+              onChangeText={(text) => updateData('phone', text)}
+              placeholder="24 123 4567"
+              helperText={t('Choose your country code first, then enter the rest of your phone number.')}
+              defaultCountryCode="+233"
+            />
             <Text style={styles.disclaimer}>
               {t('Your number will only be used for accountability reminders.')}
             </Text>
@@ -459,37 +445,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     minHeight: 180,
     textAlignVertical: 'top',
-    fontFamily: 'Inter_400Regular',
-    outlineStyle: 'none',
-  } as any,
-  phoneInputRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  countryCodeContainer: {
-    backgroundColor: '#1C252E',
-    borderRadius: 12,
-    width: 80,
-    height: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  countryCodeInput: {
-    color: '#fff',
-    fontSize: 16,
-    textAlign: 'center',
-    width: '100%',
-    fontFamily: 'Inter_400Regular',
-    outlineStyle: 'none',
-  } as any,
-  phoneInput: {
-    flex: 1,
-    backgroundColor: '#1C252E',
-    borderRadius: 12,
-    paddingHorizontal: 20,
-    color: '#fff',
-    fontSize: 16,
-    height: 60,
     fontFamily: 'Inter_400Regular',
     outlineStyle: 'none',
   } as any,

@@ -14,7 +14,9 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { InternationalPhoneField } from '../../components/InternationalPhoneField';
 import { fetchCurrentUser, submitCoachingApplication } from '../../lib/api';
+import { isE164PhoneNumber } from '../../lib/phone';
 import { goBackOrReplace } from '../../lib/navigation';
 import { useModuleAccessGuard } from '../../lib/useModuleAccessGuard';
 
@@ -77,6 +79,10 @@ export default function ApplicationScreen() {
     }
     if (!goal || !obstacle || !investment || !commitment || !injury) {
       Alert.alert('Incomplete application', 'Please answer all application questions.');
+      return;
+    }
+    if (phoneNumber.trim() && !isE164PhoneNumber(phoneNumber.trim())) {
+      Alert.alert('Invalid phone number', 'Choose a country code first, then enter a valid number in international format.');
       return;
     }
     if (!agreement) {
@@ -283,21 +289,16 @@ export default function ApplicationScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Phone Number (Optional)</Text>
-                <View style={styles.phoneInputWrap}>
-                  <View style={styles.phonePrefix}>
-                    <Text>🇩🇪</Text>
-                  </View>
-                  <TextInput
-                    style={[styles.textInput, { flex: 1, borderLeftWidth: 0, borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }]}
-                    placeholder="+49 123 4567890"
-                    placeholderTextColor="#9CA3AF"
-                    keyboardType="phone-pad"
-                    value={phoneNumber}
-                    onChangeText={setPhoneNumber}
-                    editable={!submitting}
-                  />
-                </View>
+                <InternationalPhoneField
+                  label="Phone Number (Optional)"
+                  value={phoneNumber}
+                  onChangeText={setPhoneNumber}
+                  placeholder="24 123 4567"
+                  helperText="Select the country code, then enter the rest of the number."
+                  disabled={submitting}
+                  theme="light"
+                  defaultCountryCode="+233"
+                />
               </View>
 
               <View style={styles.formDivider} />
@@ -651,20 +652,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#000',
     fontFamily: 'Inter_400Regular',
-  },
-  phoneInputWrap: {
-    flexDirection: 'row',
-  },
-  phonePrefix: {
-    backgroundColor: '#F3F4F6',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRightWidth: 0,
-    borderTopLeftRadius: 8,
-    borderBottomLeftRadius: 8,
-    paddingHorizontal: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   formDivider: {
     height: 1,
