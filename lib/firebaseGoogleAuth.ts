@@ -3,6 +3,8 @@ declare const process: {
 };
 
 import Constants from 'expo-constants';
+import { makeRedirectUri } from 'expo-auth-session';
+import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 
 import { apiRequest, type AuthResponse } from './api';
@@ -13,7 +15,9 @@ type FirebaseGoogleConfig = {
   firebaseApiKey: string;
   projectId: string;
   androidClientId: string;
+  iosClientId: string;
   googleClientId: string;
+  redirectUri: string;
 };
 
 type GoogleTokens = {
@@ -40,30 +44,66 @@ export function getFirebaseGoogleConfig(): FirebaseGoogleConfig {
   const androidClientId =
     readEnv('EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID')
     || String(firebaseExtra.androidClientId ?? '').trim();
+  const iosClientId =
+    readEnv('EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID')
+    || String(firebaseExtra.iosClientId ?? '').trim();
   const googleClientId =
     readEnv('EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID')
     || String(firebaseExtra.webClientId ?? '').trim()
     || String(googleExtra.clientId ?? '').trim();
+  const redirectUri =
+    readEnv('EXPO_PUBLIC_GOOGLE_REDIRECT_URI')
+    || makeRedirectUri({ preferLocalhost: true });
 
   return {
     firebaseApiKey,
     projectId,
     androidClientId,
+    iosClientId,
     googleClientId,
+    redirectUri,
+  };
+}
+
+export function useGoogleIdTokenAuth() {
+  const config = getFirebaseGoogleConfig();
+  const clientId = config.googleClientId || config.androidClientId || config.iosClientId;
+  const isConfigured = Boolean(clientId);
+
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest(
+    isConfigured
+      ? {
+          clientId,
+          webClientId: config.googleClientId || undefined,
+          androidClientId: config.androidClientId || undefined,
+          iosClientId: config.iosClientId || undefined,
+          redirectUri: config.redirectUri,
+          scopes: ['openid', 'email', 'profile'],
+          selectAccount: true,
+        }
+      : {},
+  );
+
+  return {
+    isConfigured,
+    request,
+    response,
+    promptAsync,
+    redirectUri: config.redirectUri,
   };
 }
 
 export async function signInWithFirebaseGoogle(tokens: GoogleTokens): Promise<AuthResponse> {
   const idToken = String(tokens.idToken || '').trim();
   const accessToken = String(tokens.accessToken || '').trim();
-  if (!idToken && !accessToken) {
-    throw new Error('Google sign-in did not return a token.');
+  if (!idToken) {
+    throw new Error('Google sign-in did not return an ID token.');
   }
 
   return apiRequest<AuthResponse>('/auth/google', {
     method: 'POST',
     body: {
-      id_token: idToken || undefined,
+      id_token: idToken,
       access_token: accessToken || undefined,
     },
   });

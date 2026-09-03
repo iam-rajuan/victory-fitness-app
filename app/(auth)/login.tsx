@@ -18,9 +18,11 @@ import { Colors } from '../../constants/Colors';
 import { AuthInput } from '../../components/AuthInput';
 import { AuthButton } from '../../components/AuthButton';
 import { ErrorPopupModal } from '../../components/ErrorPopupModal';
+import { GoogleSignInButton } from '../../components/GoogleSignInButton';
 import { apiRequest, AuthResponse, clearAuthTokens, getAuthTokens, getAuthUser, setAuthTokens } from '../../lib/api';
 import { getPostAuthRoute, isAdminRestrictedFromApp } from '../../lib/access';
 import { formatAppError } from '../../lib/error';
+import { signInWithFirebaseGoogle, useGoogleIdTokenAuth } from '../../lib/firebaseGoogleAuth';
 import { useLanguage } from '../../lib/i18n';
 import { replaceRoute } from '../../lib/navigation';
 
@@ -32,9 +34,11 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [errorDialog, setErrorDialog] = useState<{ title: string; message: string } | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const { isConfigured: isGoogleConfigured, request: googleRequest, promptAsync } = useGoogleIdTokenAuth();
 
   useEffect(() => {
     let cancelled = false;
@@ -129,6 +133,69 @@ export default function LoginScreen() {
     router.push('/forgot-password');
   };
 
+  const finishGoogleAuth = async (auth: AuthResponse) => {
+    if (isAdminRestrictedFromApp(auth.user)) {
+      await clearAuthTokens();
+      useDefaultLanguage();
+      setErrorDialog({
+        title: t('App access restricted'),
+        message: t('Admin accounts can only sign in to the Victory Fitness dashboard.'),
+      });
+      return;
+    }
+
+    await setAuthTokens(auth);
+    await syncLanguageWithCurrentUser(auth.user.id);
+    if (auth.returning_user) {
+      Alert.alert(
+        auth.returning_user.title,
+        auth.returning_user.message,
+        [{ text: 'Choose your subscription', onPress: () => replaceRoute(router, '/plan') }, { text: 'Continue', style: 'cancel', onPress: () => replaceRoute(router, getPostAuthRoute(auth.user)) }],
+      );
+      return;
+    }
+    replaceRoute(router, getPostAuthRoute(auth.user));
+  };
+
+  const handleGoogleLogin = async () => {
+    if (!isGoogleConfigured || !googleRequest) {
+      setErrorDialog({
+        title: t('Google sign-in unavailable'),
+        message: t('Google sign-in is not configured for this app environment yet.'),
+      });
+      return;
+    }
+
+    setGoogleLoading(true);
+    try {
+      const result = await promptAsync();
+      if (result.type === 'cancel' || result.type === 'dismiss') {
+        setErrorDialog({
+          title: t('Google sign-in cancelled'),
+          message: t('The Google sign-in flow was cancelled before completion.'),
+        });
+        return;
+      }
+      if (result.type !== 'success') {
+        setErrorDialog({
+          title: t('Google sign-in failed'),
+          message: t('We could not complete Google sign-in. Please try again.'),
+        });
+        return;
+      }
+
+      const auth = await signInWithFirebaseGoogle({
+        idToken: result.params?.id_token || result.authentication?.idToken,
+        accessToken: result.params?.access_token || result.authentication?.accessToken,
+      });
+      await finishGoogleAuth(auth);
+    } catch (error) {
+      setErrorDialog(formatAppError(error));
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
   if (checkingAuth) {
     return (
       <ImageBackground
@@ -218,6 +285,17 @@ export default function LoginScreen() {
               </TouchableOpacity>
 
               <AuthButton title={t('Log In')} onPress={handleLogin} disabled={loading} loading={loading} />
+              <View style={styles.dividerRow}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>{t('or')}</Text>
+                <View style={styles.dividerLine} />
+              </View>
+              <GoogleSignInButton
+                label={t('Continue with Google')}
+                onPress={handleGoogleLogin}
+                disabled={loading}
+                loading={googleLoading}
+              />
             </View>
 
             {/* Register Link */}
@@ -238,7 +316,7 @@ export default function LoginScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
 
-        {loading && (
+        {(loading || googleLoading) && (
           <View style={styles.loadingOverlay} pointerEvents="auto">
             <ActivityIndicator size="large" color={Colors.primary} />
           </View>
@@ -253,6 +331,24 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     height: '100%',
+  },
+  dividerRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 18,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+  },
+  dividerText: {
+    color: Colors.textMuted,
+    fontSize: 13,
+    marginHorizontal: 12,
+    fontFamily: 'Inter_500Medium',
+    textTransform: 'uppercase',
   },
   overlay: {
     flex: 1,

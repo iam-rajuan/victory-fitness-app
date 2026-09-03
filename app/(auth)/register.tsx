@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Alert,
   View,
   Text,
   Image,
@@ -19,10 +20,14 @@ import { Colors } from '../../constants/Colors';
 import { AuthInput } from '../../components/AuthInput';
 import { AuthButton } from '../../components/AuthButton';
 import { ErrorPopupModal } from '../../components/ErrorPopupModal';
+import { GoogleSignInButton } from '../../components/GoogleSignInButton';
 import { InternationalPhoneField } from '../../components/InternationalPhoneField';
-import { apiRequest } from '../../lib/api';
+import { apiRequest, AuthResponse, clearAuthTokens, setAuthTokens } from '../../lib/api';
+import { getPostAuthRoute, isAdminRestrictedFromApp } from '../../lib/access';
 import { formatAppError } from '../../lib/error';
+import { signInWithFirebaseGoogle, useGoogleIdTokenAuth } from '../../lib/firebaseGoogleAuth';
 import { useLanguage } from '../../lib/i18n';
+import { replaceRoute } from '../../lib/navigation';
 import { isE164PhoneNumber } from '../../lib/phone';
 
 const { height } = Dimensions.get('window');
@@ -38,8 +43,10 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [marketingConsent, setMarketingConsent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [errorDialog, setErrorDialog] = useState<{ title: string; message: string } | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const { isConfigured: isGoogleConfigured, request: googleRequest, promptAsync } = useGoogleIdTokenAuth();
 
   React.useEffect(() => {
     useDefaultLanguage();
@@ -95,6 +102,69 @@ export default function RegisterScreen() {
       setErrorDialog(formatAppError(error));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const finishGoogleAuth = async (auth: AuthResponse) => {
+    if (isAdminRestrictedFromApp(auth.user)) {
+      await clearAuthTokens();
+      useDefaultLanguage();
+      setErrorDialog({
+        title: 'App access restricted',
+        message: 'Admin accounts can only sign in to the Victory Fitness dashboard.',
+      });
+      return;
+    }
+
+    await setAuthTokens(auth);
+    await syncLanguageWithCurrentUser(auth.user.id);
+    if (auth.returning_user) {
+      Alert.alert(
+        auth.returning_user.title,
+        auth.returning_user.message,
+        [{ text: 'Choose your subscription', onPress: () => replaceRoute(router, '/plan') }, { text: 'Continue', style: 'cancel', onPress: () => replaceRoute(router, getPostAuthRoute(auth.user)) }],
+      );
+      return;
+    }
+    replaceRoute(router, getPostAuthRoute(auth.user));
+  };
+
+  const handleGoogleRegister = async () => {
+    if (!isGoogleConfigured || !googleRequest) {
+      setErrorDialog({
+        title: 'Google sign-in unavailable',
+        message: 'Google sign-in is not configured for this app environment yet.',
+      });
+      return;
+    }
+
+    setGoogleLoading(true);
+    try {
+      const result = await promptAsync();
+      if (result.type === 'cancel' || result.type === 'dismiss') {
+        setErrorDialog({
+          title: 'Google sign-in cancelled',
+          message: 'The Google sign-in flow was cancelled before completion.',
+        });
+        return;
+      }
+      if (result.type !== 'success') {
+        setErrorDialog({
+          title: 'Google sign-in failed',
+          message: 'We could not complete Google sign-in. Please try again.',
+        });
+        return;
+      }
+
+      const auth = await signInWithFirebaseGoogle({
+        idToken: result.params?.id_token || result.authentication?.idToken,
+        accessToken: result.params?.access_token || result.authentication?.accessToken,
+      });
+      await finishGoogleAuth(auth);
+    } catch (error) {
+      setErrorDialog(formatAppError(error));
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -241,6 +311,17 @@ export default function RegisterScreen() {
               </View>
 
               <AuthButton title="Register" onPress={handleRegister} disabled={loading} loading={loading} />
+              <View style={styles.dividerRow}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>or</Text>
+                <View style={styles.dividerLine} />
+              </View>
+              <GoogleSignInButton
+                label="Continue with Google"
+                onPress={handleGoogleRegister}
+                disabled={loading}
+                loading={googleLoading}
+              />
             </View>
 
             {/* Login Link */}
@@ -261,7 +342,7 @@ export default function RegisterScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
 
-        {loading && (
+        {(loading || googleLoading) && (
           <View style={styles.loadingOverlay} pointerEvents="auto">
             <ActivityIndicator size="large" color={Colors.primary} />
           </View>
@@ -340,6 +421,24 @@ const styles = StyleSheet.create({
     width: '100%',
     marginTop: 4,
     marginBottom: 20,
+  },
+  dividerRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+  },
+  dividerText: {
+    color: Colors.textMuted,
+    fontSize: 13,
+    marginHorizontal: 12,
+    fontFamily: 'Inter_500Medium',
+    textTransform: 'uppercase',
   },
   consentRow: {
     width: '100%',
