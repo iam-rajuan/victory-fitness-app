@@ -966,7 +966,7 @@ export default function ChallengeProgressScreen() {
       <Modal visible={Boolean(celebration)} transparent animationType="fade" onRequestClose={() => setCelebration(null)}>
         <View style={styles.celebrationBackdrop}>
           {/* Backdrop Dot Grid */}
-          <View style={styles.backdropDots} pointerEvents="none">
+          <View style={styles.backdropDots}>
             {Array.from({ length: 96 }).map((_, index) => (
               <View key={`backdrop-dot-${index}`} style={styles.backdropDot} />
             ))}
@@ -1976,6 +1976,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    pointerEvents: 'none',
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',

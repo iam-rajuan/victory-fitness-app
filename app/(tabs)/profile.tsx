@@ -22,7 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import VictoryHeader from '../../components/VictoryHeader';
 import AccessRestrictionModal from '../../components/AccessRestrictionModal';
-import { BodyMetrics, fetchCurrentUser, fetchCurrentUserBodyMetrics, logout, updateCurrentUserBodyMetrics, updateCurrentUserProfile } from '../../lib/api';
+import { BodyMetrics, fetchCurrentUser, fetchCurrentUserBodyMetrics, getAuthUser, logout, updateCurrentUserBodyMetrics, updateCurrentUserProfile } from '../../lib/api';
 import { canAccessFeature, canAccessPlanRoute } from '../../lib/access';
 import { useLanguage } from '../../lib/i18n';
 import { syncOnboardingProfileFields } from '../../lib/onboarding';
@@ -152,6 +152,15 @@ function getSubscriptionTierBadgeStyle(tier: string) {
   }
 }
 
+const WEB_AVATAR_IMAGE_STYLE: React.CSSProperties = {
+  width: 88,
+  height: 88,
+  borderRadius: 44,
+  objectFit: 'cover',
+  border: '1px solid rgba(6,182,212,0.28)',
+  display: 'block',
+};
+
 export default function ProfileScreen() {
   const checkingAccess = useModuleAccessGuard('/profile');
   const router = useRouter();
@@ -203,6 +212,7 @@ export default function ProfileScreen() {
   const [showHabitModal, setShowHabitModal] = React.useState(false);
   const [savingMetrics, setSavingMetrics] = React.useState(false);
   const [savingHabits, setSavingHabits] = React.useState(false);
+  const [profileImageFailed, setProfileImageFailed] = React.useState(false);
   const [metricsDraft, setMetricsDraft] = React.useState<BodyMetrics>({
     age: '',
     height: '',
@@ -242,6 +252,17 @@ export default function ProfileScreen() {
     },
     [language, t],
   );
+
+  const profileInitials = React.useMemo(() => {
+    const source = (me?.name || me?.email || 'Victory Fitness').trim();
+    const words = source.includes('@') ? [source.charAt(0)] : source.split(/\s+/).filter(Boolean);
+    return words.slice(0, 2).map((word) => word.charAt(0).toUpperCase()).join('') || 'VF';
+  }, [me?.email, me?.name]);
+  const profileImageUrl = String(me?.profileImage || '').trim();
+
+  React.useEffect(() => {
+    setProfileImageFailed(false);
+  }, [profileImageUrl]);
 
   const visibleMenuSections = React.useMemo(() => {
     return MENU_SECTIONS.map((section) => ({
@@ -290,13 +311,18 @@ export default function ProfileScreen() {
 
   const genderOptions = ['Male', 'Female', 'Other'];
 
-  const loadProfileData = React.useCallback(async (showLoading = true) => {
+  const loadProfileData = React.useCallback(async (showLoading = true, forceRefresh = false) => {
     if (showLoading) {
       setLoadingMe(true);
     }
     try {
+      const cachedUser = await getAuthUser();
+      if (cachedUser) {
+        setMe(cachedUser);
+      }
+
       const [response, metricsResponse] = await Promise.all([
-        fetchCurrentUser(),
+        fetchCurrentUser({ forceRefresh }),
         fetchCurrentUserBodyMetrics(),
       ]);
       setMe(response);
@@ -319,19 +345,19 @@ export default function ProfileScreen() {
         if (cancelled) {
           return;
         }
-        await loadProfileData(!me);
+        await loadProfileData(true, true);
       })();
 
       return () => {
         cancelled = true;
       };
-    }, [loadProfileData, me]),
+    }, [loadProfileData]),
   );
 
   const handleRefresh = React.useCallback(async () => {
     setRefreshing(true);
     try {
-      await loadProfileData(false);
+      await loadProfileData(false, true);
     } finally {
       setRefreshing(false);
     }
@@ -491,14 +517,27 @@ export default function ProfileScreen() {
         <View style={[styles.heroCard, { backgroundColor: Colors.surface }]}>
           {/* Avatar */}
           <View style={styles.avatarWrap}>
-            <Image
-              source={
-                me?.profileImage
-                  ? { uri: me.profileImage }
-                  : require('../../assets/profile-placeholder.png')
-              }
-              style={styles.avatarImage}
-            />
+            {profileImageUrl && !profileImageFailed ? (
+              Platform.OS === 'web' ? (
+                React.createElement('img', {
+                  src: profileImageUrl,
+                  alt: `${displayName} profile`,
+                  referrerPolicy: 'no-referrer',
+                  style: WEB_AVATAR_IMAGE_STYLE,
+                  onError: () => setProfileImageFailed(true),
+                })
+              ) : (
+                <Image
+                  source={{ uri: profileImageUrl }}
+                  style={styles.avatarImage}
+                  onError={() => setProfileImageFailed(true)}
+                />
+              )
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarFallbackText}>{profileInitials}</Text>
+              </View>
+            )}
           </View>
           <TouchableOpacity
             style={styles.avatarManageBtn}
@@ -507,7 +546,7 @@ export default function ProfileScreen() {
           >
             <Ionicons name="camera-outline" size={15} color="#06B6D4" />
             <Text style={styles.avatarManageBtnText}>
-              {me?.profileImage ? t('Update profile photo') : t('Upload profile photo')}
+              {profileImageUrl && !profileImageFailed ? t('Update profile photo') : t('Upload profile photo')}
             </Text>
           </TouchableOpacity>
 
@@ -1004,6 +1043,22 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
     borderWidth: 1,
     borderColor: 'rgba(6,182,212,0.28)',
+  },
+  avatarFallback: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(6,182,212,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(6,182,212,0.42)',
+  },
+  avatarFallbackText: {
+    color: '#E6FFFB',
+    fontFamily: 'Inter_700Bold',
+    fontSize: 28,
+    letterSpacing: 1,
   },
   avatarManageBtn: {
     flexDirection: 'row',

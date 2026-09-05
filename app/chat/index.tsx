@@ -337,7 +337,6 @@ export default function ChatScreen() {
         <View style={styles.inputBar}>
           <View
             style={[styles.inputWrapper, sending && styles.inputWrapperDisabled]}
-            pointerEvents={sending ? 'none' : 'auto'}
           >
             <TextInput
               style={styles.input}
@@ -655,6 +654,7 @@ const styles = StyleSheet.create({
   },
   inputWrapperDisabled: {
     opacity: 0.72,
+    pointerEvents: 'none',
   },
   input: {
     flex: 1,

@@ -11,6 +11,14 @@ const firebaseConfig = {
   appId: String(process.env?.EXPO_PUBLIC_FIREBASE_APP_ID ?? ''),
 };
 
+const isProduction = process.env?.NODE_ENV === 'production';
+const hasFirebaseWebPushConfig = Boolean(
+  firebaseConfig.apiKey
+  && firebaseConfig.projectId
+  && firebaseConfig.messagingSenderId
+  && firebaseConfig.appId,
+);
+
 export default function Root({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
@@ -27,32 +35,38 @@ export default function Root({ children }: { children: React.ReactNode }) {
         <link rel="icon" href="/favicon.ico?v=5" sizes="any" />
         <link rel="icon" type="image/png" href="/favicon.png?v=5" sizes="64x64" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
-        <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js" />
-        <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js" />
-        <script dangerouslySetInnerHTML={{ __html: `
-          if (window.firebase) {
-            window.firebase.initializeApp({
-              apiKey: '${firebaseConfig.apiKey}',
-              authDomain: '${firebaseConfig.authDomain}',
-              projectId: '${firebaseConfig.projectId}',
-              storageBucket: '${firebaseConfig.storageBucket}',
-              messagingSenderId: '${firebaseConfig.messagingSenderId}',
-              appId: '${firebaseConfig.appId}'
-            });
-          }
-        ` }} />
+        {isProduction && hasFirebaseWebPushConfig ? (
+          <>
+            <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js" />
+            <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js" />
+            <script dangerouslySetInnerHTML={{ __html: `
+              if (window.firebase) {
+                window.firebase.initializeApp({
+                  apiKey: '${firebaseConfig.apiKey}',
+                  authDomain: '${firebaseConfig.authDomain}',
+                  projectId: '${firebaseConfig.projectId}',
+                  storageBucket: '${firebaseConfig.storageBucket}',
+                  messagingSenderId: '${firebaseConfig.messagingSenderId}',
+                  appId: '${firebaseConfig.appId}'
+                });
+              }
+            ` }} />
+          </>
+        ) : null}
         <style
           id="expo-reset"
           dangerouslySetInnerHTML={{
             __html: '#root,body,html{height:100%}body{overflow:hidden;background:#070B14}#root{display:flex}',
           }}
         />
-        <script
-          dangerouslySetInnerHTML={{
-            __html:
-              "if('serviceWorker' in navigator){window.addEventListener('load',function(){if(location.hostname==='localhost'||location.hostname==='127.0.0.1'){navigator.serviceWorker.getRegistrations().then(function(regs){return Promise.all(regs.map(function(reg){return reg.unregister()}))}).then(function(){return caches&&caches.keys?caches.keys().then(function(keys){return Promise.all(keys.map(function(key){return caches.delete(key)}))}):null}).catch(function(){})}else{navigator.serviceWorker.register('/sw.js').catch(function(){})}})}",
-          }}
-        />
+        {isProduction ? (
+          <script
+            dangerouslySetInnerHTML={{
+              __html:
+                "if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){})})}",
+            }}
+          />
+        ) : null}
       </head>
       <body>{children}</body>
     </html>

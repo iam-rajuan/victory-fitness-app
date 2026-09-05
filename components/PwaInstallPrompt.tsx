@@ -156,7 +156,7 @@ export default function PwaInstallPrompt() {
     : 'Add Victory Fitness to your home screen for a faster, full-screen experience.';
 
   return (
-    <View style={styles.wrap} pointerEvents="box-none">
+    <View style={styles.wrap}>
       <View style={styles.card}>
         <View style={styles.copy}>
           <Text style={styles.eyebrow}>PWA READY</Text>
@@ -196,6 +196,7 @@ const styles = StyleSheet.create({
     right: 12,
     bottom: 18,
     zIndex: 30,
+    pointerEvents: 'box-none',
   },
   card: {
     borderRadius: 22,

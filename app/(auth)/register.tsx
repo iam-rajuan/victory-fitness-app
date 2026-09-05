@@ -25,7 +25,7 @@ import { InternationalPhoneField } from '../../components/InternationalPhoneFiel
 import { apiRequest, AuthResponse, clearAuthTokens, setAuthTokens } from '../../lib/api';
 import { getPostAuthRoute, isAdminRestrictedFromApp } from '../../lib/access';
 import { formatAppError } from '../../lib/error';
-import { signInWithFirebaseGoogle, useGoogleIdTokenAuth } from '../../lib/firebaseGoogleAuth';
+import { signInWithFirebaseGoogle, signInWithGoogleBrowserOAuth, useGoogleIdTokenAuth } from '../../lib/firebaseGoogleAuth';
 import { useLanguage } from '../../lib/i18n';
 import { replaceRoute } from '../../lib/navigation';
 import { isE164PhoneNumber } from '../../lib/phone';
@@ -130,7 +130,7 @@ export default function RegisterScreen() {
   };
 
   const handleGoogleRegister = async () => {
-    if (!isGoogleConfigured || !googleRequest) {
+    if (Platform.OS !== 'web' && (!isGoogleConfigured || !googleRequest)) {
       setErrorDialog({
         title: 'Google sign-in unavailable',
         message: 'Google sign-in is not configured for this app environment yet.',
@@ -140,6 +140,12 @@ export default function RegisterScreen() {
 
     setGoogleLoading(true);
     try {
+      if (Platform.OS === 'web') {
+        const auth = await signInWithGoogleBrowserOAuth();
+        await finishGoogleAuth(auth);
+        return;
+      }
+
       const result = await promptAsync();
       if (result.type === 'cancel' || result.type === 'dismiss') {
         setErrorDialog({
@@ -343,7 +349,7 @@ export default function RegisterScreen() {
         </KeyboardAvoidingView>
 
         {(loading || googleLoading) && (
-          <View style={styles.loadingOverlay} pointerEvents="auto">
+          <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color={Colors.primary} />
           </View>
         )}
@@ -367,6 +373,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(7, 10, 15, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
+    pointerEvents: 'auto',
   },
   keyboardView: {
     flex: 1,

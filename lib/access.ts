@@ -153,7 +153,7 @@ export const PLAN_CARDS: AppPlanCard[] = [
   },
 ];
 
-const ALLOWED_PUBLIC_PATHS = ['/login', '/register', '/verification', '/forgot-password', '/onboarding', '/splash'];
+const ALLOWED_PUBLIC_PATHS = ['/login', '/register', '/verification', '/forgot-password', '/onboarding', '/splash', '/google-auth-complete'];
 const ALLOWED_AUTHENTICATED_PATHS = ['/journal'] as const;
 const PLAN_PATH = '/plan';
 

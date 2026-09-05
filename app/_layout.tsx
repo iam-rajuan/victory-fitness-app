@@ -16,6 +16,7 @@ import { appendRunLog, formatRunLogMessage } from '../lib/runLog';
 import { LanguageProvider } from '../lib/i18n';
 import { blurActiveElementBeforeNavigation, replaceRoute } from '../lib/navigation';
 import { PushNotificationEvent, registerForPushNotificationsAsync, startForegroundNotificationStream, stopForegroundNotificationStream, subscribeToPushNotifications } from '../lib/pushNotifications';
+import { cleanupLocalWebServiceWorkers } from '../lib/webServiceWorker';
 
 export function ErrorBoundary({ error, retry }: { error: Error; retry: () => void }) {
   return (
@@ -44,6 +45,10 @@ export default function RootLayout() {
   });
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [toastNotification, setToastNotification] = useState<PushNotificationEvent | null>(null);
+
+  useEffect(() => {
+    cleanupLocalWebServiceWorkers();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = subscribeToPushNotifications((notification) => {
@@ -271,6 +276,13 @@ export default function RootLayout() {
   useEffect(() => {
     const originalError = console.error;
     const originalWarn = console.warn;
+    const shouldIgnoreDevWarning = (args: unknown[]) => {
+      const message = formatRunLogMessage(args);
+      return (
+        message.includes('"shadow*" style props are deprecated. Use "boxShadow".')
+        || message.includes('props.pointerEvents is deprecated. Use style.pointerEvents')
+      );
+    };
 
     console.error = (...args: unknown[]) => {
       void appendRunLog({
@@ -284,6 +296,10 @@ export default function RootLayout() {
     };
 
     console.warn = (...args: unknown[]) => {
+      if (shouldIgnoreDevWarning(args)) {
+        return;
+      }
+
       void appendRunLog({
         level: 'warning',
         title: 'Console warning',

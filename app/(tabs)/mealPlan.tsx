@@ -974,7 +974,7 @@ function MealPlanResult({
 
         {/* Fixed Copy List Button */}
         {copyToastMessage ? (
-          <View style={styles.copyToastWrap} pointerEvents="none">
+          <View style={styles.copyToastWrap}>
             <View style={styles.copyToast}>
               <Ionicons name="checkmark-circle" size={16} color="#D8B4FE" />
               <Text style={styles.copyToastText}>{copyToastMessage}</Text>
@@ -3045,6 +3045,7 @@ const styles = StyleSheet.create({
     bottom: Platform.OS === 'ios' ? 170 : 158,
     alignItems: 'center',
     zIndex: 5,
+    pointerEvents: 'none',
   },
   copyToast: {
     flexDirection: 'row',

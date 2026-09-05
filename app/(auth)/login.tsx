@@ -22,7 +22,7 @@ import { GoogleSignInButton } from '../../components/GoogleSignInButton';
 import { apiRequest, AuthResponse, clearAuthTokens, getAuthTokens, getAuthUser, setAuthTokens } from '../../lib/api';
 import { getPostAuthRoute, isAdminRestrictedFromApp } from '../../lib/access';
 import { formatAppError } from '../../lib/error';
-import { signInWithFirebaseGoogle, useGoogleIdTokenAuth } from '../../lib/firebaseGoogleAuth';
+import { signInWithFirebaseGoogle, signInWithGoogleBrowserOAuth, useGoogleIdTokenAuth } from '../../lib/firebaseGoogleAuth';
 import { useLanguage } from '../../lib/i18n';
 import { replaceRoute } from '../../lib/navigation';
 
@@ -158,7 +158,7 @@ export default function LoginScreen() {
   };
 
   const handleGoogleLogin = async () => {
-    if (!isGoogleConfigured || !googleRequest) {
+    if (Platform.OS !== 'web' && (!isGoogleConfigured || !googleRequest)) {
       setErrorDialog({
         title: t('Google sign-in unavailable'),
         message: t('Google sign-in is not configured for this app environment yet.'),
@@ -168,6 +168,12 @@ export default function LoginScreen() {
 
     setGoogleLoading(true);
     try {
+      if (Platform.OS === 'web') {
+        const auth = await signInWithGoogleBrowserOAuth();
+        await finishGoogleAuth(auth);
+        return;
+      }
+
       const result = await promptAsync();
       if (result.type === 'cancel' || result.type === 'dismiss') {
         setErrorDialog({
@@ -317,7 +323,7 @@ export default function LoginScreen() {
         </KeyboardAvoidingView>
 
         {(loading || googleLoading) && (
-          <View style={styles.loadingOverlay} pointerEvents="auto">
+          <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color={Colors.primary} />
           </View>
         )}
@@ -359,6 +365,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(7, 10, 15, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
+    pointerEvents: 'auto',
   },
   checkingAuthWrap: {
     flex: 1,

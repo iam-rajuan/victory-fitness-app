@@ -43,7 +43,7 @@ function resolveApiUrl(url: string): string {
   return normalizedUrl;
 }
 
-const API_URL = resolveApiUrl(RAW_API_URL);
+export const API_URL = resolveApiUrl(RAW_API_URL);
 const REQUEST_TIMEOUT_MS = 8_000;
 const IS_BROWSER_AUTH = Platform.OS === 'web';
 const APP_REQUEST_CREDENTIALS: RequestCredentials = IS_BROWSER_AUTH ? 'include' : 'omit';
@@ -869,10 +869,14 @@ export async function fetchHomepageQuote() {
   return apiRequest<HomepageQuote | null>('/content/homepage/quote');
 }
 
-export async function fetchCurrentUser() {
+export async function fetchCurrentUser(options?: { forceRefresh?: boolean }) {
   const now = Date.now();
-  if (authUser && currentUserFetchedAt && now - currentUserFetchedAt < CURRENT_USER_CACHE_TTL_MS) {
+  if (!options?.forceRefresh && authUser && currentUserFetchedAt && now - currentUserFetchedAt < CURRENT_USER_CACHE_TTL_MS) {
     return authUser;
+  }
+
+  if (options?.forceRefresh) {
+    currentUserRequestPromise = null;
   }
 
   if (!currentUserRequestPromise) {

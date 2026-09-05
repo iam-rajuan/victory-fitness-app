@@ -3,7 +3,7 @@ import { Tabs } from 'expo-router';
 import { useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
-import { Image, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Image, Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import AccessRestrictionModal from '../../components/AccessRestrictionModal';
 import { fetchCurrentUser, getAuthUser, getValidAuthTokens } from '../../lib/api';
@@ -11,6 +11,14 @@ import { getAllowedTabNames, isSubscriptionActive } from '../../lib/access';
 import { preloadAppData } from '../../lib/appPreload';
 import { useLanguage } from '../../lib/i18n';
 import { replaceRoute } from '../../lib/navigation';
+
+const WEB_PROFILE_AVATAR_STYLE: React.CSSProperties = {
+  width: '100%',
+  height: '100%',
+  borderRadius: '50%',
+  objectFit: 'cover',
+  display: 'block',
+};
 
 export default function TabsLayout() {
   const router = useRouter();
@@ -20,6 +28,7 @@ export default function TabsLayout() {
   const { width } = useWindowDimensions();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [profileImage, setProfileImage] = useState('');
+  const [profileImageFailed, setProfileImageFailed] = useState(false);
   const [allowedTabs, setAllowedTabs] = useState<string[] | null>(null);
   const [restrictedSection, setRestrictedSection] = useState('');
   const hasStartedPreloadRef = React.useRef(false);
@@ -42,6 +51,7 @@ export default function TabsLayout() {
         return;
       }
       setProfileImage(String(cachedUser.profileImage || '').trim());
+      setProfileImageFailed(false);
     };
 
     void syncCachedProfileImage();
@@ -73,6 +83,7 @@ export default function TabsLayout() {
 
         if (cachedUser) {
           setProfileImage(String(cachedUser.profileImage || '').trim());
+          setProfileImageFailed(false);
 
           if (!isSubscriptionActive(cachedUser)) {
             replaceRoute(routerRef.current, '/plan');
@@ -94,6 +105,7 @@ export default function TabsLayout() {
         }
 
         setProfileImage(String(authUser?.profileImage || '').trim());
+        setProfileImageFailed(false);
 
         if (!isSubscriptionActive(authUser)) {
           replaceRoute(routerRef.current, '/plan');
@@ -229,8 +241,18 @@ export default function TabsLayout() {
                     },
                   ]}
                 >
-                  {profileImage ? (
-                    <Image source={{ uri: profileImage }} style={styles.profileAvatar} />
+                  {profileImage && !profileImageFailed ? (
+                    Platform.OS === 'web' ? (
+                      React.createElement('img', {
+                        src: profileImage,
+                        alt: 'Profile',
+                        referrerPolicy: 'no-referrer',
+                        style: WEB_PROFILE_AVATAR_STYLE,
+                        onError: () => setProfileImageFailed(true),
+                      })
+                    ) : (
+                      <Image source={{ uri: profileImage }} style={styles.profileAvatar} onError={() => setProfileImageFailed(true)} />
+                    )
                   ) : (
                     <Ionicons name={focused ? 'person' : 'person-outline'} size={tabIconSize} color={color} />
                   )}
