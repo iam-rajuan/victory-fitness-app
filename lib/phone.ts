@@ -243,6 +243,14 @@ export function findCountryByDialCode(dialCode: string) {
   return COUNTRY_DIAL_CODES.find((item) => normalizeDialCode(item.dialCode) === normalizedDialCode) || null;
 }
 
+export function findCountryByCode(countryCode: string) {
+  const normalizedCode = String(countryCode || '').trim().toUpperCase();
+  if (!normalizedCode) {
+    return null;
+  }
+  return COUNTRY_DIAL_CODES.find((item) => item.code === normalizedCode) || null;
+}
+
 export function splitE164PhoneNumber(value: string) {
   const normalizedValue = normalizePhoneToE164(value);
   if (!normalizedValue.startsWith('+')) {

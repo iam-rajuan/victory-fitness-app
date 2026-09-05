@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Alert,
   View,
@@ -27,6 +27,7 @@ import { getPostAuthRoute, isAdminRestrictedFromApp } from '../../lib/access';
 import { formatAppError } from '../../lib/error';
 import { signInWithFirebaseGoogle, signInWithGoogleBrowserOAuth, useGoogleIdTokenAuth } from '../../lib/firebaseGoogleAuth';
 import { useLanguage } from '../../lib/i18n';
+import { detectCountryFromDeviceLocale } from '../../lib/localeCountry';
 import { replaceRoute } from '../../lib/navigation';
 import { isE164PhoneNumber } from '../../lib/phone';
 
@@ -47,6 +48,10 @@ export default function RegisterScreen() {
   const [errorDialog, setErrorDialog] = useState<{ title: string; message: string } | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const { isConfigured: isGoogleConfigured, request: googleRequest, promptAsync } = useGoogleIdTokenAuth();
+  const defaultPhoneCountryCode = useMemo(
+    () => detectCountryFromDeviceLocale()?.country.dialCode || '+233',
+    []
+  );
 
   React.useEffect(() => {
     useDefaultLanguage();
@@ -260,7 +265,7 @@ export default function RegisterScreen() {
                 placeholder="24 123 4567"
                 helperText="Choose your country code first, then enter the rest of your phone number."
                 error={fieldErrors.mobile}
-                defaultCountryCode="+233"
+                defaultCountryCode={defaultPhoneCountryCode}
               />
               <AuthInput
                 placeholder="Password"

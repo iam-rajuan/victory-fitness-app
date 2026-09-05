@@ -142,6 +142,7 @@ const styles = StyleSheet.create({
   header: {
     paddingTop: 16,
     paddingBottom: 12,
+    paddingHorizontal: 16,
   },
   headerRow: {
     minHeight: 48,
@@ -155,6 +156,7 @@ const styles = StyleSheet.create({
   brandBlock: {
     alignItems: 'flex-start',
     justifyContent: 'center',
+    alignSelf: 'center',
   },
   brandLogo: {
   },
@@ -181,6 +183,7 @@ const styles = StyleSheet.create({
   rightBlock: {
     alignItems: 'flex-end',
     justifyContent: 'center',
+    alignSelf: 'center',
   },
   notificationButton: {
     alignItems: 'center',
@@ -191,10 +194,11 @@ const styles = StyleSheet.create({
   },
   unreadBadge: {
     position: 'absolute',
-    top: -2,
-    right: -2,
+    top: -1,
+    right: -1,
     minWidth: 16,
     height: 16,
+    paddingHorizontal: 3,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',

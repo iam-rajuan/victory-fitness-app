@@ -24,6 +24,7 @@ import {
   OnboardingSuggestion,
 } from '../../lib/onboarding';
 import { LanguageCode, useLanguage } from '../../lib/i18n';
+import { detectCountryFromDeviceLocale } from '../../lib/localeCountry';
 import { replaceRoute } from '../../lib/navigation';
 import { getPostAuthRoute } from '../../lib/access';
 const LANGUAGE_OPTIONS: Array<{ value: OnboardingLanguage; label: string }> = [
@@ -212,13 +213,8 @@ function convertWeightToKilograms(weight: string, unit: 'kg' | 'lb') {
   return numericWeight.toString();
 }
 function deriveCountryFromLocale() {
-  const locale = Intl.DateTimeFormat().resolvedOptions().locale || '';
-  const regionMatch = locale.match(/[-_]([A-Z]{2}|\d{3})$/i);
-  if (!regionMatch) {
-    return null;
-  }
-  const normalizedRegion = regionMatch[1].toUpperCase();
-  return ALL_COUNTRIES.find((country) => country.code === normalizedRegion) ?? null;
+  const detected = detectCountryFromDeviceLocale();
+  return detected ? ALL_COUNTRIES.find((country) => country.code === detected.country.code) ?? null : null;
 }
 export default function PostLoginOnboardingFlow({ user }: Props) {
   const router = useRouter();
