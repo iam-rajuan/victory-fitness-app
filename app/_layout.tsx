@@ -84,7 +84,7 @@ export default function RootLayout() {
           route: pathnameRef.current,
           context: 'RootLayout',
         });
-        replaceRoute(router, '/login');
+        replaceRoute(router, '/login?reauth=1');
       });
 
     return () => {
@@ -120,7 +120,7 @@ export default function RootLayout() {
               route: pathname,
               context: 'RootLayout',
             });
-            replaceRoute(router, '/login');
+            replaceRoute(router, '/login?reauth=1');
             return true;
           }
 
@@ -226,7 +226,7 @@ export default function RootLayout() {
             route: pathname,
             context: 'RootLayout',
           });
-          replaceRoute(router, '/login');
+          replaceRoute(router, '/login?reauth=1');
         }
 
         setCheckingAccess(false);

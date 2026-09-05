@@ -24,7 +24,7 @@ import {
   OnboardingSuggestion,
 } from '../../lib/onboarding';
 import { LanguageCode, useLanguage } from '../../lib/i18n';
-import { detectCountryFromDeviceLocale } from '../../lib/localeCountry';
+import { detectCountryFromDeviceLocale, detectLanguageFromDeviceLocale } from '../../lib/localeCountry';
 import { replaceRoute } from '../../lib/navigation';
 import { getPostAuthRoute } from '../../lib/access';
 const LANGUAGE_OPTIONS: Array<{ value: OnboardingLanguage; label: string }> = [
@@ -283,6 +283,24 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
       cancelled = true;
     };
   }, [user.id]);
+  useEffect(() => {
+    if (data?.language) {
+      return;
+    }
+    const detectedLanguage = detectLanguageFromDeviceLocale();
+    if (!detectedLanguage) {
+      return;
+    }
+    setData((current) => {
+      if (!current || current.language) {
+        return current;
+      }
+      return {
+        ...current,
+        language: detectedLanguage,
+      };
+    });
+  }, [data?.language]);
   useEffect(() => {
     if (selectedCountry.trim() || data?.country?.trim()) {
       return;

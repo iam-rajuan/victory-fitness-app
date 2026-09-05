@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import type { LanguageCode } from './i18n';
 import { findCountryByCode, type CountryDialCode } from './phone';
 
 export type DetectedLocaleCountry = {
@@ -45,6 +46,11 @@ function extractRegionFromLocale(locale: string) {
   return regionMatch && /^[A-Z]{2}$/i.test(regionMatch[1]) ? regionMatch[1].toUpperCase() : '';
 }
 
+function extractLanguageFromLocale(locale: string) {
+  const language = String(locale || '').trim().split(/[-_]/)[0]?.toLowerCase() || '';
+  return language === 'de' || language === 'en' ? language : '';
+}
+
 export function detectCountryFromDeviceLocale(localeOverride?: string): DetectedLocaleCountry | null {
   const localeCandidates = localeOverride
     ? [localeOverride]
@@ -61,3 +67,17 @@ export function detectCountryFromDeviceLocale(localeOverride?: string): Detected
   return null;
 }
 
+export function detectLanguageFromDeviceLocale(localeOverride?: string): LanguageCode | null {
+  const localeCandidates = localeOverride
+    ? [localeOverride]
+    : [...getBrowserLocaleCandidates(), getIntlLocaleCandidate()];
+
+  for (const locale of localeCandidates) {
+    const language = extractLanguageFromLocale(locale);
+    if (language) {
+      return language;
+    }
+  }
+
+  return null;
+}

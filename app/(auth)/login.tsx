@@ -13,13 +13,13 @@ import {
   Dimensions,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Colors } from '../../constants/Colors';
 import { AuthInput } from '../../components/AuthInput';
 import { AuthButton } from '../../components/AuthButton';
 import { ErrorPopupModal } from '../../components/ErrorPopupModal';
 import { GoogleSignInButton } from '../../components/GoogleSignInButton';
-import { apiRequest, AuthResponse, clearAuthTokens, getAuthTokens, getAuthUser, setAuthTokens } from '../../lib/api';
+import { apiRequest, AuthResponse, clearAuthTokens, getAuthUser, getValidAuthTokens, setAuthTokens } from '../../lib/api';
 import { getPostAuthRoute, isAdminRestrictedFromApp } from '../../lib/access';
 import { formatAppError } from '../../lib/error';
 import { signInWithFirebaseGoogle, signInWithGoogleBrowserOAuth, useGoogleIdTokenAuth } from '../../lib/firebaseGoogleAuth';
@@ -30,6 +30,7 @@ const { height } = Dimensions.get('window');
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { reauth } = useLocalSearchParams<{ reauth?: string }>();
   const { t, useDefaultLanguage, syncLanguageWithCurrentUser } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -44,7 +45,7 @@ export default function LoginScreen() {
     let cancelled = false;
 
     const redirectIfAuthenticated = async () => {
-      const [tokens, user] = await Promise.all([getAuthTokens(), getAuthUser()]);
+      const [tokens, user] = await Promise.all([getValidAuthTokens(), getAuthUser()]);
       if (cancelled) {
         return;
       }
@@ -69,6 +70,12 @@ export default function LoginScreen() {
       }
 
       useDefaultLanguage();
+      if (reauth === '1') {
+        setErrorDialog({
+          title: t('Session expired'),
+          message: t('For your security, please sign in again to continue.'),
+        });
+      }
       setCheckingAuth(false);
     };
 
@@ -77,7 +84,7 @@ export default function LoginScreen() {
     return () => {
       cancelled = true;
     };
-  }, [router, syncLanguageWithCurrentUser, t, useDefaultLanguage]);
+  }, [reauth, router, syncLanguageWithCurrentUser, t, useDefaultLanguage]);
 
   const handleLogin = async () => {
     const normalizedEmail = email.trim().toLowerCase();
