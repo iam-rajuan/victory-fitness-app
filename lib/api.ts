@@ -14,6 +14,41 @@ declare const process: {
 };
 
 const PRODUCTION_WEB_API_URL = 'https://victory-fitness-backend.onrender.com';
+const CUSTOM_DOMAIN_API_URL = 'https://api.victoryfitnessapp.com';
+
+function getWebHostname(): string {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') {
+    return '';
+  }
+
+  return window.location.hostname.toLowerCase();
+}
+
+function isLocalHostname(hostname: string): boolean {
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0';
+}
+
+function isLocalApiUrl(url: string): boolean {
+  return url.includes('://localhost') || url.includes('://127.0.0.1') || url.includes('://0.0.0.0');
+}
+
+function getDefaultWebApiUrl(): string {
+  const hostname = getWebHostname();
+
+  if (!hostname || isLocalHostname(hostname) || hostname.endsWith('.vercel.app')) {
+    return PRODUCTION_WEB_API_URL;
+  }
+
+  if (hostname === 'victoryfitnessapp.com' || hostname === 'www.victoryfitnessapp.com') {
+    return CUSTOM_DOMAIN_API_URL;
+  }
+
+  if (hostname.startsWith('app.')) {
+    return `https://api.${hostname.slice(4)}`;
+  }
+
+  return PRODUCTION_WEB_API_URL;
+}
 
 function getDefaultApiUrl(): string {
   if (Platform.OS === 'android') {
@@ -21,7 +56,7 @@ function getDefaultApiUrl(): string {
   }
 
   if (Platform.OS === 'web') {
-    return PRODUCTION_WEB_API_URL;
+    return getDefaultWebApiUrl();
   }
 
   return 'http://localhost:8000';
@@ -31,6 +66,13 @@ const RAW_API_URL = String(process.env?.EXPO_PUBLIC_API_URL ?? '').trim() || get
 
 function resolveApiUrl(url: string): string {
   const normalizedUrl = String(url || '').trim().replace(/\/+$/, '');
+
+  if (Platform.OS === 'web') {
+    const hostname = getWebHostname();
+    if (hostname && !isLocalHostname(hostname) && isLocalApiUrl(normalizedUrl)) {
+      return getDefaultWebApiUrl();
+    }
+  }
 
   if (Platform.OS !== 'android') {
     return normalizedUrl;
