@@ -171,6 +171,7 @@ export type AuthUser = {
   email: string;
   is_verified: boolean;
   is_admin?: boolean;
+  preferred_language?: string;
   country?: string;
   country_code?: string | null;
   profileImage?: string;
@@ -590,6 +591,7 @@ function normalizeAuthUser(user: Partial<AuthUser> & { id?: string; name?: strin
     email: String(user.email ?? ''),
     is_verified: Boolean(user.is_verified),
     is_admin: Boolean(user.is_admin),
+    preferred_language: String(user.preferred_language ?? ''),
     country: String(user.country ?? ''),
     country_code: user.country_code ? String(user.country_code).toUpperCase() : null,
     profileImage: String(user.profileImage ?? ''),
@@ -987,6 +989,7 @@ export async function updateCurrentUserProfile(payload: {
   email?: string;
   country?: string;
   country_code?: string;
+  preferred_language?: string;
   profileImage?: string;
   onboarding_completed?: boolean;
   motivation_statement?: string;
@@ -1074,6 +1077,14 @@ export async function updateCurrentUserOnboarding(payload: {
     authUser = normalizeAuthUser({
       ...authUser,
       onboarding_completed: payload.completed,
+      preferred_language: payload.language || authUser.preferred_language,
+    });
+    authUserLoaded = true;
+    await persistAuthUser(authUser);
+  } else if (payload.language && authUser) {
+    authUser = normalizeAuthUser({
+      ...authUser,
+      preferred_language: payload.language,
     });
     authUserLoaded = true;
     await persistAuthUser(authUser);

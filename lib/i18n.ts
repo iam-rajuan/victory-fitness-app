@@ -20,6 +20,11 @@ async function getSavedLanguageForUser(userId?: string | null): Promise<Language
   return stored === 'de' || stored === 'en' ? stored : null;
 }
 
+function normalizeLanguageCode(value?: string | null): LanguageCode | null {
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized === 'de' || normalized === 'en' ? normalized : null;
+}
+
 const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
   en: {
     'Access Restricted': 'Access Restricted',
@@ -1832,7 +1837,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       try {
         const user = await getAuthUser();
         const nextLanguage = await getSavedLanguageForUser(user?.id);
-        const resolvedLanguage = nextLanguage ?? DEFAULT_LANGUAGE;
+        const resolvedLanguage = nextLanguage ?? normalizeLanguageCode(user?.preferred_language) ?? DEFAULT_LANGUAGE;
         if (!cancelled) {
           setLanguageState(resolvedLanguage);
           setApiLanguage(resolvedLanguage);
@@ -1858,7 +1863,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   const syncLanguageWithCurrentUser = React.useCallback(async (userId?: string | null) => {
     const resolvedUserId = userId ?? (await getAuthUser())?.id ?? null;
-    const nextLanguage = await getSavedLanguageForUser(resolvedUserId) ?? DEFAULT_LANGUAGE;
+    const user = await getAuthUser();
+    const nextLanguage = await getSavedLanguageForUser(resolvedUserId) ?? normalizeLanguageCode(user?.preferred_language) ?? DEFAULT_LANGUAGE;
     setLanguageState(nextLanguage);
     setApiLanguage(nextLanguage);
     return nextLanguage;
