@@ -16,6 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
+        "NSFaceIDUsageDescription": "Victory Fitness uses Face ID to unlock your existing signed-in session on this device.",
         "NSHealthShareUsageDescription": "Victory Fitness reads your health data to power Longevity OS insights and recovery tracking.",
         "NSHealthUpdateUsageDescription": "Victory Fitness writes health updates only when you choose to sync your wellness data."
       }
@@ -62,7 +63,13 @@
           "healthUpdatePermission": "Victory Fitness writes health updates only when you choose to sync your wellness data."
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Victory Fitness uses Face ID to unlock your existing signed-in session on this device."
+        }
+      ]
     ],
     "extra": {
       "router": {},

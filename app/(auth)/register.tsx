@@ -24,6 +24,7 @@ import { GoogleSignInButton } from '../../components/GoogleSignInButton';
 import { InternationalPhoneField } from '../../components/InternationalPhoneField';
 import { apiRequest, AuthResponse, clearAuthTokens, setAuthTokens } from '../../lib/api';
 import { getPostAuthRoute, isAdminRestrictedFromApp } from '../../lib/access';
+import { markBiometricSessionUnlocked, maybeOfferBiometricUnlock } from '../../lib/biometricUnlock';
 import { formatAppError } from '../../lib/error';
 import { signInWithFirebaseGoogle, signInWithGoogleBrowserOAuth, useGoogleIdTokenAuth } from '../../lib/firebaseGoogleAuth';
 import { useLanguage } from '../../lib/i18n';
@@ -122,7 +123,9 @@ export default function RegisterScreen() {
     }
 
     await setAuthTokens(auth);
+    markBiometricSessionUnlocked();
     await syncLanguageWithCurrentUser(auth.user.id);
+    void maybeOfferBiometricUnlock(auth.user);
     if (auth.returning_user) {
       Alert.alert(
         auth.returning_user.title,

@@ -21,6 +21,7 @@ import { ErrorPopupModal } from '../../components/ErrorPopupModal';
 import { GoogleSignInButton } from '../../components/GoogleSignInButton';
 import { apiRequest, AuthResponse, clearAuthTokens, getAuthUser, getValidAuthTokens, setAuthTokens } from '../../lib/api';
 import { getPostAuthRoute, isAdminRestrictedFromApp } from '../../lib/access';
+import { markBiometricSessionUnlocked, maybeOfferBiometricUnlock } from '../../lib/biometricUnlock';
 import { formatAppError } from '../../lib/error';
 import { signInWithFirebaseGoogle, signInWithGoogleBrowserOAuth, useGoogleIdTokenAuth } from '../../lib/firebaseGoogleAuth';
 import { useLanguage } from '../../lib/i18n';
@@ -119,7 +120,9 @@ export default function LoginScreen() {
         return;
       }
       await setAuthTokens(auth);
+      markBiometricSessionUnlocked();
       await syncLanguageWithCurrentUser(auth.user.id);
+      void maybeOfferBiometricUnlock(auth.user);
       if (auth.returning_user) {
         Alert.alert(
           auth.returning_user.title,
@@ -152,7 +155,9 @@ export default function LoginScreen() {
     }
 
     await setAuthTokens(auth);
+    markBiometricSessionUnlocked();
     await syncLanguageWithCurrentUser(auth.user.id);
+    void maybeOfferBiometricUnlock(auth.user);
     if (auth.returning_user) {
       Alert.alert(
         auth.returning_user.title,

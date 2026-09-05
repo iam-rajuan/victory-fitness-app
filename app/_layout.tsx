@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Stack, usePathname, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Text, TouchableOpacity, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, AppState, Text, TouchableOpacity, View, StyleSheet } from 'react-native';
 import {
   useFonts,
   Inter_400Regular,
@@ -12,6 +12,12 @@ import { Colors } from '../constants/Colors';
 import PwaInstallPrompt from '../components/PwaInstallPrompt';
 import { clearAuthTokens, fetchCurrentUser, getAuthUser, getValidAuthTokens, setAuthFailureHandler } from '../lib/api';
 import { getPostAuthRoute, isAdminRestrictedFromApp, isPublicRoute, isRouteAllowedForPlan, isSubscriptionActive } from '../lib/access';
+import {
+  authenticateWithBiometrics,
+  isBiometricSessionUnlocked,
+  isBiometricUnlockEnabled,
+  markBiometricSessionLocked,
+} from '../lib/biometricUnlock';
 import { appendRunLog, formatRunLogMessage } from '../lib/runLog';
 import { LanguageProvider } from '../lib/i18n';
 import { blurActiveElementBeforeNavigation, replaceRoute } from '../lib/navigation';
@@ -45,9 +51,31 @@ export default function RootLayout() {
   });
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [toastNotification, setToastNotification] = useState<PushNotificationEvent | null>(null);
+  const [biometricLocked, setBiometricLocked] = useState(false);
+  const [biometricUnlocking, setBiometricUnlocking] = useState(false);
+  const [biometricError, setBiometricError] = useState('');
+  const [biometricUnlockNonce, setBiometricUnlockNonce] = useState(0);
 
   useEffect(() => {
     cleanupLocalWebServiceWorkers();
+  }, []);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'background' || state === 'inactive') {
+        markBiometricSessionLocked();
+        return;
+      }
+
+      if (state === 'active' && !isPublicRoute(pathnameRef.current)) {
+        setCheckingAccess(true);
+        setBiometricUnlockNonce((value) => value + 1);
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
   }, []);
 
   useEffect(() => {
@@ -104,6 +132,28 @@ export default function RootLayout() {
         setCheckingAccess(false);
         return;
       }
+
+      const verifyBiometricUnlock = async (user: Awaited<ReturnType<typeof getAuthUser>>) => {
+        if (!user?.id || isBiometricSessionUnlocked()) {
+          return true;
+        }
+
+        if (!(await isBiometricUnlockEnabled(user.id))) {
+          return true;
+        }
+
+        const result = await authenticateWithBiometrics('Unlock Victory Fitness');
+        if (result.success) {
+          setBiometricLocked(false);
+          setBiometricError('');
+          return true;
+        }
+
+        setBiometricLocked(true);
+        setBiometricError(result.error);
+        setCheckingAccess(false);
+        return false;
+      };
 
       const applyAccess = async (user: Awaited<ReturnType<typeof getAuthUser>>) => {
         if (!user) {
@@ -199,12 +249,20 @@ export default function RootLayout() {
           return;
         }
 
+        if (!(await verifyBiometricUnlock(cachedUser))) {
+          return;
+        }
+
         if (await applyAccess(cachedUser)) {
           return;
         }
 
         const user = await fetchCurrentUser();
         if (cancelled) {
+          return;
+        }
+
+        if (!(await verifyBiometricUnlock(user))) {
           return;
         }
 
@@ -238,7 +296,7 @@ export default function RootLayout() {
     return () => {
       cancelled = true;
     };
-  }, [fontsLoaded, pathname, router]);
+  }, [biometricUnlockNonce, fontsLoaded, pathname, router]);
 
   useEffect(() => {
     pathnameRef.current = pathname;
@@ -320,6 +378,60 @@ export default function RootLayout() {
     return null;
   }
 
+  if (biometricLocked && !isPublicRoute(pathname)) {
+    return (
+      <View style={styles.biometricScreen}>
+        <StatusBar style="light" />
+        <View style={styles.biometricCard}>
+          <View style={styles.biometricIcon}>
+            <Text style={styles.biometricIconText}>VF</Text>
+          </View>
+          <Text style={styles.biometricTitle}>Unlock Victory Fitness</Text>
+          <Text style={styles.biometricMessage}>
+            Use Face ID or fingerprint to continue with your signed-in session.
+          </Text>
+          {biometricError ? <Text style={styles.biometricError}>{biometricError}</Text> : null}
+          <TouchableOpacity
+            style={styles.biometricButton}
+            disabled={biometricUnlocking}
+            activeOpacity={0.85}
+            onPress={async () => {
+              setBiometricUnlocking(true);
+              setBiometricError('');
+              const result = await authenticateWithBiometrics('Unlock Victory Fitness');
+              setBiometricUnlocking(false);
+              if (!result.success) {
+                setBiometricError(result.error);
+                return;
+              }
+              setBiometricLocked(false);
+              setCheckingAccess(true);
+              setBiometricUnlockNonce((value) => value + 1);
+            }}
+          >
+            {biometricUnlocking ? (
+              <ActivityIndicator color="#06111f" />
+            ) : (
+              <Text style={styles.biometricButtonText}>Unlock</Text>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.biometricSignOutButton}
+            activeOpacity={0.75}
+            onPress={async () => {
+              markBiometricSessionLocked();
+              setBiometricLocked(false);
+              await clearAuthTokens();
+              replaceRoute(router, '/login');
+            }}
+          >
+            <Text style={styles.biometricSignOutText}>Sign out</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <LanguageProvider>
       <View style={styles.container}>
@@ -395,6 +507,81 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  biometricScreen: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    backgroundColor: Colors.background,
+  },
+  biometricCard: {
+    width: '100%',
+    maxWidth: 420,
+    alignItems: 'center',
+    gap: 14,
+    padding: 28,
+    borderRadius: 24,
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: 'rgba(20, 184, 166, 0.35)',
+  },
+  biometricIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(20, 184, 166, 0.16)',
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  biometricIconText: {
+    color: '#DFFFFB',
+    fontSize: 22,
+    fontFamily: 'Inter_700Bold',
+  },
+  biometricTitle: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    textAlign: 'center',
+    fontFamily: 'Inter_700Bold',
+  },
+  biometricMessage: {
+    color: Colors.textMuted,
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: 'center',
+    fontFamily: 'Inter_400Regular',
+  },
+  biometricError: {
+    color: '#FCA5A5',
+    fontSize: 13,
+    textAlign: 'center',
+    fontFamily: 'Inter_600SemiBold',
+  },
+  biometricButton: {
+    width: '100%',
+    minHeight: 50,
+    marginTop: 4,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.primary,
+  },
+  biometricButtonText: {
+    color: '#06111f',
+    fontSize: 15,
+    fontFamily: 'Inter_700Bold',
+  },
+  biometricSignOutButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+  },
+  biometricSignOutText: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+    fontFamily: 'Inter_600SemiBold',
   },
   notificationToast: {
     position: 'absolute',

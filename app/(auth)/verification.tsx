@@ -20,6 +20,7 @@ import { ErrorPopupModal } from '../../components/ErrorPopupModal';
 import { Colors } from '../../constants/Colors';
 import { apiRequest, AuthResponse, setAuthTokens } from '../../lib/api';
 import { getPostAuthRoute } from '../../lib/access';
+import { markBiometricSessionUnlocked, maybeOfferBiometricUnlock } from '../../lib/biometricUnlock';
 import { formatAppError } from '../../lib/error';
 import { replaceRoute } from '../../lib/navigation';
 
@@ -100,6 +101,8 @@ export default function VerificationScreen() {
         body: { email, code },
       });
       await setAuthTokens(auth);
+      markBiometricSessionUnlocked();
+      void maybeOfferBiometricUnlock(auth.user);
       replaceRoute(router, getPostAuthRoute(auth.user));
     } catch (error) {
       setErrorDialog(formatAppError(error));

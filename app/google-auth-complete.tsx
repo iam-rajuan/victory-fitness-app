@@ -6,6 +6,7 @@ import { Colors } from '../constants/Colors';
 import { GOOGLE_AUTH_STORAGE_KEY } from '../lib/firebaseGoogleAuth';
 import { API_URL, clearAuthTokens, setAuthTokens, type AuthResponse } from '../lib/api';
 import { getPostAuthRoute, isAdminRestrictedFromApp } from '../lib/access';
+import { markBiometricSessionUnlocked } from '../lib/biometricUnlock';
 import { replaceRoute } from '../lib/navigation';
 
 type GoogleOAuthResultResponse = {
@@ -113,6 +114,7 @@ export default function GoogleAuthCompleteScreen() {
           }
 
           await setAuthTokens(auth);
+          markBiometricSessionUnlocked();
           setMessage('Google sign-in complete. Opening Victory Fitness...');
           replaceRoute(router, getPostAuthRoute(auth.user));
         } catch {
