@@ -19,7 +19,7 @@ import { AuthInput } from '../../components/AuthInput';
 import { AuthButton } from '../../components/AuthButton';
 import { ErrorPopupModal } from '../../components/ErrorPopupModal';
 import { GoogleSignInButton } from '../../components/GoogleSignInButton';
-import { apiRequest, AuthResponse, clearAuthTokens, getAuthUser, getValidAuthTokens, setAuthTokens } from '../../lib/api';
+import { apiRequest, AuthResponse, clearAuthTokens, fetchCurrentUser, getAuthUser, getValidAuthTokens, setAuthTokens } from '../../lib/api';
 import { getPostAuthRoute, isAdminRestrictedFromApp } from '../../lib/access';
 import { markBiometricSessionUnlocked, maybeOfferBiometricUnlock } from '../../lib/biometricUnlock';
 import { formatAppError } from '../../lib/error';
@@ -46,7 +46,10 @@ export default function LoginScreen() {
     let cancelled = false;
 
     const redirectIfAuthenticated = async () => {
-      const [tokens, user] = await Promise.all([getValidAuthTokens(), getAuthUser()]);
+      const tokens = await getValidAuthTokens();
+      const user = tokens?.access_token
+        ? await fetchCurrentUser().catch(async () => getAuthUser())
+        : await getAuthUser();
       if (cancelled) {
         return;
       }

@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import type { LanguageCode } from './i18n';
+import { isSupportedLanguageCode, type LanguageCode } from './i18n';
 import { findCountryByCode, type CountryDialCode } from './phone';
 
 export type DetectedLocaleCountry = {
@@ -48,7 +48,7 @@ function extractRegionFromLocale(locale: string) {
 
 function extractLanguageFromLocale(locale: string) {
   const language = String(locale || '').trim().split(/[-_]/)[0]?.toLowerCase() || '';
-  return language === 'de' || language === 'en' ? language : '';
+  return isSupportedLanguageCode(language) ? language : '';
 }
 
 export function detectCountryFromDeviceLocale(localeOverride?: string): DetectedLocaleCountry | null {

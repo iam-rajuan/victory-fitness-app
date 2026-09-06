@@ -23,14 +23,15 @@ import {
   OnboardingLanguage,
   OnboardingSuggestion,
 } from '../../lib/onboarding';
-import { LanguageCode, useLanguage } from '../../lib/i18n';
+import { SUPPORTED_LANGUAGES, LanguageCode, useLanguage } from '../../lib/i18n';
 import { detectCountryFromDeviceLocale, detectLanguageFromDeviceLocale } from '../../lib/localeCountry';
 import { replaceRoute } from '../../lib/navigation';
 import { getPostAuthRoute } from '../../lib/access';
-const LANGUAGE_OPTIONS: Array<{ value: OnboardingLanguage; label: string }> = [
-  { value: 'en', label: 'English' },
-  { value: 'de', label: 'German' },
-];
+const LANGUAGE_OPTIONS = SUPPORTED_LANGUAGES.map((language) => ({
+  value: language.code as OnboardingLanguage,
+  label: language.label,
+  nativeLabel: language.nativeLabel,
+}));
 const GENDER_OPTIONS = ['Male', 'Female', 'Non-binary', 'Prefer not to say'];
 const PRIMARY_GOAL_OPTIONS = ['Lose weight', 'Build muscle', 'Improve endurance', 'General health and energy', 'Recovery and rehab'];
 const ACTIVITY_LEVEL_OPTIONS = ['Sedentary', 'Lightly active', 'Moderately active', 'Very active'];
@@ -39,6 +40,7 @@ const DAYS_OPTIONS = ['1-2 days', '3-4 days', '5+ days'];
 const SESSION_OPTIONS = ['20 minutes', '30 minutes', '45 minutes', '60+ minutes'];
 const EQUIPMENT_OPTIONS = ['No equipment', 'Home gym', 'Full gym', 'Outdoors'];
 const STEP_TITLES = ['Language', 'Country', 'Profile', 'Health', 'Motivation', 'Recommendation'];
+const getHealthConcernLabel = (option: string) => (option === 'Back' ? 'Back concern' : option);
 const POPULAR_COUNTRIES = [
   { name: 'United States', code: 'US' },
   { name: 'United Kingdom', code: 'GB' },
@@ -189,7 +191,7 @@ const ALL_COUNTRIES = [
   { name: 'Zimbabwe', code: 'ZW' }
 ];
 function isSupportedAppLanguage(value: OnboardingLanguage): value is LanguageCode {
-  return value === 'en' || value === 'de';
+  return SUPPORTED_LANGUAGES.some((language) => language.code === value);
 }
 type Props = {
   user: AuthUser;
@@ -218,7 +220,7 @@ function deriveCountryFromLocale() {
 }
 export default function PostLoginOnboardingFlow({ user }: Props) {
   const router = useRouter();
-  const { setLanguage } = useLanguage();
+  const { setLanguage, t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [step, setStep] = useState(0);
@@ -511,6 +513,18 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
     };
     setData(nextData);
   };
+  const handleLanguageSelect = async (language: OnboardingLanguage) => {
+    void updateData((current) => ({ ...current, language }));
+    if (!isSupportedAppLanguage(language)) {
+      return;
+    }
+    try {
+      await setLanguage(language);
+      await updateCurrentUserProfile({ preferred_language: language });
+    } catch {
+      setSaveError('Unable to save language preference. Please try again.');
+    }
+  };
   const toggleHealthConcern = (value: string) => {
     if (!data) {
       return;
@@ -552,8 +566,8 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
     <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <Text style={styles.eyebrow}>VICTORY FITNESS</Text>
-        <Text style={styles.title}>Build your personalized start</Text>
-        <Text style={styles.subtitle}>Complete these steps once and we will keep your plan setup on this device.</Text>
+        <Text style={styles.title}>{t('Build your personalized start')}</Text>
+        <Text style={styles.subtitle}>{t('Complete these steps once and we will keep your plan setup on this device.')}</Text>
         <View style={styles.progressRow}>
           {STEP_TITLES.map((label, index) => (
             <View key={label} style={styles.progressItem}>
@@ -564,43 +578,44 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
           ))}
         </View>
         <Text style={styles.currentStepText}>
-          Step {step + 1} of {STEP_TITLES.length}  •  {STEP_TITLES[step]}
+          {t('Step {step} of {total}', { step: step + 1, total: STEP_TITLES.length })}  •  {t(STEP_TITLES[step])}
         </Text>
         <View style={styles.card}>
           {step === 0 ? (
             <View>
-              <Text style={styles.stepTitle}>Preferred language</Text>
-              <Text style={styles.stepText}>Choose the language you want to use inside the app.</Text>
+              <Text style={styles.stepTitle}>{t('Preferred language')}</Text>
+              <Text style={styles.stepText}>{t('Choose the language you want to use inside the app.')}</Text>
               <View style={styles.optionGrid}>
                 {LANGUAGE_OPTIONS.map((option) => (
                   <Pressable
                     key={option.value}
-                    onPress={() => void updateData((current) => ({ ...current, language: option.value }))}
+                    onPress={() => void handleLanguageSelect(option.value)}
                     style={[styles.optionCard, data.language === option.value && styles.optionCardActive]}
                   >
-                    <Text style={[styles.optionLabel, data.language === option.value && styles.optionLabelActive]}>{option.label}</Text>
+                    <Text style={[styles.optionLabel, data.language === option.value && styles.optionLabelActive]}>{option.nativeLabel}</Text>
+                    <Text style={[styles.optionSubLabel, data.language === option.value && styles.optionLabelActive]}>{t(option.label)}</Text>
                   </Pressable>
                 ))}
               </View>
-              {errors.language ? <Text style={styles.errorText}>{errors.language}</Text> : null}
+              {errors.language ? <Text style={styles.errorText}>{t(errors.language)}</Text> : null}
             </View>
           ) : null}
           {step === 1 ? (
             <View>
-              <Text style={styles.stepTitle}>Select your country</Text>
-              <Text style={styles.stepText}>Choose your country to help us customize recommendations and local activity.</Text>
+              <Text style={styles.stepTitle}>{t('Select your country')}</Text>
+              <Text style={styles.stepText}>{t('Choose your country to help us customize recommendations and local activity.')}</Text>
               
               <AuthInput
-                placeholder="Search country..."
+                placeholder={t('Search country...')}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 icon="search-outline"
-                error={errors.country}
+                error={errors.country ? t(errors.country) : undefined}
               />
               <View style={{ marginTop: 6 }}>
                 {searchQuery.trim().length > 0 ? (
                   <View>
-                    <Text style={styles.sectionHeader}>Search Results</Text>
+                    <Text style={styles.sectionHeader}>{t('Search Results')}</Text>
                     {filteredCountries.length > 0 ? (
                       <View style={styles.optionGridSingle}>
                         {filteredCountries.map((c) => {
@@ -617,12 +632,12 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
                         })}
                       </View>
                     ) : (
-                      <Text style={styles.noResultsText}>No countries match your search.</Text>
+                      <Text style={styles.noResultsText}>{t('No countries match your search.')}</Text>
                     )}
                   </View>
                 ) : (
                   <View>
-                    <Text style={styles.sectionHeader}>Popular countries</Text>
+                    <Text style={styles.sectionHeader}>{t('Popular countries')}</Text>
                     <View style={styles.optionGridSingle}>
                       {POPULAR_COUNTRIES.map((c) => {
                         const isSelected = selectedCountry === c.name;
@@ -647,12 +662,12 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
           ) : null}
           {step === 2 ? (
             <View>
-              <Text style={styles.stepTitle}>Personal profile</Text>
-              <Text style={styles.stepText}>These answers set your personalized targets and can be updated later from your profile.</Text>
+              <Text style={styles.stepTitle}>{t('Personal profile')}</Text>
+              <Text style={styles.stepText}>{t('These answers set your personalized targets and can be updated later from your profile.')}</Text>
               
               {/* Age - Numbers only, strings CANNOT be typed! */}
               <AuthInput
-                placeholder="Age"
+                placeholder={t('Age')}
                 value={data.personalProfile.age}
                 onChangeText={(value) => void updateData((current) => ({ ...current, personalProfile: { ...current.personalProfile, age: value } }))}
                 allowedType="number"
@@ -660,20 +675,20 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
                 icon="calendar-outline"
                 error={errors.age}
               />
-              <Text style={styles.fieldLabel}>Gender</Text>
+              <Text style={styles.fieldLabel}>{t('Gender')}</Text>
               <Pressable style={styles.dropdownField} onPress={() => setShowGenderModal(true)}>
                 <Text style={[styles.dropdownFieldText, !data.personalProfile.gender && styles.dropdownFieldPlaceholder]}>
-                  {data.personalProfile.gender || 'Select gender'}
+                  {data.personalProfile.gender ? t(data.personalProfile.gender) : t('Select gender')}
                 </Text>
                 <Ionicons name="chevron-down" size={18} color={Colors.textSecondary} />
               </Pressable>
-              {errors.gender ? <Text style={styles.errorText}>{errors.gender}</Text> : null}
-              <Text style={styles.fieldLabel}>Height</Text>
+              {errors.gender ? <Text style={styles.errorText}>{t(errors.gender)}</Text> : null}
+              <Text style={styles.fieldLabel}>{t('Height')}</Text>
               {/* Height - Decimals only, strings CANNOT be typed! */}
               <View style={styles.measurementField}>
                 <TextInput
                   style={styles.measurementInput}
-                  placeholder="How many cm"
+                  placeholder={t('How many cm')}
                   placeholderTextColor={Colors.placeholder}
                   value={data.personalProfile.height}
                   onChangeText={(val) => {
@@ -686,14 +701,14 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
                   <Text style={styles.measurementUnitText}>cm</Text>
                 </View>
               </View>
-              {errors.height ? <Text style={styles.errorText}>{errors.height}</Text> : null}
-              <Text style={styles.helperText}>This helps us calculate your personalized nutrition and training targets - visible only to you.</Text>
-              <Text style={styles.fieldLabel}>Weight</Text>
+              {errors.height ? <Text style={styles.errorText}>{t(errors.height)}</Text> : null}
+              <Text style={styles.helperText}>{t('This helps us calculate your personalized nutrition and training targets - visible only to you.')}</Text>
+              <Text style={styles.fieldLabel}>{t('Weight')}</Text>
               {/* Weight - Decimals only, strings CANNOT be typed! */}
               <View style={styles.measurementField}>
                 <TextInput
                   style={styles.measurementInput}
-                  placeholder={data.personalProfile.weightUnit === 'lb' ? 'How many lb' : 'How many kg'}
+                  placeholder={data.personalProfile.weightUnit === 'lb' ? t('How many lb') : t('How many kg')}
                   placeholderTextColor={Colors.placeholder}
                   value={data.personalProfile.weight}
                   onChangeText={(val) => {
@@ -714,14 +729,14 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
                   ))}
                 </View>
               </View>
-              {errors.weight ? <Text style={styles.errorText}>{errors.weight}</Text> : null}
+              {errors.weight ? <Text style={styles.errorText}>{t(errors.weight)}</Text> : null}
             </View>
           ) : null}
           {step === 3 ? (
             <View>
-              <Text style={styles.stepTitle}>Sport and health anamnese</Text>
-              <Text style={styles.stepText}>Answer these five questions so we can shape the right plan recommendation.</Text>
-              <Text style={styles.questionTitle}>1. What is your primary goal?</Text>
+              <Text style={styles.stepTitle}>{t('Sport and health anamnese')}</Text>
+              <Text style={styles.stepText}>{t('Answer these five questions so we can shape the right plan recommendation.')}</Text>
+              <Text style={styles.questionTitle}>{t('1. What is your primary goal?')}</Text>
               <View style={styles.optionGridSingle}>
                 {PRIMARY_GOAL_OPTIONS.map((option) => (
                   <Pressable
@@ -729,12 +744,12 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
                     onPress={() => void updateData((current) => ({ ...current, anamnese: { ...current.anamnese, primaryGoal: option } }))}
                     style={[styles.optionCard, data.anamnese.primaryGoal === option && styles.optionCardActive]}
                   >
-                    <Text style={[styles.optionLabel, data.anamnese.primaryGoal === option && styles.optionLabelActive]}>{option}</Text>
+                    <Text style={[styles.optionLabel, data.anamnese.primaryGoal === option && styles.optionLabelActive]}>{t(option)}</Text>
                   </Pressable>
                 ))}
               </View>
-              {errors.primaryGoal ? <Text style={styles.errorText}>{errors.primaryGoal}</Text> : null}
-              <Text style={styles.questionTitle}>2. How would you describe your current activity level?</Text>
+              {errors.primaryGoal ? <Text style={styles.errorText}>{t(errors.primaryGoal)}</Text> : null}
+              <Text style={styles.questionTitle}>{t('2. How would you describe your current activity level?')}</Text>
               <View style={styles.optionGridSingle}>
                 {ACTIVITY_LEVEL_OPTIONS.map((option) => (
                   <Pressable
@@ -742,12 +757,12 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
                     onPress={() => void updateData((current) => ({ ...current, anamnese: { ...current.anamnese, activityLevel: option } }))}
                     style={[styles.optionCard, data.anamnese.activityLevel === option && styles.optionCardActive]}
                   >
-                    <Text style={[styles.optionLabel, data.anamnese.activityLevel === option && styles.optionLabelActive]}>{option}</Text>
+                    <Text style={[styles.optionLabel, data.anamnese.activityLevel === option && styles.optionLabelActive]}>{t(option)}</Text>
                   </Pressable>
                 ))}
               </View>
-              {errors.activityLevel ? <Text style={styles.errorText}>{errors.activityLevel}</Text> : null}
-              <Text style={styles.questionTitle}>3. Do you currently have, or have you had in the last 12 months, any injuries, pain, or medical conditions we should know about?</Text>
+              {errors.activityLevel ? <Text style={styles.errorText}>{t(errors.activityLevel)}</Text> : null}
+              <Text style={styles.questionTitle}>{t('3. Do you currently have, or have you had in the last 12 months, any injuries, pain, or medical conditions we should know about?')}</Text>
               <View style={styles.optionGridSingle}>
                 {HEALTH_CONCERN_OPTIONS.map((option) => (
                   <Pressable
@@ -755,7 +770,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
                     onPress={() => toggleHealthConcern(option)}
                     style={[styles.optionCard, data.anamnese.healthConcerns.includes(option) && styles.optionCardActive]}
                   >
-                    <Text style={[styles.optionLabel, data.anamnese.healthConcerns.includes(option) && styles.optionLabelActive]}>{option}</Text>
+                    <Text style={[styles.optionLabel, data.anamnese.healthConcerns.includes(option) && styles.optionLabelActive]}>{t(getHealthConcernLabel(option))}</Text>
                   </Pressable>
                 ))}
               </View>
@@ -763,12 +778,12 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
               <TextInput
                 value={data.anamnese.healthNotes}
                 onChangeText={(value) => void updateData((current) => ({ ...current, anamnese: { ...current.anamnese, healthNotes: value } }))}
-                placeholder="Add details if needed"
+                placeholder={t('Add details if needed')}
                 placeholderTextColor={Colors.placeholder}
                 multiline
                 style={styles.notesInput}
               />
-              <Text style={styles.questionTitle}>4. How many days per week can you realistically commit?</Text>
+              <Text style={styles.questionTitle}>{t('4. How many days per week can you realistically commit?')}</Text>
               <View style={styles.optionGridSingle}>
                 {DAYS_OPTIONS.map((option) => (
                   <Pressable
@@ -776,12 +791,12 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
                     onPress={() => void updateData((current) => ({ ...current, anamnese: { ...current.anamnese, daysPerWeek: option } }))}
                     style={[styles.optionCard, data.anamnese.daysPerWeek === option && styles.optionCardActive]}
                   >
-                    <Text style={[styles.optionLabel, data.anamnese.daysPerWeek === option && styles.optionLabelActive]}>{option}</Text>
+                    <Text style={[styles.optionLabel, data.anamnese.daysPerWeek === option && styles.optionLabelActive]}>{t(option)}</Text>
                   </Pressable>
                 ))}
               </View>
-              {errors.daysPerWeek ? <Text style={styles.errorText}>{errors.daysPerWeek}</Text> : null}
-              <Text style={styles.questionTitle}>5. How much time can you commit per session?</Text>
+              {errors.daysPerWeek ? <Text style={styles.errorText}>{t(errors.daysPerWeek)}</Text> : null}
+              <Text style={styles.questionTitle}>{t('5. How much time can you commit per session?')}</Text>
               <View style={styles.optionGridSingle}>
                 {SESSION_OPTIONS.map((option) => (
                   <Pressable
@@ -789,12 +804,12 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
                     onPress={() => void updateData((current) => ({ ...current, anamnese: { ...current.anamnese, timePerSession: option } }))}
                     style={[styles.optionCard, data.anamnese.timePerSession === option && styles.optionCardActive]}
                   >
-                    <Text style={[styles.optionLabel, data.anamnese.timePerSession === option && styles.optionLabelActive]}>{option}</Text>
+                    <Text style={[styles.optionLabel, data.anamnese.timePerSession === option && styles.optionLabelActive]}>{t(option)}</Text>
                   </Pressable>
                 ))}
               </View>
-              {errors.timePerSession ? <Text style={styles.errorText}>{errors.timePerSession}</Text> : null}
-              <Text style={styles.questionTitle}>6. What equipment or environment do you have access to?</Text>
+              {errors.timePerSession ? <Text style={styles.errorText}>{t(errors.timePerSession)}</Text> : null}
+              <Text style={styles.questionTitle}>{t('6. What equipment or environment do you have access to?')}</Text>
               <View style={styles.optionGridSingle}>
                 {EQUIPMENT_OPTIONS.map((option) => (
                   <Pressable
@@ -802,34 +817,34 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
                     onPress={() => void updateData((current) => ({ ...current, anamnese: { ...current.anamnese, equipmentAccess: option } }))}
                     style={[styles.optionCard, data.anamnese.equipmentAccess === option && styles.optionCardActive]}
                   >
-                    <Text style={[styles.optionLabel, data.anamnese.equipmentAccess === option && styles.optionLabelActive]}>{option}</Text>
+                    <Text style={[styles.optionLabel, data.anamnese.equipmentAccess === option && styles.optionLabelActive]}>{t(option)}</Text>
                   </Pressable>
                 ))}
               </View>
-              {errors.equipmentAccess ? <Text style={styles.errorText}>{errors.equipmentAccess}</Text> : null}
+              {errors.equipmentAccess ? <Text style={styles.errorText}>{t(errors.equipmentAccess)}</Text> : null}
             </View>
           ) : null}
           {step === 4 ? (
             <View>
-              <Text style={styles.stepTitle}>What will this help you protect?</Text>
-              <Text style={styles.stepText}>Before we build your plan, write one short commitment in your own words. This step is optional and can be edited later.</Text>
+              <Text style={styles.stepTitle}>{t('What will this help you protect?')}</Text>
+              <Text style={styles.stepText}>{t('Before we build your plan, write one short commitment in your own words. This step is optional and can be edited later.')}</Text>
               <TextInput
                 value={data.motivationStatement}
                 onChangeText={(value) => void updateData((current) => ({ ...current, motivationStatement: value.slice(0, 240) }))}
-                placeholder="Example: stay healthy for my family, feel stronger again, or rebuild my routine"
+                placeholder={t('Example: stay healthy for my family, feel stronger again, or rebuild my routine')}
                 placeholderTextColor={Colors.placeholder}
                 multiline
                 maxLength={240}
                 textAlignVertical="top"
                 style={styles.notesInput}
               />
-              <Text style={styles.helperText}>We only reuse this in coaching and reminder copy as a supportive anchor, never to shame or pressure you.</Text>
+              <Text style={styles.helperText}>{t('We only reuse this in coaching and reminder copy as a supportive anchor, never to shame or pressure you.')}</Text>
             </View>
           ) : null}
           {step === 5 && suggestion ? (
             <View>
-              <Text style={styles.stepTitle}>Suggested tier</Text>
-              <Text style={styles.stepText}>Based on your answers, this is the strongest starting point for your next step inside the app.</Text>
+              <Text style={styles.stepTitle}>{t('Suggested tier')}</Text>
+              <Text style={styles.stepText}>{t('Based on your answers, this is the strongest starting point for your next step inside the app.')}</Text>
               <View style={[
                 styles.recommendationCard,
                 suggestion.tier === 'GOLD' && {
@@ -840,33 +855,33 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
                 <Text style={[
                   styles.recommendationEyebrow,
                   suggestion.tier === 'GOLD' && { color: '#F59E0B' }
-                ]}>RECOMMENDED</Text>
-                <Text style={styles.recommendationTitle}>{suggestion.title}</Text>
-                <Text style={styles.recommendationReason}>{suggestion.reason}</Text>
+                ]}>{t('RECOMMENDED')}</Text>
+                <Text style={styles.recommendationTitle}>{t(suggestion.title)}</Text>
+                <Text style={styles.recommendationReason}>{t(suggestion.reason)}</Text>
                 {suggestion.note ? <Text style={styles.recommendationNote}>{suggestion.note}</Text> : null}
               </View>
               <View style={styles.reviewCard}>
-                <Text style={styles.reviewTitle}>Review answers</Text>
-                <Text style={styles.reviewLine}>Language: {LANGUAGE_OPTIONS.find((option) => option.value === data.language)?.label ?? '-'}</Text>
-                <Text style={styles.reviewLine}>Country: {data.country || selectedCountry || '-'}</Text>
-                <Text style={styles.reviewLine}>Commitment statement: {data.motivationStatement || '-'}</Text>
-                <Text style={styles.reviewLine}>Age: {data.personalProfile.age || '-'}</Text>
-                <Text style={styles.reviewLine}>Gender: {data.personalProfile.gender || '-'}</Text>
-                <Text style={styles.reviewLine}>Height: {data.personalProfile.height ? `${data.personalProfile.height} ${data.personalProfile.heightUnit}` : '-'}</Text>
-                <Text style={styles.reviewLine}>Weight: {data.personalProfile.weight ? `${data.personalProfile.weight} ${data.personalProfile.weightUnit}` : '-'}</Text>
-                <Text style={styles.reviewLine}>Goal: {data.anamnese.primaryGoal || '-'}</Text>
-                <Text style={styles.reviewLine}>Activity: {data.anamnese.activityLevel || '-'}</Text>
-                <Text style={styles.reviewLine}>Commitment: {data.anamnese.daysPerWeek || '-'} / {data.anamnese.timePerSession || '-'}</Text>
-                <Text style={styles.reviewLine}>Equipment: {data.anamnese.equipmentAccess || '-'}</Text>
+                <Text style={styles.reviewTitle}>{t('Review answers')}</Text>
+                <Text style={styles.reviewLine}>{t('Language')}: {LANGUAGE_OPTIONS.find((option) => option.value === data.language)?.nativeLabel || '-'}</Text>
+                <Text style={styles.reviewLine}>{t('Country')}: {data.country || selectedCountry || '-'}</Text>
+                <Text style={styles.reviewLine}>{t('Commitment statement')}: {data.motivationStatement || '-'}</Text>
+                <Text style={styles.reviewLine}>{t('Age')}: {data.personalProfile.age || '-'}</Text>
+                <Text style={styles.reviewLine}>{t('Gender')}: {data.personalProfile.gender ? t(data.personalProfile.gender) : '-'}</Text>
+                <Text style={styles.reviewLine}>{t('Height')}: {data.personalProfile.height ? `${data.personalProfile.height} ${data.personalProfile.heightUnit}` : '-'}</Text>
+                <Text style={styles.reviewLine}>{t('Weight')}: {data.personalProfile.weight ? `${data.personalProfile.weight} ${data.personalProfile.weightUnit}` : '-'}</Text>
+                <Text style={styles.reviewLine}>{t('Goal')}: {data.anamnese.primaryGoal ? t(data.anamnese.primaryGoal) : '-'}</Text>
+                <Text style={styles.reviewLine}>{t('Activity')}: {data.anamnese.activityLevel ? t(data.anamnese.activityLevel) : '-'}</Text>
+                <Text style={styles.reviewLine}>{t('Commitment')}: {data.anamnese.daysPerWeek ? t(data.anamnese.daysPerWeek) : '-'} / {data.anamnese.timePerSession ? t(data.anamnese.timePerSession) : '-'}</Text>
+                <Text style={styles.reviewLine}>{t('Equipment')}: {data.anamnese.equipmentAccess ? t(data.anamnese.equipmentAccess) : '-'}</Text>
               </View>
             </View>
           ) : null}
         </View>
-        {saveError ? <Text style={styles.saveError}>{saveError}</Text> : null}
+        {saveError ? <Text style={styles.saveError}>{t(saveError)}</Text> : null}
         <View style={styles.actionsRow}>
           <View style={styles.primaryButtonWrap}>
             <AuthButton
-              title={step === STEP_TITLES.length - 1 ? 'Continue to Subscription' : step === 4 ? 'Continue' : 'Next'}
+              title={step === STEP_TITLES.length - 1 ? t('Continue to Subscription') : step === 4 ? t('Continue') : t('Next')}
               onPress={() => void handleNext()}
               disabled={saving}
               loading={saving}
@@ -874,7 +889,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
           </View>
           {step > 0 ? (
             <Pressable onPress={() => void handleBack()} disabled={saving} style={styles.secondaryButton}>
-              <Text style={styles.secondaryButtonText}>Back</Text>
+              <Text style={styles.secondaryButtonText}>{t('Back')}</Text>
             </Pressable>
           ) : null}
         </View>
@@ -882,7 +897,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
       <Modal visible={showGenderModal} transparent animationType="fade" onRequestClose={() => setShowGenderModal(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setShowGenderModal(false)}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Select gender</Text>
+            <Text style={styles.modalTitle}>{t('Select gender')}</Text>
             {GENDER_OPTIONS.map((option) => (
               <Pressable
                 key={option}
@@ -892,7 +907,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
                   void updateData((current) => ({ ...current, personalProfile: { ...current.personalProfile, gender: option } }));
                 }}
               >
-                <Text style={[styles.modalOptionText, data.personalProfile.gender === option && styles.modalOptionTextActive]}>{option}</Text>
+                <Text style={[styles.modalOptionText, data.personalProfile.gender === option && styles.modalOptionTextActive]}>{t(option)}</Text>
                 {data.personalProfile.gender === option ? <Ionicons name="checkmark-circle" size={20} color={Colors.primary} /> : null}
               </Pressable>
             ))}
@@ -1060,6 +1075,12 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontFamily: 'Inter_600SemiBold',
     fontSize: 14,
+  },
+  optionSubLabel: {
+    color: Colors.textMuted,
+    fontFamily: 'Inter_500Medium',
+    fontSize: 12,
+    marginTop: 4,
   },
   optionLabelActive: {
     color: Colors.text,

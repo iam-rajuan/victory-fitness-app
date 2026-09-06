@@ -24,7 +24,7 @@ import VictoryHeader from '../../components/VictoryHeader';
 import AccessRestrictionModal from '../../components/AccessRestrictionModal';
 import { BodyMetrics, fetchCurrentUser, fetchCurrentUserBodyMetrics, getAuthUser, logout, updateCurrentUserBodyMetrics, updateCurrentUserProfile } from '../../lib/api';
 import { canAccessFeature, canAccessPlanRoute } from '../../lib/access';
-import { useLanguage } from '../../lib/i18n';
+import { SUPPORTED_LANGUAGES, LanguageCode, useLanguage } from '../../lib/i18n';
 import { syncOnboardingProfileFields } from '../../lib/onboarding';
 import { useModuleAccessGuard } from '../../lib/useModuleAccessGuard';
 import { replaceRoute } from '../../lib/navigation';
@@ -80,10 +80,7 @@ const MENU_SECTIONS = [
   }
 ];
 
-const LANGUAGE_OPTIONS = [
-  { key: 'en', label: 'English' },
-  { key: 'de', label: 'German' },
-] as const;
+const LANGUAGE_OPTIONS = SUPPORTED_LANGUAGES;
 
 function getDynamicRankIcon(rank: string) {
   const normalized = rank.trim().toLowerCase();
@@ -242,13 +239,8 @@ export default function ProfileScreen() {
 
   const languageLabel = React.useMemo(
     () => {
-      switch (language) {
-        case 'de':
-          return t('German');
-        case 'en':
-        default:
-          return t('English');
-      }
+      const selected = LANGUAGE_OPTIONS.find((option) => option.code === language);
+      return selected ? selected.nativeLabel : t('English');
     },
     [language, t],
   );
@@ -427,8 +419,15 @@ export default function ProfileScreen() {
     setShowHabitModal(true);
   };
 
-  const handleSelectLanguage = async (languageKey: (typeof LANGUAGE_OPTIONS)[number]['key']) => {
+  const handleSelectLanguage = async (languageKey: LanguageCode) => {
     await setLanguage(languageKey);
+    try {
+      const updated = await updateCurrentUserProfile({ preferred_language: languageKey });
+      setMe((current) => current ? { ...current, ...updated } : current);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t('Unable to save language preference.');
+      Alert.alert(t('Save failed'), message);
+    }
     setShowLanguageModal(false);
   };
 
@@ -741,7 +740,7 @@ export default function ProfileScreen() {
           }}
         >
           <Ionicons name="log-out-outline" size={20} color="#EF4444" />
-          <Text style={styles.logoutText}>Log Out</Text>
+          <Text style={styles.logoutText}>{t('Log Out')}</Text>
         </TouchableOpacity>
 
         <Text style={styles.versionText}>{t('Victory Fitness v1.0.0')}</Text>
@@ -859,23 +858,30 @@ export default function ProfileScreen() {
             <TouchableWithoutFeedback onPress={() => {}}>
               <View style={styles.genderModalCard}>
                 <Text style={styles.genderModalTitle}>{t('SELECT LANGUAGE')}</Text>
-                <View style={styles.profileLanguageSwitch}>
+                <ScrollView style={styles.profileLanguageList} contentContainerStyle={styles.profileLanguageListContent}>
                   {LANGUAGE_OPTIONS.map((option) => {
-                    const active = language === option.key;
+                    const active = language === option.code;
                     return (
                       <TouchableOpacity
-                        key={option.key}
+                        key={option.code}
                         activeOpacity={0.85}
                         style={[styles.profileLanguageOption, active && styles.profileLanguageOptionActive]}
-                        onPress={() => void handleSelectLanguage(option.key)}
+                        onPress={() => void handleSelectLanguage(option.code)}
                       >
                         <Text style={[styles.profileLanguageOptionText, active && styles.profileLanguageOptionTextActive]}>
-                          {option.key.toUpperCase()}
+                          {option.code.toUpperCase()}
                         </Text>
+                        <View style={styles.profileLanguageOptionCopy}>
+                          <Text style={[styles.profileLanguageNativeText, active && styles.profileLanguageOptionTextActive]}>
+                            {option.nativeLabel}
+                          </Text>
+                          <Text style={styles.profileLanguageEnglishText}>{t(option.label)}</Text>
+                        </View>
+                        {active ? <Ionicons name="checkmark-circle" size={20} color={Colors.primary} /> : null}
                       </TouchableOpacity>
                     );
                   })}
-                </View>
+                </ScrollView>
               </View>
             </TouchableWithoutFeedback>
           </View>
@@ -1401,36 +1407,53 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 18,
   },
-  profileLanguageSwitch: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(18, 22, 34, 0.7)',
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    padding: 4,
-    gap: 8,
+  profileLanguageList: {
+    maxHeight: 360,
+    width: '100%',
+  },
+  profileLanguageListContent: {
+    gap: 10,
+    paddingBottom: 2,
   },
   profileLanguageOption: {
-    minWidth: 72,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 999,
+    minHeight: 58,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.09)',
+    backgroundColor: 'rgba(18, 22, 34, 0.72)',
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 12,
   },
   profileLanguageOptionActive: {
-    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+    backgroundColor: 'rgba(0, 240, 208, 0.13)',
   },
   profileLanguageOptionText: {
     color: '#94A3B8',
     fontSize: 13,
     fontFamily: 'Inter_700Bold',
     letterSpacing: 0.8,
+    width: 38,
   },
   profileLanguageOptionTextActive: {
-    color: '#021417',
+    color: Colors.primary,
+  },
+  profileLanguageOptionCopy: {
+    flex: 1,
+  },
+  profileLanguageNativeText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontFamily: 'Inter_700Bold',
+  },
+  profileLanguageEnglishText: {
+    color: 'rgba(255,255,255,0.48)',
+    fontSize: 12,
+    fontFamily: 'Inter_500Medium',
+    marginTop: 3,
   },
   genderModalOption: {
     flexDirection: 'row',

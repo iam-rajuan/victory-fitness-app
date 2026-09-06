@@ -31,7 +31,7 @@ export default function GreetingCard() {
         {remoteQuote?.author ? (
           <Text style={styles.quoteAuthor}>— {remoteQuote.author}</Text>
         ) : (
-          <Text style={styles.quoteAuthor}>— Victory Team</Text>
+          <Text style={styles.quoteAuthor}>— {t('Victory Team')}</Text>
         )}
       </View>
     </View>

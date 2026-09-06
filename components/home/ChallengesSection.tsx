@@ -95,16 +95,16 @@ function ChallengeCard({
         </View>
       </View>
 
-      <Text style={styles.challengeLibraryFieldLabel}>Goal Type</Text>
+      <Text style={styles.challengeLibraryFieldLabel}>{t('Goal Type')}</Text>
       <Text style={styles.challengeLibraryCategory}>{goalType}</Text>
 
-      <Text style={styles.challengeLibraryFieldLabel}>What To Do</Text>
+      <Text style={styles.challengeLibraryFieldLabel}>{t('What To Do')}</Text>
       <Text style={styles.challengeLibraryDescription} numberOfLines={expanded ? undefined : 3}>{whatToDo}</Text>
 
       {whyItMatters ? (
         <>
           <TouchableOpacity style={styles.challengeExpandBtn} activeOpacity={0.84} onPress={() => setExpanded((current) => !current)}>
-            <Text style={styles.challengeExpandBtnText}>{expanded ? 'Hide Why It Matters' : 'Why It Matters'}</Text>
+            <Text style={styles.challengeExpandBtnText}>{expanded ? t('Hide Why It Matters') : t('Why It Matters')}</Text>
             <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color="#BFDBFE" />
           </TouchableOpacity>
           {expanded ? <Text style={styles.challengeWhyText}>{whyItMatters}</Text> : null}
@@ -137,7 +137,7 @@ function ChallengeCard({
               size={14}
               color="rgba(255,255,255,0.58)"
             />
-            <Text style={styles.challengeLibraryMetaText}>{daysLeftLabel}</Text>
+            <Text style={styles.challengeLibraryMetaText}>{t(daysLeftLabel)}</Text>
           </View>
         </View>
         <View style={styles.challengeLibraryActionRow}>
@@ -463,8 +463,8 @@ export default function ChallengesSection({ refreshToken = 0 }: { refreshToken?:
                 <Ionicons name="flame" size={20} color="#FBBF24" />
               </View>
               <View style={styles.urgencyCopy}>
-                <Text style={styles.urgencyTitle}>Finish today&apos;s challenge</Text>
-                <Text style={styles.urgencyText}>Complete it today or miss today&apos;s points.</Text>
+        <Text style={styles.urgencyTitle}>{t("Finish today's challenge")}</Text>
+        <Text style={styles.urgencyText}>{t("Complete it today or miss today's points.")}</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color="#FBBF24" />
             </TouchableOpacity>

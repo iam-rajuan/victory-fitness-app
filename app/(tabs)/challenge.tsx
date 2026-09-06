@@ -1598,9 +1598,9 @@ export default function ChallengesScreen() {
                           </Text>
                         </View>
                       </View>
-                      <Text style={styles.challengeLibraryFieldLabel}>Goal Type</Text>
+                      <Text style={styles.challengeLibraryFieldLabel}>{t('Goal Type')}</Text>
                       <Text style={styles.challengeLibraryCategory}>{ch.type}</Text>
-                      <Text style={styles.challengeLibraryFieldLabel}>What To Do</Text>
+                      <Text style={styles.challengeLibraryFieldLabel}>{t('What To Do')}</Text>
                       <Text style={styles.challengeLibraryDescription} numberOfLines={isExpanded ? undefined : 3}>{ch.description}</Text>
                       {ch.state === 'ACTIVE' ? (
                         <View style={styles.challengeLibraryProgressRow}>
@@ -1630,7 +1630,7 @@ export default function ChallengesScreen() {
                           activeOpacity={0.84}
                           onPress={() => toggleChallengeCardExpansion(ch.id)}
                         >
-                          <Text style={styles.challengeExpandBtnText}>{isExpanded ? 'Hide Why It Matters' : 'Why It Matters'}</Text>
+                          <Text style={styles.challengeExpandBtnText}>{isExpanded ? t('Hide Why It Matters') : t('Why It Matters')}</Text>
                           <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={16} color="#BFDBFE" />
                         </TouchableOpacity>
                         {isExpanded ? <Text style={styles.challengeWhyText}>{ch.why_it_matters}</Text> : null}

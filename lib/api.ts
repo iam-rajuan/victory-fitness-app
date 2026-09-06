@@ -237,6 +237,11 @@ export type OnboardingState = OnboardingData & {
   completed: boolean;
 };
 
+export type TranslationBatchResponse = {
+  target_language: string;
+  translations: Record<string, string>;
+};
+
 export type SubscriptionPlan = {
   id: string;
   subscriptionTier: string;
@@ -720,12 +725,11 @@ function isJwtExpired(token: string): boolean {
 }
 
 async function persistAuthTokens(tokens: AuthTokens | null) {
-  if (IS_BROWSER_AUTH) {
-    return;
-  }
-
   if (tokens) {
-    await AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(tokens));
+    const persistedTokens = IS_BROWSER_AUTH
+      ? { access_token: '', session_token: tokens.session_token }
+      : tokens;
+    await AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(persistedTokens));
     await AsyncStorage.setItem(AUTH_API_URL_STORAGE_KEY, API_URL);
   } else {
     await AsyncStorage.removeItem(AUTH_STORAGE_KEY);
@@ -733,10 +737,6 @@ async function persistAuthTokens(tokens: AuthTokens | null) {
 }
 
 async function persistAuthUser(user: AuthUser | null) {
-  if (IS_BROWSER_AUTH) {
-    return;
-  }
-
   if (user) {
     await AsyncStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(user));
   } else {
@@ -780,19 +780,11 @@ async function fetchWithTimeout(input: string, init: RequestInit = {}, timeoutMs
 }
 
 async function loadPersistedAuthTokens(): Promise<AuthTokens | null> {
-  if (IS_BROWSER_AUTH) {
-    return null;
-  }
-
   const raw = await AsyncStorage.getItem(AUTH_STORAGE_KEY);
   return raw ? (JSON.parse(raw) as AuthTokens) : null;
 }
 
 async function loadPersistedAuthUser(): Promise<AuthUser | null> {
-  if (IS_BROWSER_AUTH) {
-    return null;
-  }
-
   const raw = await AsyncStorage.getItem(AUTH_USER_STORAGE_KEY);
   return raw ? (JSON.parse(raw) as AuthUser) : null;
 }
@@ -1111,6 +1103,18 @@ export async function updateCurrentUserSubscription(payload: {
   currentUserFetchedAt = Date.now();
   await persistAuthUser(authUser);
   return user;
+}
+
+export async function translateTextBatch(targetLanguage: string, texts: string[]) {
+  return apiRequest<TranslationBatchResponse>('/i18n/translate-batch', {
+    method: 'POST',
+    body: {
+      target_language: targetLanguage,
+      source_language: 'en',
+      texts,
+    },
+    timeoutMs: 24_000,
+  });
 }
 
 export async function createStripeCheckoutSession(payload: {

@@ -1,11 +1,42 @@
 import React from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getAuthUser, setApiLanguage } from './api';
+import { fetchCurrentUser, getAuthUser, setApiLanguage, translateTextBatch } from './api';
 
-export type LanguageCode = 'en' | 'de';
+export const SUPPORTED_LANGUAGES = [
+  { code: 'en', label: 'English', nativeLabel: 'English' },
+  { code: 'en-gh', label: 'English (Ghana)', nativeLabel: 'English (Ghana)' },
+  { code: 'de', label: 'German', nativeLabel: 'Deutsch' },
+  { code: 'es', label: 'Spanish', nativeLabel: 'Español' },
+  { code: 'fr', label: 'French', nativeLabel: 'Français' },
+  { code: 'it', label: 'Italian', nativeLabel: 'Italiano' },
+  { code: 'pt', label: 'Portuguese', nativeLabel: 'Português' },
+  { code: 'nl', label: 'Dutch', nativeLabel: 'Nederlands' },
+  { code: 'pl', label: 'Polish', nativeLabel: 'Polski' },
+  { code: 'tr', label: 'Turkish', nativeLabel: 'Türkçe' },
+  { code: 'ar', label: 'Arabic', nativeLabel: 'العربية' },
+  { code: 'hi', label: 'Hindi', nativeLabel: 'हिन्दी' },
+  { code: 'bn', label: 'Bengali', nativeLabel: 'বাংলা' },
+  { code: 'ak', label: 'Twi (Ghana)', nativeLabel: 'Twi / Akan' },
+  { code: 'ee', label: 'Ewe (Ghana)', nativeLabel: 'Eʋegbe' },
+  { code: 'gaa', label: 'Ga (Ghana)', nativeLabel: 'Ga' },
+  { code: 'ur', label: 'Urdu', nativeLabel: 'اردو' },
+  { code: 'id', label: 'Indonesian', nativeLabel: 'Bahasa Indonesia' },
+  { code: 'ja', label: 'Japanese', nativeLabel: '日本語' },
+  { code: 'ko', label: 'Korean', nativeLabel: '한국어' },
+  { code: 'zh', label: 'Chinese', nativeLabel: '中文' },
+  { code: 'ru', label: 'Russian', nativeLabel: 'Русский' },
+  { code: 'uk', label: 'Ukrainian', nativeLabel: 'Українська' },
+  { code: 'vi', label: 'Vietnamese', nativeLabel: 'Tiếng Việt' },
+  { code: 'th', label: 'Thai', nativeLabel: 'ไทย' },
+] as const;
+
+export type LanguageCode = (typeof SUPPORTED_LANGUAGES)[number]['code'];
 
 const DEFAULT_LANGUAGE: LanguageCode = 'en';
 const LANGUAGE_STORAGE_KEY_PREFIX = 'victory-language:user:';
+const TRANSLATION_CACHE_KEY_PREFIX = 'victory-translations:';
+const TRANSLATION_BATCH_DELAY_MS = 120;
+const SUPPORTED_LANGUAGE_CODES = new Set<string>(SUPPORTED_LANGUAGES.map((language) => language.code));
 
 function getLanguageStorageKeyForUser(userId: string) {
   return `${LANGUAGE_STORAGE_KEY_PREFIX}${userId}`;
@@ -17,15 +48,19 @@ async function getSavedLanguageForUser(userId?: string | null): Promise<Language
   }
 
   const stored = await AsyncStorage.getItem(getLanguageStorageKeyForUser(userId));
-  return stored === 'de' || stored === 'en' ? stored : null;
+  return isSupportedLanguageCode(stored) ? stored : null;
+}
+
+export function isSupportedLanguageCode(value?: string | null): value is LanguageCode {
+  return SUPPORTED_LANGUAGE_CODES.has(String(value || '').trim().toLowerCase());
 }
 
 function normalizeLanguageCode(value?: string | null): LanguageCode | null {
   const normalized = String(value || '').trim().toLowerCase();
-  return normalized === 'de' || normalized === 'en' ? normalized : null;
+  return isSupportedLanguageCode(normalized) ? normalized : null;
 }
 
-const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
+const TRANSLATIONS: Partial<Record<LanguageCode, Record<string, string>>> = {
   en: {
     'Access Restricted': 'Access Restricted',
     'Access restriction message': "You can't access {sectionName} with your current plan. Update your plan to unlock this section.",
@@ -238,6 +273,142 @@ const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
     'Change Profile Photo': 'Change Profile Photo',
     'FULL NAME': 'FULL NAME',
     'Your Name': 'Your Name',
+    'PREFERRED LANGUAGE': 'PREFERRED LANGUAGE',
+    'Choose the language used across Victory Fitness.': 'Choose the language used across Victory Fitness.',
+    'Saving language...': 'Saving language...',
+    'Unable to save language preference.': 'Unable to save language preference.',
+    'English (Ghana)': 'English (Ghana)',
+    Spanish: 'Spanish',
+    French: 'French',
+    Italian: 'Italian',
+    Portuguese: 'Portuguese',
+    Dutch: 'Dutch',
+    Polish: 'Polish',
+    Turkish: 'Turkish',
+    Arabic: 'Arabic',
+    Hindi: 'Hindi',
+    Bengali: 'Bengali',
+    'Twi (Ghana)': 'Twi (Ghana)',
+    'Ewe (Ghana)': 'Ewe (Ghana)',
+    'Ga (Ghana)': 'Ga (Ghana)',
+    Urdu: 'Urdu',
+    Indonesian: 'Indonesian',
+    Japanese: 'Japanese',
+    Korean: 'Korean',
+    Chinese: 'Chinese',
+    Russian: 'Russian',
+    Ukrainian: 'Ukrainian',
+    Vietnamese: 'Vietnamese',
+    Thai: 'Thai',
+    'Build your personalized start': 'Build your personalized start',
+    'Complete these steps once and we will keep your plan setup on this device.':
+      'Complete these steps once and we will keep your plan setup on this device.',
+    'Preferred language': 'Preferred language',
+    'Choose the language you want to use inside the app.': 'Choose the language you want to use inside the app.',
+    Country: 'Country',
+    'Select your country': 'Select your country',
+    'Choose your country to help us customize recommendations and local activity.':
+      'Choose your country to help us customize recommendations and local activity.',
+    'Search country...': 'Search country...',
+    'Search Results': 'Search Results',
+    'No countries match your search.': 'No countries match your search.',
+    'Popular countries': 'Popular countries',
+    'Personal profile': 'Personal profile',
+    'These answers set your personalized targets and can be updated later from your profile.':
+      'These answers set your personalized targets and can be updated later from your profile.',
+    Age: 'Age',
+    'Select gender': 'Select gender',
+    Height: 'Height',
+    'How many cm': 'How many cm',
+    'This helps us calculate your personalized nutrition and training targets - visible only to you.':
+      'This helps us calculate your personalized nutrition and training targets - visible only to you.',
+    Weight: 'Weight',
+    'How many lb': 'How many lb',
+    'How many kg': 'How many kg',
+    'Sport and health anamnese': 'Sport and health anamnese',
+    'Answer these five questions so we can shape the right plan recommendation.':
+      'Answer these five questions so we can shape the right plan recommendation.',
+    '1. What is your primary goal?': '1. What is your primary goal?',
+    '2. How would you describe your current activity level?':
+      '2. How would you describe your current activity level?',
+    '3. Do you currently have, or have you had in the last 12 months, any injuries, pain, or medical conditions we should know about?':
+      '3. Do you currently have, or have you had in the last 12 months, any injuries, pain, or medical conditions we should know about?',
+    '4. How many days per week can you realistically commit?':
+      '4. How many days per week can you realistically commit?',
+    '5. How much time can you commit per session?': '5. How much time can you commit per session?',
+    '6. What equipment or environment do you have access to?':
+      '6. What equipment or environment do you have access to?',
+    'Lose weight': 'Lose weight',
+    'Build muscle': 'Build muscle',
+    'Improve endurance': 'Improve endurance',
+    'General health and energy': 'General health and energy',
+    'Recovery and rehab': 'Recovery and rehab',
+    Sedentary: 'Sedentary',
+    'Lightly active': 'Lightly active',
+    'Moderately active': 'Moderately active',
+    'Very active': 'Very active',
+    Knee: 'Knee',
+    'Back concern': 'Back',
+    Shoulder: 'Shoulder',
+    'Heart condition': 'Heart condition',
+    None: 'None',
+    '1-2 days': '1-2 days',
+    '3-4 days': '3-4 days',
+    '5+ days': '5+ days',
+    '20 minutes': '20 minutes',
+    '30 minutes': '30 minutes',
+    '45 minutes': '45 minutes',
+    '60+ minutes': '60+ minutes',
+    'No equipment': 'No equipment',
+    'Home gym': 'Home gym',
+    'Full gym': 'Full gym',
+    Outdoors: 'Outdoors',
+    'Non-binary': 'Non-binary',
+    'Prefer not to say': 'Prefer not to say',
+    'Add details if needed': 'Add details if needed',
+    'What will this help you protect?': 'What will this help you protect?',
+    'Before we build your plan, write one short commitment in your own words. This step is optional and can be edited later.':
+      'Before we build your plan, write one short commitment in your own words. This step is optional and can be edited later.',
+    'Example: stay healthy for my family, feel stronger again, or rebuild my routine':
+      'Example: stay healthy for my family, feel stronger again, or rebuild my routine',
+    'We only reuse this in coaching and reminder copy as a supportive anchor, never to shame or pressure you.':
+      'We only reuse this in coaching and reminder copy as a supportive anchor, never to shame or pressure you.',
+    'Suggested tier': 'Suggested tier',
+    'Based on your answers, this is the strongest starting point for your next step inside the app.':
+      'Based on your answers, this is the strongest starting point for your next step inside the app.',
+    RECOMMENDED: 'RECOMMENDED',
+    'Victory Gold Trial': 'Victory Gold Trial',
+    'This is the best starting point for building consistency with nutrition and training support. If you are unsure, the 5-days paid trial with money back Guarantee (Gold Tier) lets you test the AI services first.':
+      'This is the best starting point for building consistency with nutrition and training support. If you are unsure, the 5-days paid trial with money back Guarantee (Gold Tier) lets you test the AI services first.',
+    'Review answers': 'Review answers',
+    'Commitment statement': 'Commitment statement',
+    Goal: 'Goal',
+    Activity: 'Activity',
+    Commitment: 'Commitment',
+    Equipment: 'Equipment',
+    'Continue to Subscription': 'Continue to Subscription',
+    Continue: 'Continue',
+    'Please select your preferred language.': 'Please select your preferred language.',
+    'Please select your country.': 'Please select your country.',
+    'Age is required.': 'Age is required.',
+    'Enter an age between 16 and 120.': 'Enter an age between 16 and 120.',
+    'Gender is required.': 'Gender is required.',
+    'Height is required.': 'Height is required.',
+    'Enter a height between 80 and 250 cm.': 'Enter a height between 80 and 250 cm.',
+    'Weight is required.': 'Weight is required.',
+    'Enter a valid weight.': 'Enter a valid weight.',
+    'Please choose your primary goal.': 'Please choose your primary goal.',
+    'Please choose your activity level.': 'Please choose your activity level.',
+    'Please choose your weekly commitment.': 'Please choose your weekly commitment.',
+    'Please choose your session time.': 'Please choose your session time.',
+    'Please choose your available environment.': 'Please choose your available environment.',
+    'Unable to save your country selection. Please try again.':
+      'Unable to save your country selection. Please try again.',
+    'Unable to save your onboarding details. Please try again.':
+      'Unable to save your onboarding details. Please try again.',
+    'Unable to save your progress. Please try again.': 'Unable to save your progress. Please try again.',
+    'Unable to save language preference. Please try again.':
+      'Unable to save language preference. Please try again.',
     'EMAIL ADDRESS': 'EMAIL ADDRESS',
     'Your Email': 'Your Email',
     'LOCATION (OPTIONAL)': 'LOCATION (OPTIONAL)',
@@ -1130,6 +1301,142 @@ const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
     'Change Profile Photo': 'Profilfoto ändern',
     'FULL NAME': 'VOLLSTÄNDIGER NAME',
     'Your Name': 'Dein Name',
+    'PREFERRED LANGUAGE': 'BEVORZUGTE SPRACHE',
+    'Choose the language used across Victory Fitness.': 'Wähle die Sprache, die in Victory Fitness verwendet wird.',
+    'Saving language...': 'Sprache wird gespeichert...',
+    'Unable to save language preference.': 'Die Spracheinstellung konnte nicht gespeichert werden.',
+    'English (Ghana)': 'Englisch (Ghana)',
+    Spanish: 'Spanisch',
+    French: 'Französisch',
+    Italian: 'Italienisch',
+    Portuguese: 'Portugiesisch',
+    Dutch: 'Niederländisch',
+    Polish: 'Polnisch',
+    Turkish: 'Türkisch',
+    Arabic: 'Arabisch',
+    Hindi: 'Hindi',
+    Bengali: 'Bengalisch',
+    'Twi (Ghana)': 'Twi (Ghana)',
+    'Ewe (Ghana)': 'Ewe (Ghana)',
+    'Ga (Ghana)': 'Ga (Ghana)',
+    Urdu: 'Urdu',
+    Indonesian: 'Indonesisch',
+    Japanese: 'Japanisch',
+    Korean: 'Koreanisch',
+    Chinese: 'Chinesisch',
+    Russian: 'Russisch',
+    Ukrainian: 'Ukrainisch',
+    Vietnamese: 'Vietnamesisch',
+    Thai: 'Thailändisch',
+    'Build your personalized start': 'Erstelle deinen personalisierten Start',
+    'Complete these steps once and we will keep your plan setup on this device.':
+      'Schließe diese Schritte einmal ab. Wir speichern deine Plan-Einrichtung auf diesem Gerät.',
+    'Preferred language': 'Bevorzugte Sprache',
+    'Choose the language you want to use inside the app.': 'Wähle die Sprache, die du in der App verwenden möchtest.',
+    Country: 'Land',
+    'Select your country': 'Wähle dein Land',
+    'Choose your country to help us customize recommendations and local activity.':
+      'Wähle dein Land, damit wir Empfehlungen und lokale Aktivität besser anpassen können.',
+    'Search country...': 'Land suchen...',
+    'Search Results': 'Suchergebnisse',
+    'No countries match your search.': 'Keine Länder entsprechen deiner Suche.',
+    'Popular countries': 'Beliebte Länder',
+    'Personal profile': 'Persönliches Profil',
+    'These answers set your personalized targets and can be updated later from your profile.':
+      'Diese Antworten legen deine personalisierten Ziele fest und können später im Profil geändert werden.',
+    Age: 'Alter',
+    'Select gender': 'Geschlecht auswählen',
+    Height: 'Größe',
+    'How many cm': 'Wie viele cm',
+    'This helps us calculate your personalized nutrition and training targets - visible only to you.':
+      'Das hilft uns, deine persönlichen Ernährungs- und Trainingsziele zu berechnen - nur für dich sichtbar.',
+    Weight: 'Gewicht',
+    'How many lb': 'Wie viele lb',
+    'How many kg': 'Wie viele kg',
+    'Sport and health anamnese': 'Sport- und Gesundheitsanamnese',
+    'Answer these five questions so we can shape the right plan recommendation.':
+      'Beantworte diese Fragen, damit wir die passende Planempfehlung erstellen können.',
+    '1. What is your primary goal?': '1. Was ist dein Hauptziel?',
+    '2. How would you describe your current activity level?': '2. Wie würdest du dein aktuelles Aktivitätslevel beschreiben?',
+    '3. Do you currently have, or have you had in the last 12 months, any injuries, pain, or medical conditions we should know about?':
+      '3. Hast du aktuell oder hattest du in den letzten 12 Monaten Verletzungen, Schmerzen oder medizinische Beschwerden, die wir kennen sollten?',
+    '4. How many days per week can you realistically commit?':
+      '4. Wie viele Tage pro Woche kannst du realistisch einplanen?',
+    '5. How much time can you commit per session?': '5. Wie viel Zeit kannst du pro Einheit einplanen?',
+    '6. What equipment or environment do you have access to?':
+      '6. Welche Ausrüstung oder Umgebung steht dir zur Verfügung?',
+    'Lose weight': 'Gewicht verlieren',
+    'Build muscle': 'Muskeln aufbauen',
+    'Improve endurance': 'Ausdauer verbessern',
+    'General health and energy': 'Allgemeine Gesundheit und Energie',
+    'Recovery and rehab': 'Erholung und Reha',
+    Sedentary: 'Sitzend',
+    'Lightly active': 'Leicht aktiv',
+    'Moderately active': 'Mäßig aktiv',
+    'Very active': 'Sehr aktiv',
+    Knee: 'Knie',
+    'Back concern': 'Rücken',
+    Shoulder: 'Schulter',
+    'Heart condition': 'Herzerkrankung',
+    None: 'Keine',
+    '1-2 days': '1-2 Tage',
+    '3-4 days': '3-4 Tage',
+    '5+ days': '5+ Tage',
+    '20 minutes': '20 Minuten',
+    '30 minutes': '30 Minuten',
+    '45 minutes': '45 Minuten',
+    '60+ minutes': '60+ Minuten',
+    'No equipment': 'Keine Ausrüstung',
+    'Home gym': 'Home-Gym',
+    'Full gym': 'Fitnessstudio',
+    Outdoors: 'Draußen',
+    'Non-binary': 'Nicht-binär',
+    'Prefer not to say': 'Keine Angabe',
+    'Add details if needed': 'Details hinzufügen, falls nötig',
+    'What will this help you protect?': 'Was hilft dir das zu schützen?',
+    'Before we build your plan, write one short commitment in your own words. This step is optional and can be edited later.':
+      'Bevor wir deinen Plan erstellen, schreibe ein kurzes Commitment in deinen eigenen Worten. Dieser Schritt ist optional und kann später bearbeitet werden.',
+    'Example: stay healthy for my family, feel stronger again, or rebuild my routine':
+      'Beispiel: für meine Familie gesund bleiben, mich wieder stärker fühlen oder meine Routine neu aufbauen',
+    'We only reuse this in coaching and reminder copy as a supportive anchor, never to shame or pressure you.':
+      'Wir verwenden das nur im Coaching und in Erinnerungen als unterstützenden Anker, nie um dich zu beschämen oder unter Druck zu setzen.',
+    'Suggested tier': 'Empfohlener Tarif',
+    'Based on your answers, this is the strongest starting point for your next step inside the app.':
+      'Basierend auf deinen Antworten ist das der beste Startpunkt für deinen nächsten Schritt in der App.',
+    RECOMMENDED: 'EMPFOHLEN',
+    'Victory Gold Trial': 'Victory Gold Testphase',
+    'This is the best starting point for building consistency with nutrition and training support. If you are unsure, the 5-days paid trial with money back Guarantee (Gold Tier) lets you test the AI services first.':
+      'Das ist der beste Startpunkt, um mit Ernährungs- und Trainingsunterstützung Konstanz aufzubauen. Wenn du unsicher bist, kannst du mit der 5-tägigen bezahlten Testphase mit Geld-zurück-Garantie (Gold-Tarif) die KI-Services zuerst testen.',
+    'Review answers': 'Antworten prüfen',
+    'Commitment statement': 'Commitment',
+    Goal: 'Ziel',
+    Activity: 'Aktivität',
+    Commitment: 'Commitment',
+    Equipment: 'Ausrüstung',
+    'Continue to Subscription': 'Weiter zum Abonnement',
+    Continue: 'Weiter',
+    'Please select your preferred language.': 'Bitte wähle deine bevorzugte Sprache.',
+    'Please select your country.': 'Bitte wähle dein Land.',
+    'Age is required.': 'Alter ist erforderlich.',
+    'Enter an age between 16 and 120.': 'Gib ein Alter zwischen 16 und 120 ein.',
+    'Gender is required.': 'Geschlecht ist erforderlich.',
+    'Height is required.': 'Größe ist erforderlich.',
+    'Enter a height between 80 and 250 cm.': 'Gib eine Größe zwischen 80 und 250 cm ein.',
+    'Weight is required.': 'Gewicht ist erforderlich.',
+    'Enter a valid weight.': 'Gib ein gültiges Gewicht ein.',
+    'Please choose your primary goal.': 'Bitte wähle dein Hauptziel.',
+    'Please choose your activity level.': 'Bitte wähle dein Aktivitätslevel.',
+    'Please choose your weekly commitment.': 'Bitte wähle deine wöchentliche Verpflichtung.',
+    'Please choose your session time.': 'Bitte wähle deine Trainingsdauer.',
+    'Please choose your available environment.': 'Bitte wähle deine verfügbare Trainingsumgebung.',
+    'Unable to save your country selection. Please try again.':
+      'Deine Länderauswahl konnte nicht gespeichert werden. Bitte versuche es erneut.',
+    'Unable to save your onboarding details. Please try again.':
+      'Deine Onboarding-Angaben konnten nicht gespeichert werden. Bitte versuche es erneut.',
+    'Unable to save your progress. Please try again.':
+      'Dein Fortschritt konnte nicht gespeichert werden. Bitte versuche es erneut.',
+    'Unable to save language preference. Please try again.':
+      'Die Spracheinstellung konnte nicht gespeichert werden. Bitte versuche es erneut.',
     'EMAIL ADDRESS': 'E-MAIL-ADRESSE',
     'Your Email': 'Deine E-Mail',
     'LOCATION (OPTIONAL)': 'ORT (OPTIONAL)',
@@ -1802,6 +2109,312 @@ const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
     'Unable to add {deviceName}.': '{deviceName} konnte nicht hinzugefÃ¼gt werden.',
     'Unable to generate weekly plan.': 'Der Wochenplan kann gerade nicht erstellt werden.',
   },
+  bn: {
+    'Access Restricted': 'প্রবেশ সীমিত',
+    'Access restriction message': 'আপনার বর্তমান প্ল্যানে {sectionName} ব্যবহার করা যাবে না। এই অংশ খুলতে প্ল্যান আপডেট করুন।',
+    'Update Plan': 'প্ল্যান আপডেট করুন',
+    'Back Home': 'হোমে ফিরুন',
+    'Try Again': 'আবার চেষ্টা করুন',
+    OK: 'ঠিক আছে',
+    Account: 'অ্যাকাউন্ট',
+    Fitness: 'ফিটনেস',
+    'Edit Profile': 'প্রোফাইল সম্পাদনা',
+    Application: 'অ্যাপ্লিকেশন',
+    'Privacy Policy': 'গোপনীয়তা নীতি',
+    Language: 'ভাষা',
+    'Help & Support': 'সাহায্য ও সহায়তা',
+    'Trial Notifications': 'ট্রায়াল নোটিফিকেশন',
+    'Body Metrics': 'শরীরের মাপ',
+    Workout: 'ওয়ার্কআউট',
+    Challenges: 'চ্যালেঞ্জ',
+    'Meal Plan': 'খাবার পরিকল্পনা',
+    Nutrition: 'পুষ্টি',
+    Journal: 'জার্নাল',
+    'MY COACHES': 'আমার কোচ',
+    'COACH VICTOR': 'কোচ ভিক্টর',
+    'Ready for you': 'আপনার জন্য প্রস্তুত',
+    'Upgrade required': 'আপগ্রেড প্রয়োজন',
+    'LONGEVITY OS': 'লংজেভিটি ওএস',
+    'Optimizing for you': 'আপনার জন্য অপ্টিমাইজ হচ্ছে',
+    'Review or change your subscription tier': 'আপনার সাবস্ক্রিপশন স্তর দেখুন বা পরিবর্তন করুন',
+    'Current plan: {plan}': 'বর্তমান প্ল্যান: {plan}',
+    'Loading...': 'লোড হচ্ছে...',
+    'Fetching /me data': 'প্রোফাইল তথ্য আনা হচ্ছে',
+    Verified: 'যাচাইকৃত',
+    'Not verified': 'যাচাই করা হয়নি',
+    'Exercises completed': 'ব্যায়াম সম্পন্ন',
+    Streak: 'স্ট্রিক',
+    Points: 'পয়েন্ট',
+    Rank: 'র‍্যাঙ্ক',
+    'Loading profile...': 'প্রোফাইল লোড হচ্ছে...',
+    'Loading plan...': 'প্ল্যান লোড হচ্ছে...',
+    'Admin account': 'অ্যাডমিন অ্যাকাউন্ট',
+    'Not set': 'সেট করা নেই',
+    'MAX RANK': 'সর্বোচ্চ র‍্যাঙ্ক',
+    'pts to': 'পয়েন্ট বাকি',
+    'Save Changes': 'পরিবর্তন সংরক্ষণ',
+    Cancel: 'বাতিল',
+    Back: 'পিছনে',
+    Next: 'পরবর্তী',
+    Continue: 'চালিয়ে যান',
+    Save: 'সংরক্ষণ',
+    Select: 'নির্বাচন করুন',
+    'Save failed': 'সংরক্ষণ ব্যর্থ',
+    'SELECT LANGUAGE': 'ভাষা নির্বাচন করুন',
+    'SELECT GENDER': 'লিঙ্গ নির্বাচন করুন',
+    AGE: 'বয়স',
+    GENDER: 'লিঙ্গ',
+    HEIGHT: 'উচ্চতা',
+    WEIGHT: 'ওজন',
+    'Saving metrics...': 'মাপ সংরক্ষণ হচ্ছে...',
+    'EDIT PROFILE': 'প্রোফাইল সম্পাদনা',
+    'Uploading photo...': 'ছবি আপলোড হচ্ছে...',
+    'Change Profile Photo': 'প্রোফাইল ছবি পরিবর্তন',
+    'Update profile photo': 'প্রোফাইল ছবি আপডেট',
+    'Upload profile photo': 'প্রোফাইল ছবি আপলোড',
+    'FULL NAME': 'পূর্ণ নাম',
+    'Your Name': 'আপনার নাম',
+    'PREFERRED LANGUAGE': 'পছন্দের ভাষা',
+    'Choose the language used across Victory Fitness.': 'Victory Fitness-এ ব্যবহৃত ভাষা বেছে নিন।',
+    'Saving language...': 'ভাষা সংরক্ষণ হচ্ছে...',
+    'Unable to save language preference.': 'ভাষা পছন্দ সংরক্ষণ করা যায়নি।',
+    'English (Ghana)': 'ইংরেজি (ঘানা)',
+    Spanish: 'স্প্যানিশ',
+    French: 'ফরাসি',
+    Italian: 'ইতালীয়',
+    Portuguese: 'পর্তুগিজ',
+    Dutch: 'ডাচ',
+    Polish: 'পোলিশ',
+    Turkish: 'তুর্কি',
+    Arabic: 'আরবি',
+    Hindi: 'হিন্দি',
+    Bengali: 'বাংলা',
+    'Twi (Ghana)': 'টুই (ঘানা)',
+    'Ewe (Ghana)': 'ইওয়ে (ঘানা)',
+    'Ga (Ghana)': 'গা (ঘানা)',
+    Urdu: 'উর্দু',
+    Indonesian: 'ইন্দোনেশীয়',
+    Japanese: 'জাপানি',
+    Korean: 'কোরিয়ান',
+    Chinese: 'চীনা',
+    Russian: 'রুশ',
+    Ukrainian: 'ইউক্রেনীয়',
+    Vietnamese: 'ভিয়েতনামি',
+    Thai: 'থাই',
+    'EMAIL ADDRESS': 'ইমেইল ঠিকানা',
+    'Your Email': 'আপনার ইমেইল',
+    'LOCATION (OPTIONAL)': 'অবস্থান (ঐচ্ছিক)',
+    'City, Country': 'শহর, দেশ',
+    'SAVING...': 'সংরক্ষণ হচ্ছে...',
+    'LOADING...': 'লোড হচ্ছে...',
+    'SAVE CHANGES': 'পরিবর্তন সংরক্ষণ',
+    'WELCOME BACK': 'স্বাগতম ফিরে',
+    'Log in to continue': 'চালিয়ে যেতে লগইন করুন',
+    Email: 'ইমেইল',
+    Password: 'পাসওয়ার্ড',
+    'Forgot Password?': 'পাসওয়ার্ড ভুলে গেছেন?',
+    'Log In': 'লগইন',
+    "Don't have an account? ": 'অ্যাকাউন্ট নেই? ',
+    Register: 'রেজিস্টার',
+    or: 'অথবা',
+    'Information for Developers': 'ডেভেলপারদের জন্য তথ্য',
+    'Problems? Contact support:': 'সমস্যা? সাপোর্টে যোগাযোগ করুন:',
+    'Good morning, ': 'সুপ্রভাত, ',
+    'GOOD MORNING': 'সুপ্রভাত',
+    'DAILY INSPIRATION': 'দৈনিক অনুপ্রেরণা',
+    'STAY FOCUS AND KEEP PUSHING YOUR LIMITS TO UNLEASH YOUR TRUE POTENTIAL.':
+      'মনোযোগ ধরে রাখুন এবং আপনার সীমা ছাড়িয়ে সত্যিকারের সম্ভাবনা উন্মুক্ত করুন।',
+    'Victory Team': 'Victory Team',
+    'Your AI companion for motivation, advice, and feedback.': 'প্রেরণা, পরামর্শ ও ফিডব্যাকের জন্য আপনার AI সঙ্গী।',
+    'Start Chat +': 'চ্যাট শুরু +',
+    'Unlock Access +': 'অ্যাক্সেস খুলুন +',
+    NUTRITION: 'পুষ্টি',
+    'Personalized nutrition plans and recipes for your goals.': 'আপনার লক্ষ্যের জন্য ব্যক্তিগত পুষ্টি পরিকল্পনা ও রেসিপি।',
+    'View Plan +': 'প্ল্যান দেখুন +',
+    "Don't train alone!": 'একা ট্রেন করবেন না!',
+    'Bring your friends to Victory Fitness. Motivate each other and earn points for the next rank.':
+      'আপনার বন্ধুদের Victory Fitness-এ আনুন। একে অপরকে উৎসাহ দিন এবং পরবর্তী র‍্যাঙ্কের জন্য পয়েন্ট অর্জন করুন।',
+    'Invite Friends': 'বন্ধুদের আমন্ত্রণ',
+    'Join me on Victory Fitness and start training with me.':
+      'Victory Fitness-এ আমার সাথে যোগ দিন এবং আমার সাথে ট্রেনিং শুরু করুন।',
+    'Invite link copied': 'আমন্ত্রণ লিংক কপি হয়েছে',
+    'The Victory Fitness invite link was copied to your clipboard.':
+      'Victory Fitness আমন্ত্রণ লিংক আপনার ক্লিপবোর্ডে কপি হয়েছে।',
+    'Invite failed': 'আমন্ত্রণ ব্যর্থ',
+    'Unable to share the invite link right now.': 'এখন আমন্ত্রণ লিংক শেয়ার করা যাচ্ছে না।',
+    'Sharing...': 'শেয়ার হচ্ছে...',
+    'This section needs a higher plan.': 'এই অংশের জন্য উচ্চতর প্ল্যান দরকার।',
+    WORKOUTS: 'ওয়ার্কআউট',
+    'Your Mindful Moment': 'আপনার মননশীল মুহূর্ত',
+    'What is one thing you will do for your well-being tomorrow?':
+      'আগামীকাল আপনার সুস্থতার জন্য একটি কী কাজ করবেন?',
+    'Write in Journal': 'জার্নালে লিখুন',
+    'How are you feeling right now?': 'এই মুহূর্তে আপনি কেমন অনুভব করছেন?',
+    'NEXT UP: YOUR WORKOUT': 'পরবর্তী: আপনার ওয়ার্কআউট',
+    'YOUR ACTIVE PLAN': 'আপনার সক্রিয় প্ল্যান',
+    'Search workouts...': 'ওয়ার্কআউট খুঁজুন...',
+    'Loading workout library...': 'ওয়ার্কআউট লাইব্রেরি লোড হচ্ছে...',
+    'FEATURED WORKOUT': 'ফিচার্ড ওয়ার্কআউট',
+    'Video ready': 'ভিডিও প্রস্তুত',
+    'No published workouts yet': 'এখনও প্রকাশিত ওয়ার্কআউট নেই',
+    CATEGORIES: 'ক্যাটাগরি',
+    CATEGORY: 'ক্যাটাগরি',
+    'Workouts': 'ওয়ার্কআউট',
+    'VIDEOS': 'ভিডিও',
+    'WORKOUT PLAN': 'ওয়ার্কআউট প্ল্যান',
+    '7-DAY VIDEO PLAN': '৭ দিনের ভিডিও প্ল্যান',
+    'CUSTOM STRENGTH PLAN': 'কাস্টম স্ট্রেংথ প্ল্যান',
+    'NO PLAN? NO PROBLEM.': 'প্ল্যান নেই? সমস্যা নেই।',
+    'Choose your path to victory. Which plan will you start?':
+      'জয়ের পথে আপনার পথ বেছে নিন। কোন প্ল্যান দিয়ে শুরু করবেন?',
+    'WORKOUT LIBRARY READY.': 'ওয়ার্কআউট লাইব্রেরি প্রস্তুত।',
+    'Your current plan includes the workout library. Upgrade to unlock custom workout plans.':
+      'আপনার বর্তমান প্ল্যানে ওয়ার্কআউট লাইব্রেরি আছে। কাস্টম ওয়ার্কআউট প্ল্যান খুলতে আপগ্রেড করুন।',
+    'UNLOCK WORKOUT PLANS': 'ওয়ার্কআউট প্ল্যান আনলক করুন',
+    'Custom Strength Plan': 'কাস্টম স্ট্রেংথ প্ল্যান',
+    '7-Day Video Plan': '৭ দিনের ভিডিও প্ল্যান',
+    of: 'এর মধ্যে',
+    Completed: 'সম্পন্ন',
+    Active: 'সক্রিয়',
+    Day: 'দিন',
+    Days: 'দিন',
+    'RESUME WORKOUT': 'ওয়ার্কআউট চালিয়ে যান',
+    'RESUME VIDEO PLAN': 'ভিডিও প্ল্যান চালিয়ে যান',
+    'Saved Workout Plans': 'সংরক্ষিত ওয়ার্কআউট প্ল্যান',
+    'Create Another Plan': 'আরেকটি প্ল্যান তৈরি করুন',
+    'No Plan? No Problem.': 'প্ল্যান নেই? সমস্যা নেই।',
+    'Create your personal AI plan to reach your goals faster.': 'লক্ষ্যে দ্রুত পৌঁছাতে আপনার ব্যক্তিগত AI প্ল্যান তৈরি করুন।',
+    WATCH: 'দেখুন',
+    'Workout unavailable': 'ওয়ার্কআউট পাওয়া যাচ্ছে না',
+    'Build your personalized start': 'আপনার ব্যক্তিগত শুরু তৈরি করুন',
+    'Complete these steps once and we will keep your plan setup on this device.':
+      'এই ধাপগুলো একবার সম্পন্ন করুন, আমরা এই ডিভাইসে আপনার প্ল্যান সেটআপ সংরক্ষণ করব।',
+    'Step {step} of {total}': 'ধাপ {step} / {total}',
+    'Preferred language': 'পছন্দের ভাষা',
+    'Choose the language you want to use inside the app.': 'অ্যাপের ভিতরে যে ভাষা ব্যবহার করতে চান তা বেছে নিন।',
+    Country: 'দেশ',
+    'Select your country': 'আপনার দেশ নির্বাচন করুন',
+    'Choose your country to help us customize recommendations and local activity.':
+      'সুপারিশ ও স্থানীয় কার্যক্রম সাজাতে আপনার দেশ নির্বাচন করুন।',
+    'Search country...': 'দেশ খুঁজুন...',
+    'Search Results': 'অনুসন্ধানের ফলাফল',
+    'No countries match your search.': 'আপনার অনুসন্ধানের সাথে কোনো দেশ মেলেনি।',
+    'Popular countries': 'জনপ্রিয় দেশ',
+    'Personal profile': 'ব্যক্তিগত প্রোফাইল',
+    'These answers set your personalized targets and can be updated later from your profile.':
+      'এই উত্তরগুলো আপনার ব্যক্তিগত লক্ষ্য ঠিক করবে এবং পরে প্রোফাইল থেকে আপডেট করা যাবে।',
+    Age: 'বয়স',
+    Gender: 'লিঙ্গ',
+    'Select gender': 'লিঙ্গ নির্বাচন করুন',
+    Height: 'উচ্চতা',
+    'How many cm': 'কত সেমি',
+    Weight: 'ওজন',
+    'How many lb': 'কত পাউন্ড',
+    'How many kg': 'কত কেজি',
+    'Sport and health anamnese': 'খেলাধুলা ও স্বাস্থ্য তথ্য',
+    'Answer these five questions so we can shape the right plan recommendation.':
+      'সঠিক প্ল্যান সুপারিশ তৈরি করতে এই প্রশ্নগুলোর উত্তর দিন।',
+    '1. What is your primary goal?': '১. আপনার প্রধান লক্ষ্য কী?',
+    '2. How would you describe your current activity level?': '২. আপনার বর্তমান কার্যকলাপের মাত্রা কীভাবে বর্ণনা করবেন?',
+    '3. Do you currently have, or have you had in the last 12 months, any injuries, pain, or medical conditions we should know about?':
+      '৩. বর্তমানে বা গত ১২ মাসে কোনো আঘাত, ব্যথা বা মেডিকেল অবস্থা আছে কি যা আমাদের জানা উচিত?',
+    '4. How many days per week can you realistically commit?': '৪. সপ্তাহে বাস্তবে কত দিন দিতে পারবেন?',
+    '5. How much time can you commit per session?': '৫. প্রতি সেশনে কত সময় দিতে পারবেন?',
+    '6. What equipment or environment do you have access to?': '৬. কোন সরঞ্জাম বা পরিবেশ আপনার আছে?',
+    'Lose weight': 'ওজন কমানো',
+    'Build muscle': 'মাসল তৈরি',
+    'Improve endurance': 'সহনশীলতা বাড়ানো',
+    'General health and energy': 'সাধারণ স্বাস্থ্য ও শক্তি',
+    'Recovery and rehab': 'রিকভারি ও রিহ্যাব',
+    Sedentary: 'কম সক্রিয়',
+    'Lightly active': 'হালকা সক্রিয়',
+    'Moderately active': 'মাঝারি সক্রিয়',
+    'Very active': 'খুব সক্রিয়',
+    Knee: 'হাঁটু',
+    'Back concern': 'পিঠ',
+    Shoulder: 'কাঁধ',
+    'Heart condition': 'হৃদরোগ',
+    None: 'কোনোটিই নয়',
+    '1-2 days': '১-২ দিন',
+    '3-4 days': '৩-৪ দিন',
+    '5+ days': '৫+ দিন',
+    '20 minutes': '২০ মিনিট',
+    '30 minutes': '৩০ মিনিট',
+    '45 minutes': '৪৫ মিনিট',
+    '60+ minutes': '৬০+ মিনিট',
+    'No equipment': 'কোনো সরঞ্জাম নেই',
+    'Home gym': 'হোম জিম',
+    'Full gym': 'পূর্ণ জিম',
+    Outdoors: 'বাইরে',
+    Male: 'পুরুষ',
+    Female: 'নারী',
+    'Non-binary': 'নন-বাইনারি',
+    'Prefer not to say': 'বলতে চাই না',
+    'Add details if needed': 'প্রয়োজন হলে বিস্তারিত লিখুন',
+    'What will this help you protect?': 'এটি আপনাকে কী রক্ষা করতে সাহায্য করবে?',
+    'Before we build your plan, write one short commitment in your own words. This step is optional and can be edited later.':
+      'প্ল্যান তৈরির আগে নিজের ভাষায় একটি ছোট প্রতিশ্রুতি লিখুন। এই ধাপটি ঐচ্ছিক এবং পরে সম্পাদনা করা যাবে।',
+    'Example: stay healthy for my family, feel stronger again, or rebuild my routine':
+      'উদাহরণ: পরিবারের জন্য সুস্থ থাকা, আবার শক্তিশালী অনুভব করা, বা রুটিন পুনর্গঠন করা',
+    'Suggested tier': 'প্রস্তাবিত স্তর',
+    'Based on your answers, this is the strongest starting point for your next step inside the app.':
+      'আপনার উত্তরের ভিত্তিতে অ্যাপের পরবর্তী ধাপের জন্য এটি সেরা শুরু।',
+    RECOMMENDED: 'প্রস্তাবিত',
+    'Victory Gold Trial': 'Victory Gold ট্রায়াল',
+    'Review answers': 'উত্তর পর্যালোচনা',
+    'Commitment statement': 'প্রতিশ্রুতি',
+    Goal: 'লক্ষ্য',
+    Activity: 'কার্যকলাপ',
+    Commitment: 'প্রতিশ্রুতি',
+    Equipment: 'সরঞ্জাম',
+    'Continue to Subscription': 'সাবস্ক্রিপশনে যান',
+    'Please select your preferred language.': 'আপনার পছন্দের ভাষা নির্বাচন করুন।',
+    'Please select your country.': 'আপনার দেশ নির্বাচন করুন।',
+    'Age is required.': 'বয়স প্রয়োজন।',
+    'Enter an age between 16 and 120.': '১৬ থেকে ১২০ এর মধ্যে বয়স লিখুন।',
+    'Gender is required.': 'লিঙ্গ প্রয়োজন।',
+    'Height is required.': 'উচ্চতা প্রয়োজন।',
+    'Enter a height between 80 and 250 cm.': '৮০ থেকে ২৫০ সেমির মধ্যে উচ্চতা লিখুন।',
+    'Weight is required.': 'ওজন প্রয়োজন।',
+    'Enter a valid weight.': 'সঠিক ওজন লিখুন।',
+    'Please choose your primary goal.': 'আপনার প্রধান লক্ষ্য নির্বাচন করুন।',
+    'Please choose your activity level.': 'আপনার কার্যকলাপের মাত্রা নির্বাচন করুন।',
+    'Please choose your weekly commitment.': 'সাপ্তাহিক প্রতিশ্রুতি নির্বাচন করুন।',
+    'Please choose your session time.': 'সেশনের সময় নির্বাচন করুন।',
+    'Please choose your available environment.': 'আপনার উপলব্ধ পরিবেশ নির্বাচন করুন।',
+    'Unable to save your country selection. Please try again.': 'দেশ নির্বাচন সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।',
+    'Unable to save your onboarding details. Please try again.': 'অনবোর্ডিং তথ্য সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।',
+    'Unable to save your progress. Please try again.': 'অগ্রগতি সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।',
+    'Unable to save language preference. Please try again.': 'ভাষা পছন্দ সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।',
+    'Profile unavailable': 'প্রোফাইল পাওয়া যাচ্ছে না',
+    'Unable to load your profile right now.': 'এই মুহূর্তে আপনার প্রোফাইল লোড করা যাচ্ছে না।',
+    'Unable to save profile changes.': 'প্রোফাইল পরিবর্তন সংরক্ষণ করা যাচ্ছে না।',
+    'Upload failed': 'আপলোড ব্যর্থ',
+    'Unable to upload your profile image right now.': 'এই মুহূর্তে প্রোফাইল ছবি আপলোড করা যাচ্ছে না।',
+    'Mindset & Habits': 'মাইন্ডসেট ও অভ্যাস',
+    'Edit mindset settings': 'মাইন্ডসেট সেটিংস সম্পাদনা',
+    'View All': 'সব দেখুন',
+    'No challenges available': 'কোনো চ্যালেঞ্জ নেই',
+    'Active or ready challenges will appear here based on your current plan.':
+      'আপনার বর্তমান প্ল্যান অনুযায়ী সক্রিয় বা প্রস্তুত চ্যালেঞ্জ এখানে দেখা যাবে।',
+    'Goal Type': 'লক্ষ্যের ধরন',
+    'What To Do': 'কী করতে হবে',
+    'Why It Matters': 'কেন এটি গুরুত্বপূর্ণ',
+    'Hide Why It Matters': 'কারণ লুকান',
+    "Finish today's challenge": 'আজকের চ্যালেঞ্জ শেষ করুন',
+    "Complete it today or miss today's points.": 'আজই সম্পন্ন করুন, না হলে আজকের পয়েন্ট মিস হবে।',
+    Chat: 'চ্যাট',
+    Invite: 'আমন্ত্রণ',
+    'In Progress': 'চলমান',
+    Join: 'যোগ দিন',
+    'Coming Soon': 'শীঘ্রই আসছে',
+    joined: 'যোগ দিয়েছে',
+    Ready: 'প্রস্তুত',
+    Locked: 'লকড',
+    Strength: 'স্ট্রেংথ',
+    'Victory Fitness v1.0.0': 'Victory Fitness v1.0.0',
+    'Log Out': 'লগ আউট',
+  },
 };
 
 type LanguageContextValue = {
@@ -1826,16 +2439,315 @@ function interpolate(template: string, params?: Record<string, string | number>)
   });
 }
 
+function getTranslationCacheKey(language: LanguageCode) {
+  return `${TRANSLATION_CACHE_KEY_PREFIX}${language}`;
+}
+
+function shouldAutoTranslateText(value: string) {
+  const text = String(value || '').replace(/\s+/g, ' ').trim();
+  if (text.length < 2 || text.length > 500) {
+    return false;
+  }
+  if (/^https?:\/\//i.test(text) || /^[\d\s.,:%+/#-]+$/.test(text)) {
+    return false;
+  }
+  return /[A-Za-z]/.test(text);
+}
+
+function WebAutoTranslate({
+  language,
+  requestTranslations,
+  remoteTranslations,
+}: {
+  language: LanguageCode;
+  requestTranslations: (targetLanguage: LanguageCode, texts: string[]) => Promise<Record<string, string>>;
+  remoteTranslations: Record<string, string>;
+}) {
+  const originalTextNodesRef = React.useRef(new WeakMap<Text, string>());
+  const originalAttributesRef = React.useRef(new WeakMap<Element, Map<string, string>>());
+  const observerRef = React.useRef<MutationObserver | null>(null);
+  const pendingRef = React.useRef(new Set<string>());
+  const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const translatingRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (typeof document === 'undefined' || typeof window === 'undefined') {
+      return;
+    }
+
+    const shouldSkipElement = (element: Element | null) => {
+      if (!element) {
+        return true;
+      }
+      const tagName = element.tagName.toLowerCase();
+      return tagName === 'script' || tagName === 'style' || tagName === 'noscript' || tagName === 'svg';
+    };
+
+    const applyTranslations = async () => {
+      if (translatingRef.current) {
+        return;
+      }
+      const texts = Array.from(pendingRef.current);
+      pendingRef.current.clear();
+      if (texts.length === 0) {
+        return;
+      }
+
+      translatingRef.current = true;
+      try {
+        const translations = await requestTranslations(language, texts);
+        for (const textNode of collectTextNodes()) {
+          const original = originalTextNodesRef.current.get(textNode);
+          if (!original) {
+            continue;
+          }
+          const translated = translations[original] || remoteTranslations[original];
+          if (translated && textNode.nodeValue !== translated) {
+            textNode.nodeValue = translated;
+          }
+        }
+        for (const element of Array.from(document.querySelectorAll('[placeholder], [aria-label], [title]'))) {
+          const originals = originalAttributesRef.current.get(element);
+          if (!originals) {
+            continue;
+          }
+          for (const [attribute, original] of originals.entries()) {
+            const translated = translations[original] || remoteTranslations[original];
+            if (translated && element.getAttribute(attribute) !== translated) {
+              element.setAttribute(attribute, translated);
+            }
+          }
+        }
+      } finally {
+        translatingRef.current = false;
+      }
+    };
+
+    const queue = (text: string) => {
+      const normalized = text.replace(/\s+/g, ' ').trim();
+      if (!shouldAutoTranslateText(normalized)) {
+        return;
+      }
+      pendingRef.current.add(normalized);
+      if (timerRef.current) {
+        return;
+      }
+      timerRef.current = globalThis.setTimeout(() => {
+        timerRef.current = null;
+        void applyTranslations();
+      }, 180);
+    };
+
+    const collectTextNodes = () => {
+      const nodes: Text[] = [];
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+          const parent = node.parentElement;
+          if (shouldSkipElement(parent)) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          const text = node.nodeValue?.replace(/\s+/g, ' ').trim() || '';
+          return shouldAutoTranslateText(text) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+        },
+      });
+      let node = walker.nextNode();
+      while (node) {
+        nodes.push(node as Text);
+        node = walker.nextNode();
+      }
+      return nodes;
+    };
+
+    const scan = () => {
+      if (!document.body) {
+        return;
+      }
+
+      for (const textNode of collectTextNodes()) {
+        if (!originalTextNodesRef.current.has(textNode)) {
+          originalTextNodesRef.current.set(textNode, textNode.nodeValue?.replace(/\s+/g, ' ').trim() || '');
+        }
+        const original = originalTextNodesRef.current.get(textNode) || '';
+        if (language === DEFAULT_LANGUAGE) {
+          if (original && textNode.nodeValue !== original) {
+            textNode.nodeValue = original;
+          }
+          continue;
+        }
+        const translated = remoteTranslations[original];
+        if (translated && textNode.nodeValue !== translated) {
+          textNode.nodeValue = translated;
+        } else {
+          queue(original);
+        }
+      }
+
+      for (const element of Array.from(document.querySelectorAll('[placeholder], [aria-label], [title]'))) {
+        if (shouldSkipElement(element)) {
+          continue;
+        }
+        const originals = originalAttributesRef.current.get(element) || new Map<string, string>();
+        for (const attribute of ['placeholder', 'aria-label', 'title']) {
+          const value = element.getAttribute(attribute);
+          if (!value) {
+            continue;
+          }
+          if (!originals.has(attribute)) {
+            originals.set(attribute, value.replace(/\s+/g, ' ').trim());
+          }
+          const original = originals.get(attribute) || '';
+          if (language === DEFAULT_LANGUAGE) {
+            if (original && element.getAttribute(attribute) !== original) {
+              element.setAttribute(attribute, original);
+            }
+            continue;
+          }
+          const translated = remoteTranslations[original];
+          if (translated && element.getAttribute(attribute) !== translated) {
+            element.setAttribute(attribute, translated);
+          } else {
+            queue(original);
+          }
+        }
+        originalAttributesRef.current.set(element, originals);
+      }
+    };
+
+    observerRef.current?.disconnect();
+    observerRef.current = new MutationObserver(() => {
+      if (translatingRef.current) {
+        return;
+      }
+      window.requestAnimationFrame(scan);
+    });
+    observerRef.current.observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: ['placeholder', 'aria-label', 'title'],
+    });
+    scan();
+
+    return () => {
+      observerRef.current?.disconnect();
+      observerRef.current = null;
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [language, remoteTranslations, requestTranslations]);
+
+  return null;
+}
+
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = React.useState<LanguageCode>(DEFAULT_LANGUAGE);
   const [ready, setReady] = React.useState(false);
+  const [remoteTranslations, setRemoteTranslations] = React.useState<Partial<Record<LanguageCode, Record<string, string>>>>({});
+  const translationQueueRef = React.useRef(new Set<string>());
+  const translationTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const remoteTranslationsRef = React.useRef(remoteTranslations);
+
+  React.useEffect(() => {
+    remoteTranslationsRef.current = remoteTranslations;
+  }, [remoteTranslations]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    const loadCachedTranslations = async () => {
+      if (language === DEFAULT_LANGUAGE) {
+        return;
+      }
+      try {
+        const raw = await AsyncStorage.getItem(getTranslationCacheKey(language));
+        if (!raw || cancelled) {
+          return;
+        }
+        const parsed = JSON.parse(raw) as Record<string, string>;
+        if (parsed && typeof parsed === 'object') {
+          setRemoteTranslations((current) => ({
+            ...current,
+            [language]: { ...(current[language] || {}), ...parsed },
+          }));
+        }
+      } catch {
+        // Cached translations are an enhancement; a corrupt cache should not block the app.
+      }
+    };
+    void loadCachedTranslations();
+    return () => {
+      cancelled = true;
+    };
+  }, [language]);
+
+  const requestTranslations = React.useCallback(async (targetLanguage: LanguageCode, texts: string[]) => {
+    if (targetLanguage === DEFAULT_LANGUAGE) {
+      return {};
+    }
+
+    const uniqueTexts = Array.from(new Set(texts.map((text) => text.replace(/\s+/g, ' ').trim()).filter(shouldAutoTranslateText))).slice(0, 80);
+    if (uniqueTexts.length === 0) {
+      return {};
+    }
+
+    const known = remoteTranslationsRef.current[targetLanguage] || {};
+    const missing = uniqueTexts.filter((text) => !TRANSLATIONS[targetLanguage]?.[text] && !known[text]);
+    if (missing.length === 0) {
+      return Object.fromEntries(uniqueTexts.map((text) => [text, TRANSLATIONS[targetLanguage]?.[text] || known[text] || text]));
+    }
+
+    try {
+      const response = await translateTextBatch(targetLanguage, missing);
+      const nextTranslations = response.translations || {};
+      if (Object.keys(nextTranslations).length > 0) {
+        setRemoteTranslations((current) => {
+          const merged = {
+            ...(current[targetLanguage] || {}),
+            ...nextTranslations,
+          };
+          void AsyncStorage.setItem(getTranslationCacheKey(targetLanguage), JSON.stringify(merged)).catch(() => undefined);
+          return {
+            ...current,
+            [targetLanguage]: merged,
+          };
+        });
+      }
+      return { ...known, ...nextTranslations };
+    } catch {
+      return known;
+    }
+  }, []);
+
+  const queueTranslation = React.useCallback((key: string) => {
+    if (language === DEFAULT_LANGUAGE || !shouldAutoTranslateText(key)) {
+      return;
+    }
+    if (TRANSLATIONS[language]?.[key] || remoteTranslationsRef.current[language]?.[key]) {
+      return;
+    }
+    translationQueueRef.current.add(key);
+    if (translationTimerRef.current) {
+      return;
+    }
+    translationTimerRef.current = setTimeout(() => {
+      translationTimerRef.current = null;
+      const batch = Array.from(translationQueueRef.current);
+      translationQueueRef.current.clear();
+      void requestTranslations(language, batch);
+    }, TRANSLATION_BATCH_DELAY_MS);
+  }, [language, requestTranslations]);
 
   React.useEffect(() => {
     let cancelled = false;
 
     const loadLanguage = async () => {
       try {
-        const user = await getAuthUser();
+        const cachedUser = await getAuthUser();
+        const user = cachedUser?.preferred_language
+          ? cachedUser
+          : await fetchCurrentUser().catch(() => cachedUser);
         const nextLanguage = await getSavedLanguageForUser(user?.id);
         const resolvedLanguage = nextLanguage ?? normalizeLanguageCode(user?.preferred_language) ?? DEFAULT_LANGUAGE;
         if (!cancelled) {
@@ -1862,8 +2774,11 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const syncLanguageWithCurrentUser = React.useCallback(async (userId?: string | null) => {
-    const resolvedUserId = userId ?? (await getAuthUser())?.id ?? null;
-    const user = await getAuthUser();
+    const cachedUser = await getAuthUser();
+    const user = cachedUser?.preferred_language
+      ? cachedUser
+      : await fetchCurrentUser().catch(() => cachedUser);
+    const resolvedUserId = userId ?? user?.id ?? null;
     const nextLanguage = await getSavedLanguageForUser(resolvedUserId) ?? normalizeLanguageCode(user?.preferred_language) ?? DEFAULT_LANGUAGE;
     setLanguageState(nextLanguage);
     setApiLanguage(nextLanguage);
@@ -1881,10 +2796,13 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   const t = React.useCallback(
     (key: string, params?: Record<string, string | number>) => {
-      const template = TRANSLATIONS[language][key] ?? TRANSLATIONS.en[key] ?? key;
+      const template = TRANSLATIONS[language]?.[key] ?? remoteTranslations[language]?.[key] ?? TRANSLATIONS.en?.[key] ?? key;
+      if (template === key && language !== DEFAULT_LANGUAGE) {
+        queueTranslation(key);
+      }
       return interpolate(template, params);
     },
-    [language],
+    [language, queueTranslation, remoteTranslations],
   );
 
   const value = React.useMemo(
@@ -1892,7 +2810,16 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     [language, ready, setLanguage, syncLanguageWithCurrentUser, t, useDefaultLanguage],
   );
 
-  return React.createElement(LanguageContext.Provider, { value }, children);
+  return React.createElement(
+    LanguageContext.Provider,
+    { value },
+    children,
+    React.createElement(WebAutoTranslate, {
+      language,
+      requestTranslations,
+      remoteTranslations: remoteTranslations[language] || {},
+    }),
+  );
 }
 
 export function useLanguage() {

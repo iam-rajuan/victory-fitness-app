@@ -1,7 +1,8 @@
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { LanguageCode } from './i18n';
 
-export type OnboardingLanguage = 'en' | 'it' | 'de' | 'es';
+export type OnboardingLanguage = LanguageCode;
 
 export type OnboardingPersonalProfile = {
   age: string;

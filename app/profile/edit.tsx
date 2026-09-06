@@ -18,16 +18,18 @@ import { ErrorPopupModal } from '../../components/ErrorPopupModal';
 import { ScreenState } from '../../components/ScreenState';
 import { deleteCurrentUserProfileImage, fetchCurrentUser, updateCurrentUserProfile, uploadCurrentUserProfileImage } from '../../lib/api';
 import { formatAppError } from '../../lib/error';
-import { useLanguage } from '../../lib/i18n';
+import { SUPPORTED_LANGUAGES, LanguageCode, useLanguage } from '../../lib/i18n';
 import { useAsyncScreenData } from '../../hooks/useAsyncScreenData';
 import { goBackOrReplace } from '../../lib/navigation';
 
 export default function EditProfileScreen() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
   const [name, setName] = useState('');
   const [profileImage, setProfileImage] = useState('');
+  const [preferredLanguage, setPreferredLanguage] = useState<LanguageCode>(language);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [savingLanguage, setSavingLanguage] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [deletingImage, setDeletingImage] = useState(false);
   const [errorDialog, setErrorDialog] = useState<{ title: string; message: string } | null>(null);
@@ -41,6 +43,10 @@ export default function EditProfileScreen() {
       const me = await fetchCurrentUser();
       setName(me.name ?? '');
       setProfileImage(me.profileImage ?? '');
+      const nextLanguage = SUPPORTED_LANGUAGES.some((option) => option.code === me.preferred_language)
+        ? me.preferred_language as LanguageCode
+        : language;
+      setPreferredLanguage(nextLanguage);
       return null;
     },
     getErrorMessage: () => t('Unable to load your profile right now.'),
@@ -56,7 +62,9 @@ export default function EditProfileScreen() {
       await updateCurrentUserProfile({
         name: name.trim(),
         profileImage: profileImage.trim() || undefined,
+        preferred_language: preferredLanguage,
       });
+      await setLanguage(preferredLanguage);
       goBackOrReplace(router, '/profile');
     } catch (error) {
       setErrorDialog(formatAppError(error, t('Unable to save profile changes.')));
@@ -111,6 +119,25 @@ export default function EditProfileScreen() {
     } catch (error) {
       setErrorDialog(formatAppError(error, t('Unable to upload your profile image right now.')));
       setUploadingImage(false);
+    }
+  };
+
+  const handleLanguageSelect = async (nextLanguage: LanguageCode) => {
+    if (savingProfile || savingLanguage || loadingProfile) {
+      return;
+    }
+
+    setPreferredLanguage(nextLanguage);
+    await setLanguage(nextLanguage);
+    setSavingLanguage(true);
+    try {
+      await updateCurrentUserProfile({ preferred_language: nextLanguage });
+    } catch (error) {
+      setPreferredLanguage(language);
+      await setLanguage(language);
+      setErrorDialog(formatAppError(error, t('Unable to save language preference.')));
+    } finally {
+      setSavingLanguage(false);
     }
   };
 
@@ -241,6 +268,36 @@ export default function EditProfileScreen() {
               editable={!loadingProfile && !savingProfile}
             />
           </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>{t('PREFERRED LANGUAGE')}</Text>
+            <Text style={styles.helperText}>{t('Choose the language used across Victory Fitness.')}</Text>
+            <View style={styles.languageGrid}>
+              {SUPPORTED_LANGUAGES.map((option) => {
+                const selected = preferredLanguage === option.code;
+                return (
+                  <TouchableOpacity
+                    key={option.code}
+                    style={[styles.languageCard, selected && styles.languageCardActive]}
+                    activeOpacity={0.82}
+                    disabled={savingLanguage || savingProfile || loadingProfile}
+                    onPress={() => void handleLanguageSelect(option.code)}
+                  >
+                    <View style={[styles.languageBadge, selected && styles.languageBadgeActive]}>
+                      <Text style={[styles.languageBadgeText, selected && styles.languageBadgeTextActive]}>
+                        {option.code.toUpperCase()}
+                      </Text>
+                    </View>
+                    <View style={styles.languageCopy}>
+                      <Text style={[styles.languageLabel, selected && styles.languageLabelActive]}>{option.nativeLabel}</Text>
+                      <Text style={styles.languageHint}>{t(option.label)}</Text>
+                    </View>
+                    {selected ? <Ionicons name="checkmark-circle" size={22} color={Colors.primary} /> : null}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            {savingLanguage ? <Text style={styles.languageSavingText}>{t('Saving language...')}</Text> : null}
+          </View>
         </View>
 
         <TouchableOpacity
@@ -356,6 +413,77 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
     letterSpacing: 1,
     marginBottom: 12,
+  },
+  helperText: {
+    color: 'rgba(255,255,255,0.58)',
+    fontSize: 13,
+    lineHeight: 19,
+    fontFamily: 'Inter_400Regular',
+    marginBottom: 14,
+  },
+  languageGrid: {
+    gap: 12,
+  },
+  languageCard: {
+    minHeight: 62,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: '#111827',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  languageCardActive: {
+    borderColor: Colors.primary,
+    backgroundColor: 'rgba(20,184,166,0.14)',
+  },
+  languageBadge: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+  },
+  languageBadgeActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  languageBadgeText: {
+    color: 'rgba(255,255,255,0.72)',
+    fontSize: 13,
+    fontFamily: 'Inter_700Bold',
+  },
+  languageBadgeTextActive: {
+    color: '#06111f',
+  },
+  languageCopy: {
+    flex: 1,
+  },
+  languageLabel: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontFamily: 'Inter_700Bold',
+  },
+  languageLabelActive: {
+    color: '#DFFFFB',
+  },
+  languageHint: {
+    marginTop: 3,
+    color: 'rgba(255,255,255,0.48)',
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  languageSavingText: {
+    marginTop: 10,
+    color: Colors.primary,
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
   },
   input: {
     backgroundColor: '#131313',
