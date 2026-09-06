@@ -1022,6 +1022,7 @@ function normalizeOnboardingState(state: OnboardingState): OnboardingState {
     country: String((state as OnboardingState & { country?: string }).country || '').trim(),
     countryCode: String((state as OnboardingState & { countryCode?: string | null }).countryCode || '').trim().toUpperCase() || null,
     motivationStatement: String((state as OnboardingState & { motivationStatement?: string }).motivationStatement || '').trim(),
+    identityStatement: String((state as OnboardingState & { identityStatement?: string }).identityStatement || ''),
     personalProfile: {
       age: String(personalProfile.age || '').trim(),
       gender: String(personalProfile.gender || '').trim(),
@@ -1061,6 +1062,7 @@ export async function updateCurrentUserOnboarding(payload: {
   country?: string;
   countryCode?: string | null;
   motivationStatement?: string;
+  identityStatement?: string;
   personalProfile?: OnboardingPersonalProfile;
   anamnese?: OnboardingAnamnese;
   suggestion?: OnboardingSuggestion | null;

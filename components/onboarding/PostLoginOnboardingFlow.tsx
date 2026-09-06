@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import { AuthButton } from '../AuthButton';
 import { AuthInput } from '../AuthInput';
-import { AuthUser, fetchCurrentUser, fetchCurrentUserOnboarding, updateCurrentUserOnboarding, updateCurrentUserProfile } from '../../lib/api';
+import { AuthUser, fetchCurrentUser, fetchCurrentUserOnboarding, startGoldTrial, updateCurrentUserOnboarding, updateCurrentUserProfile } from '../../lib/api';
 import {
   OnboardingAnamnese,
   OnboardingData,
@@ -37,9 +37,13 @@ const PRIMARY_GOAL_OPTIONS = ['Lose weight', 'Build muscle', 'Improve endurance'
 const ACTIVITY_LEVEL_OPTIONS = ['Sedentary', 'Lightly active', 'Moderately active', 'Very active'];
 const HEALTH_CONCERN_OPTIONS = ['Knee', 'Back', 'Shoulder', 'Heart condition', 'None'];
 const DAYS_OPTIONS = ['1-2 days', '3-4 days', '5+ days'];
-const SESSION_OPTIONS = ['20 minutes', '30 minutes', '45 minutes', '60+ minutes'];
 const EQUIPMENT_OPTIONS = ['No equipment', 'Home gym', 'Full gym', 'Outdoors'];
-const STEP_TITLES = ['Language', 'Country', 'Profile', 'Health', 'Motivation', 'Recommendation'];
+const COMMITMENT_OPTIONS = [
+  'I want to feel strong and confident again',
+  'I want to improve my health for my future',
+  'I want consistency, structure, and accountability',
+];
+const STEP_TITLES = ['Language', 'Country', 'Profile', 'Health', 'Motivation', 'Identity', 'Recommendation'];
 const getHealthConcernLabel = (option: string) => (option === 'Back' ? 'Back concern' : option);
 const POPULAR_COUNTRIES = [
   { name: 'United States', code: 'US' },
@@ -248,6 +252,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
           country: stored.country,
           countryCode: stored.countryCode,
           motivationStatement: stored.motivationStatement,
+          identityStatement: stored.identityStatement,
           personalProfile: stored.personalProfile,
           anamnese: stored.anamnese,
           suggestion: stored.suggestion,
@@ -259,6 +264,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
           country: '',
           countryCode: null,
           motivationStatement: '',
+          identityStatement: '',
           personalProfile: { age: '', gender: '', height: '', heightUnit: 'cm', weight: '', weightUnit: 'kg' },
           anamnese: {
             primaryGoal: '',
@@ -333,6 +339,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
       country: draft.country,
       countryCode: draft.countryCode,
       motivationStatement: draft.motivationStatement,
+      identityStatement: draft.identityStatement,
       personalProfile: draft.personalProfile,
       anamnese: draft.anamnese,
       suggestion: draft.suggestion,
@@ -384,11 +391,11 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
       if (!data.anamnese.activityLevel) {
         nextErrors.activityLevel = 'Please choose your activity level.';
       }
+      if (data.anamnese.healthConcerns.length === 0) {
+        nextErrors.healthConcerns = 'Please choose any injuries/conditions, or select None.';
+      }
       if (!data.anamnese.daysPerWeek) {
         nextErrors.daysPerWeek = 'Please choose your weekly commitment.';
-      }
-      if (!data.anamnese.timePerSession) {
-        nextErrors.timePerSession = 'Please choose your session time.';
       }
       if (!data.anamnese.equipmentAccess) {
         nextErrors.equipmentAccess = 'Please choose your available environment.';
@@ -448,6 +455,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
           country: selectedCountry.trim(),
           countryCode: countryObj?.code ?? null,
           motivationStatement: finalData.motivationStatement,
+          identityStatement: finalData.identityStatement,
           personalProfile: {
             ...finalData.personalProfile,
             weight: convertWeightToKilograms(finalData.personalProfile.weight, finalData.personalProfile.weightUnit),
@@ -460,6 +468,8 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
         const updatedUser = await updateCurrentUserProfile({
           country: selectedCountry,
           ...(countryObj ? { country_code: countryObj.code } : {}),
+          motivation_statement: finalData.motivationStatement,
+          identity_statement: finalData.identityStatement,
           onboarding_completed: true
         });
         replaceRoute(router, getPostAuthRoute(updatedUser));
@@ -512,6 +522,62 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
       currentStep: step,
     };
     setData(nextData);
+  };
+  const completeAndStartGoldTrial = async () => {
+    if (!data || saving) {
+      return;
+    }
+    if (!validateCurrentStep()) {
+      return;
+    }
+    setSaving(true);
+    setSaveError('');
+    try {
+      const countryObj = ALL_COUNTRIES.find(c => c.name === selectedCountry);
+      const finalData: OnboardingData = {
+        ...data,
+        country: selectedCountry.trim(),
+        countryCode: countryObj?.code ?? null,
+        suggestion,
+        currentStep: STEP_TITLES.length - 1,
+        updatedAt: new Date().toISOString(),
+      };
+      await updateCurrentUserOnboarding({
+        currentStep: finalData.currentStep,
+        language: finalData.language,
+        country: selectedCountry.trim(),
+        countryCode: countryObj?.code ?? null,
+        motivationStatement: finalData.motivationStatement,
+        identityStatement: finalData.identityStatement,
+        personalProfile: {
+          ...finalData.personalProfile,
+          weight: convertWeightToKilograms(finalData.personalProfile.weight, finalData.personalProfile.weightUnit),
+          weightUnit: 'kg',
+        },
+        anamnese: finalData.anamnese,
+        suggestion: finalData.suggestion,
+        completed: true,
+      });
+      await updateCurrentUserProfile({
+        country: selectedCountry,
+        ...(countryObj ? { country_code: countryObj.code } : {}),
+        motivation_statement: finalData.motivationStatement,
+        identity_statement: finalData.identityStatement,
+        onboarding_completed: true,
+      });
+      await startGoldTrial();
+      const updatedUser = await fetchCurrentUser();
+      replaceRoute(router, getPostAuthRoute(updatedUser));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      if (message.toLowerCase().includes('commercial 5-day gold trial is disabled')) {
+        replaceRoute(router, '/plan');
+        return;
+      }
+      setSaveError('Unable to start your Gold trial right now. Please try again or choose another plan.');
+    } finally {
+      setSaving(false);
+    }
   };
   const handleLanguageSelect = async (language: OnboardingLanguage) => {
     void updateData((current) => ({ ...current, language }));
@@ -774,6 +840,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
                   </Pressable>
                 ))}
               </View>
+              {errors.healthConcerns ? <Text style={styles.errorText}>{t(errors.healthConcerns)}</Text> : null}
               {/* Health Notes - Allows both strings and numbers */}
               <TextInput
                 value={data.anamnese.healthNotes}
@@ -796,20 +863,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
                 ))}
               </View>
               {errors.daysPerWeek ? <Text style={styles.errorText}>{t(errors.daysPerWeek)}</Text> : null}
-              <Text style={styles.questionTitle}>{t('5. How much time can you commit per session?')}</Text>
-              <View style={styles.optionGridSingle}>
-                {SESSION_OPTIONS.map((option) => (
-                  <Pressable
-                    key={option}
-                    onPress={() => void updateData((current) => ({ ...current, anamnese: { ...current.anamnese, timePerSession: option } }))}
-                    style={[styles.optionCard, data.anamnese.timePerSession === option && styles.optionCardActive]}
-                  >
-                    <Text style={[styles.optionLabel, data.anamnese.timePerSession === option && styles.optionLabelActive]}>{t(option)}</Text>
-                  </Pressable>
-                ))}
-              </View>
-              {errors.timePerSession ? <Text style={styles.errorText}>{t(errors.timePerSession)}</Text> : null}
-              <Text style={styles.questionTitle}>{t('6. What equipment or environment do you have access to?')}</Text>
+              <Text style={styles.questionTitle}>{t('5. What equipment or environment do you have access to?')}</Text>
               <View style={styles.optionGridSingle}>
                 {EQUIPMENT_OPTIONS.map((option) => (
                   <Pressable
@@ -826,8 +880,20 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
           ) : null}
           {step === 4 ? (
             <View>
-              <Text style={styles.stepTitle}>{t('What will this help you protect?')}</Text>
-              <Text style={styles.stepText}>{t('Before we build your plan, write one short commitment in your own words. This step is optional and can be edited later.')}</Text>
+              <Text style={styles.stepTitle}>{t("Before we build your plan — what’s this for?")}</Text>
+              <Text style={styles.stepText}>{t('Choose the reason that feels most true, or write your own.')}</Text>
+              <View style={styles.optionGridSingle}>
+                {COMMITMENT_OPTIONS.map((option) => (
+                  <Pressable
+                    key={option}
+                    onPress={() => void updateData((current) => ({ ...current, motivationStatement: current.motivationStatement === option ? '' : option }))}
+                    style={[styles.optionCard, data.motivationStatement === option && styles.optionCardActive]}
+                  >
+                    <Text style={[styles.optionLabel, data.motivationStatement === option && styles.optionLabelActive]}>{t(option)}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <Text style={styles.fieldLabel}>{t('Or write your own reason')}</Text>
               <TextInput
                 value={data.motivationStatement}
                 onChangeText={(value) => void updateData((current) => ({ ...current, motivationStatement: value.slice(0, 240) }))}
@@ -841,7 +907,24 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
               <Text style={styles.helperText}>{t('We only reuse this in coaching and reminder copy as a supportive anchor, never to shame or pressure you.')}</Text>
             </View>
           ) : null}
-          {step === 5 && suggestion ? (
+          {step === 5 ? (
+            <View>
+              <Text style={styles.stepTitle}>{t('Who are you becoming?')}</Text>
+              <Text style={styles.stepText}>{t('Write one sentence about the identity you are building. This is optional and can be edited later.')}</Text>
+              <TextInput
+                value={data.identityStatement}
+                onChangeText={(value) => void updateData((current) => ({ ...current, identityStatement: value.slice(0, 240) }))}
+                placeholder={t('Example: I am becoming someone who keeps promises to myself.')}
+                placeholderTextColor={Colors.placeholder}
+                multiline
+                maxLength={240}
+                textAlignVertical="top"
+                style={styles.notesInput}
+              />
+              <Text style={styles.helperText}>{t('Gold coaching can use this as a positive anchor in reminders and check-ins.')}</Text>
+            </View>
+          ) : null}
+          {step === 6 && suggestion ? (
             <View>
               <Text style={styles.stepTitle}>{t('Suggested tier')}</Text>
               <Text style={styles.stepText}>{t('Based on your answers, this is the strongest starting point for your next step inside the app.')}</Text>
@@ -865,13 +948,14 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
                 <Text style={styles.reviewLine}>{t('Language')}: {LANGUAGE_OPTIONS.find((option) => option.value === data.language)?.nativeLabel || '-'}</Text>
                 <Text style={styles.reviewLine}>{t('Country')}: {data.country || selectedCountry || '-'}</Text>
                 <Text style={styles.reviewLine}>{t('Commitment statement')}: {data.motivationStatement || '-'}</Text>
+                <Text style={styles.reviewLine}>{t('Identity statement')}: {data.identityStatement || '-'}</Text>
                 <Text style={styles.reviewLine}>{t('Age')}: {data.personalProfile.age || '-'}</Text>
                 <Text style={styles.reviewLine}>{t('Gender')}: {data.personalProfile.gender ? t(data.personalProfile.gender) : '-'}</Text>
                 <Text style={styles.reviewLine}>{t('Height')}: {data.personalProfile.height ? `${data.personalProfile.height} ${data.personalProfile.heightUnit}` : '-'}</Text>
                 <Text style={styles.reviewLine}>{t('Weight')}: {data.personalProfile.weight ? `${data.personalProfile.weight} ${data.personalProfile.weightUnit}` : '-'}</Text>
                 <Text style={styles.reviewLine}>{t('Goal')}: {data.anamnese.primaryGoal ? t(data.anamnese.primaryGoal) : '-'}</Text>
                 <Text style={styles.reviewLine}>{t('Activity')}: {data.anamnese.activityLevel ? t(data.anamnese.activityLevel) : '-'}</Text>
-                <Text style={styles.reviewLine}>{t('Commitment')}: {data.anamnese.daysPerWeek ? t(data.anamnese.daysPerWeek) : '-'} / {data.anamnese.timePerSession ? t(data.anamnese.timePerSession) : '-'}</Text>
+                <Text style={styles.reviewLine}>{t('Commitment')}: {data.anamnese.daysPerWeek ? t(data.anamnese.daysPerWeek) : '-'}</Text>
                 <Text style={styles.reviewLine}>{t('Equipment')}: {data.anamnese.equipmentAccess ? t(data.anamnese.equipmentAccess) : '-'}</Text>
               </View>
             </View>
@@ -881,15 +965,31 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
         <View style={styles.actionsRow}>
           <View style={styles.primaryButtonWrap}>
             <AuthButton
-              title={step === STEP_TITLES.length - 1 ? t('Continue to Subscription') : step === 4 ? t('Continue') : t('Next')}
-              onPress={() => void handleNext()}
+              title={
+                step === STEP_TITLES.length - 1
+                  ? t('Try Gold free for 5 days')
+                  : (step === 4 && !data?.motivationStatement?.trim()) || (step === 5 && !data?.identityStatement?.trim())
+                  ? t('Skip for now')
+                  : t('Next')
+              }
+              onPress={() => step === STEP_TITLES.length - 1 ? void completeAndStartGoldTrial() : void handleNext()}
               disabled={saving}
               loading={saving}
             />
           </View>
           {step > 0 ? (
-            <Pressable onPress={() => void handleBack()} disabled={saving} style={styles.secondaryButton}>
-              <Text style={styles.secondaryButtonText}>{t('Back')}</Text>
+            <Pressable
+              onPress={() => {
+                if (step === STEP_TITLES.length - 1) {
+                  replaceRoute(router, '/plan');
+                  return;
+                }
+                void handleBack();
+              }}
+              disabled={saving}
+              style={styles.secondaryButton}
+            >
+              <Text style={styles.secondaryButtonText}>{t(step === STEP_TITLES.length - 1 ? 'Choose another plan' : 'Back')}</Text>
             </Pressable>
           ) : null}
         </View>

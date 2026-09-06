@@ -471,7 +471,7 @@ export default function ProfileScreen() {
     try {
       const updated = await updateCurrentUserProfile({
         motivation_statement: habitDraft.motivation_statement.trim(),
-        identity_statement: habitDraft.identity_statement.trim(),
+        identity_statement: habitDraft.identity_statement,
         workout_unlock_label: habitDraft.workout_unlock_label.trim(),
         training_trigger_context: habitDraft.training_trigger_context.trim(),
         training_trigger_action: habitDraft.training_trigger_action.trim(),
@@ -931,11 +931,12 @@ export default function ProfileScreen() {
                     <TextInput
                       style={styles.habitInput}
                       value={habitDraft.identity_statement}
-                      onChangeText={(value) => setHabitDraft((prev) => ({ ...prev, identity_statement: value.slice(0, 240) }))}
+                      onChangeText={(value) => setHabitDraft((prev) => ({ ...prev, identity_statement: value }))}
                       placeholder="Who are you becoming?"
                       placeholderTextColor={Colors.placeholder}
                       editable={!savingHabits}
                       multiline
+                      maxLength={240}
                       textAlignVertical="top"
                       returnKeyType="done"
                     />

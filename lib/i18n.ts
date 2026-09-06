@@ -62,6 +62,9 @@ function normalizeLanguageCode(value?: string | null): LanguageCode | null {
 
 const TRANSLATIONS: Partial<Record<LanguageCode, Record<string, string>>> = {
   en: {
+    'Skip for now': 'Skip for now',
+    'Skip': 'Skip',
+    "Before we build your plan — what’s this for?": "Before we build your plan — what’s this for?",
     'Target auto-adjusted for your updated weight ({weight}kg): {target}g protein': 'Target auto-adjusted for your updated weight ({weight}kg): {target}g protein',
     'PERIODIC CHECK-IN': 'PERIODIC CHECK-IN',
     'Is your weight still': 'Is your weight still',
@@ -346,6 +349,8 @@ const TRANSLATIONS: Partial<Record<LanguageCode, Record<string, string>>> = {
     '4. How many days per week can you realistically commit?':
       '4. How many days per week can you realistically commit?',
     '5. How much time can you commit per session?': '5. How much time can you commit per session?',
+    '5. What equipment or environment do you have access to?':
+      '5. What equipment or environment do you have access to?',
     '6. What equipment or environment do you have access to?':
       '6. What equipment or environment do you have access to?',
     'Lose weight': 'Lose weight',
@@ -377,12 +382,28 @@ const TRANSLATIONS: Partial<Record<LanguageCode, Record<string, string>>> = {
     'Prefer not to say': 'Prefer not to say',
     'Add details if needed': 'Add details if needed',
     'What will this help you protect?': 'What will this help you protect?',
+    "Before we build your plan - what's this for?": "Before we build your plan - what's this for?",
+    'Choose the reason that feels most true, or write your own.':
+      'Choose the reason that feels most true, or write your own.',
+    'I want to feel strong and confident again': 'I want to feel strong and confident again',
+    'I want to improve my health for my future': 'I want to improve my health for my future',
+    'I want consistency, structure, and accountability': 'I want consistency, structure, and accountability',
+    'Or write your own reason': 'Or write your own reason',
     'Before we build your plan, write one short commitment in your own words. This step is optional and can be edited later.':
       'Before we build your plan, write one short commitment in your own words. This step is optional and can be edited later.',
     'Example: stay healthy for my family, feel stronger again, or rebuild my routine':
       'Example: stay healthy for my family, feel stronger again, or rebuild my routine',
     'We only reuse this in coaching and reminder copy as a supportive anchor, never to shame or pressure you.':
       'We only reuse this in coaching and reminder copy as a supportive anchor, never to shame or pressure you.',
+    Identity: 'Identity',
+    'Identity statement': 'Identity statement',
+    'Who are you becoming?': 'Who are you becoming?',
+    'Write one sentence about the identity you are building. This is optional and can be edited later.':
+      'Write one sentence about the identity you are building. This is optional and can be edited later.',
+    'Example: I am becoming someone who keeps promises to myself.':
+      'Example: I am becoming someone who keeps promises to myself.',
+    'Gold coaching can use this as a positive anchor in reminders and check-ins.':
+      'Gold coaching can use this as a positive anchor in reminders and check-ins.',
     'Suggested tier': 'Suggested tier',
     'Based on your answers, this is the strongest starting point for your next step inside the app.':
       'Based on your answers, this is the strongest starting point for your next step inside the app.',
@@ -397,6 +418,8 @@ const TRANSLATIONS: Partial<Record<LanguageCode, Record<string, string>>> = {
     Commitment: 'Commitment',
     Equipment: 'Equipment',
     'Continue to Subscription': 'Continue to Subscription',
+    'Try Gold free for 5 days': 'Try Gold free for 5 days',
+    'Choose another plan': 'Choose another plan',
     Continue: 'Continue',
     'Please select your preferred language.': 'Please select your preferred language.',
     'Please select your country.': 'Please select your country.',
@@ -409,6 +432,8 @@ const TRANSLATIONS: Partial<Record<LanguageCode, Record<string, string>>> = {
     'Enter a valid weight.': 'Enter a valid weight.',
     'Please choose your primary goal.': 'Please choose your primary goal.',
     'Please choose your activity level.': 'Please choose your activity level.',
+    'Please choose any injuries/conditions, or select None.':
+      'Please choose any injuries/conditions, or select None.',
     'Please choose your weekly commitment.': 'Please choose your weekly commitment.',
     'Please choose your session time.': 'Please choose your session time.',
     'Please choose your available environment.': 'Please choose your available environment.',
@@ -419,6 +444,8 @@ const TRANSLATIONS: Partial<Record<LanguageCode, Record<string, string>>> = {
     'Unable to save your progress. Please try again.': 'Unable to save your progress. Please try again.',
     'Unable to save language preference. Please try again.':
       'Unable to save language preference. Please try again.',
+    'Unable to start your Gold trial right now. Please try again or choose another plan.':
+      'Unable to start your Gold trial right now. Please try again or choose another plan.',
     'EMAIL ADDRESS': 'EMAIL ADDRESS',
     'Your Email': 'Your Email',
     'LOCATION (OPTIONAL)': 'LOCATION (OPTIONAL)',
@@ -1071,6 +1098,12 @@ const TRANSLATIONS: Partial<Record<LanguageCode, Record<string, string>>> = {
     Processing: 'Processing',
     'Your plan request is waiting for the generation worker.': 'Your plan request is waiting for the generation worker.',
     'The backend is building your meal plan now.': 'The backend is building your meal plan now.',
+    'Add at least 3 favourite meals before we generate your plan.':
+      'Add at least 3 favourite meals before we generate your plan.',
+    'Add more favourite meals': 'Add more favourite meals',
+    'Favourite meal {number}': 'Favourite meal {number}',
+    '{count}/3 favourite meals added': '{count}/3 favourite meals added',
+    'Add another meal': 'Add another meal',
     'Generating your plan': 'Generating your plan',
     'Plan saved': 'Plan saved',
     'Loading your saved plan...': 'Loading your saved plan...',
@@ -1094,6 +1127,9 @@ const TRANSLATIONS: Partial<Record<LanguageCode, Record<string, string>>> = {
     'WORKOUT_CARD_GOOD': 'GOOD',
   },
   de: {
+    'Skip for now': 'Jetzt überspringen',
+    'Skip': 'Überspringen',
+    "Before we build your plan — what’s this for?": 'Bevor wir deinen Plan erstellen — wofür ist das?',
     'Target auto-adjusted for your updated weight ({weight}kg): {target}g protein': 'Ziel automatisch an Ihr aktualisiertes Gewicht angepasst ({weight}kg): {target}g Protein',
     'PERIODIC CHECK-IN': 'REGELMÄSSIGE KONTROLLE',
     'Is your weight still': 'Ist Ihr Gewicht noch',
@@ -1383,6 +1419,8 @@ const TRANSLATIONS: Partial<Record<LanguageCode, Record<string, string>>> = {
     '4. How many days per week can you realistically commit?':
       '4. Wie viele Tage pro Woche kannst du realistisch einplanen?',
     '5. How much time can you commit per session?': '5. Wie viel Zeit kannst du pro Einheit einplanen?',
+    '5. What equipment or environment do you have access to?':
+      '5. Welche Ausrüstung oder Umgebung steht dir zur Verfügung?',
     '6. What equipment or environment do you have access to?':
       '6. Welche Ausrüstung oder Umgebung steht dir zur Verfügung?',
     'Lose weight': 'Gewicht verlieren',
@@ -1414,12 +1452,28 @@ const TRANSLATIONS: Partial<Record<LanguageCode, Record<string, string>>> = {
     'Prefer not to say': 'Keine Angabe',
     'Add details if needed': 'Details hinzufügen, falls nötig',
     'What will this help you protect?': 'Was hilft dir das zu schützen?',
+    "Before we build your plan - what's this for?": 'Bevor wir deinen Plan erstellen - wofür ist das?',
+    'Choose the reason that feels most true, or write your own.':
+      'Wähle den Grund, der sich am passendsten anfühlt, oder schreibe deinen eigenen.',
+    'I want to feel strong and confident again': 'Ich möchte mich wieder stark und selbstbewusst fühlen',
+    'I want to improve my health for my future': 'Ich möchte meine Gesundheit für meine Zukunft verbessern',
+    'I want consistency, structure, and accountability': 'Ich möchte Konstanz, Struktur und Verbindlichkeit',
+    'Or write your own reason': 'Oder schreibe deinen eigenen Grund',
     'Before we build your plan, write one short commitment in your own words. This step is optional and can be edited later.':
       'Bevor wir deinen Plan erstellen, schreibe ein kurzes Commitment in deinen eigenen Worten. Dieser Schritt ist optional und kann später bearbeitet werden.',
     'Example: stay healthy for my family, feel stronger again, or rebuild my routine':
       'Beispiel: für meine Familie gesund bleiben, mich wieder stärker fühlen oder meine Routine neu aufbauen',
     'We only reuse this in coaching and reminder copy as a supportive anchor, never to shame or pressure you.':
       'Wir verwenden das nur im Coaching und in Erinnerungen als unterstützenden Anker, nie um dich zu beschämen oder unter Druck zu setzen.',
+    Identity: 'Identität',
+    'Identity statement': 'Identitätsstatement',
+    'Who are you becoming?': 'Wer wirst du?',
+    'Write one sentence about the identity you are building. This is optional and can be edited later.':
+      'Schreibe einen Satz über die Identität, die du aufbaust. Das ist optional und kann später bearbeitet werden.',
+    'Example: I am becoming someone who keeps promises to myself.':
+      'Beispiel: Ich werde jemand, der Versprechen an sich selbst hält.',
+    'Gold coaching can use this as a positive anchor in reminders and check-ins.':
+      'Gold-Coaching kann das als positiven Anker in Erinnerungen und Check-ins nutzen.',
     'Suggested tier': 'Empfohlener Tarif',
     'Based on your answers, this is the strongest starting point for your next step inside the app.':
       'Basierend auf deinen Antworten ist das der beste Startpunkt für deinen nächsten Schritt in der App.',
@@ -1434,6 +1488,8 @@ const TRANSLATIONS: Partial<Record<LanguageCode, Record<string, string>>> = {
     Commitment: 'Commitment',
     Equipment: 'Ausrüstung',
     'Continue to Subscription': 'Weiter zum Abonnement',
+    'Try Gold free for 5 days': 'Gold 5 Tage kostenlos testen',
+    'Choose another plan': 'Anderen Plan wählen',
     Continue: 'Weiter',
     'Please select your preferred language.': 'Bitte wähle deine bevorzugte Sprache.',
     'Please select your country.': 'Bitte wähle dein Land.',
@@ -1446,6 +1502,8 @@ const TRANSLATIONS: Partial<Record<LanguageCode, Record<string, string>>> = {
     'Enter a valid weight.': 'Gib ein gültiges Gewicht ein.',
     'Please choose your primary goal.': 'Bitte wähle dein Hauptziel.',
     'Please choose your activity level.': 'Bitte wähle dein Aktivitätslevel.',
+    'Please choose any injuries/conditions, or select None.':
+      'Bitte wähle Verletzungen/Beschwerden aus oder wähle Keine.',
     'Please choose your weekly commitment.': 'Bitte wähle deine wöchentliche Verpflichtung.',
     'Please choose your session time.': 'Bitte wähle deine Trainingsdauer.',
     'Please choose your available environment.': 'Bitte wähle deine verfügbare Trainingsumgebung.',
@@ -1457,6 +1515,8 @@ const TRANSLATIONS: Partial<Record<LanguageCode, Record<string, string>>> = {
       'Dein Fortschritt konnte nicht gespeichert werden. Bitte versuche es erneut.',
     'Unable to save language preference. Please try again.':
       'Die Spracheinstellung konnte nicht gespeichert werden. Bitte versuche es erneut.',
+    'Unable to start your Gold trial right now. Please try again or choose another plan.':
+      'Deine Gold-Testphase konnte gerade nicht gestartet werden. Bitte versuche es erneut oder wähle einen anderen Plan.',
     'EMAIL ADDRESS': 'E-MAIL-ADRESSE',
     'Your Email': 'Deine E-Mail',
     'LOCATION (OPTIONAL)': 'ORT (OPTIONAL)',
@@ -2112,6 +2172,12 @@ const TRANSLATIONS: Partial<Record<LanguageCode, Record<string, string>>> = {
     Processing: 'Wird verarbeitet',
     'Your plan request is waiting for the generation worker.': 'Deine Plananfrage wartet auf den Erstellungsdienst.',
     'The backend is building your meal plan now.': 'Das Backend erstellt jetzt deinen Mahlzeitenplan.',
+    'Add at least 3 favourite meals before we generate your plan.':
+      'Füge mindestens 3 Lieblingsgerichte hinzu, bevor wir deinen Plan erstellen.',
+    'Add more favourite meals': 'Mehr Lieblingsgerichte hinzufügen',
+    'Favourite meal {number}': 'Lieblingsgericht {number}',
+    '{count}/3 favourite meals added': '{count}/3 Lieblingsgerichte hinzugefügt',
+    'Add another meal': 'Weiteres Gericht hinzufügen',
     'Generating your plan': 'Dein Plan wird erstellt',
     'Plan saved': 'Plan gespeichert',
     'Loading your saved plan...': 'Dein gespeicherter Plan wird geladen...',
@@ -2130,6 +2196,9 @@ const TRANSLATIONS: Partial<Record<LanguageCode, Record<string, string>>> = {
     'Unable to generate weekly plan.': 'Der Wochenplan kann gerade nicht erstellt werden.',
   },
   bn: {
+    'Skip for now': 'আপাতত এড়িয়ে যান',
+    'Skip': 'এড়িয়ে যান',
+    "Before we build your plan — what’s this for?": 'আপনার প্ল্যান তৈরির আগে — এটি কীসের জন্য?',
     'Target auto-adjusted for your updated weight ({weight}kg): {target}g protein': 'আপনার পরিবর্তিত ওজনের ({weight}কেজি) জন্য লক্ষ্য স্বয়ংক্রিয়ভাবে সমন্বয় করা হয়েছে: {target}গ্রাম প্রোটিন',
     'PERIODIC CHECK-IN': 'পর্যায়ক্রমিক ওজন যাচাই',
     'Is your weight still': 'আপনার ওজন কি এখনও',
@@ -2324,8 +2393,11 @@ const TRANSLATIONS: Partial<Record<LanguageCode, Record<string, string>>> = {
     'Sport and health anamnese': 'খেলাধুলা ও স্বাস্থ্য তথ্য',
     '1. What is your primary goal?': '১. আপনার প্রধান লক্ষ্য কী?',
     '2. How would you describe your current activity level?': '২. আপনার বর্তমান কার্যকলাপের মাত্রা কীভাবে বর্ণনা করবেন?',
+    '3. Do you currently have, or have you had in the last 12 months, any injuries, pain, or medical conditions we should know about?':
+      '৩. বর্তমানে বা গত ১২ মাসে কোনো আঘাত, ব্যথা বা চিকিৎসাগত সমস্যা আছে কি?',
     '4. How many days per week can you realistically commit?': '৪. সপ্তাহে বাস্তবে কত দিন দিতে পারবেন?',
     '5. How much time can you commit per session?': '৫. প্রতি সেশনে কত সময় দিতে পারবেন?',
+    '5. What equipment or environment do you have access to?': '৫. কোন সরঞ্জাম বা পরিবেশ আপনার আছে?',
     '6. What equipment or environment do you have access to?': '৬. কোন সরঞ্জাম বা পরিবেশ আপনার আছে?',
     'Lose weight': 'ওজন কমানো',
     'Build muscle': 'মাসল তৈরি',
@@ -2357,7 +2429,22 @@ const TRANSLATIONS: Partial<Record<LanguageCode, Record<string, string>>> = {
     'Non-binary': 'নন-বাইনারি',
     'Prefer not to say': 'বলতে চাই না',
     'Add details if needed': 'প্রয়োজন হলে বিস্তারিত লিখুন',
+    "Before we build your plan - what's this for?": 'আপনার প্ল্যান তৈরির আগে - এটি কীসের জন্য?',
+    'Choose the reason that feels most true, or write your own.': 'যে কারণটি সবচেয়ে সত্য মনে হয় সেটি বেছে নিন, অথবা নিজেরটি লিখুন।',
+    'I want to feel strong and confident again': 'আমি আবার শক্তিশালী ও আত্মবিশ্বাসী হতে চাই',
+    'I want to improve my health for my future': 'আমি আমার ভবিষ্যতের জন্য স্বাস্থ্য উন্নত করতে চাই',
+    'I want consistency, structure, and accountability': 'আমি ধারাবাহিকতা, কাঠামো ও দায়বদ্ধতা চাই',
+    'Or write your own reason': 'অথবা নিজের কারণ লিখুন',
     'What will this help you protect?': 'এটি আপনাকে কী রক্ষা করতে সাহায্য করবে?',
+    'Identity': 'পরিচয়',
+    'Identity statement': 'পরিচয় বিবৃতি',
+    'Who are you becoming?': 'আপনি কেমন মানুষ হয়ে উঠছেন?',
+    'Write one sentence about the identity you are building. This is optional and can be edited later.':
+      'আপনি যে পরিচয় গড়ছেন তা নিয়ে একটি বাক্য লিখুন। এটি ঐচ্ছিক এবং পরে পরিবর্তন করা যাবে।',
+    'Example: I am becoming someone who keeps promises to myself.':
+      'উদাহরণ: আমি এমন একজন হচ্ছি যে নিজের প্রতিশ্রুতি রাখে।',
+    'Gold coaching can use this as a positive anchor in reminders and check-ins.':
+      'Gold কোচিং এটি রিমাইন্ডার ও চেক-ইনে ইতিবাচক অ্যাঙ্কর হিসেবে ব্যবহার করতে পারে।',
     'Suggested tier': 'প্রস্তাবিত স্তর',
     'RECOMMENDED': 'প্রস্তাবিত',
     'Victory Gold Trial': 'Victory Gold ট্রায়াল',
@@ -2368,6 +2455,8 @@ const TRANSLATIONS: Partial<Record<LanguageCode, Record<string, string>>> = {
     'Commitment': 'প্রতিশ্রুতি',
     'Equipment': 'সরঞ্জাম',
     'Continue to Subscription': 'সাবস্ক্রিপশনে যান',
+    'Try Gold free for 5 days': '৫ দিনের জন্য Gold বিনামূল্যে চেষ্টা করুন',
+    'Choose another plan': 'অন্য প্ল্যান বেছে নিন',
     'Please select your preferred language.': 'আপনার পছন্দের ভাষা নির্বাচন করুন।',
     'Please select your country.': 'আপনার দেশ নির্বাচন করুন।',
     'Age is required.': 'বয়স প্রয়োজন।',
@@ -2379,6 +2468,8 @@ const TRANSLATIONS: Partial<Record<LanguageCode, Record<string, string>>> = {
     'Enter a valid weight.': 'সঠিক ওজন লিখুন।',
     'Please choose your primary goal.': 'আপনার প্রধান লক্ষ্য নির্বাচন করুন।',
     'Please choose your activity level.': 'আপনার কার্যকলাপের মাত্রা নির্বাচন করুন।',
+    'Please choose any injuries/conditions, or select None.':
+      'আঘাত/সমস্যা নির্বাচন করুন, অথবা কোনোটিই নয় নির্বাচন করুন।',
     'Please choose your weekly commitment.': 'সাপ্তাহিক প্রতিশ্রুতি নির্বাচন করুন।',
     'Please choose your session time.': 'সেশনের সময় নির্বাচন করুন।',
     'Please choose your available environment.': 'আপনার উপলব্ধ পরিবেশ নির্বাচন করুন।',
@@ -2386,6 +2477,8 @@ const TRANSLATIONS: Partial<Record<LanguageCode, Record<string, string>>> = {
     'Unable to save your onboarding details. Please try again.': 'অনবোর্ডিং তথ্য সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।',
     'Unable to save your progress. Please try again.': 'অগ্রগতি সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।',
     'Unable to save language preference. Please try again.': 'ভাষা পছন্দ সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।',
+    'Unable to start your Gold trial right now. Please try again or choose another plan.':
+      'এই মুহূর্তে Gold ট্রায়াল শুরু করা যাচ্ছে না। আবার চেষ্টা করুন অথবা অন্য প্ল্যান বেছে নিন।',
     'Profile unavailable': 'প্রোফাইল পাওয়া যাচ্ছে না',
     'Unable to load your profile right now.': 'এই মুহূর্তে আপনার প্রোফাইল লোড করা যাচ্ছে না।',
     'Unable to save profile changes.': 'প্রোফাইল পরিবর্তন সংরক্ষণ করা যাচ্ছে না।',
@@ -2983,6 +3076,12 @@ const TRANSLATIONS: Partial<Record<LanguageCode, Record<string, string>>> = {
     'Processing': 'প্রক্রিয়াকরণ',
     'Your plan request is waiting for the generation worker.': 'আপনার পরিকল্পনা অনুরোধ প্রজন্ম কর্মীর জন্য অপেক্ষা করছে.',
     'The backend is building your meal plan now.': 'ব্যাকএন্ড এখন আপনার খাবার পরিকল্পনা তৈরি করছে।',
+    'Add at least 3 favourite meals before we generate your plan.':
+      'আপনার প্ল্যান তৈরি করার আগে কমপক্ষে ৩টি প্রিয় খাবার যোগ করুন।',
+    'Add more favourite meals': 'আরও প্রিয় খাবার যোগ করুন',
+    'Favourite meal {number}': 'প্রিয় খাবার {number}',
+    '{count}/3 favourite meals added': '{count}/৩টি প্রিয় খাবার যোগ হয়েছে',
+    'Add another meal': 'আরেকটি খাবার যোগ করুন',
     'Generating your plan': 'আপনার পরিকল্পনা তৈরি করা হচ্ছে',
     'Plan saved': 'পরিকল্পনা সংরক্ষিত',
     'Loading your saved plan...': 'আপনার সংরক্ষিত পরিকল্পনা লোড হচ্ছে...',

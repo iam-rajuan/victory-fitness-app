@@ -37,6 +37,7 @@ export type OnboardingData = {
   country: string;
   countryCode: string | null;
   motivationStatement: string;
+  identityStatement: string;
   personalProfile: OnboardingPersonalProfile;
   anamnese: OnboardingAnamnese;
   suggestion: OnboardingSuggestion | null;
@@ -85,6 +86,7 @@ function normalizeOnboardingData(raw: unknown): OnboardingData | null {
     country: String(source.country ?? '').trim(),
     countryCode: String(source.countryCode ?? '').trim().toUpperCase() || null,
     motivationStatement: String(source.motivationStatement ?? '').trim(),
+    identityStatement: String(source.identityStatement ?? ''),
     personalProfile: {
       age: String((source.personalProfile as Record<string, unknown> | undefined)?.age ?? '').trim(),
       gender: String((source.personalProfile as Record<string, unknown> | undefined)?.gender ?? '').trim(),
@@ -124,6 +126,7 @@ function buildEmptyOnboardingData(userId: string): OnboardingData {
     country: '',
     countryCode: null,
     motivationStatement: '',
+    identityStatement: '',
     personalProfile: { ...EMPTY_PERSONAL_PROFILE },
     anamnese: { ...EMPTY_ANAMNESE },
     suggestion: null,

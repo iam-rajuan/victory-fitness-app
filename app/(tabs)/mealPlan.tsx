@@ -49,6 +49,7 @@ const TOTAL_STEPS = 8;
 const PLAN_SUCCESS_SOUND = require('../../assets/sounds/plan-saved.wav');
 const PLAN_SUCCESS_HOLD_MS = 2500;
 const GENDER_PLACEHOLDER = 'Please select...';
+const MIN_FAVORITE_MEALS = 3;
 const PLAN_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
 const MEAL_KEYS = ['breakfast', 'lunch', 'dinner'] as const;
 type PlanTabId = 'my_plan' | 'tracker' | 'meal_analysis';
@@ -235,6 +236,7 @@ type NutritionProfile = {
   goal: string | null;
   cuisine: string;
   favoriteMeal: string;
+  favoriteMeals: string[];
   selectedDiet: string | null;
   allergies: string;
   selectedActivity: string | null;
@@ -245,6 +247,21 @@ type NutritionProfile = {
   healthConditions: string[];
 };
 
+function normalizeFavoriteMeals(rawProfile: Record<string, unknown>) {
+  const favoriteMeals = Array.isArray(rawProfile.favorite_meals)
+    ? rawProfile.favorite_meals
+        .map((item) => String(item).trim())
+        .filter(Boolean)
+    : Array.isArray(rawProfile.favorite_meals_json)
+      ? rawProfile.favorite_meals_json
+          .map((item) => String(item).trim())
+          .filter(Boolean)
+      : [];
+  const legacyFavoriteMeal = typeof rawProfile.favorite_meal === 'string' ? rawProfile.favorite_meal.trim() : '';
+  const merged = legacyFavoriteMeal ? [legacyFavoriteMeal, ...favoriteMeals] : favoriteMeals;
+  return Array.from(new Set(merged)).slice(0, 8);
+}
+
 function mapPlanProfile(plan: NutritionPlanApiResponse | null): NutritionProfile | null {
   const rawProfile = plan?.profile;
   if (!rawProfile) {
@@ -254,11 +271,13 @@ function mapPlanProfile(plan: NutritionPlanApiResponse | null): NutritionProfile
   const healthConditions = Array.isArray(rawProfile.health_conditions)
     ? rawProfile.health_conditions.filter((item): item is string => typeof item === 'string')
     : [];
+  const favoriteMeals = normalizeFavoriteMeals(rawProfile);
 
   return {
     goal: typeof rawProfile.goal === 'string' ? rawProfile.goal : null,
     cuisine: typeof rawProfile.cuisine === 'string' ? rawProfile.cuisine : '',
-    favoriteMeal: typeof rawProfile.favorite_meal === 'string' ? rawProfile.favorite_meal : '',
+    favoriteMeal: favoriteMeals[0] ?? '',
+    favoriteMeals,
     selectedDiet: typeof rawProfile.diet === 'string' ? rawProfile.diet : null,
     allergies: typeof rawProfile.allergies === 'string' ? rawProfile.allergies : '',
     selectedActivity: typeof rawProfile.activity_level === 'string' ? rawProfile.activity_level : null,
@@ -1634,6 +1653,7 @@ export default function JournalScreen() {
   const [selectedGoal, setSelectedGoal] = useState<string | null>(null);
   const [cuisine, setCuisine] = useState('');
   const [favoriteMeal, setFavoriteMeal] = useState('');
+  const [favoriteMeals, setFavoriteMeals] = useState<string[]>(['', '', '']);
   const [selectedDiet, setSelectedDiet] = useState<string | null>(null);
   const [allergies, setAllergies] = useState('');
   const [selectedActivity, setSelectedActivity] = useState<string | null>(null);
@@ -1659,6 +1679,7 @@ export default function JournalScreen() {
       setSelectedGoal(mappedProfile.goal);
       setCuisine(mappedProfile.cuisine);
       setFavoriteMeal(mappedProfile.favoriteMeal);
+      setFavoriteMeals(mappedProfile.favoriteMeals.length > 0 ? mappedProfile.favoriteMeals : ['', '', '']);
       setSelectedDiet(mappedProfile.selectedDiet);
       setAllergies(mappedProfile.allergies);
       setSelectedActivity(mappedProfile.selectedActivity);
@@ -1818,7 +1839,7 @@ export default function JournalScreen() {
   const canNext = () => {
     if (step === 1) return selectedGoal !== null;
     if (step === 2) return cuisine.trim().length > 0;
-    if (step === 3) return favoriteMeal.trim().length > 0;
+    if (step === 3) return favoriteMeals.filter((meal) => meal.trim().length > 0).length >= MIN_FAVORITE_MEALS;
     if (step === 4) return selectedDiet !== null;
     if (step === 5) return true;
     if (step === 6) return selectedActivity !== null;
@@ -1840,9 +1861,30 @@ export default function JournalScreen() {
       setErrorDialog(null);
     }
   };
+  const updateFavoriteMealAt = (index: number, value: string) => {
+    const next = [...favoriteMeals];
+    next[index] = value;
+    setFavoriteMeals(next);
+    setFavoriteMeal(next.find((meal) => meal.trim().length > 0)?.trim() ?? '');
+  };
+
+  const addFavoriteMealField = () => {
+    setFavoriteMeals((previous) => [...previous, '']);
+  };
+
+  const normalizedFavoriteMeals = favoriteMeals
+    .map((meal) => meal.trim())
+    .filter(Boolean);
 
   const generatePlan = async () => {
     if (generating) {
+      return;
+    }
+    if (normalizedFavoriteMeals.length < MIN_FAVORITE_MEALS) {
+      setErrorDialog({
+        title: t('Add more favourite meals'),
+        message: t('Add at least 3 favourite meals before we generate your plan.'),
+      });
       return;
     }
 
@@ -1857,7 +1899,9 @@ export default function JournalScreen() {
       const response = await createNutritionPlan({
         goal: selectedGoal,
         cuisine,
-        favorite_meal: favoriteMeal,
+        favorite_meal: normalizedFavoriteMeals[0] ?? favoriteMeal,
+        favorite_meals: normalizedFavoriteMeals,
+        favorite_meals_json: normalizedFavoriteMeals,
         diet: selectedDiet,
         allergies,
         activity_level: selectedActivity,
@@ -1967,6 +2011,7 @@ export default function JournalScreen() {
           goal: selectedGoal,
           cuisine,
           favoriteMeal,
+          favoriteMeals: normalizedFavoriteMeals,
           selectedDiet,
           allergies,
           selectedActivity,
@@ -2034,10 +2079,27 @@ export default function JournalScreen() {
         {step === 3 && (
           <View>
             <Text style={styles.bigQuestion}>What is your absolute favorite meal?</Text>
-            <Text style={styles.bigSub}>We'll schedule it 2x a week—guilt-free!</Text>
-            <View style={styles.textInputCard}>
-              <TextInput style={styles.textInput} placeholder="e.g. Pizza, Jollof Rice, Burger..." placeholderTextColor="rgba(255,255,255,0.3)" value={favoriteMeal} onChangeText={setFavoriteMeal} multiline textAlignVertical="top" />
-            </View>
+            <Text style={styles.bigSub}>{t('Add at least 3 favourite meals before we generate your plan.')}</Text>
+            {favoriteMeals.map((meal, index) => (
+              <View key={`favorite-meal-${index}`} style={styles.textInputCard}>
+                <Text style={styles.fieldLabel}>{t('Favourite meal {number}', { number: index + 1 })}</Text>
+                <TextInput
+                  style={[styles.textInput, styles.textInputSingle]}
+                  placeholder={index === 0 ? 'e.g. Jollof rice' : index === 1 ? 'e.g. Chicken curry' : 'e.g. Pasta with salmon'}
+                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  value={meal}
+                  onChangeText={(value) => updateFavoriteMealAt(index, value)}
+                  textAlignVertical="top"
+                />
+              </View>
+            ))}
+            <Text style={styles.mealRequirementText}>
+              {t('{count}/3 favourite meals added', { count: Math.min(normalizedFavoriteMeals.length, MIN_FAVORITE_MEALS) })}
+            </Text>
+            <TouchableOpacity style={styles.addMealButton} onPress={addFavoriteMealField} activeOpacity={0.85}>
+              <Ionicons name="add" size={18} color={Colors.primary} />
+              <Text style={styles.addMealButtonText}>{t('Add another meal')}</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -2146,12 +2208,12 @@ export default function JournalScreen() {
             </View>
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity onPress={generatePlan} activeOpacity={0.85}>
-            <View style={[styles.generateBtn, { backgroundColor: Colors.accentPurple }]}>
+          <TouchableOpacity onPress={generatePlan} disabled={normalizedFavoriteMeals.length < MIN_FAVORITE_MEALS} activeOpacity={0.85}>
+            <View style={[styles.generateBtn, { backgroundColor: normalizedFavoriteMeals.length >= MIN_FAVORITE_MEALS ? Colors.accentPurple : '#2A2A40' }]}>
               {generating ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.generateBtnText}>{t('Curate Your Plan')}</Text>
+                <Text style={[styles.generateBtnText, normalizedFavoriteMeals.length < MIN_FAVORITE_MEALS && styles.nextBtnDisabled]}>{t('Curate Your Plan')}</Text>
               )}
             </View>
           </TouchableOpacity>
@@ -2187,6 +2249,9 @@ const styles = StyleSheet.create({
   textInputCard: { backgroundColor: '#13132A', borderRadius: 14, padding: 16, marginBottom: 16, borderWidth: 1.5, borderColor: '#1E1E38' },
   textInput: { color: '#fff', fontSize: 15, fontFamily: 'Inter_400Regular', lineHeight: 24, minHeight: 90 },
   textInputSingle: { minHeight: 0 },
+  mealRequirementText: { color: Colors.textMuted, fontSize: 13, fontFamily: 'Inter_600SemiBold', marginBottom: 12, textAlign: 'center' },
+  addMealButton: { minHeight: 48, borderRadius: 14, borderWidth: 1.5, borderColor: 'rgba(0, 240, 208, 0.35)', backgroundColor: 'rgba(0, 240, 208, 0.08)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  addMealButtonText: { color: Colors.primary, fontSize: 14, fontFamily: 'Inter_700Bold' },
 
   fieldLabel: { color: Colors.textMuted, fontSize: 13, fontFamily: 'Inter_400Regular', marginBottom: 8, marginTop: 4, letterSpacing: 0.2 },
   genderSelector: { flexDirection: 'row', alignItems: 'center' },
@@ -3177,5 +3242,3 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 });
-
-
