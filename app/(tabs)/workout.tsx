@@ -448,7 +448,7 @@ export default function WorkoutScreen() {
                   </Text>
                   <View style={styles.heroFooterRow}>
                     <Text style={styles.heroMeta}>
-                      {featuredWorkout.tag} · {t('Video ready')}
+                      {t(featuredWorkout.tag)} · {t('Video ready')}
                     </Text>
                     <View style={styles.heroStartButton}>
                       <Text style={styles.heroStartButtonText}>{t('START')}</Text>
@@ -504,7 +504,7 @@ export default function WorkoutScreen() {
                           isSelected && styles.categoryPillTextSelected,
                         ]}
                       >
-                        {category.name.toUpperCase()}
+                        {t(category.name).toUpperCase()}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -531,7 +531,7 @@ export default function WorkoutScreen() {
                           style={styles.popularImageVertical}
                         />
                         <View style={styles.popularLevelBadge}>
-                          <Text style={styles.popularLevelBadgeText}>{details.level}</Text>
+                          <Text style={styles.popularLevelBadgeText}>{t(details.level)}</Text>
                         </View>
                       </View>
                       <View style={styles.popularContentVertical}>
@@ -539,9 +539,9 @@ export default function WorkoutScreen() {
                           {workout.title}
                         </Text>
                         <View style={styles.popularMetaRow}>
-                          <Text style={styles.popularMetaDuration}>{details.duration} MIN</Text>
+                          <Text style={styles.popularMetaDuration}>{details.duration} {t('MIN')}</Text>
                           <Text style={styles.popularMetaDivider}>•</Text>
-                          <Text style={styles.popularMetaTag}>{workout.tag.toUpperCase()}</Text>
+                          <Text style={styles.popularMetaTag}>{t(workout.tag).toUpperCase()}</Text>
                         </View>
                       </View>
                     </TouchableOpacity>

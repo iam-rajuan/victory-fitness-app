@@ -102,7 +102,12 @@ export default function VictoryHeader({ showGreeting = false }: VictoryHeaderPro
                   { fontSize: greetingPrefixSize, lineHeight: greetingPrefixSize + 3 },
                 ]}
               >
-                {t('Good morning')}
+                {(() => {
+                  const hour = new Date().getHours();
+                  if (hour < 12) return t('Good morning');
+                  if (hour < 17) return t('Good afternoon');
+                  return t('Good evening');
+                })()}
               </Text>
               <Text style={[styles.greetingName, { fontSize: greetingNameSize, lineHeight: greetingNameSize + 2 }]} numberOfLines={1}>
                 {firstName}
@@ -120,7 +125,7 @@ export default function VictoryHeader({ showGreeting = false }: VictoryHeaderPro
             ]}
             onPress={() => router.push('/notifications')}
             accessibilityRole="button"
-            accessibilityLabel="Open notifications"
+            accessibilityLabel={t('Open notifications')}
             hitSlop={10}
           >
             <Ionicons name="notifications-outline" size={isCompactWidth ? 18 : 20} color="#fff" />

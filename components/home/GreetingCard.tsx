@@ -26,7 +26,7 @@ export default function GreetingCard() {
       </View>
       <View style={styles.quoteBox}>
         <Text style={styles.quoteText}>
-          {remoteQuote?.text || t('STAY FOCUS AND KEEP PUSHING YOUR LIMITS TO UNLEASH YOUR TRUE POTENTIAL.')}
+          {remoteQuote?.text ? t(remoteQuote.text) : t('STAY FOCUS AND KEEP PUSHING YOUR LIMITS TO UNLEASH YOUR TRUE POTENTIAL.')}
         </Text>
         {remoteQuote?.author ? (
           <Text style={styles.quoteAuthor}>— {remoteQuote.author}</Text>
