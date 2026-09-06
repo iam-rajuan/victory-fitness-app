@@ -272,7 +272,10 @@ export async function syncOnboardingProfileFields(userId: string, fields: Partia
   return nextData;
 }
 
-export async function markWeightPromptHandled(userId: string) {
-  await writeStorageValue(LAST_WEIGHT_PROMPT_DATE_KEY, new Date().toISOString());
+export async function markWeightPromptHandled(userId: string, snoozeDays = 0) {
+  const dateToSave = snoozeDays > 0
+    ? new Date(Date.now() - (WEIGHT_PROMPT_INTERVAL_DAYS - snoozeDays) * MS_PER_DAY).toISOString()
+    : new Date().toISOString();
+  await writeStorageValue(LAST_WEIGHT_PROMPT_DATE_KEY, dateToSave);
   await writeStorageValue(LAST_WEIGHT_PROMPT_USER_KEY, userId);
 }

@@ -38,7 +38,29 @@ export type NutritionPlanApiResponse = {
   shopping_list: NutritionShoppingSection[];
   meal_completions?: Record<string, Record<string, boolean>>;
   profile?: Record<string, unknown> | null;
+  daily_protein_target?: number | null;
+  protein_per_kg?: number | null;
+  baseline_weight?: number | null;
 };
+
+export function calculateProteinTarget(
+  weightKgOrLb: number | string | null | undefined,
+  goal?: string | null
+): { target: number; multiplier: number; weightKg: number } {
+  let weightKg = 70;
+  if (weightKgOrLb !== null && weightKgOrLb !== undefined) {
+    const s = String(weightKgOrLb).trim().toLowerCase();
+    const isLb = s.includes('lb');
+    const num = parseFloat(s.replace(/[^\d.]/g, ''));
+    if (!isNaN(num) && num > 0) {
+      weightKg = isLb ? num * 0.45359237 : num;
+    }
+  }
+  const goalStr = String(goal || '').trim().toLowerCase();
+  const multiplier = goalStr === 'g2' || goalStr.includes('muscle') ? 2.0 : 1.6;
+  const target = Math.max(Math.round(weightKg * multiplier), 60);
+  return { target, multiplier, weightKg: Math.round(weightKg * 10) / 10 };
+}
 
 export type NutritionPlanJobResponse = {
   job_id: string;

@@ -37,11 +37,13 @@ import { replaceRoute } from '../../lib/navigation';
 import {
   NutritionPlanApiResponse,
   analyzeMealImage,
+  calculateProteinTarget,
   createNutritionPlan,
   getMealAnalysisHistory,
   MealImageAnalysisResponse,
   updateNutritionMealCompletion,
 } from '../../lib/nutrition';
+import { fetchCurrentUserBodyMetrics } from '../../lib/api';
 
 const TOTAL_STEPS = 8;
 const PLAN_SUCCESS_SOUND = require('../../assets/sounds/plan-saved.wav');
@@ -343,6 +345,7 @@ function MealPlanResult({
   const [canAccessTracker, setCanAccessTracker] = useState(false);
   const [canAccessMealAnalysis, setCanAccessMealAnalysis] = useState(false);
   const [restrictedSection, setRestrictedSection] = useState('');
+  const [userWeight, setUserWeight] = useState('');
   const [copyToastMessage, setCopyToastMessage] = useState('');
   const copyToastTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const useNativeDriver = Platform.OS !== 'web';
@@ -363,9 +366,15 @@ function MealPlanResult({
 
     const loadNutritionAccess = async () => {
       try {
-        const user = await fetchCurrentUser();
+        const [user, metrics] = await Promise.all([
+          fetchCurrentUser(),
+          fetchCurrentUserBodyMetrics().catch(() => null),
+        ]);
         if (cancelled) {
           return;
+        }
+        if (metrics?.weight) {
+          setUserWeight(metrics.weight);
         }
         setCanAccessTracker(canAccessFeature('nutrition_tracker', user));
         setCanAccessMealAnalysis(canAccessFeature('meal_analysis', user));
@@ -608,6 +617,18 @@ function MealPlanResult({
   const totalP = day.breakfast.p + day.lunch.p + day.dinner.p;
   const totalC = day.breakfast.c + day.lunch.c + day.dinner.c;
   const totalF = day.breakfast.f + day.lunch.f + day.dinner.f;
+
+  const effectiveWeight = userWeight || profile.weight || (generatedPlan?.baseline_weight ? String(generatedPlan.baseline_weight) : '70');
+  const { target: calculatedProteinTarget, multiplier: proteinMultiplier, weightKg: currentWeightKg } = calculateProteinTarget(
+    effectiveWeight,
+    profile.goal || (generatedPlan?.profile as any)?.goal
+  );
+  const activeProteinTarget = generatedPlan?.daily_protein_target ?? calculatedProteinTarget;
+  const planBaselineWeight = generatedPlan?.baseline_weight ?? null;
+  const weightDivergence = planBaselineWeight !== null && planBaselineWeight > 0
+    ? Math.abs(currentWeightKg - planBaselineWeight)
+    : 0;
+  const hasWeightDivergence = weightDivergence >= 2.0;
   const adviceItems = normalizeAdviceItems(nutritionAdvice);
 
   const goalLabel = generatedPlan?.goal_label ? t(generatedPlan.goal_label) : getGoalLabel(profile.goal, t);
@@ -1094,6 +1115,13 @@ function MealPlanResult({
                 <Text style={styles.trackerSectionIcon}>📊</Text>
                 <Text style={styles.trackerSectionTitle}>{t('DAILY SUMMARY')}</Text>
               </View>
+              {hasWeightDivergence ? (
+                <View style={styles.weightNoticeBanner}>
+                  <Text style={styles.weightNoticeText}>
+                    ⚖️ {t('Target auto-adjusted for your updated weight ({weight}kg): {target}g protein', { weight: currentWeightKg, target: activeProteinTarget })}
+                  </Text>
+                </View>
+              ) : null}
               <View style={styles.dailyMetricGrid}>
                 <View style={styles.dailyMetricCard}>
                   <Text style={styles.dailyMetricEmoji}>🔥</Text>
@@ -1103,7 +1131,8 @@ function MealPlanResult({
                 <View style={styles.dailyMetricCard}>
                   <Text style={styles.dailyMetricEmoji}>💪</Text>
                   <Text style={styles.dailyMetricLabel}>{t('Protein')}</Text>
-                  <Text style={styles.dailyMetricValue}>{completedDayTotals.p} / {totalP}g P</Text>
+                  <Text style={styles.dailyMetricValue}>{completedDayTotals.p} / {activeProteinTarget}g P</Text>
+                  <Text style={styles.dailyMetricSubtext}>{proteinMultiplier}g/kg ({currentWeightKg}kg)</Text>
                 </View>
                 <View style={styles.dailyMetricCard}>
                   <Text style={styles.dailyMetricEmoji}>🌾</Text>
@@ -2276,6 +2305,28 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 20,
     fontFamily: 'Inter_700Bold',
+  },
+  dailyMetricSubtext: {
+    color: Colors.accentGold,
+    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
+    marginTop: -2,
+  },
+  weightNoticeBanner: {
+    backgroundColor: 'rgba(226, 179, 78, 0.12)',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(226, 179, 78, 0.3)',
+    marginTop: 10,
+    marginBottom: 2,
+  },
+  weightNoticeText: {
+    color: '#FFD700',
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
+    lineHeight: 16,
   },
   trackerProgressText: {
     color: Colors.textMuted,

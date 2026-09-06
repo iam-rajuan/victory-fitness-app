@@ -231,6 +231,9 @@ export type BodyMetrics = {
   height: string;
   weight: string;
   gender: string;
+  weight_updated_at?: string | null;
+  weight_confirmed_at?: string | null;
+  should_prompt_weight_update?: boolean;
 };
 
 export type OnboardingState = OnboardingData & {
@@ -684,6 +687,9 @@ function normalizeBodyMetrics(metrics: Partial<BodyMetrics> | null | undefined):
     height: String(metrics?.height ?? ''),
     weight: String(metrics?.weight ?? ''),
     gender: String(metrics?.gender ?? ''),
+    weight_updated_at: metrics?.weight_updated_at ?? null,
+    weight_confirmed_at: metrics?.weight_confirmed_at ?? null,
+    should_prompt_weight_update: Boolean(metrics?.should_prompt_weight_update),
   };
 }
 
@@ -1231,6 +1237,17 @@ export async function updateCurrentUserBodyMetrics(payload: Partial<BodyMetrics>
   const metrics = await apiRequest<BodyMetrics>('/me/body-metrics', {
     method: 'PATCH',
     body: payload,
+  });
+  bodyMetricsCache = normalizeBodyMetrics(metrics);
+  bodyMetricsFetchedAt = Date.now();
+  await primeCachedResource(BODY_METRICS_RESOURCE_KEY, bodyMetricsCache);
+  return bodyMetricsCache;
+}
+
+export async function confirmCurrentUserWeight(snoozeDays = 0) {
+  const metrics = await apiRequest<BodyMetrics>('/me/body-metrics/confirm-weight', {
+    method: 'POST',
+    body: { snooze_days: snoozeDays },
   });
   bodyMetricsCache = normalizeBodyMetrics(metrics);
   bodyMetricsFetchedAt = Date.now();
