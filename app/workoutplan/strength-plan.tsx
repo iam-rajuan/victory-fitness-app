@@ -54,13 +54,14 @@ type CompletionCard = {
   isFullPlan: boolean;
 };
 
-async function fetchStrengthCompletionCard(planId: string, dayLabel = '', isFullPlan = false): Promise<CompletionCard> {
+async function fetchStrengthCompletionCard(planId: string, dayLabel = '', isFullPlan = false, durationSeconds = 0): Promise<CompletionCard> {
+  const durationQuery = durationSeconds > 0 ? `&duration_seconds=${durationSeconds}` : '';
   const response = await apiRequest<{
     file_name: string;
     mime_type: string;
     image_base64: string;
     share_message: string;
-  }>(`/ai/workout-plan/strength/${encodeURIComponent(planId)}/report?day=${encodeURIComponent(dayLabel)}&full_plan=${isFullPlan ? 'true' : 'false'}`);
+  }>(`/ai/workout-plan/strength/${encodeURIComponent(planId)}/report?day=${encodeURIComponent(dayLabel)}&full_plan=${isFullPlan ? 'true' : 'false'}${durationQuery}`);
   const imageBase64 = response.image_base64;
   return {
     imageBase64,
@@ -80,7 +81,10 @@ export default function StrengthPlanDashboard() {
   const [loading, setLoading] = useState(true);
   const [deletingPlanId, setDeletingPlanId] = useState<string | null>(null);
   const [updatingProgressKey, setUpdatingProgressKey] = useState<string | null>(null);
-  const [elapsedTime, setElapsedTime] = useState('00:00:00');
+  const [sessionSeconds, setSessionSeconds] = useState(0);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [activeSessionDay, setActiveSessionDay] = useState<string | null>(null);
+  const [completedSessionSeconds, setCompletedSessionSeconds] = useState<number | null>(null);
   const [currentUserName, setCurrentUserName] = useState('Victory Member');
   const [completionCard, setCompletionCard] = useState<CompletionCard | null>(null);
   const [cardAction, setCardAction] = useState<'download' | 'share' | 'preview' | ''>('');
@@ -145,38 +149,73 @@ export default function StrengthPlanDashboard() {
   const getDayProgress = (plan: StrengthPlanResponse, dayLabel: string): StrengthPlanDayProgress | undefined =>
     Array.isArray(plan.progress) ? plan.progress.find((entry) => entry.day === dayLabel) : undefined;
 
-  // Active session timer effect
+  const formatTimer = (totalSecs: number) => {
+    const hrs = Math.floor(totalSecs / 3600);
+    const mins = Math.floor((totalSecs % 3600) / 60);
+    const secs = totalSecs % 60;
+    const pad = (num: number) => String(num).padStart(2, '0');
+    return `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+  };
+
+  // Continuous timer ticking effect - runs exclusively when isTimerRunning is true
+  useEffect(() => {
+    if (!isTimerRunning) return;
+
+    const interval = setInterval(() => {
+      setSessionSeconds((prev) => prev + 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isTimerRunning]);
+
+  // Session day initialization effect: only runs when switching day or plan
   useEffect(() => {
     const currentPlan = plans.find((item) => (item.plan_id ?? item.summary) === expandedPlanId);
     if (!currentPlan) return;
-    
+
     const dayProgress = getDayProgress(currentPlan, selectedDay);
     const workoutStarted = Boolean(dayProgress?.started);
     const workoutCompleted = Boolean(dayProgress?.completed);
-    
-    if (!workoutStarted || workoutCompleted || !dayProgress?.started_at) {
-      setElapsedTime('00:00:00');
-      return;
+
+    if (workoutStarted && !workoutCompleted) {
+      if (activeSessionDay !== selectedDay) {
+        setActiveSessionDay(selectedDay);
+        if (dayProgress?.started_at && sessionSeconds === 0) {
+          const startMs = new Date(dayProgress.started_at).getTime();
+          const rawDiff = Math.max(0, Math.floor((Date.now() - startMs) / 1000));
+          // If started recently (< 2.5 hours), adopt elapsed time; otherwise start fresh
+          const initialSecs = rawDiff < 9000 ? rawDiff : 0;
+          setSessionSeconds(initialSecs);
+        }
+        setIsTimerRunning(true);
+      }
+    } else if (workoutCompleted) {
+      if (activeSessionDay === selectedDay && isTimerRunning) {
+        setIsTimerRunning(false);
+      }
     }
+  }, [expandedPlanId, selectedDay, plans.length]);
 
-    const startMs = new Date(dayProgress.started_at).getTime();
+  const handleTogglePauseTimer = () => {
+    setIsTimerRunning((prev) => !prev);
+  };
 
-    const updateTimer = () => {
-      const nowMs = Date.now();
-      const diffSecs = Math.max(0, Math.floor((nowMs - startMs) / 1000));
-      
-      const hrs = Math.floor(diffSecs / 3600);
-      const mins = Math.floor((diffSecs % 3600) / 60);
-      const secs = diffSecs % 60;
-      
-      const pad = (num: number) => String(num).padStart(2, '0');
-      setElapsedTime(`${pad(hrs)}:${pad(mins)}:${pad(secs)}`);
-    };
-
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
-    return () => clearInterval(interval);
-  }, [expandedPlanId, selectedDay, plans]);
+  const handleResetTimer = async () => {
+    const currentPlan = plans.find((item) => (item.plan_id ?? item.summary) === expandedPlanId);
+    if (!currentPlan?.plan_id) return;
+    setSessionSeconds(0);
+    try {
+      const nextPlan = await updateStrengthWorkoutPlanProgress(currentPlan.plan_id, {
+        day: selectedDay,
+        started: true,
+        reset_timer: true,
+        started_at: new Date().toISOString(),
+      });
+      updatePlanProgressState(nextPlan);
+    } catch {
+      // silent fallback
+    }
+  };
 
   if (checkingAccess) {
     return null;
@@ -200,24 +239,30 @@ export default function StrengthPlanDashboard() {
       return;
     }
 
+    // Freeze timer and calculate final session duration
+    setIsTimerRunning(false);
+    const finalDuration = Math.max(sessionSeconds, 30);
+    setCompletedSessionSeconds(finalDuration);
+
     const progressKey = `complete-${plan.plan_id}-${dayLabel}`;
     try {
       setUpdatingProgressKey(progressKey);
       const updatedPlan = await updateStrengthWorkoutPlanProgress(plan.plan_id, {
         day: dayLabel,
         completed: true,
+        duration_seconds: finalDuration,
       });
       updatePlanProgressState(updatedPlan);
 
-      // Log workout session to backend
+      // Log workout session to backend with ACTUAL recorded duration!
       void createWorkoutLog({
         workout_id: `${plan.plan_id}-${dayLabel.toLowerCase().replace(/\s+/g, '-')}`,
-        duration_seconds: 1800,
+        duration_seconds: finalDuration,
         status: 'completed',
       }).catch(() => undefined);
 
       const isFullPlan = updatedPlan.days.length > 0 && updatedPlan.days.every((day) => getDayProgress(updatedPlan, day.day)?.completed);
-      const card = await fetchStrengthCompletionCard(plan.plan_id, dayLabel, isFullPlan);
+      const card = await fetchStrengthCompletionCard(plan.plan_id, dayLabel, isFullPlan, finalDuration);
       setCompletionCard(card);
       setCompletedDayLabel(dayLabel);
       setActivePlanIdForFeedback(plan.plan_id);
@@ -301,12 +346,17 @@ export default function StrengthPlanDashboard() {
       return;
     }
 
+    setSessionSeconds(0);
+    setActiveSessionDay(dayLabel);
+    setIsTimerRunning(true);
+
     const progressKey = `start-${plan.plan_id}-${dayLabel}`;
     try {
       setUpdatingProgressKey(progressKey);
       const updatedPlan = await updateStrengthWorkoutPlanProgress(plan.plan_id, {
         day: dayLabel,
         started: true,
+        started_at: new Date().toISOString(),
       });
       updatePlanProgressState(updatedPlan);
     } catch (error) {
@@ -324,6 +374,12 @@ export default function StrengthPlanDashboard() {
   ) => {
     if (!plan.plan_id) {
       return;
+    }
+
+    // Ensure session timer is actively running if not already started
+    if (!isTimerRunning) {
+      setActiveSessionDay(dayLabel);
+      setIsTimerRunning(true);
     }
 
     const progressKey = `exercise-${plan.plan_id}-${dayLabel}-${exerciseId}`;
@@ -361,6 +417,12 @@ export default function StrengthPlanDashboard() {
   ) => {
     if (!plan.plan_id) {
       return;
+    }
+
+    // Ensure session timer is actively running if not already started
+    if (!isTimerRunning) {
+      setActiveSessionDay(dayLabel);
+      setIsTimerRunning(true);
     }
 
     const progressKey = `section-${plan.plan_id}-${dayLabel}-${sectionId}`;
@@ -586,8 +648,32 @@ export default function StrengthPlanDashboard() {
                               <Text style={styles.activeSessionTitle}>{selectedPlanDay ? selectedPlanDay.title.toUpperCase() : ''}</Text>
                             </View>
                             <View style={styles.activeSessionRight}>
-                              <Text style={styles.activeSessionElapsedLabel}>{t('ELAPSED')}</Text>
-                              <Text style={styles.activeSessionElapsedTimer}>{elapsedTime}</Text>
+                              <View style={styles.activeTimerControls}>
+                                <Text style={[styles.activeSessionElapsedLabel, !isTimerRunning && { color: Colors.accentGold }]}>
+                                  {!isTimerRunning ? t('PAUSED') : t('ELAPSED')}
+                                </Text>
+                                <TouchableOpacity
+                                  onPress={handleTogglePauseTimer}
+                                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                  accessibilityLabel={!isTimerRunning ? "Resume timer" : "Pause timer"}
+                                >
+                                  <Ionicons
+                                    name={!isTimerRunning ? 'play-circle' : 'pause-circle'}
+                                    size={18}
+                                    color={!isTimerRunning ? '#10B981' : Colors.accentGold}
+                                  />
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                  onPress={() => void handleResetTimer()}
+                                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                  accessibilityLabel="Reset timer"
+                                >
+                                  <Ionicons name="refresh-outline" size={16} color="rgba(255,255,255,0.4)" />
+                                </TouchableOpacity>
+                              </View>
+                              <Text style={[styles.activeSessionElapsedTimer, !isTimerRunning && { color: Colors.accentGold }]}>
+                                {formatTimer(sessionSeconds)}
+                              </Text>
                             </View>
                           </View>
 
@@ -764,8 +850,12 @@ export default function StrengthPlanDashboard() {
                           {selectedPlanDay && (
                             <View style={styles.statsRow}>
                               <View style={styles.statBox}>
-                                <Text style={styles.statLabel}>{t('EST. TIME')}</Text>
-                                <Text style={styles.statValue}>{selectedPlanDay.est_time ?? '-'}</Text>
+                                <Text style={styles.statLabel}>{workoutCompleted ? t('WORKOUT TIME') : t('EST. TIME')}</Text>
+                                <Text style={[styles.statValue, workoutCompleted && { color: '#10B981' }]}>
+                                  {workoutCompleted && selectedDayProgress?.duration_seconds
+                                    ? `${Math.floor(selectedDayProgress.duration_seconds / 60)}m ${selectedDayProgress.duration_seconds % 60}s`
+                                    : (selectedPlanDay.est_time ?? '-')}
+                                </Text>
                               </View>
                               <View style={styles.statDivider} />
                               <View style={styles.statBox}>
@@ -958,6 +1048,7 @@ export default function StrengthPlanDashboard() {
         dayLabel={completedDayLabel || selectedDay}
         completionCard={completionCard}
         totalCompletedWorkouts={completedWorkoutsCount}
+        durationSeconds={completedSessionSeconds ?? sessionSeconds}
         onClose={() => setCompletionCard(null)}
         onDownload={handleDownloadCard}
         onShareCard={handleShareCard}
@@ -1418,12 +1509,17 @@ const styles = StyleSheet.create({
   activeSessionRight: {
     alignItems: 'flex-end',
   },
+  activeTimerControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
   activeSessionElapsedLabel: {
     color: 'rgba(255,255,255,0.4)',
     fontSize: 9,
     fontFamily: 'Inter_700Bold',
     letterSpacing: 1,
-    marginBottom: 4,
   },
   activeSessionElapsedTimer: {
     color: Colors.accentBlue,

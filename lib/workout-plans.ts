@@ -36,6 +36,7 @@ export type StrengthPlanDayProgress = {
   completed_exercise_ids: string[];
   started_at?: string | null;
   completed_at?: string | null;
+  duration_seconds?: number | null;
 };
 
 export type StrengthPlanResponse = {
@@ -168,6 +169,9 @@ export async function updateStrengthWorkoutPlanProgress(
     exercise_id?: string | null;
     started?: boolean;
     completed?: boolean;
+    reset_timer?: boolean;
+    started_at?: string;
+    duration_seconds?: number;
   }
 ) {
   try {
@@ -196,18 +200,28 @@ export async function updateStrengthWorkoutPlanProgress(
     if (typeof payload.started === 'boolean') {
       nextDay.started = payload.started;
       if (payload.started && !nextDay.started_at) {
-        nextDay.started_at = new Date().toISOString();
+        nextDay.started_at = payload.started_at || new Date().toISOString();
       }
     }
-    if (typeof payload.completed === 'boolean') {
+    if (typeof payload.completed === 'boolean' && !payload.exercise_id && !payload.section_id) {
       nextDay.completed = payload.completed;
       if (payload.completed && !nextDay.completed_at) {
         nextDay.completed_at = new Date().toISOString();
       }
     }
+    if (payload.reset_timer) {
+      nextDay.started_at = payload.started_at || new Date().toISOString();
+    }
+    if (payload.duration_seconds !== undefined) {
+      nextDay.duration_seconds = payload.duration_seconds;
+    }
     if (payload.exercise_id) {
+      nextDay.started = true;
+      if (!nextDay.started_at) {
+        nextDay.started_at = new Date().toISOString();
+      }
       const exSet = new Set(nextDay.completed_exercise_ids || []);
-      if (exSet.has(payload.exercise_id)) {
+      if (payload.completed === false || exSet.has(payload.exercise_id)) {
         exSet.delete(payload.exercise_id);
       } else {
         exSet.add(payload.exercise_id);

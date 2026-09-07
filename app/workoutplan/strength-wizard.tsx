@@ -72,6 +72,7 @@ export default function StrengthWizard() {
     frequency: '4',
   });
   const [loading, setLoading] = useState(false);
+  const [hasProfileSync, setHasProfileSync] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -87,13 +88,81 @@ export default function StrengthWizard() {
           return;
         }
 
+        const anamnese = (user as any)?.onboarding?.anamnese;
+        const personalProfile = (user as any)?.onboarding?.personalProfile;
+        const hasSync = Boolean(anamnese || personalProfile);
+        if (hasSync) {
+          setHasProfileSync(true);
+        }
+
+        // Map goal
+        let defaultGoal = '';
+        const rawGoal = String(anamnese?.primaryGoal || (user as any)?.fitness_goal || '').toLowerCase();
+        if (rawGoal.includes('muscle') || rawGoal.includes('hypertrophy') || rawGoal.includes('build')) {
+          defaultGoal = '1';
+        } else if (rawGoal.includes('strength') || rawGoal.includes('powerlift')) {
+          defaultGoal = '2';
+        } else if (rawGoal.includes('speed') || rawGoal.includes('athletic') || rawGoal.includes('endurance')) {
+          defaultGoal = '3';
+        } else if (rawGoal.includes('fat') || rawGoal.includes('recomp') || rawGoal.includes('lose') || rawGoal.includes('weight')) {
+          defaultGoal = '4';
+        }
+
+        // Map level
+        let defaultLevel = '';
+        const rawLevel = String(anamnese?.activityLevel || (user as any)?.fitness_level || '').toLowerCase();
+        if (rawLevel.includes('sedentary') || rawLevel.includes('beginner') || rawLevel.includes('light')) {
+          defaultLevel = 'BEGINNER';
+        } else if (rawLevel.includes('advanced') || rawLevel.includes('athlete') || rawLevel.includes('very')) {
+          defaultLevel = 'ADVANCED';
+        } else if (rawLevel) {
+          defaultLevel = 'INTERMEDIATE';
+        }
+
+        // Map frequency & days
+        let defaultFreq = '4';
+        const matchDays = String(anamnese?.daysPerWeek || '').match(/(\d+)/);
+        if (matchDays) {
+          defaultFreq = String(Math.max(3, Math.min(5, parseInt(matchDays[1], 10))));
+        }
+
+        // Map split
+        let defaultSplit = '2'; // UPPER / LOWER
+        if (defaultFreq === '3') defaultSplit = '1'; // FULL BODY
+        else if (defaultFreq === '5') defaultSplit = '3'; // PUSH PULL LEGS
+
+        // Map default days
+        const daysMap: Record<string, string[]> = {
+          '3': ['Monday', 'Wednesday', 'Friday'],
+          '4': ['Monday', 'Tuesday', 'Thursday', 'Friday'],
+          '5': ['Monday', 'Tuesday', 'Wednesday', 'Friday', 'Saturday'],
+        };
+        const defaultDays = daysMap[defaultFreq] || ['Monday', 'Tuesday', 'Thursday', 'Friday'];
+
+        // Map equipment
+        let defaultEquipment: string[] = [];
+        const rawEquip = String(anamnese?.equipmentAccess || (user as any)?.equipmentAccess || '').toLowerCase();
+        if (rawEquip.includes('no equipment') || rawEquip.includes('none') || rawEquip.includes('bodyweight') || rawEquip.includes('outdoors')) {
+          defaultEquipment = ['bodyweight'];
+        } else if (rawEquip.includes('dumbbells') || rawEquip.includes('home')) {
+          defaultEquipment = ['dumbbells', 'bands'];
+        } else if (rawEquip.includes('gym')) {
+          defaultEquipment = ['barbell', 'dumbbells', 'bench', 'squat_rack', 'cable', 'machines'];
+        }
+
         setFormData((current: any) => ({
           ...current,
-          age: current.age || metrics?.age || '',
-          height: current.height || metrics?.height || '',
-          weight: current.weight || metrics?.weight || '',
-          gender: current.gender || metrics?.gender || '',
-          country: current.country || user?.country || '',
+          goal: current.goal || defaultGoal || '1',
+          level: current.level || defaultLevel || 'INTERMEDIATE',
+          split: current.split || defaultSplit || '2',
+          frequency: current.frequency || defaultFreq || '4',
+          days: current.days?.length ? current.days : defaultDays,
+          equipment: current.equipment?.length ? current.equipment : (defaultEquipment.length ? defaultEquipment : ['bodyweight']),
+          age: current.age || personalProfile?.age || metrics?.age || (user as any)?.age || '',
+          height: current.height || personalProfile?.height || metrics?.height || (user as any)?.height || '',
+          weight: current.weight || personalProfile?.weight || metrics?.weight || (user as any)?.weight || '',
+          gender: current.gender || personalProfile?.gender || metrics?.gender || (user as any)?.gender || '',
+          country: current.country || (user as any)?.country || '',
         }));
       } catch {
         return;
@@ -138,23 +207,24 @@ export default function StrengthWizard() {
     if (step > 1) setStep(step - 1);
   };
 
-  const generatePlan = async () => {
+  const generatePlan = async (customFormData?: any) => {
     setLoading(true);
     try {
+      const data = customFormData || formData;
       await createStrengthWorkoutPlan({
-        goal: resolveGoalLabel(formData.goal),
-        level: formData.level,
-        split: resolveSplitLabel(formData.split),
-        height: formData.height,
-        gender: formData.gender,
-        bench: formData.bench,
-        squat: formData.squat,
-        deadlift: formData.deadlift,
-        equipment: resolveEquipmentLabels(formData.equipment),
-        frequency: formData.frequency || '4',
-        days: formData.days,
-        age: formData.age,
-        weight: formData.weight,
+        goal: resolveGoalLabel(data.goal),
+        level: data.level,
+        split: resolveSplitLabel(data.split),
+        height: data.height,
+        gender: data.gender,
+        bench: data.bench,
+        squat: data.squat,
+        deadlift: data.deadlift,
+        equipment: resolveEquipmentLabels(data.equipment),
+        frequency: data.frequency || '4',
+        days: data.days,
+        age: data.age,
+        weight: data.weight,
       });
       setLoading(false);
       router.replace('/workoutplan/strength-plan');
@@ -171,6 +241,21 @@ export default function StrengthWizard() {
 
   const toggleListValue = (key: string, value: any) => {
     const current = formData[key] || [];
+    if (key === 'equipment') {
+      if (value === 'bodyweight') {
+        // Bodyweight only chosen: clear gym equipment
+        updateData('equipment', current.includes('bodyweight') ? [] : ['bodyweight']);
+        return;
+      }
+      // Gym equipment chosen: remove 'bodyweight'
+      const nonBw = current.filter((v: any) => v !== 'bodyweight');
+      if (nonBw.includes(value)) {
+        updateData('equipment', nonBw.filter((v: any) => v !== value));
+      } else {
+        updateData('equipment', [...nonBw, value]);
+      }
+      return;
+    }
     if (current.includes(value)) {
       updateData(key, current.filter((v: any) => v !== value));
     } else {
@@ -438,6 +523,25 @@ export default function StrengthWizard() {
                 <View style={[styles.progressBar, { width: `${progress}%` }]} />
               </View>
             </View>
+          </View>
+        )}
+
+        {!loading && hasProfileSync && (
+          <View style={[styles.profileSyncBanner, { marginHorizontal: contentPadding }]}>
+            <View style={styles.profileSyncInfo}>
+              <Ionicons name="sparkles" size={16} color={Colors.accentGold} />
+              <Text style={styles.profileSyncText}>
+                {t('Profile & equipment synced from onboarding')}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.profile1TapBtn}
+              activeOpacity={0.8}
+              onPress={() => void generatePlan()}
+            >
+              <Ionicons name="flash" size={13} color="#000" />
+              <Text style={styles.profile1TapBtnText}>{t('1-Tap Plan')}</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -735,5 +839,43 @@ const styles = StyleSheet.create({
     marginTop: 24,
     lineHeight: 24,
   },
+  profileSyncBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(212,175,55,0.08)',
+    borderColor: 'rgba(212,175,55,0.25)',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  profileSyncInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  profileSyncText: {
+    color: Colors.accentGold,
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
+    flex: 1,
+  },
+  profile1TapBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.accentGold,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  profile1TapBtnText: {
+    color: '#000',
+    fontSize: 11,
+    fontFamily: 'Inter_900Black',
+    letterSpacing: 0.5,
+  },
 });
-

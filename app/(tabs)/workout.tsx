@@ -25,6 +25,7 @@ import { formatAppError } from '../../lib/error';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import {
   clearLatestVideoWorkoutPlan,
+  createStrengthWorkoutPlan,
   deleteLatestStrengthWorkoutPlan,
   fetchLatestStrengthWorkoutPlan,
   loadLatestVideoWorkoutPlan,
@@ -164,6 +165,7 @@ export default function WorkoutScreen() {
   const [historyTotalPages, setHistoryTotalPages] = useState(1);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [seedingLogs, setSeedingLogs] = useState(false);
+  const [generatingProfilePlan, setGeneratingProfilePlan] = useState(false);
 
   const loadHistory = React.useCallback(async (pageToLoad = 1) => {
     setHistoryLoading(true);
@@ -190,6 +192,19 @@ export default function WorkoutScreen() {
       Alert.alert(t('Error'), formatAppError(seedErr).message);
     } finally {
       setSeedingLogs(false);
+    }
+  };
+
+  const handle1TapGenerateFromProfile = async () => {
+    setGeneratingProfilePlan(true);
+    try {
+      const plan = await createStrengthWorkoutPlan({});
+      setStrengthPlan(plan);
+      Alert.alert(t('Plan Generated!'), t('Your custom workout plan was generated from your onboarding profile and is now pinned.'));
+    } catch (err) {
+      Alert.alert(t('Generation Failed'), formatAppError(err).message);
+    } finally {
+      setGeneratingProfilePlan(false);
     }
   };
 
@@ -541,7 +556,16 @@ export default function WorkoutScreen() {
                   <Text style={styles.pinnedBadgeText}>{t("PINNED • TODAY'S WORKOUT")}</Text>
                 </View>
                 {todaysWorkoutInfo ? (
-                  <Text style={styles.pinnedDayTag}>{todaysWorkoutInfo.dayLabel}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <TouchableOpacity
+                      style={styles.pinnedReplanBtn}
+                      onPress={() => router.push('/workoutplan/strength-wizard')}
+                    >
+                      <Ionicons name="refresh-outline" size={13} color="#06B6D4" />
+                      <Text style={styles.pinnedReplanText}>{t('New Plan')}</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.pinnedDayTag}>{todaysWorkoutInfo.dayLabel}</Text>
+                  </View>
                 ) : null}
               </View>
 
@@ -620,15 +644,31 @@ export default function WorkoutScreen() {
                     <Text style={styles.pinnedEmptyTitle}>{t('No Active Plan Pinned')}</Text>
                   </View>
                   <Text style={styles.pinnedEmptyText}>
-                    {t('Generate an AI customized strength plan or pick a video workout to pin your daily training.')}
+                    {t('Generate an AI workout plan tailored to your profile & equipment, or customize manually.')}
                   </Text>
-                  <TouchableOpacity
-                    style={styles.pinnedCreateBtn}
-                    onPress={() => router.push('/workoutplan/strength-wizard')}
-                  >
-                    <Ionicons name="flash" size={15} color="#000" />
-                    <Text style={styles.pinnedCreateBtnText}>{t('GENERATE AI WORKOUT PLAN')}</Text>
-                  </TouchableOpacity>
+                  <View style={{ gap: 8, marginTop: 14 }}>
+                    <TouchableOpacity
+                      style={styles.pinnedCreateBtn}
+                      disabled={generatingProfilePlan}
+                      onPress={handle1TapGenerateFromProfile}
+                    >
+                      {generatingProfilePlan ? (
+                        <ActivityIndicator size="small" color="#000" />
+                      ) : (
+                        <>
+                          <Ionicons name="flash" size={15} color="#000" />
+                          <Text style={styles.pinnedCreateBtnText}>{t('⚡ 1-TAP PLAN FROM PROFILE')}</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.pinnedCreateBtn, { backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' }]}
+                      onPress={() => router.push('/workoutplan/strength-wizard')}
+                    >
+                      <Ionicons name="options-outline" size={15} color="#fff" />
+                      <Text style={[styles.pinnedCreateBtnText, { color: '#fff' }]}>{t('CUSTOMIZE IN WIZARD')}</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               )}
             </View>
@@ -1409,6 +1449,20 @@ const styles = StyleSheet.create({
     color: '#06B6D4',
     fontSize: 12,
     fontFamily: 'Inter_700Bold',
+  },
+  pinnedReplanBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(6,182,212,0.12)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  pinnedReplanText: {
+    color: '#06B6D4',
+    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
   },
   pinnedCard: {
     backgroundColor: '#161922',

@@ -37,6 +37,7 @@ interface WorkoutCompletionModalProps {
     fileName: string;
   } | null;
   totalCompletedWorkouts?: number;
+  durationSeconds?: number;
   onClose: () => void;
   onDownload: () => void;
   onShareCard: () => void;
@@ -48,6 +49,7 @@ export default function WorkoutCompletionModal({
   dayLabel,
   completionCard,
   totalCompletedWorkouts = 2,
+  durationSeconds,
   onClose,
   onDownload,
   onShareCard,
@@ -163,9 +165,19 @@ export default function WorkoutCompletionModal({
         <View style={styles.modalCard}>
           {/* Header */}
           <View style={styles.header}>
-            <View style={styles.celebrationBadge}>
-              <Ionicons name="flame" size={16} color="#EAB308" />
-              <Text style={styles.celebrationBadgeText}>{t('SESSION COMPLETE!')}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', flex: 1 }}>
+              <View style={styles.celebrationBadge}>
+                <Ionicons name="flame" size={16} color="#EAB308" />
+                <Text style={styles.celebrationBadgeText}>{t('SESSION COMPLETE!')}</Text>
+              </View>
+              {durationSeconds && durationSeconds > 0 ? (
+                <View style={styles.durationBadge}>
+                  <Ionicons name="stopwatch-outline" size={14} color="#00D9F5" />
+                  <Text style={styles.durationBadgeText}>
+                    {Math.floor(durationSeconds / 60) > 0 ? `${Math.floor(durationSeconds / 60)}m ` : ''}{durationSeconds % 60}s
+                  </Text>
+                </View>
+              ) : null}
             </View>
             <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
               <Ionicons name="close" size={22} color="#9CA3AF" />
@@ -475,6 +487,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'Inter_700Bold',
     letterSpacing: 0.8,
+  },
+  durationBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(0,217,245,0.12)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(0,217,245,0.3)',
+  },
+  durationBadgeText: {
+    color: '#00D9F5',
+    fontSize: 12,
+    fontFamily: 'Inter_700Bold',
   },
   closeBtn: {
     padding: 6,
