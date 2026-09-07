@@ -2,15 +2,38 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
-import { Colors } from '../../constants/Colors';
 import { fetchHomepageQuote } from '../../lib/api';
 import { useLanguage } from '../../lib/i18n';
+
+// Curated pool of version release quotes.
+// Guarantees each app release version has an inspiring, deterministic quote
+// that remains static throughout usage and updates ONLY when a new app version is released.
+const VERSION_RELEASE_QUOTES: Array<{ text: string; author: string }> = [
+  { text: 'Every rep is a vote for the person you are becoming.', author: 'Victory Fitness' },
+  { text: 'Consistency is what transforms average into excellence.', author: 'Victory Fitness' },
+  { text: 'Small daily improvements over time lead to stunning results.', author: 'Victory Fitness' },
+  { text: 'Your only limit is the one you build in your mind.', author: 'Victory Fitness' },
+  { text: 'Discipline is choosing between what you want now and what you want most.', author: 'Victory Fitness' },
+  { text: 'The pain you feel today will be the strength you feel tomorrow.', author: 'Victory Fitness' },
+  { text: 'Success starts with self-discipline and daily dedication.', author: 'Victory Fitness' },
+];
+
+export function getVersionDeterministicQuote(version: string) {
+  let hash = 0;
+  for (let i = 0; i < version.length; i++) {
+    hash = (hash << 5) - hash + version.charCodeAt(i);
+    hash |= 0;
+  }
+  const index = Math.abs(hash) % VERSION_RELEASE_QUOTES.length;
+  return VERSION_RELEASE_QUOTES[index];
+}
 
 const APP_VERSION = Constants.expoConfig?.version || '1.0.0';
 const QUOTE_CACHE_KEY = `@victory_quote_version_${APP_VERSION}`;
 
 export default function GreetingCard() {
-  const [remoteQuote, setRemoteQuote] = useState<{ text: string; author: string } | null>(null);
+  const defaultVersionQuote = getVersionDeterministicQuote(APP_VERSION);
+  const [quote, setQuote] = useState<{ text: string; author: string }>(defaultVersionQuote);
   const { t } = useLanguage();
 
   useEffect(() => {
@@ -18,22 +41,31 @@ export default function GreetingCard() {
 
     const loadVersionQuote = async () => {
       try {
+        // 1. Check local storage cache for this specific app release version
         const cached = await AsyncStorage.getItem(QUOTE_CACHE_KEY);
         if (cached) {
           const parsed = JSON.parse(cached);
           if (parsed?.text && isMounted) {
-            setRemoteQuote(parsed);
+            setQuote(parsed);
             return;
           }
         }
-        const quote = await fetchHomepageQuote(APP_VERSION);
-        if (isMounted && quote?.text && quote.author) {
-          const quoteObj = { text: quote.text, author: quote.author };
-          setRemoteQuote(quoteObj);
+
+        // 2. Fetch version-seeded quote from backend
+        const remoteQuote = await fetchHomepageQuote(APP_VERSION);
+        if (isMounted && remoteQuote?.text && remoteQuote.author) {
+          const quoteObj = { text: remoteQuote.text, author: remoteQuote.author };
+          setQuote(quoteObj);
           await AsyncStorage.setItem(QUOTE_CACHE_KEY, JSON.stringify(quoteObj));
+          return;
+        }
+
+        // 3. Fallback to the release-deterministic quote if offline or unseeded
+        if (isMounted) {
+          await AsyncStorage.setItem(QUOTE_CACHE_KEY, JSON.stringify(defaultVersionQuote));
         }
       } catch {
-        // Keep fallback
+        // Maintain deterministic version quote
       }
     };
 
@@ -51,13 +83,9 @@ export default function GreetingCard() {
       </View>
       <View style={styles.quoteBox}>
         <Text style={styles.quoteText}>
-          {remoteQuote?.text ? t(remoteQuote.text) : t('STAY FOCUS AND KEEP PUSHING YOUR LIMITS TO UNLEASH YOUR TRUE POTENTIAL.')}
+          {t(quote.text)}
         </Text>
-        {remoteQuote?.author ? (
-          <Text style={styles.quoteAuthor}>— {remoteQuote.author}</Text>
-        ) : (
-          <Text style={styles.quoteAuthor}>— {t('Victory Team')}</Text>
-        )}
+        <Text style={styles.quoteAuthor}>— {t(quote.author)}</Text>
       </View>
     </View>
   );
