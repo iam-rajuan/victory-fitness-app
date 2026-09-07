@@ -368,6 +368,42 @@ function formatCommunityPostTime(value: string, t: (key: string, params?: Record
   return createdAt.toLocaleDateString();
 }
 
+function parseChallengeInvitePost(content: string) {
+  const titleMatch =
+    content.match(/Join me in the\s+["“](.*?)["”]/i) ||
+    content.match(/Join me in the\s+(.*?)\s+challenge/i);
+  const title = titleMatch ? titleMatch[1].trim() : '';
+
+  const durationMatch = content.match(/Duration:\s*(\d+)\s*Days?/i);
+  const durationDays = durationMatch ? `${durationMatch[1]} Days` : '';
+
+  const pointsMatch = content.match(/Points:\s*(\d+)/i);
+  const points = pointsMatch ? `${pointsMatch[1]} PTS` : '';
+
+  const urlMatch = content.match(/https?:\/\/[^\s\n]+/i);
+  const inviteUrl = urlMatch ? urlMatch[0].trim() : '';
+
+  let challengeId = '';
+  if (inviteUrl) {
+    const idMatch = inviteUrl.match(/challenge_id=([^&\s]+)/i);
+    if (idMatch) {
+      challengeId = idMatch[1];
+    }
+  }
+
+  const categoryMatch = content.match(/#(?!ChallengeInvite|VictoryFitness|WorkoutCompleted)(\w+)/i);
+  const category = categoryMatch ? categoryMatch[1].trim() : '';
+
+  return {
+    title: title || 'Challenge Invitation',
+    durationDays,
+    points,
+    inviteUrl,
+    challengeId,
+    category,
+  };
+}
+
 function getImageSource(url: string | null | undefined) {
   const resolvedUrl = resolveRemoteAssetUrl(url);
   return resolvedUrl ? { uri: resolvedUrl } : null;
@@ -616,6 +652,7 @@ export default function ChallengesScreen() {
   const [communityVideoLink, setCommunityVideoLink] = useState('');
   const [screenRefreshing, setScreenRefreshing] = useState(false);
   const [communityMedia, setCommunityMedia] = useState<CommunityMediaAsset | null>(null);
+  const [isWorkoutShareMode, setIsWorkoutShareMode] = useState(false);
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [commentSubmitting, setCommentSubmitting] = useState<Record<string, boolean>>({});
@@ -633,6 +670,30 @@ export default function ChallengesScreen() {
   const [selectedCommunityFilters, setSelectedCommunityFilters] = useState<(typeof COMMUNITY_AUDIENCE_FILTERS)[number][]>(['ALL']);
   const [communityFilterPickerOpen, setCommunityFilterPickerOpen] = useState(false);
   const [inviteModalChallenge, setInviteModalChallenge] = useState<ReadyChallenge | null>(null);
+  const [copiedInvitePostIds, setCopiedInvitePostIds] = useState<Record<string, boolean>>({});
+
+  const handleCopyPostInviteLink = async (postId: string, inviteUrl: string) => {
+    try {
+      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(inviteUrl);
+      } else {
+        await Clipboard.setStringAsync(inviteUrl);
+      }
+      setCopiedInvitePostIds((current) => ({ ...current, [postId]: true }));
+      setTimeout(() => {
+        setCopiedInvitePostIds((current) => ({ ...current, [postId]: false }));
+      }, 3000);
+    } catch {
+      Alert.alert(t('Copy Failed'), t('Unable to copy invite link.'));
+    }
+  };
+
+  const handleAcceptChallengeFromPost = (challengeId: string) => {
+    handleTabSelect('CHALLENGES');
+    if (challengeId) {
+      setExpandedChallengeCards((current) => ({ ...current, [challengeId]: true }));
+    }
+  };
   const [inviteCopied, setInviteCopied] = useState(false);
   const [sharingToCommunity, setSharingToCommunity] = useState(false);
   const [currentUserId, setCurrentUserId] = useState('');
@@ -695,12 +756,14 @@ export default function ChallengesScreen() {
       return [...COMMUNITY_AUDIENCE_FILTERS];
     }
     const hierarchy: Record<string, string[]> = {
+      NONE: ['ALL', 'SILVER'],
       SILVER: ['ALL', 'SILVER'],
+      GOLD_BETA: ['ALL', 'SILVER', 'GOLD'],
       GOLD: ['ALL', 'SILVER', 'GOLD'],
       PLATINUM: ['ALL', 'SILVER', 'GOLD', 'PLATINUM'],
       INNER_CIRCLE: ['ALL', 'SILVER', 'GOLD', 'PLATINUM', 'INNER_CIRCLE'],
     };
-    return hierarchy[subscriptionTier] ?? [];
+    return hierarchy[subscriptionTier] ?? ['ALL', 'SILVER'];
   }, [canAccessCommunity, isCommunityAdmin, subscriptionTier]);
   const availableCommunityFilters = useMemo(() => {
     if (!canAccessCommunity) {
@@ -942,6 +1005,9 @@ export default function ChallengesScreen() {
         return;
       }
 
+      if (source === 'workout_completion') {
+        setIsWorkoutShareMode(true);
+      }
       setCommunityMedia({
         uri: imageUri,
         mimeType: mimeType || 'image/svg+xml',
@@ -977,6 +1043,15 @@ export default function ChallengesScreen() {
     params.prefillSource,
     params.prefillStatus,
   ]);
+
+  const isSharingWorkoutCard = isWorkoutShareMode || Boolean(
+    communityMedia &&
+    (
+      communityDraft.includes('#WorkoutCompleted') ||
+      communityDraft.includes('#workoutcompleted') ||
+      params.prefillSource === 'workout_completion'
+    )
+  );
 
   const handleRefresh = useCallback(async () => {
     setScreenRefreshing(true);
@@ -1130,6 +1205,7 @@ export default function ChallengesScreen() {
     setCommunityDraft('');
     setCommunityMedia(null);
     setCommunityVideoLink('');
+    setIsWorkoutShareMode(false);
     setCommunityPosts((current) => [optimisticPost, ...current]);
     try {
       const isWorkoutSharePost = postingDraft.includes('#WorkoutCompleted') || postingDraft.includes('#workoutcompleted');
@@ -2044,134 +2120,184 @@ export default function ChallengesScreen() {
               </TouchableOpacity>
             </Modal>
 
-            {/* Post Composer */}
-            <View style={styles.composerCard}>
-              <TextInput
-                style={styles.composerInput}
-                placeholder={t("What's on your mind?")}
-                placeholderTextColor="rgba(255,255,255,0.35)"
-                multiline
-                value={communityDraft}
-                onChangeText={setCommunityDraft}
-              />
-              <TextInput
-                style={styles.composerLinkInput}
-                placeholder={t('Paste a YouTube or Vimeo link')}
-                placeholderTextColor="rgba(255,255,255,0.35)"
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="url"
-                value={communityVideoLink}
-                onChangeText={(text) => {
-                  setCommunityVideoLink(text);
-                  if (text.trim()) {
-                    setCommunityMedia(null);
-                  }
-                }}
-              />
-              <Text style={styles.composerLinkHint}>{getCommunityVideoLinkHint(t)}</Text>
-              <View style={styles.composerDivider} />
-              <View style={styles.composerActions}>
-                <TouchableOpacity style={styles.composerImgBtn} onPress={handlePickCommunityMedia}>
-                  <Ionicons name="images-outline" size={22} color={communityMedia ? Colors.primary : 'rgba(255,255,255,0.45)'} />
-                </TouchableOpacity>
-
-                {/* Tier Dropdown */}
-                {/* <View style={styles.tierDropdownWrapper}>
-                  <TouchableOpacity
-                    style={styles.tierSelector}
-                    onPress={() => setTierDropdownOpen(!tierDropdownOpen)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.tierText}>{selectedTier}</Text>
-                    <Ionicons
-                      name={tierDropdownOpen ? 'chevron-up' : 'chevron-down'}
-                      size={13}
-                      color="rgba(255,255,255,0.6)"
-                    />
-                  </TouchableOpacity>
-                  {tierDropdownOpen && (
-                    <View style={styles.tierDropdown}>
-                      {TIERS.map((tier) => (
-                        <TouchableOpacity
-                          key={tier}
-                          style={[
-                            styles.tierOption,
-                            selectedTier === tier && styles.tierOptionActive,
-                          ]}
-                          onPress={() => {
-                            setSelectedTier(tier);
-                            setTierDropdownOpen(false);
-                          }}
-                        >
-                          <Text style={[
-                            styles.tierOptionText,
-                            selectedTier === tier && styles.tierOptionTextActive,
-                          ]}>
-                            {tier}
-                          </Text>
-                          {selectedTier === tier && (
-                            <Ionicons name="checkmark" size={14} color={Colors.primary} />
-                          )}
-                        </TouchableOpacity>
-                      ))}
+            {/* Post Composer or Workout Share Showcase */}
+            {isSharingWorkoutCard ? (
+              <View style={styles.workoutShareContainer}>
+                {/* Header Badge & Close */}
+                <View style={styles.workoutShareHeader}>
+                  <View style={styles.workoutShareBadgeRow}>
+                    <View style={styles.workoutShareTrophyPill}>
+                      <Ionicons name="trophy" size={14} color="#F59E0B" />
+                      <Text style={styles.workoutShareTrophyText}>{t('WORKOUT COMPLETED')}</Text>
                     </View>
-                  )}
-                </View> */}
-
-                <TouchableOpacity
-                  style={[styles.postBtn, communityPosting && { opacity: 0.7 }]}
-                  onPress={handleCommunityPost}
-                  disabled={communityPosting}
-                >
-                  {communityPosting ? <ActivityIndicator size="small" color="#0A0A14" /> : <Text style={styles.postBtnText}>{t('Post')}</Text>}
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {communityMedia?.uri ? (
-              <View style={styles.communityPreviewCard}>
-                {communityMedia.type === 'video' ? (
-                  <View style={styles.communityPreviewVideoWrap}>
-                    <CrossPlatformWebView
-                      source={{ html: buildCommunityVideoHtml(getCommunityVideoUrl(communityMedia.uri) || communityMedia.uri) }}
-                      style={styles.communityPreviewVideo}
-                      scrollEnabled={false}
-                      javaScriptEnabled
-                      mediaPlaybackRequiresUserAction
-                    />
-                    {communityPosting ? (
-                      <View style={styles.communityUploadOverlay}>
-                        <ActivityIndicator size="small" color="#FFFFFF" />
-                        <Text style={styles.communityUploadOverlayText}>{t('Uploading video...')}</Text>
-                      </View>
-                    ) : null}
+                    <View style={styles.workoutShareRewardPill}>
+                      <Ionicons name="sparkles" size={12} color="#00F0D0" />
+                      <Text style={styles.workoutShareRewardText}>+30 PTS REWARD</Text>
+                    </View>
                   </View>
-                ) : (
-                  <Image source={{ uri: communityMedia.uri }} style={styles.communityPreviewImage} />
-                )}
-                <TouchableOpacity onPress={() => setCommunityMedia(null)} style={styles.communityPreviewRemove}>
-                  <Text style={styles.communityPreviewRemoveText}>{t('Remove media')}</Text>
-                </TouchableOpacity>
-              </View>
-            ) : null}
+                  <TouchableOpacity
+                    style={styles.workoutShareCloseBtn}
+                    onPress={() => {
+                      setIsWorkoutShareMode(false);
+                      setCommunityMedia(null);
+                      setCommunityDraft('');
+                    }}
+                    accessibilityLabel={t('Cancel sharing')}
+                  >
+                    <Ionicons name="close" size={18} color="rgba(255,255,255,0.7)" />
+                  </TouchableOpacity>
+                </View>
 
-            {!communityMedia?.uri && communityVideoLink.trim() ? (
-              <View style={styles.communityPreviewCard}>
-                <View style={styles.communityPreviewVideoWrap}>
-                  <CrossPlatformWebView
-                    source={{ html: buildCommunityVideoHtml(normalizeExternalCommunityVideoUrl(communityVideoLink) || communityVideoLink.trim()) }}
-                    style={styles.communityPreviewVideo}
-                    scrollEnabled={false}
-                    javaScriptEnabled
-                    mediaPlaybackRequiresUserAction
+                <Text style={styles.workoutShareTitle}>
+                  {t('Share your victory with the community!')}
+                </Text>
+
+                {/* Integrated Accomplishment Card Preview */}
+                {communityMedia?.uri ? (
+                  <View style={styles.workoutShareMediaFrame}>
+                    <Image
+                      source={{ uri: communityMedia.uri }}
+                      style={styles.workoutShareCardImage}
+                    />
+                    <View style={styles.workoutShareCardOverlayBadge}>
+                      <Ionicons name="ribbon" size={13} color="#00F0D0" />
+                      <Text style={styles.workoutShareCardOverlayText}>{t('Accomplishment Card')}</Text>
+                    </View>
+                  </View>
+                ) : null}
+
+                {/* Caption Input */}
+                <View style={styles.workoutShareInputWrap}>
+                  <Text style={styles.workoutShareInputLabel}>{t('Add a note or motivation:')}</Text>
+                  <TextInput
+                    style={styles.workoutShareInput}
+                    multiline
+                    value={communityDraft}
+                    onChangeText={setCommunityDraft}
+                    placeholder={t('Share thoughts or motivation on your session...')}
+                    placeholderTextColor="rgba(255,255,255,0.35)"
                   />
                 </View>
-                <TouchableOpacity onPress={() => setCommunityVideoLink('')} style={styles.communityPreviewRemove}>
-                  <Text style={styles.communityPreviewRemoveText}>{t('Remove link')}</Text>
+
+                {communityError ? (
+                  <View style={styles.communityErrorCard}>
+                    <Text style={styles.communityErrorText}>{communityError}</Text>
+                  </View>
+                ) : null}
+
+                {/* Prominent Glowing Post Button */}
+                <TouchableOpacity
+                  style={[styles.workoutSharePostBtn, communityPosting && styles.workoutSharePostBtnDisabled]}
+                  onPress={handleCommunityPost}
+                  disabled={communityPosting}
+                  activeOpacity={0.88}
+                >
+                  {communityPosting ? (
+                    <View style={styles.workoutSharePostingRow}>
+                      <ActivityIndicator size="small" color="#030712" />
+                      <Text style={styles.workoutSharePostBtnText}>{t('Publishing to Community...')}</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.workoutShareBtnContent}>
+                      <Ionicons name="paper-plane" size={16} color="#030712" />
+                      <Text style={styles.workoutSharePostBtnText}>
+                        {t('Post to Community Feed')}
+                      </Text>
+                      <View style={styles.workoutSharePointsBadge}>
+                        <Text style={styles.workoutSharePointsBadgeText}>+30 PTS</Text>
+                      </View>
+                    </View>
+                  )}
                 </TouchableOpacity>
               </View>
-            ) : null}
+            ) : (
+              <>
+                <View style={styles.composerCard}>
+                  <TextInput
+                    style={styles.composerInput}
+                    placeholder={t("What's on your mind?")}
+                    placeholderTextColor="rgba(255,255,255,0.35)"
+                    multiline
+                    value={communityDraft}
+                    onChangeText={setCommunityDraft}
+                  />
+                  <TextInput
+                    style={styles.composerLinkInput}
+                    placeholder={t('Paste a YouTube or Vimeo link')}
+                    placeholderTextColor="rgba(255,255,255,0.35)"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="url"
+                    value={communityVideoLink}
+                    onChangeText={(text) => {
+                      setCommunityVideoLink(text);
+                      if (text.trim()) {
+                        setCommunityMedia(null);
+                      }
+                    }}
+                  />
+                  <Text style={styles.composerLinkHint}>{getCommunityVideoLinkHint(t)}</Text>
+                  <View style={styles.composerDivider} />
+                  <View style={styles.composerActions}>
+                    <TouchableOpacity style={styles.composerImgBtn} onPress={handlePickCommunityMedia}>
+                      <Ionicons name="images-outline" size={22} color={communityMedia ? Colors.primary : 'rgba(255,255,255,0.45)'} />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.postBtn, communityPosting && { opacity: 0.7 }]}
+                      onPress={handleCommunityPost}
+                      disabled={communityPosting}
+                    >
+                      {communityPosting ? <ActivityIndicator size="small" color="#0A0A14" /> : <Text style={styles.postBtnText}>{t('Post')}</Text>}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {communityMedia?.uri ? (
+                  <View style={styles.communityPreviewCard}>
+                    {communityMedia.type === 'video' ? (
+                      <View style={styles.communityPreviewVideoWrap}>
+                        <CrossPlatformWebView
+                          source={{ html: buildCommunityVideoHtml(getCommunityVideoUrl(communityMedia.uri) || communityMedia.uri) }}
+                          style={styles.communityPreviewVideo}
+                          scrollEnabled={false}
+                          javaScriptEnabled
+                          mediaPlaybackRequiresUserAction
+                        />
+                        {communityPosting ? (
+                          <View style={styles.communityUploadOverlay}>
+                            <ActivityIndicator size="small" color="#FFFFFF" />
+                            <Text style={styles.communityUploadOverlayText}>{t('Uploading video...')}</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                    ) : (
+                      <Image source={{ uri: communityMedia.uri }} style={styles.communityPreviewImage} />
+                    )}
+                    <TouchableOpacity onPress={() => setCommunityMedia(null)} style={styles.communityPreviewRemove}>
+                      <Text style={styles.communityPreviewRemoveText}>{t('Remove media')}</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : null}
+
+                {!communityMedia?.uri && communityVideoLink.trim() ? (
+                  <View style={styles.communityPreviewCard}>
+                    <View style={styles.communityPreviewVideoWrap}>
+                      <CrossPlatformWebView
+                        source={{ html: buildCommunityVideoHtml(normalizeExternalCommunityVideoUrl(communityVideoLink) || communityVideoLink.trim()) }}
+                        style={styles.communityPreviewVideo}
+                        scrollEnabled={false}
+                        javaScriptEnabled
+                        mediaPlaybackRequiresUserAction
+                      />
+                    </View>
+                    <TouchableOpacity onPress={() => setCommunityVideoLink('')} style={styles.communityPreviewRemove}>
+                      <Text style={styles.communityPreviewRemoveText}>{t('Remove link')}</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : null}
+              </>
+            )}
 
             {communityError ? (
               <View style={styles.communityErrorCard}>
@@ -2211,7 +2337,12 @@ export default function ChallengesScreen() {
                     </View>
                   </View>
 
-                  {Boolean(post.is_locked || (post.audience !== 'ALL' && !accessibleCommunityAudiences.includes(post.audience))) ? (
+                  {Boolean(
+                    post.audience !== 'ALL' &&
+                    !accessibleCommunityAudiences.includes(post.audience) &&
+                    !post.can_delete &&
+                    post.author_id !== currentUserId
+                  ) ? (
                     <View style={styles.lockedPostContainer}>
                       <View style={styles.lockedPostBlurredArea}>
                         <Text style={styles.lockedPostBlurredText} numberOfLines={2}>
@@ -2229,7 +2360,7 @@ export default function ChallengesScreen() {
                         <TouchableOpacity
                           style={styles.lockedUpgradeBtn}
                           activeOpacity={0.88}
-                          onPress={() => router.push('/plan' as any)}
+                          onPress={() => router.push((`/plan?tier=${encodeURIComponent(post.audience)}`) as any)}
                         >
                           <Ionicons name="sparkles" size={13} color="#030712" />
                           <Text style={styles.lockedUpgradeBtnText}>{t('Upgrade to Unlock')}</Text>
@@ -2251,17 +2382,88 @@ export default function ChallengesScreen() {
                           </View>
                           <Text style={styles.workoutMilestoneText}>{post.content.replace(/#WorkoutCompleted|#workoutcompleted|#VictoryFitness/g, '').trim()}</Text>
                         </View>
-                      ) : post.content && post.content.includes('#ChallengeInvite') ? (
-                        <View style={styles.challengeInvitePostCard}>
-                          <View style={styles.challengeInvitePostHeader}>
-                            <View style={styles.challengeInvitePostBadge}>
-                              <Ionicons name="flash" size={14} color="#00F0D0" />
-                              <Text style={styles.challengeInvitePostBadgeText}>{t('CHALLENGE INVITATION')}</Text>
+                      ) : post.content && post.content.includes('#ChallengeInvite') ? (() => {
+                        const inviteData = parseChallengeInvitePost(post.content);
+                        const isCopied = Boolean(copiedInvitePostIds[post.id]);
+                        return (
+                          <View style={styles.challengeInvitePostCard}>
+                            {/* Top Header Row */}
+                            <View style={styles.challengeInvitePostHeader}>
+                              <View style={styles.challengeInvitePostBadge}>
+                                <Ionicons name="flash" size={12} color="#00F0D0" />
+                                <Text style={styles.challengeInvitePostBadgeText}>{t('CHALLENGE INVITATION')}</Text>
+                              </View>
+                              {inviteData.points ? (
+                                <View style={styles.challengeInvitePointsPill}>
+                                  <Ionicons name="trophy" size={12} color="#F59E0B" />
+                                  <Text style={styles.challengeInvitePointsPillText}>{inviteData.points}</Text>
+                                </View>
+                              ) : null}
+                            </View>
+
+                            {/* Challenge Title & Inviter Note */}
+                            <View style={styles.challengeInviteHeroBox}>
+                              <View style={styles.challengeInviteTrophyCircle}>
+                                <Ionicons name="trophy" size={22} color="#F59E0B" />
+                              </View>
+                              <View style={styles.challengeInviteTitleWrap}>
+                                <Text style={styles.challengeInviteTitle} numberOfLines={2}>
+                                  {inviteData.title}
+                                </Text>
+                                <Text style={styles.challengeInviteSubtitle}>
+                                  {t('Invited by {name} to compete together!', { name: post.author_name || 'Member' })}
+                                </Text>
+                              </View>
+                            </View>
+
+                            {/* Stat Chips Row */}
+                            <View style={styles.challengeInviteStatsRow}>
+                              {inviteData.durationDays ? (
+                                <View style={styles.challengeInviteStatChip}>
+                                  <Ionicons name="time-outline" size={13} color="#94A3B8" />
+                                  <Text style={styles.challengeInviteStatChipText}>{inviteData.durationDays}</Text>
+                                </View>
+                              ) : null}
+                              {inviteData.points ? (
+                                <View style={styles.challengeInviteStatChip}>
+                                  <Ionicons name="ribbon-outline" size={13} color="#94A3B8" />
+                                  <Text style={styles.challengeInviteStatChipText}>{inviteData.points}</Text>
+                                </View>
+                              ) : null}
+                              {inviteData.category ? (
+                                <View style={[styles.challengeInviteStatChip, styles.challengeInviteCategoryChip]}>
+                                  <Text style={styles.challengeInviteCategoryChipText}>#{inviteData.category}</Text>
+                                </View>
+                              ) : null}
+                            </View>
+
+                            {/* Action Buttons */}
+                            <View style={styles.challengeInviteActionsRow}>
+                              <TouchableOpacity
+                                style={styles.challengeInviteAcceptBtn}
+                                activeOpacity={0.88}
+                                onPress={() => handleAcceptChallengeFromPost(inviteData.challengeId)}
+                              >
+                                <Ionicons name="flash" size={15} color="#030712" />
+                                <Text style={styles.challengeInviteAcceptBtnText}>{t('View & Join Challenge')}</Text>
+                              </TouchableOpacity>
+
+                              {inviteData.inviteUrl ? (
+                                <TouchableOpacity
+                                  style={[styles.challengeInviteCopyBtn, isCopied && styles.challengeInviteCopyBtnSuccess]}
+                                  activeOpacity={0.85}
+                                  onPress={() => handleCopyPostInviteLink(post.id, inviteData.inviteUrl)}
+                                >
+                                  <Ionicons name={isCopied ? "checkmark-circle" : "copy-outline"} size={15} color={isCopied ? "#22C55E" : "#00F0D0"} />
+                                  <Text style={[styles.challengeInviteCopyBtnText, isCopied && styles.challengeInviteCopyBtnTextSuccess]}>
+                                    {isCopied ? t('Copied!') : t('Copy Link')}
+                                  </Text>
+                                </TouchableOpacity>
+                              ) : null}
                             </View>
                           </View>
-                          <Text style={styles.challengeInvitePostContent}>{post.content.replace(/#ChallengeInvite/g, '').trim()}</Text>
-                        </View>
-                      ) : post.content ? (
+                        );
+                      })() : post.content ? (
                         <Text style={styles.postBody}>{post.content}</Text>
                       ) : null}
                       {getImageSource(post.image_url) ? (
@@ -3642,31 +3844,28 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   communityFilterIconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    height: 30,
+    paddingHorizontal: 10,
+    borderRadius: 15,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 6,
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    position: 'relative',
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   communityFilterCountBadge: {
-    position: 'absolute',
-    top: -8,
-    right: -12,
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
-    paddingHorizontal: 5,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   communityFilterCountText: {
     color: '#07111F',
-    fontSize: 9,
+    fontSize: 10,
     fontFamily: 'Inter_800ExtraBold',
   },
   communityFilterModalBackdrop: {
@@ -3732,10 +3931,12 @@ const styles = StyleSheet.create({
   },
   composerInput: {
     color: '#fff',
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: 'Inter_400Regular',
-    padding: 16,
-    minHeight: 80,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    minHeight: 75,
     textAlignVertical: 'top',
   },
   composerLinkInput: {
@@ -3792,16 +3993,198 @@ const styles = StyleSheet.create({
   },
   postBtn: {
     marginLeft: 'auto',
-    backgroundColor: '#fff',
+    backgroundColor: '#00F0D0',
     paddingHorizontal: 22,
-    paddingVertical: 8,
-    borderRadius: 10,
+    paddingVertical: 9,
+    borderRadius: 12,
+    shadowColor: '#00F0D0',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
   },
   postBtnText: {
-    color: '#0A0A14',
-    fontSize: 14,
-    fontWeight: '700',
+    color: '#030712',
+    fontSize: 13,
+    fontWeight: '800',
+    fontFamily: 'Inter_800ExtraBold',
+  },
+  /* Dedicated Workout Share Showcase Styles */
+  workoutShareContainer: {
+    backgroundColor: '#0D1326',
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0, 240, 208, 0.25)',
+    padding: 16,
+    marginBottom: 20,
+    shadowColor: '#00F0D0',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 4,
+  },
+  workoutShareHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  workoutShareBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  workoutShareTrophyPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.35)',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  workoutShareTrophyText: {
+    color: '#F59E0B',
+    fontSize: 11,
     fontFamily: 'Inter_700Bold',
+    letterSpacing: 0.5,
+  },
+  workoutShareRewardPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(0, 240, 208, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 240, 208, 0.3)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  workoutShareRewardText: {
+    color: '#00F0D0',
+    fontSize: 10,
+    fontFamily: 'Inter_800ExtraBold',
+    letterSpacing: 0.4,
+  },
+  workoutShareCloseBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  workoutShareTitle: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontFamily: 'Inter_700Bold',
+    marginBottom: 14,
+  },
+  workoutShareMediaFrame: {
+    width: '100%',
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#070B16',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    position: 'relative',
+    marginBottom: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  workoutShareCardImage: {
+    width: '100%',
+    height: 380,
+    resizeMode: 'contain',
+    backgroundColor: '#070B16',
+  },
+  workoutShareCardOverlayBadge: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(3, 7, 18, 0.85)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 240, 208, 0.25)',
+  },
+  workoutShareCardOverlayText: {
+    color: '#00F0D0',
+    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  workoutShareInputWrap: {
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    padding: 12,
+    marginBottom: 14,
+  },
+  workoutShareInputLabel: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
+    marginBottom: 6,
+  },
+  workoutShareInput: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    minHeight: 65,
+    textAlignVertical: 'top',
+    lineHeight: 19,
+    padding: 0,
+  },
+  workoutSharePostBtn: {
+    backgroundColor: '#00F0D0',
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#00F0D0',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  workoutSharePostBtnDisabled: {
+    opacity: 0.65,
+  },
+  workoutShareBtnContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  workoutSharePostingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  workoutSharePostBtnText: {
+    color: '#030712',
+    fontSize: 14,
+    fontFamily: 'Inter_800ExtraBold',
+    letterSpacing: 0.3,
+  },
+  workoutSharePointsBadge: {
+    backgroundColor: '#030712',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  workoutSharePointsBadgeText: {
+    color: '#00F0D0',
+    fontSize: 11,
+    fontFamily: 'Inter_800ExtraBold',
   },
   communityErrorCard: {
     backgroundColor: 'rgba(239,68,68,0.12)',
@@ -4534,38 +4917,172 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_500Medium',
   },
   challengeInvitePostCard: {
-    backgroundColor: 'rgba(0, 240, 208, 0.08)',
-    borderRadius: 16,
-    borderWidth: 1,
+    backgroundColor: '#0E172E',
+    borderRadius: 18,
+    borderWidth: 1.5,
     borderColor: 'rgba(0, 240, 208, 0.28)',
-    padding: 14,
+    padding: 16,
     marginBottom: 14,
+    shadowColor: '#00F0D0',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 3,
   },
   challengeInvitePostHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    justifyContent: 'space-between',
+    marginBottom: 12,
   },
   challengeInvitePostBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(0, 240, 208, 0.18)',
+    backgroundColor: 'rgba(0, 240, 208, 0.15)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 240, 208, 0.3)',
   },
   challengeInvitePostBadgeText: {
     color: '#00F0D0',
     fontSize: 11,
-    fontWeight: '800',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: 'Inter_800ExtraBold',
     letterSpacing: 0.5,
   },
-  challengeInvitePostContent: {
-    color: '#F1F5F9',
-    fontSize: 14,
+  challengeInvitePointsPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.3)',
+  },
+  challengeInvitePointsPillText: {
+    color: '#F59E0B',
+    fontSize: 11,
+    fontFamily: 'Inter_700Bold',
+  },
+  challengeInviteHeroBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  challengeInviteTrophyCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(245, 158, 11, 0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.28)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  challengeInviteTitleWrap: {
+    flex: 1,
+  },
+  challengeInviteTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontFamily: 'Inter_700Bold',
     lineHeight: 22,
-    fontFamily: 'Inter_500Medium',
+    marginBottom: 2,
+  },
+  challengeInviteSubtitle: {
+    color: '#94A3B8',
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+  },
+  challengeInviteStatsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+    marginBottom: 14,
+  },
+  challengeInviteStatChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  challengeInviteStatChipText: {
+    color: '#CBD5E1',
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  challengeInviteCategoryChip: {
+    backgroundColor: 'rgba(0, 240, 208, 0.08)',
+    borderColor: 'rgba(0, 240, 208, 0.2)',
+  },
+  challengeInviteCategoryChipText: {
+    color: '#00F0D0',
+    fontSize: 12,
+    fontFamily: 'Inter_700Bold',
+  },
+  challengeInviteActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  challengeInviteAcceptBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#00F0D0',
+    paddingVertical: 10,
+    borderRadius: 10,
+    shadowColor: '#00F0D0',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  challengeInviteAcceptBtnText: {
+    color: '#030712',
+    fontSize: 13,
+    fontFamily: 'Inter_800ExtraBold',
+  },
+  challengeInviteCopyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(0, 240, 208, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 240, 208, 0.35)',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  challengeInviteCopyBtnSuccess: {
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    borderColor: 'rgba(34, 197, 94, 0.4)',
+  },
+  challengeInviteCopyBtnText: {
+    color: '#00F0D0',
+    fontSize: 12,
+    fontFamily: 'Inter_700Bold',
+  },
+  challengeInviteCopyBtnTextSuccess: {
+    color: '#22C55E',
   },
 });
