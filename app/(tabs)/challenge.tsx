@@ -122,6 +122,7 @@ type CommunityPost = {
   author_id: string;
   author_name: string;
   author_role: string;
+  author_tier?: string;
   author_profile_image: string;
   audience: string;
   content: string;
@@ -352,8 +353,12 @@ function getOptimisticCommunityAudience(subscriptionTier: string, isCommunityAdm
   if (isCommunityAdmin) {
     return 'ALL';
   }
-  if (subscriptionTier === 'GOLD' || subscriptionTier === 'PLATINUM' || subscriptionTier === 'INNER_CIRCLE') {
-    return subscriptionTier;
+  const norm = String(subscriptionTier || '').toUpperCase();
+  if (norm === 'GOLD_BETA' || norm === 'GOLD') {
+    return 'GOLD';
+  }
+  if (norm === 'PLATINUM' || norm === 'INNER_CIRCLE') {
+    return norm;
   }
   return 'SILVER';
 }
@@ -385,12 +390,13 @@ function formatCommunityPostTime(value: string, t: (key: string, params?: Record
   return createdAt.toLocaleDateString();
 }
 
-function getCommunityTierBadgeInfo(audience?: string, t?: (key: string) => string) {
-  const norm = String(audience || 'ALL').toUpperCase();
+function getCommunityTierBadgeInfo(audienceOrTier?: string, t?: (key: string) => string) {
+  const norm = String(audienceOrTier || 'ALL').toUpperCase();
   switch (norm) {
     case 'SILVER':
       return { bg: 'rgba(148, 163, 184, 0.18)', border: 'rgba(148, 163, 184, 0.45)', text: '#CBD5E1', icon: 'shield-outline', label: t ? t('SILVER') : 'SILVER' };
     case 'GOLD':
+    case 'GOLD_BETA':
       return { bg: 'rgba(245, 158, 11, 0.18)', border: 'rgba(245, 158, 11, 0.45)', text: '#FBBF24', icon: 'trophy-outline', label: t ? t('GOLD') : 'GOLD' };
     case 'PLATINUM':
       return { bg: 'rgba(6, 182, 212, 0.18)', border: 'rgba(6, 182, 212, 0.45)', text: '#38BDF8', icon: 'diamond-outline', label: t ? t('PLATINUM') : 'PLATINUM' };
@@ -1269,11 +1275,14 @@ export default function ChallengesScreen() {
       postingMedia?.type === 'video'
         ? (getCommunityVideoUrl(postingMedia.uri) || postingMedia.uri)
         : (!postingMedia?.uri && postingVideoLink ? (getCommunityVideoUrl(postingVideoLink) || postingVideoLink) : '');
+    const optimisticAuthorTier =
+      subscriptionTier === 'GOLD_BETA' ? 'GOLD' : (subscriptionTier !== 'NONE' ? subscriptionTier : 'SILVER');
     const optimisticPost: CommunityPost = {
       id: optimisticPostId,
-      author_id: 'me',
+      author_id: currentUserId || 'me',
       author_name: currentCommunityUser.name || t('You'),
-      author_role: '',
+      author_role: isCommunityAdmin ? 'admin' : 'user',
+      author_tier: optimisticAuthorTier,
       author_profile_image: currentCommunityUser.profileImage || '',
       audience: getOptimisticCommunityAudience(subscriptionTier, isCommunityAdmin),
       content: postingDraft,
@@ -2547,7 +2556,7 @@ export default function ChallengesScreen() {
                         </View>
                         <Text style={styles.postTime}>{formatCommunityPostTime(post.created_at, t)}</Text>
                         {(() => {
-                          const badge = getCommunityTierBadgeInfo(post.audience, t);
+                          const badge = getCommunityTierBadgeInfo(post.author_tier || post.audience, t);
                           return (
                             <View style={[styles.tierBadge, { backgroundColor: badge.bg, borderColor: badge.border, borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 3 }]}>
                               <Ionicons name={badge.icon as any} size={10} color={badge.text} />
@@ -2688,50 +2697,61 @@ export default function ChallengesScreen() {
                       })() : post.content ? (
                         <Text style={styles.postBody}>{post.content}</Text>
                       ) : null}
-                      {getImageSource(post.image_url) ? (
-                        <TouchableOpacity
-                          style={styles.postMediaFrame}
-                          activeOpacity={0.92}
-                          onPress={() => setFullscreenCardImage(post.image_url)}
-                        >
-                          <Image source={getImageSource(post.image_url)!} style={styles.postImagePreview} />
-                          <View style={styles.cardZoomHintBadge}>
-                            <Ionicons name="expand" size={12} color="#00F0D0" />
-                            <Text style={styles.cardZoomHintText}>{t('Tap to view card')}</Text>
-                          </View>
-                          {post.is_pending_upload ? (
-                            <View style={styles.postUploadingOverlay}>
-                              <ActivityIndicator size="small" color="#FFFFFF" />
-                              <Text style={styles.postUploadingText}>{t('Uploading...')}</Text>
-                            </View>
-                          ) : null}
-                        </TouchableOpacity>
-                      ) : getCommunityVideoUrl(post.video_url) ? (
-                        <View style={styles.postMediaFrame}>
-                          <View style={styles.postVideoPreviewWrap}>
-                            <CrossPlatformWebView
-                              source={{ html: buildCommunityVideoHtml(getCommunityVideoUrl(post.video_url)) }}
-                              style={styles.postVideoPreview}
-                              scrollEnabled={false}
-                              javaScriptEnabled
-                              mediaPlaybackRequiresUserAction
-                            />
-                          </View>
-                          <View style={styles.postVideoBadge}>
-                            <Ionicons name="videocam" size={14} color="#FFFFFF" />
-                            <Text style={styles.postVideoBadgeText}>{t('Video')}</Text>
-                          </View>
-                          {post.is_pending_upload ? (
-                            <View style={styles.postUploadingOverlay}>
-                              <ActivityIndicator size="small" color="#FFFFFF" />
-                              <Text style={styles.postUploadingText}>{t('Uploading video...')}</Text>
-                            </View>
-                          ) : null}
-                        </View>
-                      ) : null}
                     </>
                   )}
                 </TouchableOpacity>
+
+                {/* Post Media: Standalone and outside post detail TouchableOpacity so clicking/playing video will never open the post modal */}
+                {Boolean(
+                  post.audience === 'ALL' ||
+                  accessibleCommunityAudiences.includes(post.audience) ||
+                  post.can_delete ||
+                  post.author_id === currentUserId
+                ) ? (
+                  <>
+                    {getImageSource(post.image_url) ? (
+                      <TouchableOpacity
+                        style={styles.postMediaFrame}
+                        activeOpacity={0.92}
+                        onPress={() => setFullscreenCardImage(post.image_url)}
+                      >
+                        <Image source={getImageSource(post.image_url)!} style={styles.postImagePreview} />
+                        <View style={styles.cardZoomHintBadge}>
+                          <Ionicons name="expand" size={12} color="#00F0D0" />
+                          <Text style={styles.cardZoomHintText}>{t('Tap to view card')}</Text>
+                        </View>
+                        {post.is_pending_upload ? (
+                          <View style={styles.postUploadingOverlay}>
+                            <ActivityIndicator size="small" color="#FFFFFF" />
+                            <Text style={styles.postUploadingText}>{t('Uploading...')}</Text>
+                          </View>
+                        ) : null}
+                      </TouchableOpacity>
+                    ) : getCommunityVideoUrl(post.video_url) ? (
+                      <View style={styles.postMediaFrame}>
+                        <View style={styles.postVideoPreviewWrap}>
+                          <CrossPlatformWebView
+                            source={{ html: buildCommunityVideoHtml(getCommunityVideoUrl(post.video_url)) }}
+                            style={styles.postVideoPreview}
+                            scrollEnabled={false}
+                            javaScriptEnabled
+                            mediaPlaybackRequiresUserAction
+                          />
+                        </View>
+                        <View style={styles.postVideoBadge} pointerEvents="none">
+                          <Ionicons name="videocam" size={14} color="#FFFFFF" />
+                          <Text style={styles.postVideoBadgeText}>{t('Video')}</Text>
+                        </View>
+                        {post.is_pending_upload ? (
+                          <View style={styles.postUploadingOverlay}>
+                            <ActivityIndicator size="small" color="#FFFFFF" />
+                            <Text style={styles.postUploadingText}>{t('Uploading video...')}</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                    ) : null}
+                  </>
+                ) : null}
 
                 {/* Post Footer */}
                 <View style={styles.postFooter}>
@@ -2970,9 +2990,15 @@ export default function ChallengesScreen() {
                     <View style={styles.postMetaRow}>
                       <Text style={styles.postAuthor}>{selectedCommunityPost.author_name}</Text>
                       <Text style={styles.postTime}>{formatCommunityPostTime(selectedCommunityPost.created_at, t)}</Text>
-                    </View>
-                    <View style={[styles.modalTierBadge, { backgroundColor: selectedCommunityPost.audience === 'ALL' ? '#22C55E' : '#A855F7' }]}>
-                      <Text style={styles.tierBadgeText}>{selectedCommunityPost.audience}</Text>
+                      {(() => {
+                        const badge = getCommunityTierBadgeInfo(selectedCommunityPost.author_tier || selectedCommunityPost.audience, t);
+                        return (
+                          <View style={[styles.tierBadge, { backgroundColor: badge.bg, borderColor: badge.border, borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 3 }]}>
+                            <Ionicons name={badge.icon as any} size={10} color={badge.text} />
+                            <Text style={[styles.tierBadgeText, { color: badge.text }]}>{badge.label}</Text>
+                          </View>
+                        );
+                      })()}
                     </View>
                   </View>
                 </View>
@@ -4791,14 +4817,16 @@ const styles = StyleSheet.create({
   },
   postVideoPreviewWrap: {
     width: '100%',
-    height: 200,
+    height: 220,
     borderRadius: 14,
     overflow: 'hidden',
-    backgroundColor: '#0B1020',
+    backgroundColor: '#040711',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   postVideoPreview: {
     flex: 1,
-    backgroundColor: '#0B1020',
+    backgroundColor: '#040711',
   },
   postVideoBadge: {
     position: 'absolute',

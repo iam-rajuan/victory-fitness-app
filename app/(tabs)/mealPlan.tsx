@@ -158,8 +158,12 @@ function normalizeAdviceItems(reply: string) {
     .replace(/\r/g, '\n')
     .replace(/(?<=\S)\s*(\d+[.)])\s+/g, '\n$1 ')
     .split(/\n+/)
-    .map((item) => item.replace(/^\s*(?:[-*\u2022]|\d+[.)])\s*/, '').trim())
-    .filter(Boolean)
+    .map((item) => {
+      let cleaned = item.replace(/^\s*(?:[-*\u2022]|\d+[.)])\s*/, '').trim();
+      cleaned = cleaned.replace(/^\*\*|\*\*$/g, '').replace(/^#+\s*/, '').replace(/^[•\-]\s*/, '').trim();
+      return cleaned;
+    })
+    .filter((item) => item.length > 2)
     .slice(0, 8);
 }
 
@@ -604,13 +608,52 @@ function MealPlanResult({
         return acc;
       }, {})
     : MEAL_PLAN;
-  const activeShoppingList = Array.isArray(generatedPlan?.shopping_list) ? generatedPlan.shopping_list : [];
+  const fallbackShoppingList = React.useMemo(() => {
+    const categories: Record<string, { name: string; qty: string }[]> = {
+      'Produce & Fresh': [],
+      'Proteins & Meats': [],
+      'Carbohydrates & Grains': [],
+      'Pantry & Extras': [],
+    };
+    const added = new Set<string>();
+    const plan = activePlan || MEAL_PLAN;
+    PLAN_DAYS.forEach((dayKey) => {
+      const dayData = plan[dayKey];
+      if (!dayData) return;
+      [dayData.breakfast, dayData.lunch, dayData.dinner].forEach((m) => {
+        if (!m?.ingredients) return;
+        m.ingredients.forEach((ing) => {
+          const trimmed = ing.trim();
+          const lower = trimmed.toLowerCase();
+          if (!trimmed || added.has(lower)) return;
+          added.add(lower);
+          if (lower.includes('chicken') || lower.includes('salmon') || lower.includes('egg') || lower.includes('tuna') || lower.includes('beef') || lower.includes('turkey') || lower.includes('shrimp') || lower.includes('yogurt') || lower.includes('lentil') || lower.includes('tofu') || lower.includes('protein')) {
+            categories['Proteins & Meats'].push({ name: trimmed, qty: 'Weekly supply' });
+          } else if (lower.includes('banana') || lower.includes('tomato') || lower.includes('onion') || lower.includes('berries') || lower.includes('avocado') || lower.includes('broccoli') || lower.includes('greens') || lower.includes('salad') || lower.includes('pepper') || lower.includes('cucumber') || lower.includes('fruit') || lower.includes('spinach')) {
+            categories['Produce & Fresh'].push({ name: trimmed, qty: 'Fresh weekly' });
+          } else if (lower.includes('oat') || lower.includes('rice') || lower.includes('bread') || lower.includes('wrap') || lower.includes('grain') || lower.includes('quinoa') || lower.includes('pasta') || lower.includes('potato') || lower.includes('pancake') || lower.includes('flour')) {
+            categories['Carbohydrates & Grains'].push({ name: trimmed, qty: '1-2 packs' });
+          } else {
+            categories['Pantry & Extras'].push({ name: trimmed, qty: 'To taste' });
+          }
+        });
+      });
+    });
+    return Object.entries(categories)
+      .filter(([_, items]) => items.length > 0)
+      .map(([category, items]) => ({ category, items }));
+  }, [activePlan]);
+
+  const activeShoppingList = Array.isArray(generatedPlan?.shopping_list) && generatedPlan.shopping_list.length > 0
+    ? generatedPlan.shopping_list
+    : fallbackShoppingList;
   const day = activePlan[activeDay] ?? MEAL_PLAN[activeDay];
   const dayMealStatuses = [
     { key: 'breakfast', label: getMealLabel('breakfast', t), meal: day.breakfast, completed: isMealComplete(activeDay, 'breakfast') },
     { key: 'lunch', label: getMealLabel('lunch', t), meal: day.lunch, completed: isMealComplete(activeDay, 'lunch') },
     { key: 'dinner', label: getMealLabel('dinner', t), meal: day.dinner, completed: isMealComplete(activeDay, 'dinner') },
   ];
+  const MEAL_CHRONO_ORDER: Record<MealKey, number> = { breakfast: 0, lunch: 1, dinner: 2 };
   const orderedMealCards = [
     { key: 'breakfast' as MealKey, label: t('Breakfast'), meal: day.breakfast, expandKey: `${activeDay}-b` },
     { key: 'lunch' as MealKey, label: t('Lunch'), meal: day.lunch, expandKey: `${activeDay}-l` },
@@ -618,7 +661,10 @@ function MealPlanResult({
   ].sort((first, second) => {
     const firstCompleted = isMealComplete(activeDay, first.key);
     const secondCompleted = isMealComplete(activeDay, second.key);
-    return Number(firstCompleted) - Number(secondCompleted);
+    if (firstCompleted !== secondCompleted) {
+      return Number(firstCompleted) - Number(secondCompleted);
+    }
+    return MEAL_CHRONO_ORDER[first.key] - MEAL_CHRONO_ORDER[second.key];
   });
   const completedMealsCount = dayMealStatuses.filter((item) => item.completed).length;
   const completedDayTotals = dayMealStatuses
@@ -651,40 +697,82 @@ function MealPlanResult({
   const adviceItems = normalizeAdviceItems(nutritionAdvice);
 
   const goalLabel = generatedPlan?.goal_label ? t(generatedPlan.goal_label) : getGoalLabel(profile.goal, t);
-  const buildShoppingListCopyText = () =>
-    activeShoppingList
-      .map((section) => {
-        const sectionItems = Array.isArray(section?.items)
-          ? section.items
-              .map((item) => `- ${item.qty ? `${item.qty} ` : ''}${item.name}`.trim())
-              .join('\n')
-          : '';
+  const buildShoppingListCopyText = () => {
+    if (activeShoppingList && activeShoppingList.length > 0) {
+      const listText = activeShoppingList
+        .map((section) => {
+          const sectionItems = Array.isArray(section?.items)
+            ? section.items
+                .map((item) => `- ${item.qty ? `${item.qty} ` : ''}${item.name}`.trim())
+                .join('\n')
+            : '';
 
-        return `${section.category}\n${sectionItems}`.trim();
-      })
-      .filter(Boolean)
-      .join('\n\n');
+          return `${section.category}:\n${sectionItems}`.trim();
+        })
+        .filter(Boolean)
+        .join('\n\n');
+      if (listText.trim()) {
+        return `🛒 VICTORY FITNESS - WEEKLY SHOPPING LIST\n\n${listText}`;
+      }
+    }
+
+    const plan = activePlan || MEAL_PLAN;
+    const lines: string[] = ['📋 VICTORY FITNESS - 7-DAY MEAL & INGREDIENTS LIST\n'];
+    PLAN_DAYS.forEach((d) => {
+      const dayData = plan[d];
+      if (!dayData) return;
+      lines.push(`\n[${d.toUpperCase()}]`);
+      if (dayData.breakfast) lines.push(`• Breakfast: ${dayData.breakfast.name} (${dayData.breakfast.kcal} kcal, ${dayData.breakfast.p}g P)`);
+      if (dayData.lunch) lines.push(`• Lunch: ${dayData.lunch.name} (${dayData.lunch.kcal} kcal, ${dayData.lunch.p}g P)`);
+      if (dayData.dinner) lines.push(`• Dinner: ${dayData.dinner.name} (${dayData.dinner.kcal} kcal, ${dayData.dinner.p}g P)`);
+    });
+    return lines.join('\n');
+  };
 
   const handleCopyShoppingList = async () => {
     const shoppingListText = buildShoppingListCopyText();
     if (!shoppingListText) {
-      Alert.alert(t('Nothing to copy'), t('Generate a nutrition plan before copying the shopping list.'));
+      showCopyToast(t('No items to copy'));
       return;
     }
 
     try {
-      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(shoppingListText);
-      } else {
+      let copied = false;
+      if (Platform.OS === 'web') {
+        if (typeof navigator !== 'undefined' && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+          try {
+            await navigator.clipboard.writeText(shoppingListText);
+            copied = true;
+          } catch {
+            // fallback to textarea
+          }
+        }
+        if (!copied && typeof document !== 'undefined') {
+          const textArea = document.createElement('textarea');
+          textArea.value = shoppingListText;
+          textArea.style.position = 'fixed';
+          textArea.style.left = '-9999px';
+          textArea.style.top = '-9999px';
+          document.body.appendChild(textArea);
+          textArea.focus();
+          textArea.select();
+          copied = document.execCommand('copy');
+          document.body.removeChild(textArea);
+        }
+      }
+      if (!copied) {
         await Clipboard.setStringAsync(shoppingListText);
+        copied = true;
       }
 
       showCopyToast(t('Shopping list copied'));
     } catch (error) {
-      Alert.alert(
-        t('Copy failed'),
-        error instanceof Error ? error.message : t('Unable to copy the shopping list right now.')
-      );
+      try {
+        await Clipboard.setStringAsync(shoppingListText);
+        showCopyToast(t('Shopping list copied'));
+      } catch {
+        showCopyToast(t('Copy failed'));
+      }
     }
   };
   const planJson = generatedPlan
@@ -897,7 +985,7 @@ function MealPlanResult({
   };
 
   const handleStartAnalysis = () => {
-    setAnalysisSourcePickerVisible(true);
+    setAnalysisCapturePickerVisible(true);
   };
 
   const handleOpenCameraModule = () => {
@@ -911,24 +999,50 @@ function MealPlanResult({
     label,
     meal,
     expandKey,
+    isNextUpcoming,
   }: {
     dayLabel: string;
     mealKey: string;
     label: string;
     meal: MealEntry;
     expandKey: string;
+    isNextUpcoming?: boolean;
   }) => {
     const completed = isMealComplete(dayLabel, mealKey);
+    const isPreWorkout = meal.desc?.toLowerCase().includes('pre-workout') || label.toLowerCase().includes('pre-workout') || meal.name.toLowerCase().includes('pre-workout');
+    const isPostWorkout = meal.desc?.toLowerCase().includes('post-workout') || label.toLowerCase().includes('post-workout') || meal.name.toLowerCase().includes('post-workout');
 
     return (
       <View style={styles.mealCardWrap}>
         <TouchableOpacity
-          style={styles.mealCard}
+          style={[styles.mealCard, isNextUpcoming && !completed && styles.mealCardNextUpcoming]}
           onPress={() => openMealModal(dayLabel, mealKey, label, meal, expandKey)}
           activeOpacity={0.9}
         >
-          <Text style={styles.mealLabel}>{label}</Text>
-          {completed ? <Text style={styles.mealCompleteBadge}>{t('COMPLETED')}</Text> : null}
+          <View style={styles.mealHeaderRow}>
+            <Text style={styles.mealLabel}>{label}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              {isNextUpcoming && !completed ? (
+                <View style={styles.nextUpcomingBadge}>
+                  <Ionicons name="time" size={11} color="#10B981" />
+                  <Text style={styles.nextUpcomingBadgeText}>{t('NEXT UPCOMING')}</Text>
+                </View>
+              ) : null}
+              {completed ? <Text style={styles.mealCompleteBadge}>{t('COMPLETED')}</Text> : null}
+            </View>
+          </View>
+          {isPreWorkout ? (
+            <View style={styles.nutrientTimingPill}>
+              <Ionicons name="flash" size={12} color="#F59E0B" />
+              <Text style={styles.nutrientTimingPillText}>{t('Pre-Workout (60–90m before) • Carb-Forward')}</Text>
+            </View>
+          ) : null}
+          {isPostWorkout ? (
+            <View style={[styles.nutrientTimingPill, { backgroundColor: 'rgba(59,130,246,0.18)', borderColor: 'rgba(96,165,250,0.35)' }]}>
+              <Ionicons name="barbell" size={12} color="#60A5FA" />
+              <Text style={[styles.nutrientTimingPillText, { color: '#BFDBFE' }]}>{t('Post-Workout (within 45m) • High Protein')}</Text>
+            </View>
+          ) : null}
           <Text style={styles.mealName}>{meal.name}</Text>
           <Text style={styles.mealDesc}>{meal.desc}</Text>
           <View style={styles.mealMacroRow}>
@@ -1104,7 +1218,7 @@ function MealPlanResult({
                 <View style={styles.totalsItem}><Text style={styles.totalsIcon}>🫒</Text><Text style={styles.totalsVal}>{totalF}g F</Text></View>
               </View>
             </View>
-            {orderedMealCards.map((mealCard) => (
+            {orderedMealCards.map((mealCard, idx) => (
               <MealCard
                 key={`${activeDay}-${mealCard.key}`}
                 dayLabel={activeDay}
@@ -1112,6 +1226,7 @@ function MealPlanResult({
                 label={mealCard.label}
                 meal={mealCard.meal}
                 expandKey={mealCard.expandKey}
+                isNextUpcoming={idx === 0 && !isMealComplete(activeDay, mealCard.key)}
               />
             ))}
             <TouchableOpacity style={styles.shoppingBtn} activeOpacity={0.85} onPress={() => setShowShopping(true)}>
@@ -1179,7 +1294,10 @@ function MealPlanResult({
                 {loadingAdvice ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={styles.getSuggestionsBtnText}>{t('GET SUGGESTIONS')}</Text>
+                  <>
+                    <Ionicons name="sparkles" size={16} color="#fff" />
+                    <Text style={styles.getSuggestionsBtnText}>{t('GET SUGGESTIONS')}</Text>
+                  </>
                 )}
               </TouchableOpacity>
               {nutritionAdvice ? (
@@ -2499,7 +2617,55 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(168,85,247,0.45)',
     backgroundColor: '#171733',
   },
-  mealLabel: { fontSize: 13, fontWeight: '700', color: '#A855F7', fontFamily: 'Inter_700Bold', marginBottom: 6, letterSpacing: 0.3 },
+  mealHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  mealCardNextUpcoming: {
+    borderColor: 'rgba(16,185,129,0.5)',
+    backgroundColor: '#151c33',
+  },
+  nextUpcomingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(16,185,129,0.18)',
+    borderColor: 'rgba(16,185,129,0.4)',
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  nextUpcomingBadgeText: {
+    color: '#10B981',
+    fontSize: 10,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  nutrientTimingPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(245,158,11,0.14)',
+    borderColor: 'rgba(245,158,11,0.3)',
+    borderWidth: 1,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginBottom: 8,
+  },
+  nutrientTimingPillText: {
+    color: '#FDE68A',
+    fontSize: 11,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+  },
+  mealLabel: { fontSize: 13, fontWeight: '700', color: '#A855F7', fontFamily: 'Inter_700Bold', letterSpacing: 0.3 },
   mealCompleteBadge: {
     alignSelf: 'flex-start',
     color: '#22C55E',
@@ -2795,8 +2961,23 @@ const styles = StyleSheet.create({
   macroGridValRow: { flexDirection: 'row', alignItems: 'baseline' },
   macroGridVal: { fontSize: 32, fontWeight: '800', color: Colors.primary, fontFamily: 'Inter_700Bold' },
   macroGridUnit: { fontSize: 13, color: Colors.textMuted, fontFamily: 'Inter_400Regular' },
-  getSuggestionsBtn: { backgroundColor: '#0D0D1E', borderRadius: 12, paddingVertical: 14, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
-  getSuggestionsBtnText: { color: '#fff', fontSize: 13, fontWeight: '700', fontFamily: 'Inter_700Bold', letterSpacing: 1 },
+  getSuggestionsBtn: {
+    backgroundColor: '#8B5CF6',
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#A78BFA',
+    shadowColor: '#8B5CF6',
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+  },
+  getSuggestionsBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800', fontFamily: 'Inter_700Bold', letterSpacing: 0.8 },
   advicePanel: {
     marginTop: 12,
     backgroundColor: '#101426',
@@ -2849,36 +3030,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(255,255,255,0.09)',
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 13,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: 'rgba(255,255,255,0.15)',
   },
   adviceBullet: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#FDE68A',
+    backgroundColor: '#F59E0B',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
-    shadowColor: '#FDE68A',
-    shadowOpacity: 0.18,
+    shadowColor: '#F59E0B',
+    shadowOpacity: 0.28,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
   },
   adviceBulletText: {
-    color: '#23160A',
+    color: '#000000',
     fontSize: 13,
+    fontWeight: '800',
     fontFamily: 'Inter_700Bold',
   },
   adviceItemText: {
-    color: '#F8FAFC',
+    color: '#FFFFFF',
     fontSize: 14,
     lineHeight: 22,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: 'Inter_600SemiBold',
     flex: 1,
   },
   adviceFallbackText: { color: '#F8FAFC', fontSize: 14, lineHeight: 22, fontFamily: 'Inter_500Medium' },
