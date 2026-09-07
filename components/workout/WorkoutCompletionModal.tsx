@@ -7,7 +7,6 @@ import {
   Image,
   TouchableOpacity,
   ScrollView,
-  TextInput,
   ActivityIndicator,
   Linking,
   Platform,
@@ -43,6 +42,56 @@ interface WorkoutCompletionModalProps {
   onShareCard: () => void;
 }
 
+function getImmediateCoachFeedback(
+  difficulty: 'too_easy' | 'just_right' | 'too_hard',
+  energy: 'low' | 'medium' | 'high',
+  painFlag: boolean,
+  sweetSpotFlag: boolean,
+  t: (key: string) => string
+) {
+  const isHard = difficulty === 'too_hard' || energy === 'low';
+  const isEasy = difficulty === 'too_easy' && energy === 'high';
+
+  let adj_pct = 0;
+  let direction = 'maintain';
+  let summary = t('Keep the next workout steady and reinforce consistency before changing load again.');
+  let what_went_well = t('Hit the optimal hypertrophy and strength stimulus zone without inducing excessive CNS fatigue.');
+  let cautions = t('Keep hydration, electrolytes, and daily protein targets (1.6g/kg) consistent for optimal muscle repair.');
+  let next_steps = t('Maintain baseline intensity and consolidate motor patterns on the upcoming session.');
+
+  if (isHard) {
+    adj_pct = -10;
+    direction = 'decrease';
+    summary = t('Reduce the next workout slightly so recovery stays ahead of fatigue.');
+    what_went_well = t('Commendable effort and perseverance completing a demanding session under high load.');
+    cautions = t('Elevated systemic strain detected. Prioritize 8+ hours of sleep, recovery nutrition, and light mobility.');
+    next_steps = t('We will dial back volume by 10% on the next session to prevent cumulative overtraining.');
+  } else if (isEasy) {
+    adj_pct = 5;
+    direction = 'increase';
+    summary = t('You handled this session well, so the next workout can progress slightly.');
+    what_went_well = t('Excellent execution, high motor unit recruitment, and clean mechanical control throughout sets.');
+    cautions = t('Ensure strict tempo control on the eccentric phase before adding external load.');
+    next_steps = t('Slightly advancing progressive overload by +5% on primary compound lifts next workout.');
+  }
+
+  if (painFlag) {
+    cautions = t('⚠️ Pain / discomfort noted: Deload affected joint angles, substitute with pain-free movement variations, and consult coach if discomfort persists.');
+  }
+  if (sweetSpotFlag) {
+    what_went_well = t('🎯 Sweet spot achieved! Perfect muscular stimulation with optimal tension-to-fatigue ratio.');
+  }
+
+  return {
+    adjustment_pct: adj_pct,
+    next_volume_direction: direction,
+    summary,
+    what_went_well,
+    cautions,
+    next_steps,
+  };
+}
+
 export default function WorkoutCompletionModal({
   visible,
   planId,
@@ -62,9 +111,9 @@ export default function WorkoutCompletionModal({
   const [energy, setEnergy] = useState<'low' | 'medium' | 'high'>('high');
   const [painFlag, setPainFlag] = useState(false);
   const [sweetSpotFlag, setSweetSpotFlag] = useState(false);
-  const [notes, setNotes] = useState('');
-  const [submittingFeedback, setSubmittingFeedback] = useState(false);
   const [aiCoachFeedback, setAiCoachFeedback] = useState<StrengthFeedbackResponse | null>(null);
+
+  const activeFeedback = aiCoachFeedback || getImmediateCoachFeedback(difficulty, energy, painFlag, sweetSpotFlag, t);
 
   // Upgrade Offer State
   const [showUpgradeOffer, setShowUpgradeOffer] = useState(false);
@@ -128,30 +177,42 @@ export default function WorkoutCompletionModal({
     router.push('/(tabs)/challenge');
   };
 
-  const handleSubmitFeedback = async () => {
-    if (!planId) return;
-    setSubmittingFeedback(true);
-    try {
-      const response = await submitStrengthWorkoutFeedback(planId, {
+  useEffect(() => {
+    if (!visible || !planId) return;
+    const timer = setTimeout(() => {
+      void submitStrengthWorkoutFeedback(planId, {
         day: dayLabel,
         perceived_difficulty: difficulty,
         energy,
         soreness: painFlag ? 'high' : 'medium',
         pain_flag: painFlag,
         sweet_spot_flag: sweetSpotFlag,
-        notes,
-      });
-      setAiCoachFeedback(response);
+      })
+        .then((res) => {
+          setAiCoachFeedback(res);
+        })
+        .catch(() => undefined);
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [visible, planId, dayLabel, difficulty, energy, painFlag, sweetSpotFlag]);
+
+  const handleDone = () => {
+    if (planId) {
+      void submitStrengthWorkoutFeedback(planId, {
+        day: dayLabel,
+        perceived_difficulty: difficulty,
+        energy,
+        soreness: painFlag ? 'high' : 'medium',
+        pain_flag: painFlag,
+        sweet_spot_flag: sweetSpotFlag,
+      }).catch(() => undefined);
       void recordAnalyticsEvent('post_workout_feedback_submitted', {
         difficulty,
         painFlag,
         sweetSpotFlag,
       }).catch(() => undefined);
-    } catch {
-      Alert.alert(t('Feedback Recorded'), t('Your workout metrics have been logged locally!'));
-    } finally {
-      setSubmittingFeedback(false);
     }
+    onClose();
   };
 
   if (!visible) return null;
@@ -362,83 +423,75 @@ export default function WorkoutCompletionModal({
                   </TouchableOpacity>
                 ))}
               </View>
-
-              {/* Notes input */}
-              <TextInput
-                style={styles.notesInput}
-                placeholder={t('Optional notes (e.g. felt strong on bench press)...')}
-                placeholderTextColor="#6B7280"
-                value={notes}
-                onChangeText={setNotes}
-                multiline
-                maxLength={300}
-              />
-
-              {!aiCoachFeedback ? (
-                <TouchableOpacity
-                  style={[styles.submitFeedbackBtn, submittingFeedback && styles.disabledBtn]}
-                  onPress={handleSubmitFeedback}
-                  disabled={submittingFeedback}
-                >
-                  {submittingFeedback ? (
-                    <ActivityIndicator size="small" color="#000" />
-                  ) : (
-                    <>
-                      <Ionicons name="sparkles" size={16} color="#000" />
-                      <Text style={styles.submitFeedbackBtnText}>{t('Get AI Coach Analysis')}</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              ) : null}
             </View>
 
-            {/* AI Coach Victor Response */}
-            {aiCoachFeedback ? (
-              <View style={styles.aiCoachCard}>
-                <View style={styles.aiCoachHeader}>
-                  <View style={styles.coachAvatar}>
-                    <Ionicons name="shield-checkmark" size={18} color="#000" />
-                  </View>
-                  <View>
-                    <Text style={styles.coachName}>{t('Coach Victor AI')}</Text>
-                    <Text style={styles.coachRole}>{t('Post-Workout Performance Feedback')}</Text>
-                  </View>
+            {/* AI Coach Victor Response based on difficulty rating */}
+            <View style={styles.aiCoachCard}>
+              <View style={styles.aiCoachHeader}>
+                <View style={styles.coachAvatar}>
+                  <Ionicons name="shield-checkmark" size={18} color="#000" />
                 </View>
-
-                {aiCoachFeedback.what_went_well ? (
-                  <View style={styles.aiFeedbackSection}>
-                    <Text style={styles.aiSectionTitle}>💪 {t('What Went Well')}</Text>
-                    <Text style={styles.aiSectionContent}>{aiCoachFeedback.what_went_well}</Text>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={styles.coachName}>{t('Coach Victor AI')}</Text>
+                    <View style={styles.aiActiveBadge}>
+                      <Text style={styles.aiActiveBadgeText}>{t('POST-WORKOUT FEEDBACK')}</Text>
+                    </View>
                   </View>
-                ) : null}
-
-                {aiCoachFeedback.cautions ? (
-                  <View style={styles.aiFeedbackSection}>
-                    <Text style={styles.aiSectionTitle}>⚠️ {t('Cautions & Recovery')}</Text>
-                    <Text style={styles.aiSectionContent}>{aiCoachFeedback.cautions}</Text>
-                  </View>
-                ) : null}
-
-                {aiCoachFeedback.next_steps ? (
-                  <View style={styles.aiFeedbackSection}>
-                    <Text style={styles.aiSectionTitle}>🎯 {t('Next Steps')}</Text>
-                    <Text style={styles.aiSectionContent}>{aiCoachFeedback.next_steps}</Text>
-                  </View>
-                ) : null}
-
-                {aiCoachFeedback.adjustment_pct !== 0 ? (
-                  <View style={styles.adjustmentBadge}>
-                    <Text style={styles.adjustmentBadgeText}>
-                      {aiCoachFeedback.adjustment_pct > 0
-                        ? `+${aiCoachFeedback.adjustment_pct}% Progressive Overload Applied`
-                        : `${aiCoachFeedback.adjustment_pct}% Recovery Volume Adjusted`}
-                    </Text>
-                  </View>
-                ) : null}
+                  <Text style={styles.coachRole}>{t('Real-time coaching response to difficulty rating')}</Text>
+                </View>
               </View>
-            ) : null}
 
-            <TouchableOpacity style={styles.doneBtn} onPress={onClose}>
+              {activeFeedback.what_went_well ? (
+                <View style={styles.aiFeedbackSection}>
+                  <Text style={styles.aiSectionTitle}>💪 {t('What Went Well')}</Text>
+                  <Text style={styles.aiSectionContent}>{activeFeedback.what_went_well}</Text>
+                </View>
+              ) : null}
+
+              {activeFeedback.cautions ? (
+                <View style={styles.aiFeedbackSection}>
+                  <Text style={styles.aiSectionTitle}>⚠️ {t('Cautions & Recovery')}</Text>
+                  <Text style={styles.aiSectionContent}>{activeFeedback.cautions}</Text>
+                </View>
+              ) : null}
+
+              {activeFeedback.next_steps ? (
+                <View style={styles.aiFeedbackSection}>
+                  <Text style={styles.aiSectionTitle}>🎯 {t('Next Steps')}</Text>
+                  <Text style={styles.aiSectionContent}>{activeFeedback.next_steps}</Text>
+                </View>
+              ) : null}
+
+              <View
+                style={[
+                  styles.adjustmentBadge,
+                  activeFeedback.adjustment_pct > 0 && styles.adjustmentBadgeOverload,
+                  activeFeedback.adjustment_pct < 0 && styles.adjustmentBadgeDeload,
+                ]}
+              >
+                <Ionicons
+                  name={activeFeedback.adjustment_pct > 0 ? 'trending-up' : activeFeedback.adjustment_pct < 0 ? 'trending-down' : 'checkmark-circle'}
+                  size={14}
+                  color={activeFeedback.adjustment_pct > 0 ? '#10B981' : activeFeedback.adjustment_pct < 0 ? '#F59E0B' : '#00D9F5'}
+                />
+                <Text
+                  style={[
+                    styles.adjustmentBadgeText,
+                    activeFeedback.adjustment_pct > 0 && { color: '#10B981' },
+                    activeFeedback.adjustment_pct < 0 && { color: '#F59E0B' },
+                  ]}
+                >
+                  {activeFeedback.adjustment_pct > 0
+                    ? `+${activeFeedback.adjustment_pct}% Progressive Overload Applied`
+                    : activeFeedback.adjustment_pct < 0
+                      ? `${activeFeedback.adjustment_pct}% Recovery Volume Adjusted`
+                      : t('Optimal Stimulus Maintained')}
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity style={styles.doneBtn} onPress={handleDone}>
               <Text style={styles.doneBtnText}>{t('Done')}</Text>
             </TouchableOpacity>
           </ScrollView>
@@ -771,32 +824,6 @@ const styles = StyleSheet.create({
   energyBtnTextActive: {
     color: Colors.accentBlue,
   },
-  notesInput: {
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    borderRadius: 10,
-    padding: 10,
-    color: '#fff',
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-    minHeight: 56,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-  },
-  submitFeedbackBtn: {
-    backgroundColor: Colors.accentBlue,
-    borderRadius: 12,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  submitFeedbackBtnText: {
-    color: '#000',
-    fontSize: 12,
-    fontFamily: 'Inter_700Bold',
-  },
   aiCoachCard: {
     backgroundColor: 'rgba(6,182,212,0.06)',
     borderRadius: 18,
@@ -824,10 +851,25 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: 'Inter_700Bold',
   },
+  aiActiveBadge: {
+    backgroundColor: 'rgba(6,182,212,0.18)',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(6,182,212,0.3)',
+  },
+  aiActiveBadgeText: {
+    color: '#00D9F5',
+    fontSize: 9,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: 0.5,
+  },
   coachRole: {
     color: Colors.accentBlue,
     fontSize: 11,
     fontFamily: 'Inter_500Medium',
+    marginTop: 2,
   },
   aiFeedbackSection: {
     marginBottom: 10,
@@ -845,12 +887,25 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
   },
   adjustmentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(6,182,212,0.15)',
+    backgroundColor: 'rgba(6,182,212,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(6,182,212,0.25)',
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderRadius: 12,
     marginTop: 6,
+  },
+  adjustmentBadgeOverload: {
+    backgroundColor: 'rgba(16,185,129,0.12)',
+    borderColor: 'rgba(16,185,129,0.3)',
+  },
+  adjustmentBadgeDeload: {
+    backgroundColor: 'rgba(245,158,11,0.12)',
+    borderColor: 'rgba(245,158,11,0.3)',
   },
   adjustmentBadgeText: {
     color: Colors.accentBlue,
