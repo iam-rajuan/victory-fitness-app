@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
@@ -15,6 +15,8 @@ export default function StreakCard({ onPressStartWorkout }: StreakCardProps) {
   const { t } = useLanguage();
   const [streakDays, setStreakDays] = useState(0);
   const [workoutsCompleted, setWorkoutsCompleted] = useState(0);
+
+  const flameOpacity = useRef(new Animated.Value(0.85)).current;
 
   useEffect(() => {
     let cancelled = false;
@@ -38,6 +40,29 @@ export default function StreakCard({ onPressStartWorkout }: StreakCardProps) {
     };
   }, []);
 
+  useEffect(() => {
+    if (streakDays > 0) {
+      const anim = Animated.loop(
+        Animated.sequence([
+          Animated.timing(flameOpacity, {
+            toValue: 1,
+            duration: 1100,
+            useNativeDriver: true,
+          }),
+          Animated.timing(flameOpacity, {
+            toValue: 0.82,
+            duration: 1100,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      anim.start();
+      return () => anim.stop();
+    } else {
+      flameOpacity.setValue(0.5);
+    }
+  }, [streakDays, flameOpacity]);
+
   const isAtRisk = streakDays > 0;
   const nextMilestone = streakDays < 3 ? 3 : streakDays < 7 ? 7 : streakDays < 14 ? 14 : streakDays + 7;
   const milestonePct = Math.min(Math.round((streakDays / nextMilestone) * 100), 100);
@@ -46,14 +71,16 @@ export default function StreakCard({ onPressStartWorkout }: StreakCardProps) {
     <View style={styles.card}>
       <View style={styles.topRow}>
         <View style={styles.streakHeaderLeft}>
-          <View style={styles.fireCircle}>
+          <Animated.View style={[styles.fireCircle, { opacity: flameOpacity }, streakDays === 0 && styles.fireCircleInactive]}>
             <Text style={styles.fireEmoji}>🔥</Text>
-          </View>
+          </Animated.View>
           <View style={{ marginLeft: 12 }}>
             <Text style={styles.streakSub}>{t('TRAINING STREAK')}</Text>
             <View style={styles.daysRow}>
               <Text style={styles.streakVal}>{streakDays} {streakDays === 1 ? t('Day') : t('Days')}</Text>
-              <Text style={styles.activeTag}>• {t('Active')}</Text>
+              <Text style={[styles.activeTag, streakDays === 0 && styles.inactiveTag]}>
+                • {streakDays > 0 ? t('Active') : t('Inactive')}
+              </Text>
             </View>
           </View>
         </View>
@@ -161,6 +188,13 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontSize: 12,
     fontFamily: 'Inter_600SemiBold',
+  },
+  inactiveTag: {
+    color: 'rgba(255, 255, 255, 0.4)',
+  },
+  fireCircleInactive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   atRiskBadge: {
     flexDirection: 'row',
