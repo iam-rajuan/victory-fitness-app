@@ -18,6 +18,7 @@ import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import {
+  deleteLatestStrengthWorkoutPlan,
   deleteStrengthWorkoutPlan,
   fetchStrengthWorkoutPlans,
   loadLatestStrengthWorkoutPlan,
@@ -71,6 +72,7 @@ export default function StrengthPlanDashboard() {
   const [currentUserName, setCurrentUserName] = useState('Victory Member');
   const [completionCard, setCompletionCard] = useState<CompletionCard | null>(null);
   const [cardAction, setCardAction] = useState<'download' | 'share' | 'preview' | ''>('');
+  const [planToDelete, setPlanToDelete] = useState<StrengthPlanResponse | null>(null);
 
   // Accordion and Day selection states
   const [expandedPlanId, setExpandedPlanId] = useState<string | null>(null);
@@ -335,33 +337,40 @@ export default function StrengthPlanDashboard() {
     }
   };
 
-  const handleDeletePlan = (targetPlan: StrengthPlanResponse) => {
-    const planId = targetPlan.plan_id ?? targetPlan.summary;
-    if (!planId || deletingPlanId) {
+  const confirmDeletePlan = async () => {
+    if (!planToDelete || deletingPlanId) {
       return;
     }
+    const targetPlan = planToDelete;
+    const planId = targetPlan.plan_id ?? targetPlan.summary;
+    try {
+      setDeletingPlanId(planId);
+      if (targetPlan.plan_id) {
+        await deleteStrengthWorkoutPlan(targetPlan.plan_id);
+      } else {
+        await deleteLatestStrengthWorkoutPlan();
+      }
+      setPlans((current) => current.filter((item) => (item.plan_id ?? item.summary) !== planId));
+      if (expandedPlanId === planId) {
+        setExpandedPlanId(null);
+      }
+      setPlanToDelete(null);
+    } catch (error) {
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.alert(formatAppError(error, t('Unable to delete workout plan.')).message);
+      } else {
+        Alert.alert(t('Error'), formatAppError(error, t('Unable to delete workout plan.')).message);
+      }
+    } finally {
+      setDeletingPlanId(null);
+    }
+  };
 
-    Alert.alert(t('Remove Plan'), t('Delete your saved custom strength plan?'), [
-      { text: t('Cancel'), style: 'cancel' },
-      {
-        text: t('Delete'),
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            setDeletingPlanId(targetPlan.plan_id ?? planId);
-            if (targetPlan.plan_id) {
-              await deleteStrengthWorkoutPlan(targetPlan.plan_id);
-            }
-            setPlans((current) => current.filter((item) => (item.plan_id ?? item.summary) !== planId));
-            if (expandedPlanId === planId) {
-              setExpandedPlanId(null);
-            }
-          } finally {
-            setDeletingPlanId(null);
-          }
-        },
-      },
-    ]);
+  const handleDeletePlan = (targetPlan: StrengthPlanResponse) => {
+    if (deletingPlanId) {
+      return;
+    }
+    setPlanToDelete(targetPlan);
   };
 
   const handleToggleExpand = (plan: StrengthPlanResponse) => {
@@ -474,30 +483,40 @@ export default function StrengthPlanDashboard() {
               return (
                 <View key={planId ?? `${plan.summary}-${index}`} style={[styles.planCard, isExpanded && styles.planCardExpanded]}>
                   {/* Plan Card Header */}
-                  <TouchableOpacity
-                    style={styles.planHeader}
-                    activeOpacity={0.7}
-                    onPress={() => handleToggleExpand(plan)}
-                  >
-                    <View style={styles.planMain}>
+                  <View style={styles.planHeader}>
+                    <TouchableOpacity
+                      style={styles.planMain}
+                      activeOpacity={0.7}
+                      onPress={() => handleToggleExpand(plan)}
+                    >
                       <Text style={styles.planSummary} numberOfLines={isExpanded ? 3 : 1}>{plan.summary}</Text>
-                    </View>
+                    </TouchableOpacity>
                     <View style={styles.planActions}>
                       <TouchableOpacity
-                        style={[styles.deleteBtnIcon, deletingPlanId === plan.plan_id && styles.disabledBtn]}
-                        disabled={deletingPlanId === plan.plan_id}
-                        onPress={() => handleDeletePlan(plan)}
+                        style={[styles.deleteBtnIcon, deletingPlanId === (plan.plan_id ?? plan.summary) && styles.disabledBtn]}
+                        disabled={Boolean(deletingPlanId)}
+                        onPress={(e) => {
+                          e?.stopPropagation?.();
+                          handleDeletePlan(plan);
+                        }}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        accessibilityLabel="Delete plan"
                       >
                         <Ionicons name="trash-outline" size={18} color="#F87171" />
                       </TouchableOpacity>
-                      <Ionicons
-                        name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                        size={20}
-                        color="rgba(255,255,255,0.4)"
-                        style={{ marginLeft: 6 }}
-                      />
+                      <TouchableOpacity
+                        onPress={() => handleToggleExpand(plan)}
+                        hitSlop={{ top: 10, bottom: 10, left: 6, right: 10 }}
+                        style={{ padding: 4 }}
+                      >
+                        <Ionicons
+                          name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                          size={20}
+                          color="rgba(255,255,255,0.4)"
+                        />
+                      </TouchableOpacity>
                     </View>
-                  </TouchableOpacity>
+                  </View>
 
                   {plan.days.length > 0 && plan.days.every((day) => getDayProgress(plan, day.day)?.completed) && (
                     <TouchableOpacity
@@ -863,6 +882,46 @@ export default function StrengthPlanDashboard() {
           </View>
         </ScrollView>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        visible={Boolean(planToDelete)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPlanToDelete(null)}
+      >
+        <View style={styles.confirmModalBackdrop}>
+          <View style={styles.confirmModalBox}>
+            <View style={styles.confirmModalIconWrap}>
+              <Ionicons name="trash-outline" size={26} color="#EF4444" />
+            </View>
+            <Text style={styles.confirmModalTitle}>{t('Delete Strength Plan?')}</Text>
+            <Text style={styles.confirmModalText}>
+              {t('Are you sure you want to delete this custom workout plan? This action cannot be undone.')}
+            </Text>
+            <View style={styles.confirmModalButtons}>
+              <TouchableOpacity
+                style={styles.confirmModalCancelBtn}
+                onPress={() => setPlanToDelete(null)}
+                disabled={Boolean(deletingPlanId)}
+              >
+                <Text style={styles.confirmModalCancelText}>{t('Cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.confirmModalDeleteBtn, Boolean(deletingPlanId) && styles.disabledBtn]}
+                onPress={() => void confirmDeletePlan()}
+                disabled={Boolean(deletingPlanId)}
+              >
+                {deletingPlanId ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.confirmModalDeleteText}>{t('Delete')}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1384,5 +1443,85 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Inter_800ExtraBold',
     letterSpacing: 1,
+  },
+  confirmModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  confirmModalBox: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#181822',
+    borderRadius: 22,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  confirmModalIconWrap: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: 'rgba(239,68,68,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  confirmModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    fontFamily: 'Inter_700Bold',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  confirmModalText: {
+    fontSize: 13,
+    color: '#94A3B8',
+    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 20,
+  },
+  confirmModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  confirmModalCancelBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  confirmModalCancelText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#E2E8F0',
+    fontFamily: 'Inter_600SemiBold',
+  },
+  confirmModalDeleteBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#EF4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  confirmModalDeleteText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    fontFamily: 'Inter_700Bold',
   },
 });

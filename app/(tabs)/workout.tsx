@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Pressable,
   Alert,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -331,6 +332,21 @@ export default function WorkoutScreen() {
   };
 
   const handleRemoveStrengthPlan = () => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const confirmed = window.confirm ? window.confirm(t('Delete your saved custom strength plan?')) : true;
+      if (confirmed) {
+        void (async () => {
+          try {
+            await deleteLatestStrengthWorkoutPlan();
+            setStrengthPlan(null);
+          } catch (deleteError) {
+            setError(formatAppError(deleteError).message);
+          }
+        })();
+      }
+      return;
+    }
+
     Alert.alert(t('Remove Plan'), t('Delete your saved custom strength plan?'), [
       { text: t('Cancel'), style: 'cancel' },
       {
@@ -349,6 +365,21 @@ export default function WorkoutScreen() {
   };
 
   const handleRemoveVideoPlan = () => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const confirmed = window.confirm ? window.confirm(t('Delete your saved 7-day video plan from this device?')) : true;
+      if (confirmed) {
+        void (async () => {
+          try {
+            await clearLatestVideoWorkoutPlan();
+            setVideoPlan(null);
+          } catch (deleteError) {
+            setError(formatAppError(deleteError).message);
+          }
+        })();
+      }
+      return;
+    }
+
     Alert.alert(t('Remove Plan'), t('Delete your saved 7-day video plan from this device?'), [
       { text: t('Cancel'), style: 'cancel' },
       {
