@@ -200,6 +200,7 @@ export default function WorkoutCompletionModal({
     const mins = Math.max(Math.round((durationSeconds || 1800) / 60), 1);
     const estimatedCals = Math.round(mins * 7.5);
     const streak = Math.max(totalCompletedWorkouts || 1, 1);
+    const cardImg = completionCard?.fileUri || (completionCard?.imageBase64 ? `data:image/png;base64,${completionCard.imageBase64}` : '');
     router.push({
       pathname: '/(tabs)/challenge',
       params: {
@@ -209,8 +210,9 @@ export default function WorkoutCompletionModal({
         prefillDurationMinutes: String(mins),
         prefillCalories: String(estimatedCals),
         prefillStreakCount: String(streak),
-        prefillImageUri: completionCard?.fileUri || '',
+        prefillImageUri: cardImg,
         prefillImageFileName: completionCard?.fileName || 'workout-completion.png',
+        prefillImageMimeType: 'image/png',
         prefillStatus: `🔥 Completed ${dayLabel || t('Strength Workout')}!\n⏱️ Duration: ${mins} mins | ⚡ Burned: ~${estimatedCals} kcal | 🏆 Streak: ${streak} days\n${completionCard?.shareMessage || ''}\n#WorkoutCompleted #VictoryFitness`,
       },
     } as any);

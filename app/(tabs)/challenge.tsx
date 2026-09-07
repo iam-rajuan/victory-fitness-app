@@ -290,13 +290,39 @@ function buildCommunityUploadFormData(params: {
 
     if (params.media.file) {
       formData.append('media_file', params.media.file);
+    } else if (Platform.OS === 'web' && typeof window !== 'undefined' && params.media.uri) {
+      const uri = params.media.uri;
+      try {
+        if (uri.startsWith('data:')) {
+          const parts = uri.split(',');
+          const mimeMatch = parts[0].match(/:(.*?);/);
+          const mime = mimeMatch ? mimeMatch[1] : (params.media.mimeType || 'image/png');
+          const bstr = atob(parts[1]);
+          let n = bstr.length;
+          const u8arr = new Uint8Array(n);
+          while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+          }
+          const fileObj = new File([u8arr], params.media.fileName || 'workout-completion.png', { type: mime });
+          formData.append('media_file', fileObj);
+        } else {
+          formData.append('media_file', {
+            uri: params.media.uri,
+            name: getCommunityUploadName(params.media, params.media.type),
+            type: params.media.mimeType,
+          } as any);
+        }
+      } catch {
+        formData.append('media_file', {
+          uri: params.media.uri,
+          name: getCommunityUploadName(params.media, params.media.type),
+          type: params.media.mimeType,
+        } as any);
+      }
     } else {
       formData.append('media_file', {
         uri: params.media.uri,
-        name: getCommunityUploadName(
-          params.media,
-          params.media.type,
-        ),
+        name: getCommunityUploadName(params.media, params.media.type),
         type: params.media.mimeType,
       } as any);
     }
@@ -608,6 +634,7 @@ export default function ChallengesScreen() {
   const [communityFilterPickerOpen, setCommunityFilterPickerOpen] = useState(false);
   const [inviteModalChallenge, setInviteModalChallenge] = useState<ReadyChallenge | null>(null);
   const [inviteCopied, setInviteCopied] = useState(false);
+  const [sharingToCommunity, setSharingToCommunity] = useState(false);
   const [currentUserId, setCurrentUserId] = useState('');
   const lastHandledUrlTabRef = useRef<string | null>(null);
 
@@ -1416,11 +1443,48 @@ export default function ChallengesScreen() {
     }
   };
 
-  const handleShareToCommunityFromModal = (ch: ReadyChallenge) => {
-    setInviteModalChallenge(null);
-    lastHandledUrlTabRef.current = 'COMMUNITY';
-    setActiveTab('COMMUNITY');
-    setCommunityDraft(`🏆 Join me in the "${ch.title}" challenge! Let's conquer this together.\n#ChallengeInvite #${(ch as any).category || ch.type || 'Fitness'}`);
+  const handleShareToCommunityFromModal = async (ch: ReadyChallenge) => {
+    if (sharingToCommunity) return;
+    if (!canAccessCommunity) {
+      setInviteModalChallenge(null);
+      const tabMeta = challengeTabs.find((t) => t.id === 'COMMUNITY');
+      setRestrictedSection(tabMeta?.restrictedSection || 'Community');
+      return;
+    }
+
+    setSharingToCommunity(true);
+    const inviteUrl = getChallengeInviteUrl(ch.id);
+    const postContent = `🏆 Join me in the "${ch.title}" challenge on Victory Fitness!\n⏱️ Duration: ${ch.duration_days} Days | 🎯 Points: ${ch.points}\n👉 Join via Invite Link: ${inviteUrl}\n#ChallengeInvite #${(ch as any).category || ch.type || 'Fitness'}`;
+
+    try {
+      const formData = new FormData();
+      formData.append('content', postContent);
+      formData.append('is_workout_share', '0');
+
+      const response = await apiRequest<CommunityPost>('/community/posts', {
+        method: 'POST',
+        body: formData,
+      });
+
+      setCommunityPosts((current) => [response, ...current]);
+      setInviteModalChallenge(null);
+      handleTabSelect('COMMUNITY');
+      Alert.alert(
+        t('Shared to Community!'),
+        t('Your challenge invite has been posted to the Community feed. Friends can see it and join!')
+      );
+      void Promise.allSettled([
+        clearCachedResource(COMMUNITY_POSTS_CACHE_KEY),
+        loadCommunityPosts(false),
+      ]);
+    } catch {
+      // Fallback: close modal, navigate to Community tab and pre-fill draft
+      setInviteModalChallenge(null);
+      handleTabSelect('COMMUNITY');
+      setCommunityDraft(postContent);
+    } finally {
+      setSharingToCommunity(false);
+    }
   };
 
   const toggleChallengeCardExpansion = (challengeId: string) => {
@@ -2174,7 +2238,32 @@ export default function ChallengesScreen() {
                     </View>
                   ) : (
                     <>
-                      {post.content ? <Text style={styles.postBody}>{post.content}</Text> : null}
+                      {post.content && (post.content.includes('#WorkoutCompleted') || post.content.includes('#workoutcompleted')) ? (
+                        <View style={styles.workoutMilestoneCard}>
+                          <View style={styles.workoutMilestoneHeader}>
+                            <View style={styles.workoutMilestoneBadge}>
+                              <Ionicons name="trophy" size={14} color="#F59E0B" />
+                              <Text style={styles.workoutMilestoneBadgeText}>{t('WORKOUT COMPLETED')}</Text>
+                            </View>
+                            <View style={styles.workoutPointsPill}>
+                              <Text style={styles.workoutPointsPillText}>+30 PTS</Text>
+                            </View>
+                          </View>
+                          <Text style={styles.workoutMilestoneText}>{post.content.replace(/#WorkoutCompleted|#workoutcompleted|#VictoryFitness/g, '').trim()}</Text>
+                        </View>
+                      ) : post.content && post.content.includes('#ChallengeInvite') ? (
+                        <View style={styles.challengeInvitePostCard}>
+                          <View style={styles.challengeInvitePostHeader}>
+                            <View style={styles.challengeInvitePostBadge}>
+                              <Ionicons name="flash" size={14} color="#00F0D0" />
+                              <Text style={styles.challengeInvitePostBadgeText}>{t('CHALLENGE INVITATION')}</Text>
+                            </View>
+                          </View>
+                          <Text style={styles.challengeInvitePostContent}>{post.content.replace(/#ChallengeInvite/g, '').trim()}</Text>
+                        </View>
+                      ) : post.content ? (
+                        <Text style={styles.postBody}>{post.content}</Text>
+                      ) : null}
                       {getImageSource(post.image_url) ? (
                         <View style={styles.postMediaFrame}>
                           <Image source={getImageSource(post.image_url)!} style={styles.postImagePreview} />
@@ -2445,7 +2534,7 @@ export default function ChallengesScreen() {
         onRequestClose={() => setInviteModalChallenge(null)}
       >
         <View style={styles.inviteModalOverlay}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setInviteModalChallenge(null)} />
+          <Pressable style={[StyleSheet.absoluteFill, { zIndex: 1 }]} onPress={() => { if (!sharingToCommunity) setInviteModalChallenge(null); }} />
           <View style={styles.inviteModalCard}>
             <TouchableOpacity
               style={styles.inviteModalCloseBtn}
@@ -2531,14 +2620,24 @@ export default function ChallengesScreen() {
 
             {/* Optional Community Post CTA */}
             <TouchableOpacity
-              style={styles.inviteSecondaryCommunityBtn}
-              activeOpacity={0.85}
+              style={[
+                styles.inviteSecondaryCommunityBtn,
+                sharingToCommunity && styles.inviteSecondaryCommunityBtnDisabled,
+              ]}
+              activeOpacity={0.8}
+              disabled={sharingToCommunity}
               onPress={() => {
-                if (inviteModalChallenge) handleShareToCommunityFromModal(inviteModalChallenge);
+                if (inviteModalChallenge) void handleShareToCommunityFromModal(inviteModalChallenge);
               }}
             >
-              <Ionicons name="chatbubbles-outline" size={16} color="#94A3B8" />
-              <Text style={styles.inviteSecondaryCommunityBtnText}>{t('Share to Community Feed')}</Text>
+              {sharingToCommunity ? (
+                <ActivityIndicator size="small" color="#00F0D0" />
+              ) : (
+                <>
+                  <Ionicons name="chatbubbles-outline" size={17} color="#00F0D0" />
+                  <Text style={styles.inviteSecondaryCommunityBtnText}>{t('Share to Community Feed')}</Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -3740,9 +3839,10 @@ const styles = StyleSheet.create({
   },
   communityPreviewImage: {
     width: '100%',
-    height: 180,
-    borderRadius: 12,
-    resizeMode: 'cover',
+    height: 320,
+    borderRadius: 14,
+    resizeMode: 'contain',
+    backgroundColor: '#090D1A',
     marginBottom: 10,
   },
   communityPreviewVideoWrap: {
@@ -3860,9 +3960,10 @@ const styles = StyleSheet.create({
   },
   postImagePreview: {
     width: '100%',
-    height: 140,
-    borderRadius: 14,
-    resizeMode: 'cover',
+    height: 340,
+    borderRadius: 16,
+    resizeMode: 'contain',
+    backgroundColor: '#090D1A',
   },
   postVideoPreviewWrap: {
     width: '100%',
@@ -4215,6 +4316,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 20,
     elevation: 10,
+    zIndex: 10,
+    position: 'relative',
   },
   inviteModalCloseBtn: {
     position: 'absolute',
@@ -4361,14 +4464,108 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
   },
   inviteSecondaryCommunityBtn: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    paddingVertical: 12,
+    borderRadius: 14,
+    zIndex: 20,
+  },
+  inviteSecondaryCommunityBtnDisabled: {
+    opacity: 0.6,
+  },
+  inviteSecondaryCommunityBtnText: {
+    color: '#E2E8F0',
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+  },  /* Workout Milestone & Challenge Invite Post Styles */
+  workoutMilestoneCard: {
+    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.28)',
+    padding: 14,
+    marginBottom: 14,
+  },
+  workoutMilestoneHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  workoutMilestoneBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingVertical: 8,
+    backgroundColor: 'rgba(245, 158, 11, 0.18)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
-  inviteSecondaryCommunityBtnText: {
-    color: '#94A3B8',
-    fontSize: 13,
+  workoutMilestoneBadgeText: {
+    color: '#F59E0B',
+    fontSize: 11,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: 0.5,
+  },
+  workoutPointsPill: {
+    backgroundColor: '#16A34A',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  workoutPointsPillText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+  },
+  workoutMilestoneText: {
+    color: '#F1F5F9',
+    fontSize: 14,
+    lineHeight: 22,
+    fontFamily: 'Inter_500Medium',
+  },
+  challengeInvitePostCard: {
+    backgroundColor: 'rgba(0, 240, 208, 0.08)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 240, 208, 0.28)',
+    padding: 14,
+    marginBottom: 14,
+  },
+  challengeInvitePostHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  challengeInvitePostBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(0, 240, 208, 0.18)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  challengeInvitePostBadgeText: {
+    color: '#00F0D0',
+    fontSize: 11,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: 0.5,
+  },
+  challengeInvitePostContent: {
+    color: '#F1F5F9',
+    fontSize: 14,
+    lineHeight: 22,
     fontFamily: 'Inter_500Medium',
   },
 });
