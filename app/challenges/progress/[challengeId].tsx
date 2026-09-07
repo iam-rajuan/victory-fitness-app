@@ -25,6 +25,7 @@ import { ErrorPopupModal } from '../../../components/ErrorPopupModal';
 import { formatAppError } from '../../../lib/error';
 import { getCachedResourceSnapshot } from '../../../lib/resourceCache';
 import { fetchChallengeProgressData, getChallengeProgressCacheKey } from '../../../lib/screenData';
+import { BrandConfetti } from '../../../components/confetti/BrandConfetti';
 
 type ChallengePlanExercise = {
   id: string;
@@ -972,16 +973,8 @@ export default function ChallengeProgressScreen() {
             ))}
           </View>
 
-          {/* Confetti Animation */}
-          {Array.from({ length: 18 }).map((_, index) => (
-            <Animated.View
-              key={`confetti-${index}`}
-              style={[
-                styles.confettiPiece,
-                { left: `${5 + ((index * 37) % 90)}%`, backgroundColor: index % 3 === 0 ? Colors.accentGold : index % 3 === 1 ? Colors.primary : '#F472B6', transform: [{ translateY: celebrationAnimation.interpolate({ inputRange: [0, 1], outputRange: [-80 - index * 8, 480 + index * 14] }) }, { rotate: `${index * 24}deg` }] },
-              ]}
-            />
-          ))}
+          {/* Brand-Coloured Confetti Animation */}
+          <BrandConfetti active={Boolean(celebration)} />
 
           {/* Floating Actions Header (Download, Share, Close) */}
           <View style={styles.floatingHeaderActions}>
@@ -1057,6 +1050,28 @@ export default function ChallengeProgressScreen() {
 
             {/* Bottom URL */}
             <Text style={styles.newPostcardUrl}>VICTORY-FITNESS.APP</Text>
+
+            {/* Share to Community Action Button */}
+            <TouchableOpacity
+              style={styles.shareCommunityBtn}
+              activeOpacity={0.85}
+              onPress={() => {
+                const dayTitle = celebrationDay?.title || thread?.title || 'Challenge Workout';
+                setCelebration(null);
+                router.push({
+                  pathname: '/challenge',
+                  params: {
+                    tab: 'COMMUNITY',
+                    prefillSource: 'challenge_completion',
+                    prefillChallengeId: String(thread?.challenge_id || ''),
+                    prefillStatus: `Just completed ${dayTitle}! Streak: ${celebrationStreakCount} 🔥`,
+                  },
+                } as any);
+              }}
+            >
+              <Ionicons name="people" size={16} color="#050814" />
+              <Text style={styles.shareCommunityBtnText}>{t('Share to Community').toUpperCase()}</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -2180,6 +2195,27 @@ const styles = StyleSheet.create({
     letterSpacing: 2.2,
     fontFamily: 'Inter_700Bold',
     marginTop: 8,
+  },
+  shareCommunityBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#00F0D0',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 14,
+    marginTop: 16,
+    shadowColor: '#00F0D0',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  shareCommunityBtnText: {
+    color: '#050814',
+    fontFamily: 'Inter_700Bold',
+    fontSize: 13,
+    letterSpacing: 0.6,
   },
 
   postcardShareLabel: { color: '#E5E7EB', fontSize: 10, letterSpacing: 1.2, fontFamily: 'Inter_700Bold', marginTop: 12 },

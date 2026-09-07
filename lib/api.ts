@@ -181,6 +181,8 @@ export type AuthUser = {
   workout_unlock_label?: string | null;
   training_trigger_context?: string | null;
   training_trigger_action?: string | null;
+  daily_protein_target?: number | null;
+  share_activity_with_network?: boolean;
   points?: number;
   workouts_completed?: number;
   workouts_total?: number;
@@ -609,6 +611,8 @@ function normalizeAuthUser(user: Partial<AuthUser> & { id?: string; name?: strin
     workout_unlock_label: user.workout_unlock_label == null ? null : String(user.workout_unlock_label),
     training_trigger_context: user.training_trigger_context == null ? null : String(user.training_trigger_context),
     training_trigger_action: user.training_trigger_action == null ? null : String(user.training_trigger_action),
+    daily_protein_target: user.daily_protein_target != null ? Number(user.daily_protein_target) : null,
+    share_activity_with_network: user.share_activity_with_network !== undefined ? Boolean(user.share_activity_with_network) : true,
     points: Math.max(Number(user.points ?? 0) || 0, 0),
     workouts_completed: Math.max(Number(user.workouts_completed ?? 0) || 0, 0),
     workouts_total: Math.max(Number(user.workouts_total ?? 0) || 0, 0),
@@ -907,8 +911,9 @@ export async function getAuthUser() {
 
 export type HomepageQuote = { id: string; text: string; author: string; active: boolean };
 
-export async function fetchHomepageQuote() {
-  return apiRequest<HomepageQuote | null>('/content/homepage/quote');
+export async function fetchHomepageQuote(appVersion?: string) {
+  const query = appVersion ? `?app_version=${encodeURIComponent(appVersion)}` : '';
+  return apiRequest<HomepageQuote | null>(`/content/homepage/quote${query}`);
 }
 
 export async function fetchCurrentUser(options?: { forceRefresh?: boolean }) {
@@ -995,8 +1000,10 @@ export async function updateCurrentUserProfile(payload: {
   workout_unlock_label?: string;
   training_trigger_context?: string;
   training_trigger_action?: string;
+  daily_protein_target?: number;
+  share_activity_with_network?: boolean;
 }) {
-  const user = await apiRequest<AuthUser & { role?: string; is_admin?: boolean; country?: string; country_code?: string | null; profileImage?: string; onboarding_completed?: boolean }>(
+  const user = await apiRequest<AuthUser & { role?: string; is_admin?: boolean; country?: string; country_code?: string | null; profileImage?: string; onboarding_completed?: boolean; daily_protein_target?: number; share_activity_with_network?: boolean }>(
     '/me',
     {
       method: 'PATCH',
@@ -1162,6 +1169,24 @@ export async function startPhaseOneBetaSubscription() {
   currentUserFetchedAt = Date.now();
   await persistAuthUser(authUser);
   return user;
+}
+
+export type NetworkActivityResponse = {
+  active_today: number;
+  user_trained_today?: boolean;
+  headline?: string;
+  is_silver_or_above?: boolean;
+  recent_completions: Array<{
+    id: string;
+    name: string;
+    action: string;
+    time_ago: string;
+    avatar_color: string;
+  }>;
+};
+
+export async function fetchNetworkActivity() {
+  return apiRequest<NetworkActivityResponse>('/content/network-activity');
 }
 
 export async function fetchSubscriptionPlans() {

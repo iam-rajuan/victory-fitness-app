@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 import { Colors } from '../../constants/Colors';
 import { fetchHomepageQuote } from '../../lib/api';
 import { useLanguage } from '../../lib/i18n';
+
+const APP_VERSION = Constants.expoConfig?.version || '1.0.0';
+const QUOTE_CACHE_KEY = `@victory_quote_version_${APP_VERSION}`;
 
 export default function GreetingCard() {
   const [remoteQuote, setRemoteQuote] = useState<{ text: string; author: string } | null>(null);
@@ -10,12 +15,32 @@ export default function GreetingCard() {
 
   useEffect(() => {
     let isMounted = true;
-    void fetchHomepageQuote().then((quote) => {
-      if (isMounted && quote?.text && quote.author) {
-        setRemoteQuote({ text: quote.text, author: quote.author });
+
+    const loadVersionQuote = async () => {
+      try {
+        const cached = await AsyncStorage.getItem(QUOTE_CACHE_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed?.text && isMounted) {
+            setRemoteQuote(parsed);
+            return;
+          }
+        }
+        const quote = await fetchHomepageQuote(APP_VERSION);
+        if (isMounted && quote?.text && quote.author) {
+          const quoteObj = { text: quote.text, author: quote.author };
+          setRemoteQuote(quoteObj);
+          await AsyncStorage.setItem(QUOTE_CACHE_KEY, JSON.stringify(quoteObj));
+        }
+      } catch {
+        // Keep fallback
       }
-    }).catch(() => undefined);
-    return () => { isMounted = false; };
+    };
+
+    void loadVersionQuote();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return (

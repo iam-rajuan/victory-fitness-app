@@ -12,7 +12,7 @@ import {
   Animated,
   Easing,
 } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/Colors';
@@ -152,12 +152,19 @@ const TypingDots = memo(function TypingDots() {
 export default function ChatScreen() {
   const checkingAccess = useModuleAccessGuard('/chat');
   const router = useRouter();
+  const params = useLocalSearchParams<{ initialPrompt?: string }>();
   const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
-  const [inputText, setInputText] = useState('');
+  const [inputText, setInputText] = useState(typeof params.initialPrompt === 'string' ? params.initialPrompt : '');
   const [sending, setSending] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [errorDialog, setErrorDialog] = useState<{ title: string; message: string } | null>(null);
   const listRef = useRef<FlatList<Message>>(null);
+
+  useEffect(() => {
+    if (params.initialPrompt && typeof params.initialPrompt === 'string') {
+      setInputText(params.initialPrompt);
+    }
+  }, [params.initialPrompt]);
 
   useEffect(() => {
     let cancelled = false;

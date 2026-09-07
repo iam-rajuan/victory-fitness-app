@@ -112,6 +112,13 @@ function ChallengeCard({
       ) : null}
 
       {state === 'ACTIVE' ? (
+        <View style={styles.urgencyNudgeBadge}>
+          <Ionicons name="flash" size={13} color="#FFD700" />
+          <Text style={styles.urgencyNudgeText}>{t('⚡ Finish today or lose points')}</Text>
+        </View>
+      ) : null}
+
+      {state === 'ACTIVE' ? (
         <View style={styles.challengeLibraryProgressRow}>
           <View style={styles.challengeLibraryProgressTrack}>
             <View
@@ -839,5 +846,25 @@ const styles = StyleSheet.create({
     height: 42,
     borderRadius: 12,
     backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  urgencyNudgeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255, 215, 0, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.35)',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginTop: 10,
+    marginBottom: 4,
+    alignSelf: 'flex-start',
+  },
+  urgencyNudgeText: {
+    color: '#FFD700',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
 });

@@ -610,6 +610,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
         ...(countryObj ? { country_code: countryObj.code } : {}),
         motivation_statement: finalData.motivationStatement,
         identity_statement: finalData.identityStatement,
+        daily_protein_target: onboardingProteinTarget || 112,
         onboarding_completed: true,
       });
       await startGoldTrial();
@@ -669,6 +670,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
         ...(countryObj ? { country_code: countryObj.code } : {}),
         motivation_statement: finalData.motivationStatement,
         identity_statement: finalData.identityStatement,
+        daily_protein_target: onboardingProteinTarget || 112,
         onboarding_completed: true,
       });
       await fetchCurrentUser();

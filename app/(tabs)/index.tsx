@@ -9,6 +9,12 @@ import WorkoutSection from '../../components/home/WorkoutSection';
 import ChallengesSection from '../../components/home/ChallengesSection';
 import AccountabilitySection from '../../components/home/AccountabilitySection';
 import InviteFriendsCard from '../../components/home/InviteFriendsCard';
+import ProteinRingCard from '../../components/home/ProteinRingCard';
+import StreakCard from '../../components/home/StreakCard';
+import CoachQuickPromptBar from '../../components/home/CoachQuickPromptBar';
+import { WaterTrackerCard } from '../../components/home/WaterTrackerCard';
+import { WeeklyActivityChart } from '../../components/home/WeeklyActivityChart';
+import SocialContagionWidget from '../../components/home/SocialContagionWidget';
 import AccessRestrictionModal from '../../components/AccessRestrictionModal';
 import {
   confirmCurrentUserWeight,
@@ -168,6 +174,10 @@ export default function HomeScreen() {
         <VictoryHeader showGreeting={true} />
         <GreetingCard />
 
+        <ProteinRingCard />
+        <StreakCard />
+        <CoachQuickPromptBar />
+
         {weightPromptVisible ? (
           <View style={styles.weightReminderCard}>
             <View style={styles.weightReminderHeader}>
@@ -253,6 +263,8 @@ export default function HomeScreen() {
         />
         <MoodSection />
         <WorkoutSection canAccessWorkoutPlans={canAccessWorkoutPlans} onRestrictedPress={openRestrictedSection} />
+        <WeeklyActivityChart />
+        <WaterTrackerCard />
         {canAccessChallenges ? (
           <ChallengesSection refreshToken={refreshToken} />
         ) : (
@@ -268,6 +280,7 @@ export default function HomeScreen() {
           </View>
         )}
         {/* <AccountabilitySection /> */}
+        <SocialContagionWidget />
         <InviteFriendsCard />
         <View style={{ height: 80 }} />
       </ScrollView>

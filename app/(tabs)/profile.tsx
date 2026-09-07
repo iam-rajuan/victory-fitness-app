@@ -15,6 +15,7 @@ import {
   KeyboardAvoidingView,
   Keyboard,
   Platform,
+  Switch,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -196,6 +197,7 @@ export default function ProfileScreen() {
     subscription?: {
       access?: string[];
     };
+    share_activity_with_network?: boolean;
   } | null>(null);
   const [loadingMe, setLoadingMe] = React.useState(true);
   const [bodyMetrics, setBodyMetrics] = React.useState<BodyMetrics>({
@@ -729,6 +731,37 @@ export default function ProfileScreen() {
             </View>
           </View>
         ))}
+
+        {/* ── Privacy & Community Sharing ── */}
+        <View style={styles.menuSection}>
+          <Text style={styles.sectionTitle}>{t('Privacy & Community').toUpperCase()}</Text>
+          <View style={styles.menuCard}>
+            <View style={styles.privacyRow}>
+              <View style={[styles.menuIconWrap, { backgroundColor: 'rgba(0, 240, 208, 0.15)' }]}>
+                <Ionicons name="people" size={18} color="#00F0D0" />
+              </View>
+              <View style={{ flex: 1, paddingRight: 12 }}>
+                <Text style={styles.menuLabel}>{t('Share Activity with Network')}</Text>
+                <Text style={styles.privacySubLabel}>
+                  {t('Allow workout activity to contribute to the community trainee count.')}
+                </Text>
+              </View>
+              <Switch
+                value={Boolean(me?.share_activity_with_network !== false)}
+                onValueChange={async (value) => {
+                  try {
+                    const updated = await updateCurrentUserProfile({ share_activity_with_network: value });
+                    setMe((prev) => prev ? { ...prev, share_activity_with_network: updated.share_activity_with_network } : prev);
+                  } catch (e) {
+                    Alert.alert(t('Error'), t('Failed to update privacy setting'));
+                  }
+                }}
+                trackColor={{ false: '#262D42', true: '#00F0D0' }}
+                thumbColor={me?.share_activity_with_network !== false ? '#FFFFFF' : '#8E9BAE'}
+              />
+            </View>
+          </View>
+        </View>
 
         {/* ── Log Out ── */}
         <TouchableOpacity
@@ -1563,6 +1596,18 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginHorizontal: 16 },
 
   /* Logout */
+  privacyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  privacySubLabel: {
+    color: Colors.textMuted,
+    fontSize: 11,
+    marginTop: 2,
+    lineHeight: 15,
+  },
   logoutBtn: {
     flexDirection: 'row',
     justifyContent: 'center',

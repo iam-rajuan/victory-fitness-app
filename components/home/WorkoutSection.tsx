@@ -5,12 +5,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import { useLanguage } from '../../lib/i18n';
 import {
+  createStrengthWorkoutPlan,
   fetchLatestStrengthWorkoutPlan,
   loadLatestStrengthWorkoutPlan,
   loadLatestVideoWorkoutPlan,
   StrengthPlanResponse,
   VideoPlanResponse,
 } from '../../lib/workout-plans';
+import { fetchCurrentUserBodyMetrics, fetchCurrentUserOnboarding } from '../../lib/api';
 
 type WorkoutSectionProps = {
   canAccessWorkoutPlans?: boolean;
@@ -59,6 +61,63 @@ export default function WorkoutSection({
   const [strengthPlan, setStrengthPlan] = useState<StrengthPlanResponse | null>(null);
   const [videoPlan, setVideoPlan] = useState<VideoPlanResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isStartingPlan, setIsStartingPlan] = useState(false);
+
+  const handleStartPlan = async () => {
+    if (strengthPlan) {
+      router.push('/workoutplan/strength-plan');
+      return;
+    }
+    if (videoPlan) {
+      router.push('/workoutplan/video-plan');
+      return;
+    }
+
+    setIsStartingPlan(true);
+    try {
+      const [onboarding, metrics] = await Promise.all([
+        fetchCurrentUserOnboarding().catch(() => null),
+        fetchCurrentUserBodyMetrics().catch(() => null),
+      ]);
+
+      const goal = onboarding?.anamnese?.primaryGoal;
+      const mappedGoal =
+        goal === 'Build muscle' ? 'HYPERTROPHY' :
+        goal === 'Improve endurance' ? 'POWER & SPEED' :
+        goal === 'Lose weight' ? 'BODY RECOMP' : 'PURE STRENGTH';
+
+      const equip = onboarding?.anamnese?.equipmentAccess;
+      const mappedEquip =
+        equip === 'No equipment' ? ['Bodyweight Only'] :
+        equip === 'Home gym' ? ['Dumbbells', 'Bench', 'Resistance Bands', 'Pull-up Bar'] :
+        ['Barbell', 'Dumbbells', 'Cable Machine', 'Gym Machines', 'Squat Rack', 'Bench'];
+
+      const days = onboarding?.anamnese?.daysPerWeek;
+      const mappedFreq = days === '1-2 days' ? '2' : days === '5+ days' ? '5' : '4';
+
+      await createStrengthWorkoutPlan({
+        goal: mappedGoal,
+        level: 'INTERMEDIATE',
+        split: 'FULL BODY',
+        height: String(onboarding?.personalProfile?.height || metrics?.height || '175'),
+        gender: String(onboarding?.personalProfile?.gender || metrics?.gender || 'Male'),
+        bench: '',
+        squat: '',
+        deadlift: '',
+        equipment: mappedEquip,
+        frequency: mappedFreq,
+        days: ['Monday', 'Wednesday', 'Friday', 'Saturday'],
+        age: String(onboarding?.personalProfile?.age || metrics?.age || '25'),
+        weight: String(onboarding?.personalProfile?.weight || metrics?.weight || '75'),
+      });
+
+      router.push('/workoutplan/strength-plan');
+    } catch {
+      router.push('/workoutplan/strength-wizard');
+    } finally {
+      setIsStartingPlan(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -145,7 +204,7 @@ export default function WorkoutSection({
                     style={styles.actionBtn}
                     onPress={() => router.push('/workoutplan/strength-plan')}
                   >
-                    <Text style={styles.actionBtnText}>{t('RESUME WORKOUT')}</Text>
+                    <Text style={styles.actionBtnText}>{completedDays === 0 ? t('START PLAN') : t('RESUME WORKOUT')}</Text>
                     <Ionicons name="arrow-forward" size={14} color="#000" style={styles.actionBtnIcon} />
                   </TouchableOpacity>
                 </View>
@@ -193,20 +252,36 @@ export default function WorkoutSection({
           <View style={styles.workoutCardFallback}>
             <Text style={styles.workoutHeading}>{t('NO PLAN? NO PROBLEM.')}</Text>
             <Text style={styles.workoutDesc}>
-              {t('Choose your path to victory. Which plan will you start?')}
+              {t('Launch your personalized plan tailored from your onboarding goals, or choose a custom split.')}
             </Text>
-            <TouchableOpacity 
-              style={styles.workoutBtnPrimary}
-              onPress={() => router.push('/workoutplan/video-wizard')}
-            >
-              <Text style={styles.workoutBtnPrimaryText}>{t('7-DAY VIDEO PLAN')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.workoutBtnOutline}
-              onPress={() => router.push('/workoutplan/strength-wizard')}
-            >
-              <Text style={styles.workoutBtnOutlineText}>{t('CUSTOM STRENGTH PLAN')}</Text>
-            </TouchableOpacity>
+            <View style={styles.workoutFallbackButtons}>
+              <TouchableOpacity 
+                style={[styles.workoutBtnPrimary, { backgroundColor: Colors.primary, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }]}
+                onPress={() => void handleStartPlan()}
+                disabled={isStartingPlan}
+              >
+                {isStartingPlan ? (
+                  <ActivityIndicator size="small" color="#000" />
+                ) : (
+                  <>
+                    <Ionicons name="play" size={16} color="#000" style={{ marginRight: 6 }} />
+                    <Text style={[styles.workoutBtnPrimaryText, { color: '#000', fontWeight: '800' }]}>{t('START PLAN')}</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.workoutBtnOutline}
+                onPress={() => router.push('/workoutplan/video-wizard')}
+              >
+                <Text style={styles.workoutBtnOutlineText}>{t('7-DAY VIDEO PLAN')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.workoutBtnOutline}
+                onPress={() => router.push('/workoutplan/strength-wizard')}
+              >
+                <Text style={styles.workoutBtnOutlineText}>{t('CUSTOM STRENGTH PLAN')}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )
       ) : (
@@ -350,13 +425,16 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontFamily: 'Inter_400Regular',
   },
+  workoutFallbackButtons: {
+    width: '100%',
+    gap: 10,
+  },
   workoutBtnPrimary: {
     width: '100%',
     backgroundColor: Colors.primary,
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
-    marginBottom: 12,
   },
   workoutBtnPrimaryText: {
     color: '#000',
