@@ -43,7 +43,7 @@ const COMMITMENT_OPTIONS = [
   'I want to improve my health for my future',
   'I want consistency, structure, and accountability',
 ];
-const STEP_TITLES = ['Language', 'Country', 'Profile', 'Health', 'Motivation', 'Identity', 'Recommendation'];
+const STEP_TITLES = ['Language', 'Country', 'Profile', 'Protein Target', 'Health', 'Motivation', 'Identity', 'Recommendation'];
 const getHealthConcernLabel = (option: string) => (option === 'Back' ? 'Back concern' : option);
 const POPULAR_COUNTRIES = [
   { name: 'United States', code: 'US' },
@@ -330,6 +330,21 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
     });
   }, [data?.country, selectedCountry]);
   const suggestion = useMemo(() => (data ? getSuggestedTier(data.anamnese) : null), [data]);
+
+  const currentWeightKg = useMemo(() => {
+    if (!data?.personalProfile?.weight) return 0;
+    const raw = parseFloat(data.personalProfile.weight);
+    if (!Number.isFinite(raw) || raw <= 0) return 0;
+    if (data.personalProfile.weightUnit === 'lb') {
+      return parseFloat((raw * 0.45359237).toFixed(1));
+    }
+    return parseFloat(raw.toFixed(1));
+  }, [data?.personalProfile?.weight, data?.personalProfile?.weightUnit]);
+
+  const onboardingProteinTarget = useMemo(() => {
+    if (currentWeightKg <= 0) return 0;
+    return Math.round(currentWeightKg * 1.6);
+  }, [currentWeightKg]);
   const persistDraft = async (nextData: OnboardingData, nextStep = step) => {
     const draft: OnboardingData = { ...nextData, currentStep: nextStep };
     setData(draft);
@@ -384,7 +399,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
         nextErrors.weight = 'Enter a valid weight.';
       }
     }
-    if (step === 3) {
+    if (step === 4) {
       if (!data.anamnese.primaryGoal) {
         nextErrors.primaryGoal = 'Please choose your primary goal.';
       }
@@ -798,7 +813,69 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
               {errors.weight ? <Text style={styles.errorText}>{t(errors.weight)}</Text> : null}
             </View>
           ) : null}
-          {step === 3 ? (
+                    {step === 3 ? (
+            <View>
+              <Text style={styles.stepTitle}>{t('Your Daily Protein Target')}</Text>
+              <Text style={styles.stepText}>{t('Calculated scientifically based on your body weight to optimize recovery and energy.')}</Text>
+
+              {/* Main Hero Card */}
+              <View style={styles.proteinHeroCard}>
+                <View style={styles.proteinHeroHeader}>
+                  <View style={styles.proteinHeroIconCircle}>
+                    <Ionicons name="flash" size={26} color="#FFD700" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.proteinHeroEyebrow}>{t('DAILY TARGET')}</Text>
+                    <View style={styles.proteinHeroValueRow}>
+                      <Text style={styles.proteinHeroValue}>{onboardingProteinTarget > 0 ? onboardingProteinTarget : 112}</Text>
+                      <Text style={styles.proteinHeroUnit}>g</Text>
+                    </View>
+                  </View>
+                </View>
+
+                <View style={styles.proteinHeroDivider} />
+
+                <View style={styles.proteinHeroFormulaRow}>
+                  <Text style={styles.proteinHeroFormulaText}>
+                    {t('Formula: 1.6g × {weight}kg = {target}g protein daily', {
+                      weight: currentWeightKg > 0 ? currentWeightKg : 70,
+                      target: onboardingProteinTarget > 0 ? onboardingProteinTarget : 112,
+                    })}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Auto-update Rule Card */}
+              <View style={styles.proteinInfoCard}>
+                <View style={styles.proteinInfoIconWrap}>
+                  <Ionicons name="sync-outline" size={20} color="#E2B34E" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.proteinInfoTitle}>{t('Auto-updates with weight changes')}</Text>
+                  <Text style={styles.proteinInfoDesc}>
+                    {t('If your weight changes by more than 2kg, Victory automatically recalibrates your protein target and meal portions.')}
+                  </Text>
+                  <Text style={styles.proteinInfoSubnote}>
+                    {t('Set weight 70kg → target shows 112g. Auto-updates when weight changes by more than 2kg.')}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Science Card */}
+              <View style={styles.proteinInfoCard}>
+                <View style={styles.proteinInfoIconWrap}>
+                  <Ionicons name="shield-checkmark-outline" size={20} color="#A855F7" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.proteinInfoTitle}>{t('Why 1.6g per kilogram?')}</Text>
+                  <Text style={styles.proteinInfoDesc}>
+                    {t('1.6g/kg is the scientifically proven sweet spot for muscle preservation, metabolism support, and steady daily recovery.')}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          ) : null}
+          {step === 4 ? (
             <View>
               <Text style={styles.stepTitle}>{t('Sport and health anamnese')}</Text>
               <Text style={styles.stepText}>{t('Answer these five questions so we can shape the right plan recommendation.')}</Text>
@@ -878,7 +955,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
               {errors.equipmentAccess ? <Text style={styles.errorText}>{t(errors.equipmentAccess)}</Text> : null}
             </View>
           ) : null}
-          {step === 4 ? (
+          {step === 5 ? (
             <View>
               <Text style={styles.stepTitle}>{t("Before we build your plan — what’s this for?")}</Text>
               <Text style={styles.stepText}>{t('Choose the reason that feels most true, or write your own.')}</Text>
@@ -907,7 +984,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
               <Text style={styles.helperText}>{t('We only reuse this in coaching and reminder copy as a supportive anchor, never to shame or pressure you.')}</Text>
             </View>
           ) : null}
-          {step === 5 ? (
+          {step === 6 ? (
             <View>
               <Text style={styles.stepTitle}>{t('Who are you becoming?')}</Text>
               <Text style={styles.stepText}>{t('Write one sentence about the identity you are building. This is optional and can be edited later.')}</Text>
@@ -924,7 +1001,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
               <Text style={styles.helperText}>{t('Gold coaching can use this as a positive anchor in reminders and check-ins.')}</Text>
             </View>
           ) : null}
-          {step === 6 && suggestion ? (
+          {step === STEP_TITLES.length - 1 && suggestion ? (
             <View>
               <Text style={styles.stepTitle}>{t('Suggested tier')}</Text>
               <Text style={styles.stepText}>{t('Based on your answers, this is the strongest starting point for your next step inside the app.')}</Text>
@@ -968,7 +1045,9 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
               title={
                 step === STEP_TITLES.length - 1
                   ? t('Try Gold free for 5 days')
-                  : (step === 4 && !data?.motivationStatement?.trim()) || (step === 5 && !data?.identityStatement?.trim())
+                  : step === 3
+                  ? t('Next: Health & Goals Survey')
+                  : (step === 5 && !data?.motivationStatement?.trim()) || (step === 6 && !data?.identityStatement?.trim())
                   ? t('Skip for now')
                   : t('Next')
               }
@@ -1354,6 +1433,106 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     marginTop: 12,
+  },
+  proteinHeroCard: {
+    backgroundColor: 'rgba(226, 179, 78, 0.09)',
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: 'rgba(226, 179, 78, 0.35)',
+    padding: 20,
+    marginBottom: 16,
+  },
+  proteinHeroHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  proteinHeroIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(226, 179, 78, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  proteinHeroEyebrow: {
+    color: '#FFD700',
+    fontSize: 12,
+    letterSpacing: 1.5,
+    fontFamily: 'Inter_700Bold',
+    textTransform: 'uppercase',
+  },
+  proteinHeroValueRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4,
+    marginTop: 2,
+  },
+  proteinHeroValue: {
+    color: '#FFF',
+    fontSize: 38,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: -0.5,
+  },
+  proteinHeroUnit: {
+    color: '#FFD700',
+    fontSize: 20,
+    fontFamily: 'Inter_700Bold',
+  },
+  proteinHeroDivider: {
+    height: 1,
+    backgroundColor: 'rgba(226, 179, 78, 0.2)',
+    marginVertical: 14,
+  },
+  proteinHeroFormulaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  proteinHeroFormulaText: {
+    color: '#E2B34E',
+    fontSize: 13,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  proteinInfoCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+    backgroundColor: '#111514',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 16,
+    marginBottom: 12,
+  },
+  proteinInfoIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  proteinInfoTitle: {
+    color: '#FFF',
+    fontSize: 14,
+    fontFamily: 'Inter_700Bold',
+    marginBottom: 4,
+  },
+  proteinInfoDesc: {
+    color: Colors.textSecondary,
+    fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    lineHeight: 18,
+  },
+  proteinInfoSubnote: {
+    color: '#FFD700',
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
+    lineHeight: 16,
+    marginTop: 6,
   },
   reviewCard: {
     borderRadius: 18,
