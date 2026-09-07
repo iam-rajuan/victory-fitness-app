@@ -1040,7 +1040,94 @@ function MealPlanResult({
     };
   };
 
-  const analyzeSelectedAsset = async (asset: AnalysisImageAsset) => {
+  const formatMealAnalysisError = (err: unknown): string => {
+  const errDetails = formatAppError(err);
+  let raw = errDetails.message || '';
+  if (raw.includes('{') && raw.includes('error')) {
+    try {
+      const jsonStart = raw.indexOf('{');
+      const jsonParsed = JSON.parse(raw.slice(jsonStart));
+      if (jsonParsed?.error?.message) {
+        raw = jsonParsed.error.message;
+      }
+    } catch {
+      // ignore
+    }
+  }
+  const lower = raw.toLowerCase();
+  if (lower.includes('not represent a valid image') || lower.includes('supported image formats') || lower.includes('unsupported image format')) {
+    return 'Please select or capture a clear meal photo in JPEG, PNG, or WebP format.';
+  }
+  if (lower.includes('openai request failed') || lower.includes('502') || lower.includes('bad gateway')) {
+    return 'The AI vision service is temporarily busy. Please try another meal photo.';
+  }
+  return raw || 'Unable to analyze this meal photo right now.';
+};
+
+async function ensureJpegAnalysisAsset(asset: AnalysisImageAsset): Promise<AnalysisImageAsset> {
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof document !== 'undefined') {
+    try {
+      const converted = await new Promise<{ uri: string; base64: string; mimeType: string }>((resolve, reject) => {
+        const img = new (window as any).Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            let width = img.naturalWidth || img.width || 800;
+            let height = img.naturalHeight || img.height || 600;
+            const maxDim = 1200;
+            if (width > maxDim || height > maxDim) {
+              if (width > height) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+              } else {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+              }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              throw new Error('Canvas 2D context unavailable');
+            }
+            ctx.drawImage(img, 0, 0, width, height);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            const base64 = dataUrl.split(',')[1] || '';
+            resolve({
+              uri: dataUrl,
+              base64,
+              mimeType: 'image/jpeg',
+            });
+          } catch (err) {
+            reject(err);
+          }
+        };
+        img.onerror = () => reject(new Error('Failed to load image in canvas'));
+        if (asset.base64 && !asset.uri?.startsWith('data:')) {
+          img.src = `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}`;
+        } else {
+          img.src = asset.uri;
+        }
+      });
+
+      return {
+        ...asset,
+        uri: converted.uri,
+        base64: converted.base64,
+        mimeType: converted.mimeType,
+        fileName: asset.fileName?.replace(/\.[^/.]+$/, '.jpg') ?? 'meal-photo.jpg',
+      };
+    } catch {
+      // If canvas conversion failed, proceed with original asset
+    }
+  }
+
+  return asset;
+}
+
+  const analyzeSelectedAsset = async (rawAsset: AnalysisImageAsset) => {
+    const asset = await ensureJpegAnalysisAsset(rawAsset);
     setAnalysisImage(asset);
     setAnalysisError('');
     setAnalysisResult(null);
@@ -1052,7 +1139,7 @@ function MealPlanResult({
       setAnalysisResult(response);
       setAnalysisHistory((prev) => [response, ...prev.filter((item) => item.analysis_id !== response.analysis_id)]);
     } catch (analysisErr) {
-      setAnalysisError(formatAppError(analysisErr).message);
+      setAnalysisError(formatMealAnalysisError(analysisErr));
     } finally {
       setAnalysisLoading(false);
     }
@@ -1465,12 +1552,12 @@ function MealPlanResult({
               <Text style={styles.analysisDesc}>{t('Take a photo of your meal to get instant macro tracking and health feedback.')}</Text>
               <View style={styles.analysisActionBtnRow}>
                 <TouchableOpacity style={styles.analysisActionBtn} onPress={() => void handleUseCamera()} activeOpacity={0.85}>
-                  <Ionicons name="camera" size={18} color="#fff" />
-                  <Text style={styles.analysisActionBtnText}>{t('Take Photo')}</Text>
+                  <Ionicons name="camera" size={19} color="#6D28D9" />
+                  <Text style={[styles.analysisActionBtnText, { color: '#6D28D9' }]}>{t('Take Photo')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.analysisActionBtn, styles.analysisActionBtnSecondary]} onPress={() => void handlePickFromLibrary()} activeOpacity={0.85}>
-                  <Ionicons name="images" size={18} color="#fff" />
-                  <Text style={styles.analysisActionBtnText}>{t('Photo Album')}</Text>
+                  <Ionicons name="images" size={19} color="#fff" />
+                  <Text style={[styles.analysisActionBtnText, { color: '#fff' }]}>{t('Photo Album')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1717,47 +1804,7 @@ function MealPlanResult({
         t={t}
       />
 
-      <Modal
-        visible={analysisCapturePickerVisible}
-        animationType="fade"
-        transparent
-        onRequestClose={() => setAnalysisCapturePickerVisible(false)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.sourcePickerSheet}>
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalEyebrow}>{t('MEAL ANALYSIS')}</Text>
-            <Text style={styles.modalTitle}>{t('Camera / Gallery')}</Text>
-            <Text style={styles.modalSubtitle}>
-              {t('Choose between taking a new photo or selecting one from your gallery.')}
-            </Text>
 
-            <TouchableOpacity style={styles.sourcePickerOption} activeOpacity={0.85} onPress={() => void handleUseCamera()}>
-              <Ionicons name="camera-outline" size={22} color="#fff" />
-              <View style={styles.sourcePickerOptionTextWrap}>
-                <Text style={styles.sourcePickerOptionTitle}>{t('Use Camera')}</Text>
-                <Text style={styles.sourcePickerOptionSub}>{t('Take a new meal photo')}</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.sourcePickerOption} activeOpacity={0.85} onPress={() => void handlePickFromLibrary()}>
-              <Ionicons name="images-outline" size={22} color="#fff" />
-              <View style={styles.sourcePickerOptionTextWrap}>
-                <Text style={styles.sourcePickerOptionTitle}>{t('Choose from Library')}</Text>
-                <Text style={styles.sourcePickerOptionSub}>{t('Select an existing meal photo')}</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.modalCancelBtn}
-              activeOpacity={0.8}
-              onPress={() => setAnalysisCapturePickerVisible(false)}
-            >
-              <Text style={styles.modalCancelBtnText}>{t('Close')}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
 
       <Modal
         visible={Boolean(selectedAnalysis)}
