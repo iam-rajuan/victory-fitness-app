@@ -126,6 +126,40 @@ export async function deleteStrengthWorkoutPlan(planId: string) {
   await persistLatestStrengthPlan(null);
 }
 
+export type StrengthFeedbackResponse = {
+  plan: StrengthPlanResponse;
+  adjustment_pct: number;
+  next_volume_direction: string;
+  next_intensity_target: string;
+  summary: string;
+  what_went_well?: string;
+  cautions?: string;
+  next_steps?: string;
+  updated_at: string;
+};
+
+export async function submitStrengthWorkoutFeedback(
+  planId: string,
+  payload: {
+    day: string;
+    perceived_difficulty: string;
+    energy?: string;
+    soreness?: string;
+    notes?: string;
+    pain_flag?: boolean;
+    sweet_spot_flag?: boolean;
+  }
+): Promise<StrengthFeedbackResponse> {
+  const result = await apiRequest<StrengthFeedbackResponse>(`/ai/workout-plan/strength/${encodeURIComponent(planId)}/feedback`, {
+    method: 'POST',
+    body: payload,
+  });
+  if (result.plan) {
+    await persistLatestStrengthPlan(result.plan);
+  }
+  return result;
+}
+
 export async function updateStrengthWorkoutPlanProgress(
   planId: string,
   payload: {
@@ -136,12 +170,73 @@ export async function updateStrengthWorkoutPlanProgress(
     completed?: boolean;
   }
 ) {
-  const plan = await apiRequest<StrengthPlanResponse>(`/ai/workout-plan/strength/${encodeURIComponent(planId)}/progress`, {
-    method: 'PATCH',
-    body: payload,
-  });
-  await persistLatestStrengthPlan(plan);
-  return plan;
+  try {
+    const plan = await apiRequest<StrengthPlanResponse>(`/ai/workout-plan/strength/${encodeURIComponent(planId)}/progress`, {
+      method: 'PATCH',
+      body: payload,
+    });
+    await persistLatestStrengthPlan(plan);
+    return plan;
+  } catch (netErr) {
+    // OFFLINE RESILIENCE: Apply progress updates directly to local cache
+    const current = latestStrengthPlan || (await loadLatestStrengthWorkoutPlan());
+    if (!current) throw netErr;
+
+    const progressList = Array.isArray(current.progress) ? [...current.progress] : [];
+    const dayIndex = progressList.findIndex((p) => p.day === payload.day);
+    const existing = dayIndex >= 0 ? progressList[dayIndex] : {
+      day: payload.day,
+      started: false,
+      completed: false,
+      completed_section_ids: [],
+      completed_exercise_ids: [],
+    };
+
+    const nextDay = { ...existing };
+    if (typeof payload.started === 'boolean') {
+      nextDay.started = payload.started;
+      if (payload.started && !nextDay.started_at) {
+        nextDay.started_at = new Date().toISOString();
+      }
+    }
+    if (typeof payload.completed === 'boolean') {
+      nextDay.completed = payload.completed;
+      if (payload.completed && !nextDay.completed_at) {
+        nextDay.completed_at = new Date().toISOString();
+      }
+    }
+    if (payload.exercise_id) {
+      const exSet = new Set(nextDay.completed_exercise_ids || []);
+      if (exSet.has(payload.exercise_id)) {
+        exSet.delete(payload.exercise_id);
+      } else {
+        exSet.add(payload.exercise_id);
+      }
+      nextDay.completed_exercise_ids = Array.from(exSet);
+    }
+    if (payload.section_id) {
+      const secSet = new Set(nextDay.completed_section_ids || []);
+      if (secSet.has(payload.section_id)) {
+        secSet.delete(payload.section_id);
+      } else {
+        secSet.add(payload.section_id);
+      }
+      nextDay.completed_section_ids = Array.from(secSet);
+    }
+
+    if (dayIndex >= 0) {
+      progressList[dayIndex] = nextDay;
+    } else {
+      progressList.push(nextDay);
+    }
+
+    const updatedPlan: StrengthPlanResponse = {
+      ...current,
+      progress: progressList,
+    };
+    await persistLatestStrengthPlan(updatedPlan);
+    return updatedPlan;
+  }
 }
 
 export async function createVideoWorkoutPlan(payload: Record<string, unknown>) {

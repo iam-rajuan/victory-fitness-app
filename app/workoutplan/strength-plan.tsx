@@ -27,11 +27,23 @@ import {
   StrengthPlanResponse,
   updateStrengthWorkoutPlanProgress,
 } from '../../lib/workout-plans';
-import { apiRequest, fetchCurrentUser } from '../../lib/api';
+import { apiRequest, createWorkoutLog, fetchCurrentUser } from '../../lib/api';
 import { goBackOrReplace } from '../../lib/navigation';
 import { useModuleAccessGuard } from '../../lib/useModuleAccessGuard';
 import { useLanguage } from '../../lib/i18n';
 import { formatAppError } from '../../lib/error';
+import ActiveRestTimer from '../../components/workout/ActiveRestTimer';
+import WorkoutCompletionModal from '../../components/workout/WorkoutCompletionModal';
+
+function parseRestSeconds(restStr: string): number {
+  const match = String(restStr || '').match(/(\d+)/);
+  if (match) {
+    const val = parseInt(match[1], 10);
+    if (/min/i.test(restStr)) return val * 60;
+    return val;
+  }
+  return 60;
+}
 
 type CompletionCard = {
   imageBase64: string;
@@ -78,6 +90,13 @@ export default function StrengthPlanDashboard() {
   const [expandedPlanId, setExpandedPlanId] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<string>('Day 1');
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+
+  // Active Rest Timer & Completion State
+  const [activeRestSeconds, setActiveRestSeconds] = useState<number | null>(null);
+  const [activeRestExercise, setActiveRestExercise] = useState<string>('');
+  const [completedWorkoutsCount, setCompletedWorkoutsCount] = useState(2);
+  const [completedDayLabel, setCompletedDayLabel] = useState<string>('');
+  const [activePlanIdForFeedback, setActivePlanIdForFeedback] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -189,8 +208,20 @@ export default function StrengthPlanDashboard() {
         completed: true,
       });
       updatePlanProgressState(updatedPlan);
+
+      // Log workout session to backend
+      void createWorkoutLog({
+        workout_id: `${plan.plan_id}-${dayLabel.toLowerCase().replace(/\s+/g, '-')}`,
+        duration_seconds: 1800,
+        status: 'completed',
+      }).catch(() => undefined);
+
       const isFullPlan = updatedPlan.days.length > 0 && updatedPlan.days.every((day) => getDayProgress(updatedPlan, day.day)?.completed);
-      setCompletionCard(await fetchStrengthCompletionCard(plan.plan_id, dayLabel, isFullPlan));
+      const card = await fetchStrengthCompletionCard(plan.plan_id, dayLabel, isFullPlan);
+      setCompletionCard(card);
+      setCompletedDayLabel(dayLabel);
+      setActivePlanIdForFeedback(plan.plan_id);
+      setCompletedWorkoutsCount((prev) => prev + 1);
     } catch (error) {
       Alert.alert(t('Error'), formatAppError(error, t('Unable to complete workout right now.')).message);
     } finally {
@@ -304,6 +335,17 @@ export default function StrengthPlanDashboard() {
         completed,
       });
       updatePlanProgressState(updatedPlan);
+
+      // Trigger Rest Timer automatically when a set is completed
+      if (completed) {
+        const planDay = plan.days?.find((d) => d.day === dayLabel);
+        const allExercises = planDay?.sections?.flatMap((s) => s.exercises) || planDay?.exercises || [];
+        const targetEx = allExercises.find((e) => e.id === exerciseId);
+        if (targetEx) {
+          setActiveRestSeconds(parseRestSeconds(targetEx.rest));
+          setActiveRestExercise(targetEx.name);
+        }
+      }
     } catch (error) {
       Alert.alert(t('Error'), formatAppError(error, t('Unable to update workout progress right now.')).message);
     } finally {
@@ -652,10 +694,17 @@ export default function StrengthPlanDashboard() {
                                                   <Ionicons name="fitness-outline" size={16} color={Colors.accentBlue} />
                                                   <Text style={styles.metricValue}>{ex.weight}</Text>
                                                 </View>
-                                                <View style={styles.metricItem}>
+                                                <TouchableOpacity
+                                                  style={styles.metricItem}
+                                                  activeOpacity={0.7}
+                                                  onPress={() => {
+                                                    setActiveRestSeconds(parseRestSeconds(ex.rest));
+                                                    setActiveRestExercise(ex.name);
+                                                  }}
+                                                >
                                                   <Ionicons name="timer-outline" size={16} color={Colors.accentBlue} />
-                                                  <Text style={styles.metricValue}>{ex.rest} {t('Rest')}</Text>
-                                                </View>
+                                                  <Text style={[styles.metricValue, { color: Colors.accentBlue }]}>{ex.rest} {t('Rest')}</Text>
+                                                </TouchableOpacity>
                                               </View>
                                             </View>
                                           );
@@ -837,10 +886,17 @@ export default function StrengthPlanDashboard() {
                                                   <Ionicons name="fitness-outline" size={16} color={Colors.accentBlue} />
                                                   <Text style={styles.metricValue}>{ex.weight}</Text>
                                                 </View>
-                                                <View style={styles.metricItem}>
+                                                <TouchableOpacity
+                                                  style={styles.metricItem}
+                                                  activeOpacity={0.7}
+                                                  onPress={() => {
+                                                    setActiveRestSeconds(parseRestSeconds(ex.rest));
+                                                    setActiveRestExercise(ex.name);
+                                                  }}
+                                                >
                                                   <Ionicons name="timer-outline" size={16} color={Colors.accentBlue} />
-                                                  <Text style={styles.metricValue}>{ex.rest} {t('Rest')}</Text>
-                                                </View>
+                                                  <Text style={[styles.metricValue, { color: Colors.accentBlue }]}>{ex.rest} {t('Rest')}</Text>
+                                                </TouchableOpacity>
                                               </View>
                                             </View>
                                           );
@@ -882,6 +938,30 @@ export default function StrengthPlanDashboard() {
           </View>
         </ScrollView>
       )}
+
+      {/* Active Rest Timer Floating Overlay */}
+      {activeRestSeconds !== null && (
+        <ActiveRestTimer
+          initialSeconds={activeRestSeconds}
+          exerciseName={activeRestExercise}
+          onClose={() => setActiveRestSeconds(null)}
+          onFinished={() => {
+            // chime & vibration handled internally
+          }}
+        />
+      )}
+
+      {/* Workout Completion, Confetti & Feedback Modal */}
+      <WorkoutCompletionModal
+        visible={Boolean(completionCard)}
+        planId={activePlanIdForFeedback}
+        dayLabel={completedDayLabel || selectedDay}
+        completionCard={completionCard}
+        totalCompletedWorkouts={completedWorkoutsCount}
+        onClose={() => setCompletionCard(null)}
+        onDownload={handleDownloadCard}
+        onShareCard={handleShareCard}
+      />
 
       {/* Delete Confirmation Modal */}
       <Modal

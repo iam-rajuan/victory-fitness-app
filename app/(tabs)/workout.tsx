@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../../constants/Colors';
-import { fetchCurrentUser, recordAnalyticsEvent } from '../../lib/api';
+import { fetchCurrentUser, recordAnalyticsEvent, fetchWorkoutLogs, seedTestWorkoutLogs, WorkoutLogItem } from '../../lib/api';
 import { canAccessFeature } from '../../lib/access';
 import VictoryHeader from '../../components/VictoryHeader';
 import { fetchWorkoutLibrary, getCachedWorkoutLibrary, WorkoutLibraryCategory, WorkoutLibraryItem } from '../../lib/workouts';
@@ -157,6 +157,91 @@ export default function WorkoutScreen() {
   const [canAccessWorkoutPlans, setCanAccessWorkoutPlans] = useState(true);
   const [selectedCategoryName, setSelectedCategoryName] = useState<string | null>(null);
 
+  // Workout History (Paginated at 20 items per page)
+  const [historyLogs, setHistoryLogs] = useState<WorkoutLogItem[]>([]);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyTotal, setHistoryTotal] = useState(0);
+  const [historyTotalPages, setHistoryTotalPages] = useState(1);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [seedingLogs, setSeedingLogs] = useState(false);
+
+  const loadHistory = React.useCallback(async (pageToLoad = 1) => {
+    setHistoryLoading(true);
+    try {
+      const res = await fetchWorkoutLogs(pageToLoad, 20);
+      setHistoryLogs(res.items || []);
+      setHistoryTotal(res.total || 0);
+      setHistoryTotalPages(res.total_pages || 1);
+      setHistoryPage(res.page || 1);
+    } catch {
+      // ignore
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
+
+  const handleSeed50Logs = async () => {
+    setSeedingLogs(true);
+    try {
+      await seedTestWorkoutLogs(55);
+      await loadHistory(1);
+      Alert.alert(t('Success'), t('55 realistic workout logs seeded! Test pagination (20 items/page) below.'));
+    } catch (seedErr) {
+      Alert.alert(t('Error'), formatAppError(seedErr).message);
+    } finally {
+      setSeedingLogs(false);
+    }
+  };
+
+  const todaysWorkoutInfo = useMemo(() => {
+    if (strengthPlan && strengthPlan.days && strengthPlan.days.length > 0) {
+      const completedDays = strengthPlan.progress?.filter((p) => p.completed).map((p) => p.day) || [];
+      const nextDay = strengthPlan.days.find((d) => !completedDays.includes(d.day)) || strengthPlan.days[0];
+      const totalDays = strengthPlan.days.length;
+      const completedCount = completedDays.length;
+      const progressPercent = totalDays > 0 ? completedCount / totalDays : 0;
+      const display = getPlanDisplayData(strengthPlan.summary, t('Custom Strength Plan'));
+
+      return {
+        type: 'STRENGTH',
+        planId: strengthPlan.plan_id,
+        title: display.title,
+        dayTitle: nextDay.title || nextDay.day,
+        dayLabel: nextDay.day,
+        estTime: nextDay.est_time || '45 MIN',
+        volume: nextDay.volume || 'Optimal',
+        intensity: nextDay.intensity || 'Hypertrophy',
+        totalDays,
+        completedCount,
+        progressPercent,
+        isFinishedAll: completedCount >= totalDays,
+      };
+    }
+
+    if (videoPlan && videoPlan.days && videoPlan.days.length > 0) {
+      const activeDays = videoPlan.days.filter((day) => day.workouts_count > 0).length || 0;
+      const display = getPlanDisplayData(videoPlan.summary, t('7-Day Video Plan'));
+      const firstActiveDay = videoPlan.days.find((d) => d.workouts_count > 0) || videoPlan.days[0];
+
+      return {
+        type: 'VIDEO',
+        planId: null,
+        title: display.title,
+        dayTitle: firstActiveDay.day,
+        dayLabel: firstActiveDay.day,
+        estTime: firstActiveDay.duration_label || '30 MIN',
+        volume: `${firstActiveDay.workouts_count} Workouts`,
+        intensity: 'Video Flow',
+        totalDays: 7,
+        completedCount: activeDays,
+        progressPercent: activeDays / 7,
+        isFinishedAll: false,
+      };
+    }
+
+    return null;
+  }, [strengthPlan, videoPlan, t]);
+
   useFocusEffect(
     React.useCallback(() => {
       void recordAnalyticsEvent('workout_library_visited').catch(() => undefined);
@@ -267,6 +352,7 @@ export default function WorkoutScreen() {
       };
 
       void loadSavedPlans();
+      void loadHistory(1);
 
       return () => {
         active = false;
@@ -447,6 +533,106 @@ export default function WorkoutScreen() {
           </View>
         ) : (
           <>
+                        {/* 0. PINNED TODAY'S WORKOUT (Always pinned at the top, never pushed down) */}
+            <View style={styles.pinnedSection}>
+              <View style={styles.pinnedHeaderRow}>
+                <View style={styles.pinnedBadge}>
+                  <Ionicons name="pin" size={13} color="#EAB308" />
+                  <Text style={styles.pinnedBadgeText}>{t("PINNED • TODAY'S WORKOUT")}</Text>
+                </View>
+                {todaysWorkoutInfo ? (
+                  <Text style={styles.pinnedDayTag}>{todaysWorkoutInfo.dayLabel}</Text>
+                ) : null}
+              </View>
+
+              {todaysWorkoutInfo ? (
+                <TouchableOpacity
+                  style={styles.pinnedCard}
+                  activeOpacity={0.88}
+                  onPress={() => {
+                    if (todaysWorkoutInfo.type === 'STRENGTH') {
+                      router.push('/workoutplan/strength-plan');
+                    } else {
+                      router.push('/workoutplan/video-plan');
+                    }
+                  }}
+                >
+                  <View style={styles.pinnedCardTop}>
+                    <View style={{ flex: 1, paddingRight: 10 }}>
+                      <Text style={styles.pinnedCardCategory}>{todaysWorkoutInfo.title.toUpperCase()}</Text>
+                      <Text style={styles.pinnedCardTitle} numberOfLines={2}>
+                        {todaysWorkoutInfo.dayTitle}
+                      </Text>
+                    </View>
+                    <View style={styles.pinnedDurationWrap}>
+                      <Ionicons name="time-outline" size={14} color="#06B6D4" />
+                      <Text style={styles.pinnedDurationText}>{todaysWorkoutInfo.estTime}</Text>
+                    </View>
+                  </View>
+
+                  {/* Metrics Row */}
+                  <View style={styles.pinnedMetricsRow}>
+                    <View style={styles.pinnedMetricItem}>
+                      <Text style={styles.pinnedMetricLabel}>{t('VOLUME')}</Text>
+                      <Text style={styles.pinnedMetricVal}>{todaysWorkoutInfo.volume}</Text>
+                    </View>
+                    <View style={styles.pinnedMetricDivider} />
+                    <View style={styles.pinnedMetricItem}>
+                      <Text style={styles.pinnedMetricLabel}>{t('INTENSITY')}</Text>
+                      <Text style={styles.pinnedMetricVal}>{todaysWorkoutInfo.intensity}</Text>
+                    </View>
+                    <View style={styles.pinnedMetricDivider} />
+                    <View style={styles.pinnedMetricItem}>
+                      <Text style={styles.pinnedMetricLabel}>{t('PLAN PROGRESS')}</Text>
+                      <Text style={styles.pinnedMetricVal}>
+                        {todaysWorkoutInfo.completedCount}/{todaysWorkoutInfo.totalDays} {t('Days')}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Progress Bar */}
+                  <View style={styles.pinnedProgressBarContainer}>
+                    <View
+                      style={[
+                        styles.pinnedProgressBarFill,
+                        { width: `${Math.max(5, todaysWorkoutInfo.progressPercent * 100)}%` },
+                      ]}
+                    />
+                  </View>
+
+                  {/* Action CTA Button */}
+                  <View style={styles.pinnedActionBtn}>
+                    <Ionicons name="play-circle" size={20} color="#000" />
+                    <Text style={styles.pinnedActionBtnText}>
+                      {todaysWorkoutInfo.isFinishedAll
+                        ? t('REVIEW COMPLETED PLAN')
+                        : todaysWorkoutInfo.completedCount > 0
+                          ? t("RESUME TODAY'S SESSION")
+                          : t("START TODAY'S WORKOUT")}
+                    </Text>
+                    <Ionicons name="arrow-forward" size={16} color="#000" />
+                  </View>
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.pinnedEmptyCard}>
+                  <View style={styles.pinnedEmptyHeader}>
+                    <Ionicons name="sparkles" size={22} color="#06B6D4" />
+                    <Text style={styles.pinnedEmptyTitle}>{t('No Active Plan Pinned')}</Text>
+                  </View>
+                  <Text style={styles.pinnedEmptyText}>
+                    {t('Generate an AI customized strength plan or pick a video workout to pin your daily training.')}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.pinnedCreateBtn}
+                    onPress={() => router.push('/workoutplan/strength-wizard')}
+                  >
+                    <Ionicons name="flash" size={15} color="#000" />
+                    <Text style={styles.pinnedCreateBtnText}>{t('GENERATE AI WORKOUT PLAN')}</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+
             {/* 1. Featured Workout */}
             {featuredWorkout ? (
               <TouchableOpacity
@@ -676,6 +862,115 @@ export default function WorkoutScreen() {
                 })() : null}
               </View>
             ) : null}
+                      {/* 5. WORKOUT HISTORY (Paginated at 20 items per page) */}
+            <View style={styles.historySection}>
+              <View style={styles.historyHeaderRow}>
+                <View>
+                  <Text style={styles.sectionTitleHistory}>{t('WORKOUT HISTORY')}</Text>
+                  <Text style={styles.historySubtitle}>
+                    {historyTotal > 0
+                      ? `${historyTotal} ${t('Total Sessions Logged')}`
+                      : t('Completed past sessions recorded here')}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.seedBtn}
+                  onPress={handleSeed50Logs}
+                  disabled={seedingLogs}
+                >
+                  {seedingLogs ? (
+                    <ActivityIndicator size="small" color="#06B6D4" />
+                  ) : (
+                    <>
+                      <Ionicons name="add-circle-outline" size={14} color="#06B6D4" />
+                      <Text style={styles.seedBtnText}>{t('Seed 50+ Logs')}</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              {historyLoading ? (
+                <View style={styles.historyLoadingBox}>
+                  <ActivityIndicator size="small" color="#06B6D4" />
+                  <Text style={styles.historyLoadingText}>{t('Loading workout history...')}</Text>
+                </View>
+              ) : historyLogs.length > 0 ? (
+                <View style={styles.historyListBox}>
+                  {historyLogs.map((log) => {
+                    const mins = Math.max(1, Math.round((log.duration_seconds || 1800) / 60));
+                    const logDate = log.started_at
+                      ? new Date(log.started_at).toLocaleDateString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
+                      : 'Recently';
+
+                    return (
+                      <View key={log.id} style={styles.historyItemRow}>
+                        <View style={styles.historyIconWrap}>
+                          <Ionicons name="barbell-outline" size={18} color="#06B6D4" />
+                        </View>
+                        <View style={styles.historyItemMain}>
+                          <Text style={styles.historyItemTitle} numberOfLines={1}>
+                            {log.title}
+                          </Text>
+                          <Text style={styles.historyItemDate}>{logDate}</Text>
+                        </View>
+                        <View style={styles.historyItemMeta}>
+                          <Text style={styles.historyDurationText}>{mins} {t('min')}</Text>
+                          <View style={styles.historyBadgeCompleted}>
+                            <Text style={styles.historyBadgeText}>{t('COMPLETED')}</Text>
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  })}
+
+                  {/* Pagination Controls (20 items per page) */}
+                  <View style={styles.paginationRow}>
+                    <TouchableOpacity
+                      style={[styles.pageBtn, historyPage <= 1 && styles.pageBtnDisabled]}
+                      onPress={() => loadHistory(historyPage - 1)}
+                      disabled={historyPage <= 1 || historyLoading}
+                    >
+                      <Ionicons name="chevron-back" size={16} color={historyPage <= 1 ? '#4B5563' : '#fff'} />
+                      <Text style={[styles.pageBtnText, historyPage <= 1 && styles.pageBtnTextDisabled]}>
+                        {t('Prev')}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <Text style={styles.pageInfoText}>
+                      {t('Page')} {historyPage} / {historyTotalPages || 1}
+                    </Text>
+
+                    <TouchableOpacity
+                      style={[styles.pageBtn, historyPage >= historyTotalPages && styles.pageBtnDisabled]}
+                      onPress={() => loadHistory(historyPage + 1)}
+                      disabled={historyPage >= historyTotalPages || historyLoading}
+                    >
+                      <Text style={[styles.pageBtnText, historyPage >= historyTotalPages && styles.pageBtnTextDisabled]}>
+                        {t('Next')}
+                      </Text>
+                      <Ionicons
+                        name="chevron-forward"
+                        size={16}
+                        color={historyPage >= historyTotalPages ? '#4B5563' : '#fff'}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.historyEmptyBox}>
+                  <Ionicons name="time-outline" size={28} color="#4B5563" />
+                  <Text style={styles.historyEmptyText}>{t('No workout history found yet.')}</Text>
+                  <Text style={styles.historyEmptySubtext}>
+                    {t('Complete a session or tap "Seed 50+ Logs" to verify 20-items-per-page pagination.')}
+                  </Text>
+                </View>
+              )}
+            </View>
           </>
         )}
       </ScrollView>
@@ -1082,5 +1377,335 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: Colors.primary,
     borderRadius: 3,
+  },
+  pinnedSection: {
+    marginHorizontal: 16,
+    marginBottom: 24,
+  },
+  pinnedHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  pinnedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(234,179,8,0.12)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(234,179,8,0.25)',
+  },
+  pinnedBadgeText: {
+    color: '#EAB308',
+    fontSize: 11,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: 0.8,
+  },
+  pinnedDayTag: {
+    color: '#06B6D4',
+    fontSize: 12,
+    fontFamily: 'Inter_700Bold',
+  },
+  pinnedCard: {
+    backgroundColor: '#161922',
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: 'rgba(6,182,212,0.3)',
+    shadowColor: '#06B6D4',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+  },
+  pinnedCardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 14,
+  },
+  pinnedCardCategory: {
+    color: '#06B6D4',
+    fontSize: 10,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: 1.2,
+    marginBottom: 4,
+  },
+  pinnedCardTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontFamily: 'Inter_700Bold',
+    lineHeight: 24,
+  },
+  pinnedDurationWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(6,182,212,0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  pinnedDurationText: {
+    color: '#06B6D4',
+    fontSize: 11,
+    fontFamily: 'Inter_700Bold',
+  },
+  pinnedMetricsRow: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    marginBottom: 14,
+  },
+  pinnedMetricItem: {
+    alignItems: 'center',
+  },
+  pinnedMetricLabel: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 9,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: 0.8,
+    marginBottom: 2,
+  },
+  pinnedMetricVal: {
+    color: '#fff',
+    fontSize: 12,
+    fontFamily: 'Inter_700Bold',
+  },
+  pinnedMetricDivider: {
+    width: 1,
+    height: 18,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  pinnedProgressBarContainer: {
+    height: 5,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginBottom: 14,
+  },
+  pinnedProgressBarFill: {
+    height: '100%',
+    backgroundColor: '#06B6D4',
+    borderRadius: 3,
+  },
+  pinnedActionBtn: {
+    backgroundColor: '#06B6D4',
+    borderRadius: 12,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  pinnedActionBtnText: {
+    color: '#000',
+    fontSize: 13,
+    fontFamily: 'Inter_800ExtraBold',
+    letterSpacing: 0.6,
+  },
+  pinnedEmptyCard: {
+    backgroundColor: '#161922',
+    borderRadius: 18,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+  },
+  pinnedEmptyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
+  },
+  pinnedEmptyTitle: {
+    color: '#fff',
+    fontSize: 15,
+    fontFamily: 'Inter_700Bold',
+  },
+  pinnedEmptyText: {
+    color: '#9CA3AF',
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: 14,
+  },
+  pinnedCreateBtn: {
+    backgroundColor: '#06B6D4',
+    borderRadius: 10,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  pinnedCreateBtnText: {
+    color: '#000',
+    fontSize: 11,
+    fontFamily: 'Inter_800ExtraBold',
+    letterSpacing: 0.8,
+  },
+  historySection: {
+    marginHorizontal: 16,
+    marginTop: 28,
+    marginBottom: 30,
+  },
+  historyHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  sectionTitleHistory: {
+    color: '#fff',
+    fontSize: 14,
+    fontFamily: 'Inter_800ExtraBold',
+    letterSpacing: 1.2,
+  },
+  historySubtitle: {
+    color: '#9CA3AF',
+    fontSize: 11,
+    fontFamily: 'Inter_500Medium',
+    marginTop: 2,
+  },
+  seedBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(6,182,212,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(6,182,212,0.25)',
+  },
+  seedBtnText: {
+    color: '#06B6D4',
+    fontSize: 11,
+    fontFamily: 'Inter_700Bold',
+  },
+  historyLoadingBox: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    gap: 8,
+  },
+  historyLoadingText: {
+    color: '#9CA3AF',
+    fontSize: 12,
+  },
+  historyListBox: {
+    backgroundColor: '#161922',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    overflow: 'hidden',
+  },
+  historyItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.04)',
+    gap: 12,
+  },
+  historyIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(6,182,212,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  historyItemMain: {
+    flex: 1,
+  },
+  historyItemTitle: {
+    color: '#fff',
+    fontSize: 13,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  historyItemDate: {
+    color: '#9CA3AF',
+    fontSize: 11,
+    marginTop: 2,
+  },
+  historyItemMeta: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  historyDurationText: {
+    color: '#E5E7EB',
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  historyBadgeCompleted: {
+    backgroundColor: 'rgba(34,197,94,0.12)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  historyBadgeText: {
+    color: '#22C55E',
+    fontSize: 9,
+    fontFamily: 'Inter_700Bold',
+  },
+  paginationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+  },
+  pageBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  pageBtnDisabled: {
+    opacity: 0.4,
+  },
+  pageBtnText: {
+    color: '#fff',
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  pageBtnTextDisabled: {
+    color: '#4B5563',
+  },
+  pageInfoText: {
+    color: '#9CA3AF',
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  historyEmptyBox: {
+    backgroundColor: '#161922',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
+  historyEmptyText: {
+    color: '#fff',
+    fontSize: 13,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  historyEmptySubtext: {
+    color: '#9CA3AF',
+    fontSize: 11,
+    textAlign: 'center',
+    maxWidth: 260,
   },
 });

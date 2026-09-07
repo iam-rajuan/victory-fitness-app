@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Image,
   Linking,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -19,6 +20,53 @@ import { recordAnalyticsEvent } from '../../lib/api';
 
 const DEFAULT_THUMBNAIL =
   'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=300&auto=format&fit=crop';
+
+// High performance animated exercise GIF demonstration fallback
+const FALLBACK_EXERCISE_GIF =
+  'https://media.giphy.com/media/3o7TKSjRrfIPjeiVyM/giphy.gif';
+
+type VideoQuality = '360p' | '720p' | '1080p';
+
+function detectOptimalVideoQuality(): VideoQuality {
+  if (Platform.OS === 'web' && typeof navigator !== 'undefined') {
+    const conn =
+      (navigator as any).connection ||
+      (navigator as any).mozConnection ||
+      (navigator as any).webkitConnection;
+    if (conn) {
+      const eff = String(conn.effectiveType || '').toLowerCase();
+      // 3G or slower -> 360p
+      if (eff === 'slow-2g' || eff === '2g' || eff === '3g') {
+        return '360p';
+      }
+      // Standard cellular 4G -> 720p
+      if (eff === '4g' && conn.type === 'cellular') {
+        return '720p';
+      }
+      // High-speed WiFi / Desktop -> 1080p
+      if (conn.type === 'wifi' || conn.type === 'ethernet' || !conn.type) {
+        return '1080p';
+      }
+    }
+  }
+  return '720p'; // standard default
+}
+
+function applyQualityToVideoUrl(url: string, quality: VideoQuality): string {
+  if (!url) return '';
+  try {
+    if (url.includes('player.vimeo.com/video/')) {
+      const separator = url.includes('?') ? '&' : '?';
+      return `${url}${separator}quality=${quality}`;
+    }
+    if (url.includes('youtube.com/embed/') || url.includes('youtube-nocookie.com/embed/')) {
+      const vq = quality === '360p' ? 'small' : quality === '1080p' ? 'hd1080' : 'hd720';
+      const separator = url.includes('?') ? '&' : '?';
+      return `${url}${separator}vq=${vq}`;
+    }
+  } catch {}
+  return url;
+}
 
 function buildWorkoutPlayerHtml(videoUrl: string) {
   const isDirectVideo =
@@ -117,6 +165,12 @@ export default function WorkoutPlayerScreen() {
   const router = useRouter();
   const { t } = useLanguage();
   const [playerBlocked, setPlayerBlocked] = React.useState(false);
+  const [videoQuality, setVideoQuality] = React.useState<VideoQuality>('720p');
+  const [useGifFallback, setUseGifFallback] = React.useState(false);
+
+  React.useEffect(() => {
+    setVideoQuality(detectOptimalVideoQuality());
+  }, []);
   const params = useLocalSearchParams<{
     id?: string;
     title?: string;
@@ -136,13 +190,14 @@ export default function WorkoutPlayerScreen() {
 
   const embedUrl = useMemo(() => {
     if (videoUrl) {
-      return videoUrl;
+      return applyQualityToVideoUrl(videoUrl, videoQuality);
     }
     if (!vimeoId) {
       return '';
     }
 
-    return `https://player.vimeo.com/video/${encodeURIComponent(vimeoId)}?autoplay=1&title=0&byline=0&portrait=0&playsinline=1&dnt=1`;
+    const baseVimeo = `https://player.vimeo.com/video/${encodeURIComponent(vimeoId)}?autoplay=1&title=0&byline=0&portrait=0&playsinline=1&dnt=1`;
+    return applyQualityToVideoUrl(baseVimeo, videoQuality);
   }, [videoUrl, vimeoId]);
   const playerHtml = useMemo(() => (embedUrl ? buildWorkoutPlayerHtml(embedUrl) : ''), [embedUrl]);
   const externalVideoUrl = useMemo(() => {
@@ -189,7 +244,51 @@ export default function WorkoutPlayerScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      {embedUrl ? (
+      {/* Adaptive Quality Badge */}
+      <View style={styles.qualityRow}>
+        <View style={styles.qualityBadge}>
+          <Ionicons name="speedometer-outline" size={13} color="#06B6D4" />
+          <Text style={styles.qualityBadgeText}>
+            {videoQuality === '360p'
+              ? t('3G Data-Saver (360p)')
+              : videoQuality === '1080p'
+                ? t('WiFi High-Def (1080p)')
+                : t('Standard (720p)')}
+          </Text>
+        </View>
+        {useGifFallback ? (
+          <View style={styles.gifBadge}>
+            <Ionicons name="image" size={13} color="#EAB308" />
+            <Text style={styles.gifBadgeText}>{t('GIF DEMO FALLBACK')}</Text>
+          </View>
+        ) : null}
+      </View>
+
+      {useGifFallback ? (
+        <View style={styles.gifFallbackWrap}>
+          <Image
+            source={{ uri: FALLBACK_EXERCISE_GIF }}
+            style={styles.gifImage}
+            resizeMode="cover"
+          />
+          <View style={styles.gifNoticeOverlay}>
+            <Text style={styles.gifNoticeTitle}>{t('Exercise Demonstration (GIF Mode)')}</Text>
+            <Text style={styles.gifNoticeSub}>
+              {t('Video playback unavailable on this connection. Displaying animated demonstration.')}
+            </Text>
+            <TouchableOpacity
+              style={styles.retryVideoBtn}
+              onPress={() => {
+                setUseGifFallback(false);
+                setPlayerBlocked(false);
+              }}
+            >
+              <Ionicons name="refresh" size={14} color="#000" />
+              <Text style={styles.retryVideoBtnText}>{t('Retry HD Video Stream')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : embedUrl ? (
         <View style={styles.playerWrap}>
           <CrossPlatformWebView
             source={{ html: playerHtml }}
@@ -202,7 +301,10 @@ export default function WorkoutPlayerScreen() {
             setSupportMultipleWindows={false}
             javaScriptCanOpenWindowsAutomatically={false}
             onShouldStartLoadWithRequest={(request: any) => isAllowedWorkoutPlayerRequest(request.url)}
-            onError={() => setPlayerBlocked(true)}
+            onError={() => {
+              setPlayerBlocked(true);
+              setUseGifFallback(true);
+            }}
             startInLoadingState
             renderLoading={() => (
               <View style={styles.loadingWrap}>
@@ -424,6 +526,91 @@ const styles = StyleSheet.create({
   fallbackButtonText: {
     color: '#03111D',
     fontSize: 14,
+    fontFamily: 'Inter_700Bold',
+  },
+  qualityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  qualityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(6,182,212,0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(6,182,212,0.25)',
+  },
+  qualityBadgeText: {
+    color: '#06B6D4',
+    fontSize: 11,
+    fontFamily: 'Inter_700Bold',
+  },
+  gifBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(234,179,8,0.12)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(234,179,8,0.25)',
+  },
+  gifBadgeText: {
+    color: '#EAB308',
+    fontSize: 11,
+    fontFamily: 'Inter_700Bold',
+  },
+  gifFallbackWrap: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    backgroundColor: '#080E18',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  gifImage: {
+    width: '100%',
+    height: '100%',
+  },
+  gifNoticeOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.78)',
+    padding: 12,
+    alignItems: 'center',
+  },
+  gifNoticeTitle: {
+    color: '#fff',
+    fontSize: 13,
+    fontFamily: 'Inter_700Bold',
+  },
+  gifNoticeSub: {
+    color: '#9CA3AF',
+    fontSize: 11,
+    textAlign: 'center',
+    marginTop: 2,
+    marginBottom: 8,
+  },
+  retryVideoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#06B6D4',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  retryVideoBtnText: {
+    color: '#000',
+    fontSize: 11,
     fontFamily: 'Inter_700Bold',
   },
 });

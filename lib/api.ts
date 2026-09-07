@@ -1151,6 +1151,44 @@ export async function createStripeCheckoutSession(payload: {
   );
 }
 
+export type WorkoutLogItem = {
+  id: string;
+  workout_id: string;
+  title: string;
+  duration_seconds: number;
+  status: string;
+  market?: string | null;
+  started_at: string;
+  completed_at?: string | null;
+};
+
+export type WorkoutLogsResponse = {
+  items: WorkoutLogItem[];
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
+};
+
+export async function fetchWorkoutLogs(page = 1, limit = 20, status?: string): Promise<WorkoutLogsResponse> {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (status) params.append('status', status);
+  return apiRequest<WorkoutLogsResponse>(`/workout-logs?${params.toString()}`);
+}
+
+export async function createWorkoutLog(payload: { workout_id: string; duration_seconds: number; status: string; market?: string }): Promise<{ id: string; status: string }> {
+  return apiRequest<{ id: string; status: string }>('/workout-logs', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+export async function seedTestWorkoutLogs(count = 55): Promise<{ status: string; inserted: number }> {
+  return apiRequest<{ status: string; inserted: number }>(`/workout-logs/seed-test-logs?count=${count}`, {
+    method: 'POST',
+  });
+}
+
 export async function startGoldTrial() {
   const response = await apiRequest<{ trial: AuthUser['gold_trial'] }>('/me/trial/gold/start', {
     method: 'POST',
@@ -1773,7 +1811,7 @@ export async function apiRequest<T>(
 }
 
 export async function recordAnalyticsEvent(
-  eventType: 'workout_library_visited' | 'workout_library_item_viewed',
+  eventType: string,
   details: Record<string, unknown> = {}
 ) {
   return apiRequest<{ status: string }>('/analytics-events', {

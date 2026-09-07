@@ -19,10 +19,11 @@ const PARTICLE_COUNT = 40;
 interface BrandConfettiProps {
   active: boolean;
   duration?: number;
+  colors?: string[];
   onAnimationComplete?: () => void;
 }
 
-export function BrandConfetti({ active, duration = 3000, onAnimationComplete }: BrandConfettiProps) {
+export function BrandConfetti({ active, duration = 3000, colors = BRAND_COLORS, onAnimationComplete }: BrandConfettiProps) {
   const windowDimensions = Dimensions.get('window');
   const width = windowDimensions.width || 360;
   const height = windowDimensions.height || 640;
@@ -30,10 +31,11 @@ export function BrandConfetti({ active, duration = 3000, onAnimationComplete }: 
   const particlesRef = useRef<ConfettiPiece[]>([]);
 
   if (particlesRef.current.length === 0) {
+    const palette = colors && colors.length > 0 ? colors : BRAND_COLORS;
     particlesRef.current = Array.from({ length: PARTICLE_COUNT }).map((_, i) => ({
       id: i,
       x: Math.random() * width,
-      color: BRAND_COLORS[i % BRAND_COLORS.length],
+      color: palette[i % palette.length],
       size: Math.random() * 6 + 6,
       isCircle: i % 3 === 0,
       animY: new Animated.Value(0),
