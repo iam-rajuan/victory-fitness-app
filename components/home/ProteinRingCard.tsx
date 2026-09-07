@@ -1,10 +1,33 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Platform,
+  Modal,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import { fetchCurrentUser, fetchCurrentUserBodyMetrics } from '../../lib/api';
+import {
+  getLatestNutritionPlan,
+  updateNutritionMealCompletion,
+  calculateProteinTarget,
+  STARTER_MEAL_PLAN,
+  NutritionDayPlan,
+} from '../../lib/nutrition';
 import { useLanguage } from '../../lib/i18n';
+
+const PLAN_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
+
+function getTodayPlanDay(): string {
+  const dayIndex = new Date().getDay();
+  return PLAN_DAYS[(dayIndex + 6) % 7];
+}
 
 interface ProteinRingCardProps {
   onPressLogMeal?: () => void;
@@ -14,46 +37,113 @@ export default function ProteinRingCard({ onPressLogMeal }: ProteinRingCardProps
   const router = useRouter();
   const { t } = useLanguage();
 
+  // Zero by default: NO demo data!
   const [proteinTarget, setProteinTarget] = useState(112);
-  const [proteinConsumed, setProteinConsumed] = useState(78);
+  const [proteinConsumed, setProteinConsumed] = useState(0);
   const [caloriesTarget, setCaloriesTarget] = useState(2100);
-  const [caloriesConsumed, setCaloriesConsumed] = useState(1450);
+  const [caloriesConsumed, setCaloriesConsumed] = useState(0);
+
+  const [todayPlan, setTodayPlan] = useState<NutritionDayPlan | typeof STARTER_MEAL_PLAN['Mon'] | null>(null);
+  const [todayCompletions, setTodayCompletions] = useState<Record<string, boolean>>({});
+  const [isLogModalOpen, setIsLogModalOpen] = useState(false);
+  const [updatingMealKey, setUpdatingMealKey] = useState<string | null>(null);
+
+  const loadTargets = useCallback(async () => {
+    try {
+      const todayKey = getTodayPlanDay();
+      const [user, metrics, plan] = await Promise.all([
+        fetchCurrentUser().catch(() => null),
+        fetchCurrentUserBodyMetrics().catch(() => null),
+        getLatestNutritionPlan({ forceRefresh: true }).catch(() => null),
+      ]);
+
+      const weightKg = Number(metrics?.weight) || Number((user as any)?.weight) || 70;
+      const calcProtein = calculateProteinTarget(weightKg, (user as any)?.goal || (plan?.profile as any)?.goal);
+      const targetP = plan?.daily_protein_target || user?.daily_protein_target || calcProtein.target || 112;
+      setProteinTarget(targetP);
+
+      const resolvedDayPlan =
+        plan?.days?.find((d) => d.day === todayKey) ||
+        STARTER_MEAL_PLAN[todayKey] ||
+        STARTER_MEAL_PLAN['Mon'];
+      setTodayPlan(resolvedDayPlan);
+
+      const targetKcal = resolvedDayPlan
+        ? resolvedDayPlan.breakfast.kcal + resolvedDayPlan.lunch.kcal + resolvedDayPlan.dinner.kcal
+        : 2100;
+      setCaloriesTarget(targetKcal);
+
+      const dayCompletions = (plan?.meal_completions?.[todayKey] as Record<string, boolean>) || {};
+      setTodayCompletions(dayCompletions);
+
+      let p = 0;
+      let kcal = 0;
+      if (dayCompletions.breakfast && resolvedDayPlan?.breakfast) {
+        p += resolvedDayPlan.breakfast.p;
+        kcal += resolvedDayPlan.breakfast.kcal;
+      }
+      if (dayCompletions.lunch && resolvedDayPlan?.lunch) {
+        p += resolvedDayPlan.lunch.p;
+        kcal += resolvedDayPlan.lunch.kcal;
+      }
+      if (dayCompletions.dinner && resolvedDayPlan?.dinner) {
+        p += resolvedDayPlan.dinner.p;
+        kcal += resolvedDayPlan.dinner.kcal;
+      }
+
+      setProteinConsumed(p);
+      setCaloriesConsumed(kcal);
+    } catch {
+      // Fallback
+    }
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
-
-    const loadTargets = async () => {
-      try {
-        const [user, metrics] = await Promise.all([
-          fetchCurrentUser().catch(() => null),
-          fetchCurrentUserBodyMetrics().catch(() => null),
-        ]);
-
-        if (cancelled) return;
-
-        // Auto-calculate from profile / onboarding data: 1.6g * weight_kg
-        const weightKg = Number(metrics?.weight) || 70;
-        const calculatedProtein = Math.round(weightKg * 1.6);
-        const target = user?.daily_protein_target || calculatedProtein || 112;
-        setProteinTarget(target);
-
-        // Estimate calorie target from goal and body weight
-        const baseCalories = Math.round(weightKg * 28);
-        setCaloriesTarget(baseCalories > 1400 ? baseCalories : 2100);
-
-        // Progress for today
-        setProteinConsumed(Math.min(Math.round(target * 0.7), target));
-        setCaloriesConsumed(Math.min(Math.round((baseCalories > 1400 ? baseCalories : 2100) * 0.68), baseCalories));
-      } catch {
-        // Fallback
-      }
-    };
-
     void loadTargets();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  }, [loadTargets]);
+
+  const handleToggleMeal = async (mealKey: 'breakfast' | 'lunch' | 'dinner') => {
+    if (updatingMealKey) return;
+    const todayKey = getTodayPlanDay();
+    const currentlyCompleted = Boolean(todayCompletions[mealKey]);
+    const nextCompleted = !currentlyCompleted;
+
+    setUpdatingMealKey(mealKey);
+    try {
+      await updateNutritionMealCompletion({
+        day: todayKey,
+        meal_key: mealKey,
+        completed: nextCompleted,
+      });
+
+      const nextDayCompletions = {
+        ...todayCompletions,
+        [mealKey]: nextCompleted,
+      };
+      setTodayCompletions(nextDayCompletions);
+
+      let p = 0;
+      let kcal = 0;
+      if (nextDayCompletions.breakfast && todayPlan?.breakfast) {
+        p += todayPlan.breakfast.p;
+        kcal += todayPlan.breakfast.kcal;
+      }
+      if (nextDayCompletions.lunch && todayPlan?.lunch) {
+        p += todayPlan.lunch.p;
+        kcal += todayPlan.lunch.kcal;
+      }
+      if (nextDayCompletions.dinner && todayPlan?.dinner) {
+        p += todayPlan.dinner.p;
+        kcal += todayPlan.dinner.kcal;
+      }
+      setProteinConsumed(p);
+      setCaloriesConsumed(kcal);
+    } catch {
+      Alert.alert(t('Error'), t('Unable to update meal completion right now.'));
+    } finally {
+      setUpdatingMealKey(null);
+    }
+  };
 
   const proteinRatio = Math.min(Math.max(proteinConsumed / (proteinTarget || 1), 0), 1);
   const caloriesRatio = Math.min(Math.max(caloriesConsumed / (caloriesTarget || 1), 0), 1);
@@ -73,6 +163,13 @@ export default function ProteinRingCard({ onPressLogMeal }: ProteinRingCardProps
   const outerOffset = outerCircumference * (1 - caloriesRatio);
   const innerOffset = innerCircumference * (1 - proteinRatio);
 
+  const todayKey = getTodayPlanDay();
+  const mealItems: Array<{ key: 'breakfast' | 'lunch' | 'dinner'; label: string; icon: string; meal?: { name: string; kcal: number; p: number } }> = [
+    { key: 'breakfast', label: t('Breakfast'), icon: '🍳', meal: todayPlan?.breakfast },
+    { key: 'lunch', label: t('Lunch'), icon: '🥗', meal: todayPlan?.lunch },
+    { key: 'dinner', label: t('Dinner'), icon: '🍲', meal: todayPlan?.dinner },
+  ];
+
   return (
     <View style={styles.card}>
       <View style={styles.headerRow}>
@@ -87,7 +184,7 @@ export default function ProteinRingCard({ onPressLogMeal }: ProteinRingCardProps
             if (onPressLogMeal) {
               onPressLogMeal();
             } else {
-              router.push('/mealPlan');
+              setIsLogModalOpen(true);
             }
           }}
         >
@@ -196,6 +293,100 @@ export default function ProteinRingCard({ onPressLogMeal }: ProteinRingCardProps
           </View>
         </View>
       </View>
+
+      {/* Log Meal Interactive Modal */}
+      <Modal
+        visible={isLogModalOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setIsLogModalOpen(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeaderRow}>
+              <View>
+                <Text style={styles.modalEyebrow}>🍽️ {t('LOG TODAY’S MEALS')}</Text>
+                <Text style={styles.modalTitle}>{t('Today • {day}', { day: t(todayKey) })}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.modalCloseIconBtn}
+                onPress={() => setIsLogModalOpen(false)}
+              >
+                <Ionicons name="close" size={20} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalSubtitle}>
+              {t('Mark your planned meals as complete to log protein and calories to your daily nutrition ring.')}
+            </Text>
+
+            <View style={styles.mealList}>
+              {mealItems.map((item) => {
+                const isCompleted = Boolean(todayCompletions[item.key]);
+                const isUpdating = updatingMealKey === item.key;
+
+                return (
+                  <View key={item.key} style={[styles.mealItemCard, isCompleted && styles.mealItemCardCompleted]}>
+                    <View style={styles.mealItemInfo}>
+                      <View style={styles.mealItemTop}>
+                        <Text style={styles.mealItemIcon}>{item.icon}</Text>
+                        <Text style={styles.mealItemLabel}>{item.label}</Text>
+                        {isCompleted && (
+                          <View style={styles.mealItemDoneBadge}>
+                            <Text style={styles.mealItemDoneText}>✓ {t('COMPLETED')}</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.mealItemName} numberOfLines={1}>
+                        {item.meal?.name || t('Planned meal')}
+                      </Text>
+                      <Text style={styles.mealItemMacros}>
+                        🔥 {item.meal?.kcal ?? 0} kcal  •  💪 {item.meal?.p ?? 0}g protein
+                      </Text>
+                    </View>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.mealActionButton,
+                        isCompleted ? styles.mealActionButtonCompleted : styles.mealActionButtonPending,
+                      ]}
+                      activeOpacity={0.8}
+                      disabled={isUpdating}
+                      onPress={() => void handleToggleMeal(item.key)}
+                    >
+                      {isUpdating ? (
+                        <ActivityIndicator size="small" color={isCompleted ? '#fff' : '#000'} />
+                      ) : isCompleted ? (
+                        <>
+                          <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
+                          <Text style={styles.mealActionButtonTextCompleted}>{t('Eaten')}</Text>
+                        </>
+                      ) : (
+                        <>
+                          <Ionicons name="add-circle" size={16} color="#000" />
+                          <Text style={styles.mealActionButtonTextPending}>{t('Log')}</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+            </View>
+
+            <TouchableOpacity
+              style={styles.fullPlanBtn}
+              activeOpacity={0.85}
+              onPress={() => {
+                setIsLogModalOpen(false);
+                router.push('/mealPlan');
+              }}
+            >
+              <Text style={styles.fullPlanBtnText}>{t('View Full 7-Day Nutrition Plan')} →</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -229,25 +420,27 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
     letterSpacing: 1.2,
     marginBottom: 4,
+    textTransform: 'uppercase',
   },
   title: {
-    color: '#FFF',
+    color: '#fff',
     fontSize: 18,
     fontFamily: 'Inter_700Bold',
+    letterSpacing: 0.2,
   },
   logBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
     backgroundColor: Colors.primary,
-    paddingHorizontal: 12,
     paddingVertical: 7,
-    borderRadius: 12,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    gap: 4,
   },
   logBtnText: {
     color: '#000',
-    fontFamily: 'Inter_700Bold',
     fontSize: 12,
+    fontFamily: 'Inter_700Bold',
   },
   contentRow: {
     flexDirection: 'row',
@@ -261,30 +454,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
-  },
-  ringCenter: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ringCenterProteinVal: {
-    color: '#FFD700',
-    fontFamily: 'Inter_700Bold',
-    fontSize: 22,
-    lineHeight: 24,
-  },
-  ringCenterProteinLabel: {
-    color: '#FFD700',
-    fontFamily: 'Inter_700Bold',
-    fontSize: 9,
-    letterSpacing: 1,
-    marginTop: 1,
-  },
-  ringCenterCaloriesSub: {
-    color: Colors.textMuted,
-    fontFamily: 'Inter_500Medium',
-    fontSize: 11,
-    marginTop: 3,
   },
   nativeRingFallback: {
     width: 150,
@@ -306,28 +475,51 @@ const styles = StyleSheet.create({
     borderRadius: 52,
     borderWidth: 8,
   },
+  ringCenter: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ringCenterProteinVal: {
+    color: '#FFD700',
+    fontSize: 22,
+    fontFamily: 'Inter_700Bold',
+    lineHeight: 26,
+  },
+  ringCenterProteinLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 9,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: 1,
+    marginTop: -2,
+    marginBottom: 2,
+  },
+  ringCenterCaloriesSub: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 11,
+    fontFamily: 'Inter_500Medium',
+  },
   statsColumn: {
     flex: 1,
     gap: 10,
   },
   statBoxGold: {
-    backgroundColor: 'rgba(255, 215, 0, 0.08)',
+    backgroundColor: 'rgba(255, 215, 0, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.25)',
     borderRadius: 14,
     padding: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 215, 0, 0.28)',
   },
   statBoxCyan: {
-    backgroundColor: 'rgba(0, 240, 208, 0.06)',
+    backgroundColor: 'rgba(0, 240, 208, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 240, 208, 0.22)',
     borderRadius: 14,
     padding: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 240, 208, 0.2)',
   },
   statHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
     marginBottom: 4,
   },
   goldDot: {
@@ -335,54 +527,57 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: '#FFD700',
+    marginRight: 6,
   },
   cyanDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: Colors.primary,
+    marginRight: 6,
   },
   statTitleGold: {
     color: '#FFD700',
-    fontFamily: 'Inter_700Bold',
     fontSize: 10,
+    fontFamily: 'Inter_700Bold',
     letterSpacing: 0.8,
   },
   statTitleCyan: {
     color: Colors.primary,
-    fontFamily: 'Inter_700Bold',
     fontSize: 10,
+    fontFamily: 'Inter_700Bold',
     letterSpacing: 0.8,
   },
   statValueRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    gap: 4,
     marginBottom: 6,
   },
   statValGold: {
-    color: '#FFF',
+    color: '#fff',
+    fontSize: 18,
     fontFamily: 'Inter_700Bold',
-    fontSize: 17,
+    marginRight: 4,
   },
   statTargetGold: {
-    color: '#FFD700',
-    fontFamily: 'Inter_600SemiBold',
+    color: 'rgba(255,255,255,0.6)',
     fontSize: 12,
+    fontFamily: 'Inter_500Medium',
   },
   statValCyan: {
-    color: '#FFF',
+    color: '#fff',
+    fontSize: 18,
     fontFamily: 'Inter_700Bold',
-    fontSize: 17,
+    marginRight: 4,
   },
   statTargetCyan: {
-    color: Colors.primary,
-    fontFamily: 'Inter_600SemiBold',
+    color: 'rgba(255,255,255,0.6)',
     fontSize: 12,
+    fontFamily: 'Inter_500Medium',
   },
   progressBarBg: {
     height: 5,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 3,
     overflow: 'hidden',
     marginBottom: 4,
@@ -399,12 +594,165 @@ const styles = StyleSheet.create({
   },
   statPercentGold: {
     color: '#FFD700',
-    fontFamily: 'Inter_500Medium',
     fontSize: 10,
+    fontFamily: 'Inter_600SemiBold',
   },
   statPercentCyan: {
-    color: Colors.textMuted,
-    fontFamily: 'Inter_500Medium',
+    color: Colors.primary,
     fontSize: 10,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  // Modal styles
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#161626',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 22,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 26,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.2)',
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  modalEyebrow: {
+    color: '#FFD700',
+    fontSize: 11,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: 1.2,
+  },
+  modalTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontFamily: 'Inter_700Bold',
+    marginTop: 2,
+  },
+  modalCloseIconBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalSubtitle: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  mealList: {
+    gap: 10,
+    marginBottom: 18,
+  },
+  mealItemCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#1C1C30',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+  },
+  mealItemCardCompleted: {
+    borderColor: 'rgba(34, 197, 94, 0.35)',
+    backgroundColor: 'rgba(34, 197, 94, 0.06)',
+  },
+  mealItemInfo: {
+    flex: 1,
+    marginRight: 10,
+  },
+  mealItemTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2,
+  },
+  mealItemIcon: {
+    fontSize: 14,
+  },
+  mealItemLabel: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 12,
+    fontFamily: 'Inter_700Bold',
+  },
+  mealItemDoneBadge: {
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 6,
+  },
+  mealItemDoneText: {
+    color: '#22C55E',
+    fontSize: 9,
+    fontFamily: 'Inter_700Bold',
+  },
+  mealItemName: {
+    color: '#fff',
+    fontSize: 13,
+    fontFamily: 'Inter_500Medium',
+    marginBottom: 2,
+  },
+  mealItemMacros: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 11,
+    fontFamily: 'Inter_400Regular',
+  },
+  mealActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+  },
+  mealActionButtonPending: {
+    backgroundColor: Colors.primary,
+  },
+  mealActionButtonCompleted: {
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    borderWidth: 1,
+    borderColor: '#22C55E',
+  },
+  mealActionButtonTextPending: {
+    color: '#000',
+    fontSize: 12,
+    fontFamily: 'Inter_700Bold',
+  },
+  mealActionButtonTextCompleted: {
+    color: '#22C55E',
+    fontSize: 12,
+    fontFamily: 'Inter_700Bold',
+  },
+  fullPlanBtn: {
+    backgroundColor: 'rgba(168, 85, 247, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(168, 85, 247, 0.3)',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  fullPlanBtnText: {
+    color: '#C084FC',
+    fontSize: 13,
+    fontFamily: 'Inter_700Bold',
   },
 });

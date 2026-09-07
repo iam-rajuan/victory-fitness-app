@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
+import { fetchCurrentUser } from '../../lib/api';
 import { useLanguage } from '../../lib/i18n';
 
 interface DayActivity {
@@ -28,20 +29,60 @@ export function WeeklyActivityChart({ weeklyData }: WeeklyActivityChartProps) {
   const { t } = useLanguage();
   const currentDayIndex = (new Date().getDay() + 6) % 7; // Mon = 0, Sun = 6
 
-  const days: DayActivity[] = weeklyData || [
-    { dayLabel: 'M', durationMinutes: 45, completed: true, isToday: currentDayIndex === 0 },
-    { dayLabel: 'T', durationMinutes: 30, completed: true, isToday: currentDayIndex === 1 },
-    { dayLabel: 'W', durationMinutes: 50, completed: true, isToday: currentDayIndex === 2 },
-    { dayLabel: 'T', durationMinutes: 0, completed: false, isToday: currentDayIndex === 3 },
-    { dayLabel: 'F', durationMinutes: 40, completed: true, isToday: currentDayIndex === 4 },
-    { dayLabel: 'S', durationMinutes: 20, completed: true, isToday: currentDayIndex === 5 },
-    { dayLabel: 'S', durationMinutes: 0, completed: false, isToday: currentDayIndex === 6 },
-  ];
+  const [days, setDays] = useState<DayActivity[]>(() => {
+    if (weeklyData) return weeklyData;
+    return DEFAULT_DAYS.map((dayLabel, idx) => ({
+      dayLabel,
+      durationMinutes: 0,
+      completed: false,
+      isToday: idx === currentDayIndex,
+    }));
+  });
 
   // Staggered animated values for each of the 7 bars
-  const barAnims = useRef(days.map(() => new Animated.Value(0))).current;
+  const barAnims = useRef(DEFAULT_DAYS.map(() => new Animated.Value(0))).current;
   const cardRef = useRef<View | null>(null);
   const animatedOnceRef = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadRealActivity = async () => {
+      if (weeklyData) return;
+      try {
+        const user = await fetchCurrentUser().catch(() => null);
+        if (cancelled) return;
+        const streak = Math.max(Number(user?.streak_days ?? 0), 0);
+        const workoutsCount = Math.max(Number(user?.workouts_completed ?? 0), 0);
+
+        if (streak === 0 && workoutsCount === 0) {
+          // New or inactive user: keep at 0, no fake demo data
+          return;
+        }
+
+        const updated = DEFAULT_DAYS.map((dayLabel, idx) => {
+          const isToday = idx === currentDayIndex;
+          const isPastInStreak = idx <= currentDayIndex && (currentDayIndex - idx) < streak && streak > 0;
+          const completed = isPastInStreak;
+          const duration = completed ? 35 : 0;
+          return {
+            dayLabel,
+            durationMinutes: duration,
+            completed,
+            isToday,
+          };
+        });
+        setDays(updated);
+      } catch {
+        // Fallback
+      }
+    };
+
+    void loadRealActivity();
+    return () => {
+      cancelled = true;
+    };
+  }, [weeklyData, currentDayIndex]);
 
   useEffect(() => {
     const runAnimation = () => {
@@ -50,7 +91,7 @@ export function WeeklyActivityChart({ weeklyData }: WeeklyActivityChartProps) {
 
       barAnims.forEach((anim) => anim.setValue(0));
       const animations = barAnims.map((anim, idx) => {
-        const targetRatio = Math.min(1, Math.max(0.08, days[idx].durationMinutes / 60));
+        const targetRatio = Math.min(1, Math.max(0.08, (days[idx]?.durationMinutes ?? 0) / 60));
         return Animated.timing(anim, {
           toValue: targetRatio,
           duration: 750,
@@ -88,8 +129,8 @@ export function WeeklyActivityChart({ weeklyData }: WeeklyActivityChartProps) {
     runAnimation();
   }, [barAnims, days]);
 
-  const totalCompleted = days.filter((d) => d.completed).length;
-  const totalMinutes = days.reduce((acc, curr) => acc + curr.durationMinutes, 0);
+  const totalCompleted = days.filter((d: DayActivity) => d.completed).length;
+  const totalMinutes = days.reduce((acc: number, curr: DayActivity) => acc + curr.durationMinutes, 0);
 
   return (
     <View ref={cardRef} style={styles.card}>
@@ -113,7 +154,7 @@ export function WeeklyActivityChart({ weeklyData }: WeeklyActivityChartProps) {
 
       {/* 7-Day Bars */}
       <View style={styles.chartContainer}>
-        {days.map((item, index) => {
+        {days.map((item: DayActivity, index: number) => {
           const heightInterpolation = barAnims[index].interpolate({
             inputRange: [0, 1],
             outputRange: ['8%', '100%'],
