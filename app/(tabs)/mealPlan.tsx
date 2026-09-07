@@ -332,6 +332,158 @@ const MEAL_PLAN: Record<string, DayPlan> = {
 };
 
 /* ── MealPlanResult Component ── */
+
+function WebCamCaptureModal({
+  visible,
+  onCapture,
+  onClose,
+  t,
+}: {
+  visible: boolean;
+  onCapture: (asset: AnalysisImageAsset) => void;
+  onClose: () => void;
+  t: (key: string) => string;
+}) {
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  const streamRef = React.useRef<MediaStream | null>(null);
+  const [cameraError, setCameraError] = useState('');
+  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
+
+  const stopStream = () => {
+    if (streamRef.current) {
+      try {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      } catch {}
+      streamRef.current = null;
+    }
+  };
+
+  const startStream = async (facing: 'environment' | 'user') => {
+    stopStream();
+    setCameraError('');
+    try {
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+        throw new Error(t('Camera access is not supported in this browser. Please use a modern browser.'));
+      }
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false,
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      }
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play().catch(() => {});
+      }
+    } catch (err) {
+      setCameraError(err instanceof Error ? err.message : t('Unable to access camera'));
+    }
+  };
+
+  useEffect(() => {
+    if (visible && Platform.OS === 'web') {
+      startStream(facingMode);
+    } else {
+      stopStream();
+    }
+    return () => {
+      stopStream();
+    };
+  }, [visible, facingMode]);
+
+  const snapPhoto = () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+    const base64 = dataUrl.split(',')[1];
+    stopStream();
+    onClose();
+    onCapture({
+      uri: dataUrl,
+      base64,
+      mimeType: 'image/jpeg',
+      fileName: `meal-photo-${Date.now()}.jpg`,
+    });
+  };
+
+  if (!visible) return null;
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={styles.webcamModalBackdrop}>
+        <View style={styles.webcamCard}>
+          <View style={styles.webcamHeader}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="camera" size={18} color="#A855F7" />
+              <Text style={styles.webcamTitle}>{t('Live Meal Camera')}</Text>
+            </View>
+            <TouchableOpacity onPress={onClose} style={styles.webcamCloseBtn} activeOpacity={0.7}>
+              <Ionicons name="close" size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
+          
+          {cameraError ? (
+            <View style={styles.webcamErrorBox}>
+              <Ionicons name="alert-circle-outline" size={32} color="#F87171" />
+              <Text style={styles.webcamErrorText}>{cameraError}</Text>
+              <Text style={styles.webcamErrorSub}>{t('Please grant camera permissions or choose from your photo album.')}</Text>
+            </View>
+          ) : (
+            <View style={styles.webcamFeedWrap}>
+              {Platform.OS === 'web' ? (
+                // @ts-ignore
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  style={{
+                    width: '100%',
+                    height: 280,
+                    borderRadius: 14,
+                    objectFit: 'cover',
+                    backgroundColor: '#000',
+                  }}
+                />
+              ) : null}
+              <View style={styles.webcamCrosshairWrap}>
+                <View style={styles.webcamFrameGuide} />
+                <Text style={styles.webcamGuideText}>{t('Center meal in frame')}</Text>
+              </View>
+            </View>
+          )}
+
+          <View style={styles.webcamControlsRow}>
+            <TouchableOpacity
+              style={styles.webcamFlipBtn}
+              onPress={() => setFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'))}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="camera-reverse-outline" size={22} color="#fff" />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.webcamShutterBtn} activeOpacity={0.8} onPress={snapPhoto}>
+              <View style={styles.webcamShutterInner} />
+            </TouchableOpacity>
+
+            <View style={{ width: 44 }} />
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 function MealPlanResult({
   profile,
   initialPlan,
@@ -362,8 +514,8 @@ function MealPlanResult({
   const [analysisError, setAnalysisError] = useState('');
   const [analysisHistory, setAnalysisHistory] = useState<MealImageAnalysisResponse[]>([]);
   const [selectedAnalysis, setSelectedAnalysis] = useState<MealImageAnalysisResponse | null>(null);
-  const [analysisSourcePickerVisible, setAnalysisSourcePickerVisible] = useState(false);
   const [analysisCapturePickerVisible, setAnalysisCapturePickerVisible] = useState(false);
+  const [webcamVisible, setWebcamVisible] = useState(false);
   const [planTab, setPlanTab] = useState<PlanTabId>('my_plan');
   const [canAccessTracker, setCanAccessTracker] = useState(false);
   const [canAccessMealAnalysis, setCanAccessMealAnalysis] = useState(false);
@@ -908,6 +1060,10 @@ function MealPlanResult({
 
   const handleUseCamera = async () => {
     setAnalysisCapturePickerVisible(false);
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
+      setWebcamVisible(true);
+      return;
+    }
     try {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (!permission.granted) {
@@ -957,39 +1113,7 @@ function MealPlanResult({
     }
   };
 
-  const handleUploadFile = async () => {
-    setAnalysisSourcePickerVisible(false);
-    setAnalysisCapturePickerVisible(false);
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: '*/*',
-        copyToCacheDirectory: true,
-        multiple: false,
-      });
-
-      if (result.canceled || !result.assets || result.assets.length === 0) {
-        return;
-      }
-
-      const asset = result.assets[0];
-      await analyzeSelectedAsset({
-        uri: asset.uri,
-        fileName: asset.name ?? null,
-        mimeType: asset.mimeType ?? 'image/jpeg',
-        base64: null,
-      });
-    } catch (error) {
-      Alert.alert(t('File upload error'), error instanceof Error ? error.message : t('Unable to open the file picker right now.'));
-      setAnalysisLoading(false);
-    }
-  };
-
   const handleStartAnalysis = () => {
-    setAnalysisCapturePickerVisible(true);
-  };
-
-  const handleOpenCameraModule = () => {
-    setAnalysisSourcePickerVisible(false);
     setAnalysisCapturePickerVisible(true);
   };
 
@@ -1339,9 +1463,16 @@ function MealPlanResult({
               <Ionicons name="analytics-outline" size={40} color="#fff" style={{ opacity: 0.3, marginBottom: 12 }} />
               <Text style={styles.analysisTitle}>{t('AI MEAL ANALYSIS')}</Text>
               <Text style={styles.analysisDesc}>{t('Take a photo of your meal to get instant macro tracking and health feedback.')}</Text>
-              <TouchableOpacity style={styles.analysisBtn} onPress={handleStartAnalysis} activeOpacity={0.85}>
-                <Text style={styles.analysisBtnText}>{t('Start Analysis')}</Text>
-              </TouchableOpacity>
+              <View style={styles.analysisActionBtnRow}>
+                <TouchableOpacity style={styles.analysisActionBtn} onPress={() => void handleUseCamera()} activeOpacity={0.85}>
+                  <Ionicons name="camera" size={18} color="#fff" />
+                  <Text style={styles.analysisActionBtnText}>{t('Take Photo')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.analysisActionBtn, styles.analysisActionBtnSecondary]} onPress={() => void handlePickFromLibrary()} activeOpacity={0.85}>
+                  <Ionicons name="images" size={18} color="#fff" />
+                  <Text style={styles.analysisActionBtnText}>{t('Photo Album')}</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {analysisImage ? (
@@ -1579,47 +1710,12 @@ function MealPlanResult({
         </View>
       </Modal>
 
-      <Modal
-        visible={analysisSourcePickerVisible}
-        animationType="fade"
-        transparent
-        onRequestClose={() => setAnalysisSourcePickerVisible(false)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.sourcePickerSheet}>
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalEyebrow}>{t('MEAL ANALYSIS')}</Text>
-            <Text style={styles.modalTitle}>{t('Choose Photo Source')}</Text>
-            <Text style={styles.modalSubtitle}>
-              {t('Use your camera or pick a meal photo from your library.')}
-            </Text>
-
-            <TouchableOpacity style={styles.sourcePickerOption} activeOpacity={0.85} onPress={handleOpenCameraModule}>
-              <Ionicons name="camera-outline" size={22} color="#fff" />
-              <View style={styles.sourcePickerOptionTextWrap}>
-                <Text style={styles.sourcePickerOptionTitle}>{t('Camera / Gallery')}</Text>
-                <Text style={styles.sourcePickerOptionSub}>{t('Open camera tools and also choose from your gallery')}</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.sourcePickerOption} activeOpacity={0.85} onPress={() => void handleUploadFile()}>
-              <Ionicons name="document-outline" size={22} color="#fff" />
-              <View style={styles.sourcePickerOptionTextWrap}>
-                <Text style={styles.sourcePickerOptionTitle}>{t('Upload File')}</Text>
-                <Text style={styles.sourcePickerOptionSub}>{t('Choose an image, txt, pdf, docx, or other meal document')}</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.modalCancelBtn}
-              activeOpacity={0.8}
-              onPress={() => setAnalysisSourcePickerVisible(false)}
-            >
-              <Text style={styles.modalCancelBtnText}>{t('Close')}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      <WebCamCaptureModal
+        visible={webcamVisible}
+        onCapture={(asset) => void analyzeSelectedAsset(asset)}
+        onClose={() => setWebcamVisible(false)}
+        t={t}
+      />
 
       <Modal
         visible={analysisCapturePickerVisible}
@@ -3411,16 +3507,152 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
   },
-  analysisBtn: {
+  analysisBtn: { backgroundColor: '#fff', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  analysisBtnText: { color: Colors.accentPurple, fontSize: 14, fontWeight: '800', fontFamily: 'Inter_700Bold', letterSpacing: 0.5 },
+  analysisActionBtnRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  analysisActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
     backgroundColor: '#fff',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    marginTop: 12,
+    borderRadius: 14,
+    paddingVertical: 14,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
   },
-  analysisBtnText: {
-    color: Colors.accentPurple,
-    fontWeight: '700',
+  analysisActionBtnSecondary: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  analysisActionBtnText: {
+    color: '#0D0D1E',
     fontSize: 14,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: 0.3,
+  },
+  webcamModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  webcamCard: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: '#13132A',
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(168,85,247,0.3)',
+  },
+  webcamHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  webcamTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+  },
+  webcamCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  webcamFeedWrap: {
+    position: 'relative',
+    borderRadius: 14,
+    overflow: 'hidden',
+    backgroundColor: '#000',
+  },
+  webcamCrosshairWrap: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    pointerEvents: 'none' as any,
+  },
+  webcamFrameGuide: {
+    width: '75%',
+    height: '65%',
+    borderColor: 'rgba(255,255,255,0.45)',
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderRadius: 12,
+  },
+  webcamGuideText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
+    marginTop: 8,
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  webcamControlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 18,
+    paddingHorizontal: 12,
+  },
+  webcamFlipBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  webcamShutterBtn: {
+    width: 66,
+    height: 66,
+    borderRadius: 33,
+    borderWidth: 4,
+    borderColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  webcamShutterInner: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#A855F7',
+  },
+  webcamErrorBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 30,
+    gap: 8,
+  },
+  webcamErrorText: {
+    color: '#F87171',
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    textAlign: 'center',
+  },
+  webcamErrorSub: {
+    color: Colors.textMuted,
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
   },
 });
