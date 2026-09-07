@@ -1298,7 +1298,12 @@ export default function ChallengeProgressScreen() {
                       <Text style={styles.dayMetaText}>
                         {dayExerciseCount > 0 ? `${completedExerciseCount}/${dayExerciseCount} exercises completed` : `${day.sections.length} sections`}
                       </Text>
-                      {isCurrentDay && !dayProgress?.completed ? <Text style={styles.dayCurrentLabel}>Today</Text> : null}
+                      {isCurrentDay && !dayProgress?.completed ? (
+                        <View style={styles.urgencyPill}>
+                          <Ionicons name="flash" size={11} color="#FBBF24" />
+                          <Text style={styles.urgencyPillText}>{t('Finish today or lose points')}</Text>
+                        </View>
+                      ) : null}
                       {isMissed ? <Text style={styles.dayMissedLabel}>Missed</Text> : null}
                     </View>
 
@@ -1801,6 +1806,22 @@ const styles = StyleSheet.create({
   dayMetaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   dayMetaText: { color: Colors.textMuted, fontSize: 11, fontFamily: 'Inter_400Regular' },
   dayCurrentLabel: { color: Colors.primary, fontSize: 11, fontFamily: 'Inter_700Bold' },
+  urgencyPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(245,158,11,0.12)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(245,158,11,0.25)',
+  },
+  urgencyPillText: {
+    color: '#FBBF24',
+    fontSize: 10,
+    fontFamily: 'Inter_700Bold',
+  },
   dayDetails: { gap: 10, marginTop: 4 },
   dayNotes: { color: Colors.textSecondary, fontSize: 12, lineHeight: 18, fontFamily: 'Inter_400Regular' },
   helperText: { color: Colors.textMuted, fontSize: 12, lineHeight: 18, fontFamily: 'Inter_500Medium' },
