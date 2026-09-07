@@ -605,10 +605,16 @@ export default function ProfileScreen() {
           {habitSummary.map((line) => (
             <Text key={line} style={styles.habitSummaryLine}>{line}</Text>
           ))}
-          <TouchableOpacity style={styles.metricsEditBtn} activeOpacity={0.85} onPress={openHabitModal}>
-            <Ionicons name="sparkles-outline" size={16} color="#06B6D4" />
-            <Text style={styles.metricsEditText}>{t('Edit mindset settings')}</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+            <TouchableOpacity style={[styles.metricsEditBtn, { flex: 1, marginTop: 0 }]} activeOpacity={0.85} onPress={() => router.push('/profile/settings')}>
+              <Ionicons name="settings-outline" size={16} color="#06B6D4" />
+              <Text style={styles.metricsEditText}>{t('My Settings')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.metricsEditBtn, { flex: 1, marginTop: 0 }]} activeOpacity={0.85} onPress={openHabitModal}>
+              <Ionicons name="sparkles-outline" size={16} color="#F59E0B" />
+              <Text style={styles.metricsEditText}>{t('Quick edit')}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.coachSection}>
@@ -960,37 +966,38 @@ export default function ProfileScreen() {
                       returnKeyType="done"
                     />
 
-                    <Text style={styles.habitFieldLabel}>{t('Identity statement')}</Text>
+                    <Text style={styles.habitFieldLabel}>Who are you becoming? (Section 20.3)</Text>
                     <TextInput
                       style={styles.habitInput}
                       value={habitDraft.identity_statement}
                       onChangeText={(value) => setHabitDraft((prev) => ({ ...prev, identity_statement: value }))}
-                      placeholder="Who are you becoming?"
+                      placeholder="I am someone who..."
                       placeholderTextColor={Colors.placeholder}
                       editable={!savingHabits}
                       multiline
-                      maxLength={240}
+                      autoCorrect={false}
+                      maxLength={280}
                       textAlignVertical="top"
                       returnKeyType="done"
                     />
 
-                    <Text style={styles.habitFieldLabel}>{t('Workout unlock')}</Text>
+                    <Text style={styles.habitFieldLabel}>{t('Workout unlock')} (Section 20.4)</Text>
                     <TextInput
                       style={styles.habitInput}
                       value={habitDraft.workout_unlock_label}
                       onChangeText={(value) => setHabitDraft((prev) => ({ ...prev, workout_unlock_label: value.slice(0, 120) }))}
-                      placeholder="Example: After work reset"
+                      placeholder="Example: Favorite Podcast, Fresh Espresso"
                       placeholderTextColor={Colors.placeholder}
                       editable={!savingHabits}
                       returnKeyType="done"
                     />
 
-                    <Text style={styles.habitFieldLabel}>{t('If-then trigger context')}</Text>
+                    <Text style={styles.habitFieldLabel}>After I... (Section 20.5 Trigger)</Text>
                     <TextInput
                       style={styles.habitInput}
                       value={habitDraft.training_trigger_context}
                       onChangeText={(value) => setHabitDraft((prev) => ({ ...prev, training_trigger_context: value.slice(0, 240) }))}
-                      placeholder="If it is 6pm and I close my laptop..."
+                      placeholder="e.g. close my laptop / put the kids to bed"
                       placeholderTextColor={Colors.placeholder}
                       editable={!savingHabits}
                       multiline
@@ -998,12 +1005,12 @@ export default function ProfileScreen() {
                       returnKeyType="done"
                     />
 
-                    <Text style={styles.habitFieldLabel}>{t('If-then trigger action')}</Text>
+                    <Text style={styles.habitFieldLabel}>I will immediately... (Section 20.5 Action)</Text>
                     <TextInput
                       style={styles.habitInput}
                       value={habitDraft.training_trigger_action}
                       onChangeText={(value) => setHabitDraft((prev) => ({ ...prev, training_trigger_action: value.slice(0, 240) }))}
-                      placeholder="...then I start my workout within 10 minutes."
+                      placeholder="open the app and start my workout"
                       placeholderTextColor={Colors.placeholder}
                       editable={!savingHabits}
                       multiline

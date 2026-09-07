@@ -1829,6 +1829,102 @@ export async function recordAnalyticsEvent(
   });
 }
 
+export async function streamCoachVictorMessage(
+  message: string,
+  onToken: (token: string) => void,
+  onDone: (fullReply: string, threadId: string) => void,
+  onError: (error: Error) => void
+): Promise<() => void> {
+  const controller = new AbortController();
+  const requestTokens = await getValidAuthTokens();
+  const headers: Record<string, string> = {
+    Accept: 'text/event-stream',
+    'Content-Type': 'application/json',
+    ...getClientHeaders(),
+  };
+  if (requestTokens?.access_token) {
+    headers.Authorization = `Bearer ${requestTokens.access_token}`;
+  }
+
+  (async () => {
+    try {
+      const response = await fetch(`${API_URL}/ai/coach-victor/stream`, {
+        method: 'POST',
+        headers,
+        credentials: APP_REQUEST_CREDENTIALS,
+        body: JSON.stringify({ message }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok || !response.body) {
+        const fallbackRes = await apiRequest<{ reply: string; thread_id?: string }>('/ai/coach-victor/chat', {
+          method: 'POST',
+          body: { message },
+        });
+        const words = fallbackRes.reply.split(' ');
+        for (let i = 0; i < words.length; i++) {
+          const chunk = words[i] + (i < words.length - 1 ? ' ' : '');
+          onToken(chunk);
+          await new Promise((r) => setTimeout(r, 20));
+        }
+        onDone(fallbackRes.reply, fallbackRes.thread_id || '');
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+      let fullReply = '';
+      let finalThreadId = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) {
+          break;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith('data:')) {
+            continue;
+          }
+          const raw = trimmed.slice(5).trim();
+          if (raw === '[DONE]') {
+            break;
+          }
+          try {
+            const data = JSON.parse(raw);
+            if (data.type === 'token' && typeof data.token === 'string') {
+              fullReply += data.token;
+              onToken(data.token);
+            } else if (data.type === 'done') {
+              if (data.reply) fullReply = data.reply;
+              if (data.thread_id) finalThreadId = data.thread_id;
+            } else if (data.type === 'error') {
+              throw new Error(data.error || 'Streaming error');
+            }
+          } catch {
+            // Incomplete chunk
+          }
+        }
+      }
+
+      onDone(fullReply, finalThreadId);
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        return;
+      }
+      onError(err instanceof Error ? err : new Error(String(err)));
+    }
+  })();
+
+  return () => controller.abort();
+}
+
 function extractErrorDetail(data: unknown): string {
   if (typeof data === 'string') {
     return data;

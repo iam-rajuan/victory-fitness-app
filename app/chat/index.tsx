@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/Colors';
 import { ErrorPopupModal } from '../../components/ErrorPopupModal';
-import { apiRequest } from '../../lib/api';
+import { apiRequest, streamCoachVictorMessage } from '../../lib/api';
 import { formatAppError } from '../../lib/error';
 import { goBackOrReplace } from '../../lib/navigation';
 import { fetchCoachVictorHistoryData } from '../../lib/screenData';
@@ -214,26 +214,51 @@ export default function ChatScreen() {
       text: trimmed,
       sender: 'user',
     };
-    const nextMessages = [...messages, userMessage];
-    setMessages(nextMessages);
+    const coachMsgId = `${Date.now()}-coach`;
+    const coachPlaceholder: Message = {
+      id: coachMsgId,
+      text: '',
+      sender: 'coach',
+      status: 'typing',
+    };
+    setMessages([...messages, userMessage, coachPlaceholder]);
     setInputText('');
     setSending(true);
 
+    let accumulatedText = '';
     try {
-      const response = await apiRequest<{ reply: string }>('/ai/coach-victor/chat', {
-        method: 'POST',
-        body: { message: trimmed },
-      });
-
-      const coachMessage: Message = {
-        id: `${Date.now()}-coach`,
-        text: response.reply,
-        sender: 'coach',
-      };
-      setMessages((current) => [...current, coachMessage]);
+      await streamCoachVictorMessage(
+        trimmed,
+        (token) => {
+          accumulatedText += token;
+          setMessages((current) =>
+            current.map((msg) =>
+              msg.id === coachMsgId
+                ? { ...msg, text: accumulatedText, status: undefined }
+                : msg
+            )
+          );
+        },
+        (finalReply) => {
+          const finalText = finalReply || accumulatedText;
+          setMessages((current) =>
+            current.map((msg) =>
+              msg.id === coachMsgId
+                ? { ...msg, text: finalText, status: undefined }
+                : msg
+            )
+          );
+          setSending(false);
+        },
+        (error) => {
+          setErrorDialog(formatAppError(error, 'Coach Victor is unavailable right now. Please try again in a moment.'));
+          setMessages((current) => current.filter((msg) => msg.id !== coachMsgId));
+          setSending(false);
+        }
+      );
     } catch (error) {
       setErrorDialog(formatAppError(error, 'Coach Victor is unavailable right now. Please try again in a moment.'));
-    } finally {
+      setMessages((current) => current.filter((msg) => msg.id !== coachMsgId));
       setSending(false);
     }
   };
@@ -247,19 +272,8 @@ export default function ChatScreen() {
   }, [messages, sending]);
 
   const conversationMessages = useMemo(
-    () =>
-      sending
-        ? [
-            ...messages,
-            {
-              id: 'coach-typing-indicator',
-              text: '',
-              sender: 'coach' as const,
-              status: 'typing' as const,
-            },
-          ]
-        : messages,
-    [messages, sending],
+    () => messages,
+    [messages],
   );
 
   const renderMessage = useCallback(
