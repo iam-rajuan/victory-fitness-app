@@ -226,11 +226,17 @@ export default function ChatScreen() {
     };
   }, []);
 
+  const isSubmittingRef = useRef(false);
+
   const sendMessage = async () => {
     const trimmed = inputText.trim();
-    if (!trimmed || sending) {
+    if (!trimmed || sending || isSubmittingRef.current) {
       return;
     }
+    isSubmittingRef.current = true;
+    setTimeout(() => {
+      isSubmittingRef.current = false;
+    }, 300);
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -365,6 +371,8 @@ export default function ChatScreen() {
           keyExtractor={keyExtractor}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="always"
+          keyboardDismissMode="interactive"
           initialNumToRender={12}
           maxToRenderPerBatch={10}
           updateCellsBatchingPeriod={50}
@@ -394,13 +402,39 @@ export default function ChatScreen() {
                 setInputText(value);
               }}
               multiline
+              returnKeyType="send"
+              enablesReturnKeyAutomatically
+              blurOnSubmit={false}
+              submitBehavior="submit"
+              onSubmitEditing={() => {
+                void sendMessage();
+              }}
+              onKeyPress={(e: any) => {
+                if (e.nativeEvent?.key === 'Enter' && !e.nativeEvent?.shiftKey) {
+                  e.preventDefault?.();
+                  void sendMessage();
+                }
+              }}
+              {...(Platform.OS === 'web'
+                ? {
+                    enterKeyHint: 'send' as any,
+                  }
+                : {})}
               editable={!sending}
             />
             <TouchableOpacity
               onPress={sendMessage}
+              {...(Platform.OS === 'web'
+                ? {
+                    onMouseDown: (e: any) => {
+                      e.preventDefault?.();
+                    },
+                  }
+                : {})}
               style={[styles.sendButton, (!inputText.trim() || sending) && styles.sendButtonDisabled]}
               disabled={sending || !inputText.trim()}
-              activeOpacity={0.85}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
               <Ionicons name="arrow-forward" size={20} color={sending || !inputText.trim() ? 'rgba(255,255,255,0.4)' : '#fff'} />
             </TouchableOpacity>
