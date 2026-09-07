@@ -1,6 +1,9 @@
+import * as Clipboard from 'expo-clipboard';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Share,
+  Alert,
   Image,
   KeyboardAvoidingView,
   Modal,
@@ -17,7 +20,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
-import { apiRequest } from '../../lib/api';
+import { apiRequest, getAuthUser } from '../../lib/api';
 import { ErrorPopupModal } from '../../components/ErrorPopupModal';
 import { formatAppError } from '../../lib/error';
 import { useLanguage } from '../../lib/i18n';
@@ -77,6 +80,7 @@ type ChallengeDetail = {
   challenge_id: string;
   title: string;
   description: string;
+  why_it_matters?: string;
   plan_text: string;
   plan_days: ChallengePlanDay[];
   category: string;
@@ -126,6 +130,39 @@ export default function ChallengeDetailScreen() {
   const [message, setMessage] = useState('');
   const [errorDialog, setErrorDialog] = useState<{ title: string; message: string } | null>(null);
   const [completeDayConfirmVisible, setCompleteDayConfirmVisible] = useState(false);
+  const [inviteCopied, setInviteCopied] = useState(false);
+
+  const handleInviteFromDetail = async () => {
+    if (!detail) return;
+    try {
+      const authUser = await getAuthUser();
+      const inviterId = authUser?.id ? `&inviter_id=${authUser.id}` : '';
+      const origin =
+        Platform.OS === 'web' && typeof window !== 'undefined'
+          ? window.location.origin
+          : 'https://victory-fitness-app.vercel.app';
+      const inviteUrl = `${origin}/register?challenge_id=${detail.challenge_id}${inviterId}&signup_source=challenge_invite`;
+      const msg = `${t('Join me in the')} "${detail.title}" ${t('challenge on Victory Fitness!')}\n${inviteUrl}`;
+
+      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+        await navigator.share({
+          title: detail.title,
+          text: `${t('Join me in the')} "${detail.title}" ${t('challenge on Victory Fitness!')}`,
+          url: inviteUrl,
+        });
+        return;
+      }
+      await Clipboard.setStringAsync(inviteUrl);
+      setInviteCopied(true);
+      setTimeout(() => setInviteCopied(false), 3500);
+      Alert.alert(
+        t('Invite Link Copied!'),
+        t('Send this link to friends. When they register, they will be taken directly to this challenge preview and you will earn 50 points (+50 more on their first workout)!'),
+      );
+    } catch {
+      // dismissed
+    }
+  };
 
   const dayProgressMap = useMemo(() => {
     const map = new Map<number, ChallengePlanDayProgress>();
@@ -415,6 +452,15 @@ export default function ChallengeDetailScreen() {
                 <View style={styles.heroCard}>
                   <Text style={styles.heroTitle}>{detail.title}</Text>
                   <Text style={styles.heroDescription}>{detail.description}</Text>
+                  {detail.why_it_matters ? (
+                    <View style={styles.whyItMattersCard}>
+                      <View style={styles.whyItMattersHeader}>
+                        <Ionicons name="sparkles" size={16} color="#F59E0B" />
+                        <Text style={styles.whyItMattersTitle}>{t('Why It Matters')}</Text>
+                      </View>
+                      <Text style={styles.whyItMattersBody}>{detail.why_it_matters}</Text>
+                    </View>
+                  ) : null}
                   {overviewDay ? (
                     <View style={styles.overviewCard}>
                       <Text style={styles.overviewEyebrow}>
@@ -434,7 +480,7 @@ export default function ChallengeDetailScreen() {
                         </Text>
                       ) : null}
                     </View>
-                  ) : compactPlanSummary ? (
+                  ) : (compactPlanSummary && compactPlanSummary !== detail.description) ? (
                     <View style={styles.overviewCard}>
                       <Text style={styles.overviewEyebrow}>{t('Program Overview')}</Text>
                       <Text style={styles.overviewBody} numberOfLines={4}>
@@ -578,6 +624,16 @@ export default function ChallengeDetailScreen() {
                           )}
                         </TouchableOpacity>
                       )}
+                      <TouchableOpacity
+                        style={styles.inviteFriendDetailBtn}
+                        activeOpacity={0.88}
+                        onPress={() => void handleInviteFromDetail()}
+                      >
+                        <Ionicons name="person-add-outline" size={16} color="#00F0D0" />
+                        <Text style={styles.inviteFriendDetailBtnText}>
+                          {inviteCopied ? t('Invite Link Copied!') : t('Invite Friends (+100 Pts)')}
+                        </Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
                 </View>
@@ -754,7 +810,34 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   heroTitle: { color: '#FFF', fontSize: 28, lineHeight: 36, fontFamily: 'Inter_700Bold', marginBottom: 12 },
-  heroDescription: { color: '#E5E7EB', fontSize: 16, lineHeight: 24, fontFamily: 'Inter_400Regular', marginBottom: 18 },
+  heroDescription: { color: '#E5E7EB', fontSize: 16, lineHeight: 24, fontFamily: 'Inter_400Regular', marginBottom: 16 },
+  whyItMattersCard: {
+    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+    borderColor: 'rgba(245, 158, 11, 0.28)',
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 16,
+  },
+  whyItMattersHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
+  },
+  whyItMattersTitle: {
+    color: '#F59E0B',
+    fontSize: 13,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  whyItMattersBody: {
+    color: 'rgba(255, 255, 255, 0.88)',
+    fontSize: 14,
+    lineHeight: 21,
+    fontFamily: 'Inter_400Regular',
+  },
   dayStripWrap: {
     borderRadius: 22,
     paddingHorizontal: 16,
@@ -1074,4 +1157,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#4B5563',
   },
   sendButtonDisabled: { opacity: 0.45 },
+  inviteFriendDetailBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(0, 240, 208, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 240, 208, 0.35)',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 10,
+  },
+  inviteFriendDetailBtnText: {
+    color: '#00F0D0',
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+  },
 });

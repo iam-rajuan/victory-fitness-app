@@ -19,6 +19,7 @@ import { AuthButton } from '../../components/AuthButton';
 import { ErrorPopupModal } from '../../components/ErrorPopupModal';
 import { Colors } from '../../constants/Colors';
 import { apiRequest, AuthResponse, setAuthTokens } from '../../lib/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getPostAuthRoute } from '../../lib/access';
 import { markBiometricSessionUnlocked, maybeOfferBiometricUnlock } from '../../lib/biometricUnlock';
 import { formatAppError } from '../../lib/error';
@@ -35,7 +36,7 @@ function formatCountdown(totalSeconds: number) {
 
 export default function VerificationScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ email?: string }>();
+  const params = useLocalSearchParams<{ email?: string; challenge_id?: string }>();
   const email = params.email ?? '';
   const codeInputRef = useRef<TextInput>(null);
   const [code, setCode] = useState('');
@@ -103,6 +104,12 @@ export default function VerificationScreen() {
       await setAuthTokens(auth);
       markBiometricSessionUnlocked();
       void maybeOfferBiometricUnlock(auth.user);
+      const pendingChallengeId = params.challenge_id || (await AsyncStorage.getItem('@pending_challenge_id'));
+      if (pendingChallengeId) {
+        await AsyncStorage.removeItem('@pending_challenge_id');
+        replaceRoute(router, `/challenges/${pendingChallengeId}` as any);
+        return;
+      }
       replaceRoute(router, getPostAuthRoute(auth.user));
     } catch (error) {
       setErrorDialog(formatAppError(error));

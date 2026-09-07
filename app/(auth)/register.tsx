@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../../constants/Colors';
 import { AuthInput } from '../../components/AuthInput';
 import { AuthButton } from '../../components/AuthButton';
@@ -36,7 +37,14 @@ const { height } = Dimensions.get('window');
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const { source } = useLocalSearchParams<{ source?: string }>();
+  const params = useLocalSearchParams<{
+    source?: string;
+    inviter_id?: string;
+    challenge_id?: string;
+    invite_id?: string;
+    referral_code?: string;
+  }>();
+  const source = params.source;
   const { useDefaultLanguage, syncLanguageWithCurrentUser, t } = useLanguage();
   const [name, setName] = useState('');
   const [surname, setSurname] = useState('');
@@ -88,6 +96,9 @@ export default function RegisterScreen() {
     setFieldErrors({});
     setLoading(true);
     try {
+      if (params.challenge_id) {
+        await AsyncStorage.setItem('@pending_challenge_id', String(params.challenge_id));
+      }
       await apiRequest('/auth/register', {
         method: 'POST',
         body: {
@@ -97,12 +108,19 @@ export default function RegisterScreen() {
           mobile: normalizedMobile,
           password,
           marketing_consent: marketingConsent,
-          signup_source: String(source || 'organic').trim().slice(0, 120) || 'organic',
+          signup_source: String(source || (params.challenge_id ? 'challenge_invite' : 'organic')).trim().slice(0, 120) || 'organic',
+          inviter_id: params.inviter_id,
+          invite_id: params.invite_id,
+          challenge_id: params.challenge_id,
+          referral_code: params.referral_code,
         },
       });
       router.push({
         pathname: '/verification',
-        params: { email: normalizedEmail },
+        params: {
+          email: normalizedEmail,
+          challenge_id: params.challenge_id,
+        },
       });
     } catch (error) {
       setErrorDialog(formatAppError(error));
@@ -132,6 +150,12 @@ export default function RegisterScreen() {
         auth.returning_user.message,
         [{ text: 'Choose your subscription', onPress: () => replaceRoute(router, '/plan') }, { text: 'Continue', style: 'cancel', onPress: () => replaceRoute(router, getPostAuthRoute(auth.user)) }],
       );
+      return;
+    }
+    const pendingChallengeId = params.challenge_id || await AsyncStorage.getItem('@pending_challenge_id');
+    if (pendingChallengeId) {
+      await AsyncStorage.removeItem('@pending_challenge_id');
+      replaceRoute(router, `/challenges/${pendingChallengeId}` as any);
       return;
     }
     replaceRoute(router, getPostAuthRoute(auth.user));
@@ -216,6 +240,19 @@ export default function RegisterScreen() {
             {/* Heading */}
             <Text style={styles.heading}>CREATE ACCOUNT</Text>
             <Text style={styles.subheading}>Start your fitness journey</Text>
+
+            {params.challenge_id ? (
+              <View style={styles.challengeInviteBanner}>
+                <View style={styles.challengeInviteBadge}>
+                  <Ionicons name="trophy" size={14} color="#052E16" />
+                  <Text style={styles.challengeInviteBadgeText}>CHALLENGE INVITE</Text>
+                </View>
+                <Text style={styles.challengeInviteBannerTitle}>You've been invited to join a Challenge!</Text>
+                <Text style={styles.challengeInviteBannerText}>
+                  Sign up now to view the challenge preview and start training with your friends.
+                </Text>
+              </View>
+            ) : null}
 
             {/* Glassmorphic Form Card */}
             <View style={styles.formCard}>
@@ -547,5 +584,46 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.textMuted,
     fontFamily: 'Inter_400Regular',
+  },
+  challengeInviteBanner: {
+    backgroundColor: 'rgba(0, 240, 208, 0.12)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 240, 208, 0.35)',
+    padding: 16,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  challengeInviteBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#00F0D0',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  challengeInviteBadgeText: {
+    color: '#052E16',
+    fontSize: 11,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: 0.5,
+  },
+  challengeInviteBannerTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  challengeInviteBannerText: {
+    color: '#CBD5E1',
+    fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
+    lineHeight: 18,
   },
 });

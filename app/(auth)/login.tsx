@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
@@ -31,7 +32,7 @@ const { height } = Dimensions.get('window');
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { reauth } = useLocalSearchParams<{ reauth?: string }>();
+  const { reauth, challenge_id } = useLocalSearchParams<{ reauth?: string; challenge_id?: string }>();
   const { t, useDefaultLanguage, syncLanguageWithCurrentUser } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -126,6 +127,12 @@ export default function LoginScreen() {
       markBiometricSessionUnlocked();
       await syncLanguageWithCurrentUser(auth.user.id);
       void maybeOfferBiometricUnlock(auth.user);
+      const pendingChallengeId = challenge_id || (await AsyncStorage.getItem('@pending_challenge_id'));
+      if (pendingChallengeId) {
+        await AsyncStorage.removeItem('@pending_challenge_id');
+        replaceRoute(router, `/challenges/${pendingChallengeId}` as any);
+        return;
+      }
       if (auth.returning_user) {
         Alert.alert(
           auth.returning_user.title,
