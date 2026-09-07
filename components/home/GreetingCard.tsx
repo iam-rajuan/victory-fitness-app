@@ -41,17 +41,16 @@ export default function GreetingCard() {
 
     const loadVersionQuote = async () => {
       try {
-        // 1. Check local storage cache for this specific app release version
+        // 1. Instant render from local cache if available
         const cached = await AsyncStorage.getItem(QUOTE_CACHE_KEY);
         if (cached) {
           const parsed = JSON.parse(cached);
           if (parsed?.text && isMounted) {
             setQuote(parsed);
-            return;
           }
         }
 
-        // 2. Fetch version-seeded quote from backend
+        // 2. Fetch current live quote selected by admin from backend
         const remoteQuote = await fetchHomepageQuote(APP_VERSION);
         if (isMounted && remoteQuote?.text && remoteQuote.author) {
           const quoteObj = { text: remoteQuote.text, author: remoteQuote.author };

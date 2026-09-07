@@ -69,6 +69,9 @@ function resolveApiUrl(url: string): string {
 
   if (Platform.OS === 'web') {
     const hostname = getWebHostname();
+    if (isLocalHostname(hostname)) {
+      return 'http://localhost:8000';
+    }
     if (hostname && !isLocalHostname(hostname) && isLocalApiUrl(normalizedUrl)) {
       return getDefaultWebApiUrl();
     }
