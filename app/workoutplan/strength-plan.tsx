@@ -239,34 +239,43 @@ export default function StrengthPlanDashboard() {
       return;
     }
 
+    const dayProgress = getDayProgress(plan, dayLabel);
+    const alreadyCompleted = Boolean(dayProgress?.completed);
+
     // Freeze timer and calculate final session duration
     setIsTimerRunning(false);
-    const finalDuration = Math.max(sessionSeconds, 30);
+    const finalDuration = sessionSeconds > 0
+      ? Math.max(sessionSeconds, 30)
+      : (dayProgress?.duration_seconds || completedSessionSeconds || 30);
     setCompletedSessionSeconds(finalDuration);
 
     const progressKey = `complete-${plan.plan_id}-${dayLabel}`;
     try {
       setUpdatingProgressKey(progressKey);
-      const updatedPlan = await updateStrengthWorkoutPlanProgress(plan.plan_id, {
-        day: dayLabel,
-        completed: true,
-        duration_seconds: finalDuration,
-      });
-      updatePlanProgressState(updatedPlan);
 
-      // Log workout session to backend with ACTUAL recorded duration!
-      void createWorkoutLog({
-        workout_id: `${plan.plan_id}-${dayLabel.toLowerCase().replace(/\s+/g, '-')}`,
-        duration_seconds: finalDuration,
-        status: 'completed',
-      }).catch(() => undefined);
+      let updatedPlan = plan;
+      if (!alreadyCompleted) {
+        updatedPlan = await updateStrengthWorkoutPlanProgress(plan.plan_id, {
+          day: dayLabel,
+          completed: true,
+          duration_seconds: finalDuration,
+        });
+        updatePlanProgressState(updatedPlan);
+
+        // Log workout session to backend with ACTUAL recorded duration!
+        void createWorkoutLog({
+          workout_id: `${plan.plan_id}-${dayLabel.toLowerCase().replace(/\s+/g, '-')}`,
+          duration_seconds: finalDuration,
+          status: 'completed',
+        }).catch(() => undefined);
+        setCompletedWorkoutsCount((prev) => prev + 1);
+      }
 
       const isFullPlan = updatedPlan.days.length > 0 && updatedPlan.days.every((day) => getDayProgress(updatedPlan, day.day)?.completed);
       const card = await fetchStrengthCompletionCard(plan.plan_id, dayLabel, isFullPlan, finalDuration);
       setCompletionCard(card);
       setCompletedDayLabel(dayLabel);
       setActivePlanIdForFeedback(plan.plan_id);
-      setCompletedWorkoutsCount((prev) => prev + 1);
     } catch (error) {
       Alert.alert(t('Error'), formatAppError(error, t('Unable to complete workout right now.')).message);
     } finally {
@@ -361,6 +370,34 @@ export default function StrengthPlanDashboard() {
       updatePlanProgressState(updatedPlan);
     } catch (error) {
       Alert.alert(t('Error'), formatAppError(error, t('Unable to start workout right now.')).message);
+    } finally {
+      setUpdatingProgressKey(null);
+    }
+  };
+
+  const handleRestartWorkout = async (plan: StrengthPlanResponse, dayLabel: string) => {
+    if (!plan.plan_id) {
+      return;
+    }
+
+    setSessionSeconds(0);
+    setActiveSessionDay(dayLabel);
+    setIsTimerRunning(true);
+    setCompletedSessionSeconds(null);
+
+    const progressKey = `restart-${plan.plan_id}-${dayLabel}`;
+    try {
+      setUpdatingProgressKey(progressKey);
+      const updatedPlan = await updateStrengthWorkoutPlanProgress(plan.plan_id, {
+        day: dayLabel,
+        started: true,
+        completed: false,
+        reset_timer: true,
+        started_at: new Date().toISOString(),
+      });
+      updatePlanProgressState(updatedPlan);
+    } catch (error) {
+      Alert.alert(t('Error'), formatAppError(error, t('Unable to restart workout right now.')).message);
     } finally {
       setUpdatingProgressKey(null);
     }
@@ -574,9 +611,13 @@ export default function StrengthPlanDashboard() {
                 ? `${completedSections}/${totalSections} ${t('sections completed')} · ${completedExercises}/${totalExercises} ${t('exercises completed')}`
                 : 0;
               const startButtonKey = selectedPlanDay ? `start-${plan.plan_id}-${selectedPlanDay.day}` : '';
-              const startButtonBusy = updatingProgressKey === startButtonKey;
+              const completeButtonKey = selectedPlanDay ? `complete-${plan.plan_id}-${selectedPlanDay.day}` : '';
+              const restartButtonKey = selectedPlanDay ? `restart-${plan.plan_id}-${selectedPlanDay.day}` : '';
+              const startButtonBusy = updatingProgressKey === startButtonKey || updatingProgressKey === completeButtonKey;
+              const restartBusy = updatingProgressKey === restartButtonKey;
+              const isSessionBusy = startButtonBusy || restartBusy;
               const startButtonLabel = workoutCompleted
-                ? t('WORKOUT COMPLETED')
+                ? t('VIEW COMPLETION CARD')
                 : workoutStarted
                   ? t('CONTINUE WORKOUT')
                   : t('START WORKOUT');
@@ -805,9 +846,9 @@ export default function StrengthPlanDashboard() {
 
                           {/* Complete Session Button */}
                           <TouchableOpacity
-                            style={[styles.completeSessionBtn, startButtonBusy && styles.disabledBtn]}
+                            style={[styles.completeSessionBtn, isSessionBusy && styles.disabledBtn]}
                             activeOpacity={0.8}
-                            disabled={startButtonBusy}
+                            disabled={isSessionBusy}
                             onPress={() => handleCompleteWorkout(plan, selectedPlanDay.day)}
                           >
                             {startButtonBusy ? (
@@ -999,25 +1040,48 @@ export default function StrengthPlanDashboard() {
                             </View>
                           ) : null}
 
-                          {/* Start Workout Button */}
+                          {/* Start Workout / View Completion Card Button */}
                           <TouchableOpacity
                             style={[styles.startWorkoutBtn, workoutCompleted && styles.startWorkoutBtnCompleted]}
                             activeOpacity={0.8}
-                            disabled={!selectedPlanDay || startButtonBusy}
+                            disabled={!selectedPlanDay || isSessionBusy}
                             onPress={() => {
                               if (!selectedPlanDay) {
                                 return;
                               }
-                              void handleStartWorkout(plan, selectedPlanDay.day);
+                              if (workoutCompleted) {
+                                void handleCompleteWorkout(plan, selectedPlanDay.day);
+                              } else {
+                                void handleStartWorkout(plan, selectedPlanDay.day);
+                              }
                             }}
                           >
                             {startButtonBusy ? (
                               <ActivityIndicator size="small" color="#000" />
                             ) : (
-                              <Ionicons name={workoutCompleted ? 'checkmark-circle' : 'play'} size={20} color="#000" />
+                              <Ionicons name={workoutCompleted ? 'trophy-outline' : 'play'} size={18} color="#000" />
                             )}
-                            <Text style={styles.startWorkoutBtnText}>{startButtonLabel}</Text>
+                            <Text style={styles.startWorkoutBtnText} numberOfLines={1} ellipsizeMode="tail">
+                              {startButtonLabel}
+                            </Text>
                           </TouchableOpacity>
+
+                          {/* Redo / Restart Workout link for completed workouts */}
+                          {workoutCompleted && selectedPlanDay && (
+                            <TouchableOpacity
+                              style={[styles.redoWorkoutBtn, isSessionBusy && styles.disabledBtn]}
+                              activeOpacity={0.7}
+                              disabled={isSessionBusy}
+                              onPress={() => void handleRestartWorkout(plan, selectedPlanDay.day)}
+                            >
+                              {restartBusy ? (
+                                <ActivityIndicator size="small" color="#E0E7FF" />
+                              ) : (
+                                <Ionicons name="refresh" size={15} color="#E0E7FF" />
+                              )}
+                              <Text style={styles.redoWorkoutBtnText}>{t('Restart / Redo Workout')}</Text>
+                            </TouchableOpacity>
+                          )}
                         </>
                       )}
                     </View>
@@ -1461,7 +1525,9 @@ const styles = StyleSheet.create({
   startWorkoutBtn: {
     backgroundColor: Colors.accentBlue,
     borderRadius: 14,
-    height: 52,
+    minHeight: 52,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
@@ -1473,9 +1539,32 @@ const styles = StyleSheet.create({
   },
   startWorkoutBtnText: {
     color: '#000',
-    fontSize: 14,
-    fontFamily: 'Inter_800ExtraBold',
-    letterSpacing: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'web' ? 'Inter, system-ui, -apple-system, sans-serif' : 'Inter_700Bold',
+    letterSpacing: 0.5,
+    textAlign: 'center',
+    flexShrink: 1,
+  },
+  redoWorkoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  redoWorkoutBtnText: {
+    color: '#E0E7FF',
+    fontSize: 13,
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'web' ? 'Inter, system-ui, -apple-system, sans-serif' : 'Inter_600SemiBold',
+    letterSpacing: 0.3,
   },
 
   /* Active Session Styles */
@@ -1607,7 +1696,9 @@ const styles = StyleSheet.create({
   completeSessionBtn: {
     backgroundColor: Colors.accentBlue,
     borderRadius: 14,
-    height: 52,
+    minHeight: 52,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
@@ -1616,9 +1707,11 @@ const styles = StyleSheet.create({
   },
   completeSessionBtnText: {
     color: '#000',
-    fontSize: 14,
-    fontFamily: 'Inter_800ExtraBold',
-    letterSpacing: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'web' ? 'Inter, system-ui, -apple-system, sans-serif' : 'Inter_700Bold',
+    letterSpacing: 0.5,
+    textAlign: 'center',
   },
   confirmModalBackdrop: {
     flex: 1,

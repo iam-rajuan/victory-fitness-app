@@ -207,6 +207,11 @@ export async function updateStrengthWorkoutPlanProgress(
       nextDay.completed = payload.completed;
       if (payload.completed && !nextDay.completed_at) {
         nextDay.completed_at = new Date().toISOString();
+      } else if (!payload.completed) {
+        nextDay.completed_at = null;
+        nextDay.completed_exercise_ids = [];
+        nextDay.completed_section_ids = [];
+        nextDay.duration_seconds = null;
       }
     }
     if (payload.reset_timer) {
