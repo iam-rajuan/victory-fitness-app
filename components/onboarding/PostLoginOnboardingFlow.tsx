@@ -45,6 +45,14 @@ const COMMITMENT_OPTIONS = [
 ];
 const STEP_TITLES = ['Language', 'Country', 'Profile', 'Protein Target', 'Health', 'Motivation', 'Identity', 'Recommendation'];
 const getHealthConcernLabel = (option: string) => (option === 'Back' ? 'Back concern' : option);
+const POPULAR_LANGUAGES = [
+  { code: 'en', label: 'English', nativeLabel: 'English' },
+  { code: 'de', label: 'German', nativeLabel: 'Deutsch' },
+  { code: 'es', label: 'Spanish', nativeLabel: 'Español' },
+  { code: 'fr', label: 'French', nativeLabel: 'Français' },
+  { code: 'bn', label: 'Bengali', nativeLabel: 'বাংলা' },
+  { code: 'ar', label: 'Arabic', nativeLabel: 'العربية' },
+];
 const POPULAR_COUNTRIES = [
   { name: 'United States', code: 'US' },
   { name: 'United Kingdom', code: 'GB' },
@@ -227,13 +235,16 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
   const { setLanguage, t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingChoice, setSavingChoice] = useState<'gold' | 'other' | null>(null);
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [saveError, setSaveError] = useState('');
   const [data, setData] = useState<OnboardingData | null>(null);
   const [showGenderModal, setShowGenderModal] = useState(false);
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState(user.country || '');
   const [searchQuery, setSearchQuery] = useState('');
+  const [languageSearch, setLanguageSearch] = useState('');
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -330,6 +341,10 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
     });
   }, [data?.country, selectedCountry]);
   const suggestion = useMemo(() => (data ? getSuggestedTier(data.anamnese) : null), [data]);
+
+  const currentLanguageObj = useMemo(() => {
+    return SUPPORTED_LANGUAGES.find((l) => l.code === data?.language) || SUPPORTED_LANGUAGES[0];
+  }, [data?.language]);
 
   const currentWeightKg = useMemo(() => {
     if (!data?.personalProfile?.weight) return 0;
@@ -528,6 +543,22 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
       setSaving(false);
     }
   };
+  const goToStep = async (targetStep: number) => {
+    if (!data || saving || targetStep === step || targetStep < 0 || targetStep >= STEP_TITLES.length) {
+      return;
+    }
+    setSaveError('');
+    setSaving(true);
+    try {
+      await persistDraft(data, targetStep);
+      setStep(targetStep);
+      setErrors({});
+    } catch {
+      setSaveError('Unable to save your progress. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
   const updateData = async (updater: (current: OnboardingData) => OnboardingData) => {
     if (!data) {
       return;
@@ -546,6 +577,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
       return;
     }
     setSaving(true);
+    setSavingChoice('gold');
     setSaveError('');
     try {
       const countryObj = ALL_COUNTRIES.find(c => c.name === selectedCountry);
@@ -592,6 +624,60 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
       setSaveError('Unable to start your Gold trial right now. Please try again or choose another plan.');
     } finally {
       setSaving(false);
+      setSavingChoice(null);
+    }
+  };
+
+  const completeAndChooseAnotherPlan = async () => {
+    if (!data || saving) {
+      return;
+    }
+    if (!validateCurrentStep()) {
+      return;
+    }
+    setSaving(true);
+    setSavingChoice('other');
+    setSaveError('');
+    try {
+      const countryObj = ALL_COUNTRIES.find(c => c.name === selectedCountry);
+      const finalData: OnboardingData = {
+        ...data,
+        country: selectedCountry.trim(),
+        countryCode: countryObj?.code ?? null,
+        suggestion,
+        currentStep: STEP_TITLES.length - 1,
+        updatedAt: new Date().toISOString(),
+      };
+      await updateCurrentUserOnboarding({
+        currentStep: finalData.currentStep,
+        language: finalData.language,
+        country: selectedCountry.trim(),
+        countryCode: countryObj?.code ?? null,
+        motivationStatement: finalData.motivationStatement,
+        identityStatement: finalData.identityStatement,
+        personalProfile: {
+          ...finalData.personalProfile,
+          weight: convertWeightToKilograms(finalData.personalProfile.weight, finalData.personalProfile.weightUnit),
+          weightUnit: 'kg',
+        },
+        anamnese: finalData.anamnese,
+        suggestion: finalData.suggestion,
+        completed: true,
+      });
+      await updateCurrentUserProfile({
+        country: selectedCountry,
+        ...(countryObj ? { country_code: countryObj.code } : {}),
+        motivation_statement: finalData.motivationStatement,
+        identity_statement: finalData.identityStatement,
+        onboarding_completed: true,
+      });
+      await fetchCurrentUser();
+      replaceRoute(router, '/plan');
+    } catch {
+      setSaveError('Unable to save your onboarding details. Please try again.');
+    } finally {
+      setSaving(false);
+      setSavingChoice(null);
     }
   };
   const handleLanguageSelect = async (language: OnboardingLanguage) => {
@@ -627,6 +713,24 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
       },
     }));
   };
+  const displayLanguages = useMemo(() => {
+    if (languageSearch.trim().length > 0) {
+      const q = languageSearch.toLowerCase().trim();
+      return SUPPORTED_LANGUAGES.filter(
+        (l) =>
+          l.label.toLowerCase().includes(q) ||
+          l.nativeLabel.toLowerCase().includes(q) ||
+          l.code.toLowerCase().includes(q)
+      ).slice(0, 6);
+    }
+    const list = [...POPULAR_LANGUAGES];
+    if (data?.language && !list.some((l) => l.code === data.language)) {
+      const found = SUPPORTED_LANGUAGES.find((l) => l.code === data.language);
+      if (found) list.unshift(found);
+    }
+    return list;
+  }, [languageSearch, data?.language]);
+
   const filteredCountries = useMemo(() => {
     if (!searchQuery.trim()) {
       return [];
@@ -650,13 +754,35 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
         <Text style={styles.title}>{t('Build your personalized start')}</Text>
         <Text style={styles.subtitle}>{t('Complete these steps once and we will keep your plan setup on this device.')}</Text>
         <View style={styles.progressRow}>
-          {STEP_TITLES.map((label, index) => (
-            <View key={label} style={styles.progressItem}>
-              <View style={[styles.progressDot, index <= step && styles.progressDotActive]}>
-                <Text style={[styles.progressDotText, index <= step && styles.progressDotTextActive]}>{index + 1}</Text>
-              </View>
-            </View>
-          ))}
+          {STEP_TITLES.map((label, index) => {
+            const isCompletedOrCurrent = index <= step;
+            const isClickable = index < step && !saving;
+            return (
+              <Pressable
+                key={label}
+                style={styles.progressItem}
+                onPress={() => {
+                  if (isClickable) {
+                    void goToStep(index);
+                  }
+                }}
+                disabled={!isClickable}
+                hitSlop={6}
+              >
+                <View
+                  style={[
+                    styles.progressDot,
+                    isCompletedOrCurrent && styles.progressDotActive,
+                    isClickable && styles.progressDotClickable,
+                  ]}
+                >
+                  <Text style={[styles.progressDotText, isCompletedOrCurrent && styles.progressDotTextActive]}>
+                    {index + 1}
+                  </Text>
+                </View>
+              </Pressable>
+            );
+          })}
         </View>
         <Text style={styles.currentStepText}>
           {t('Step {step} of {total}', { step: step + 1, total: STEP_TITLES.length })}  •  {t(STEP_TITLES[step])}
@@ -666,18 +792,34 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
             <View>
               <Text style={styles.stepTitle}>{t('Preferred language')}</Text>
               <Text style={styles.stepText}>{t('Choose the language you want to use inside the app.')}</Text>
-              <View style={styles.optionGrid}>
-                {LANGUAGE_OPTIONS.map((option) => (
-                  <Pressable
-                    key={option.value}
-                    onPress={() => void handleLanguageSelect(option.value)}
-                    style={[styles.optionCard, data.language === option.value && styles.optionCardActive]}
-                  >
-                    <Text style={[styles.optionLabel, data.language === option.value && styles.optionLabelActive]}>{option.nativeLabel}</Text>
-                    <Text style={[styles.optionSubLabel, data.language === option.value && styles.optionLabelActive]}>{t(option.label)}</Text>
-                  </Pressable>
-                ))}
+
+              <Text style={styles.fieldLabel}>{t('Language')}</Text>
+              <Pressable
+                style={styles.languageDropdownField}
+                onPress={() => setShowLanguageModal(true)}
+              >
+                <View style={styles.languageDropdownLeft}>
+                  <View style={styles.languageIconCircle}>
+                    <Ionicons name="globe-outline" size={22} color={Colors.primary} />
+                  </View>
+                  <View>
+                    <Text style={styles.languageDropdownValue}>
+                      {currentLanguageObj.nativeLabel}
+                      {currentLanguageObj.label !== currentLanguageObj.nativeLabel ? ` (${currentLanguageObj.label})` : ''}
+                    </Text>
+                    <Text style={styles.languageDropdownSubtext}>{t('Tap to change language')}</Text>
+                  </View>
+                </View>
+                <Ionicons name="chevron-down" size={20} color={Colors.primary} />
+              </Pressable>
+
+              <View style={styles.languageHintCard}>
+                <Ionicons name="information-circle-outline" size={16} color={Colors.primary} />
+                <Text style={styles.languageHintText}>
+                  {t('Tap above to view and scroll all languages. When you are ready, tap Next below.')}
+                </Text>
               </View>
+
               {errors.language ? <Text style={styles.errorText}>{t(errors.language)}</Text> : null}
             </View>
           ) : null}
@@ -1044,7 +1186,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
             <AuthButton
               title={
                 step === STEP_TITLES.length - 1
-                  ? t('Try Gold free for 5 days')
+                  ? t('Try Gold free for 21 days')
                   : step === 3
                   ? t('Next: Health & Goals Survey')
                   : (step === 5 && !data?.motivationStatement?.trim()) || (step === 6 && !data?.identityStatement?.trim())
@@ -1053,26 +1195,84 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
               }
               onPress={() => step === STEP_TITLES.length - 1 ? void completeAndStartGoldTrial() : void handleNext()}
               disabled={saving}
-              loading={saving}
+              loading={saving && savingChoice !== 'other'}
             />
           </View>
-          {step > 0 ? (
+          {step === STEP_TITLES.length - 1 ? (
+            <>
+              <Pressable
+                onPress={() => void completeAndChooseAnotherPlan()}
+                disabled={saving}
+                style={[styles.secondaryButton, saving && styles.secondaryButtonDisabled]}
+              >
+                {saving && savingChoice === 'other' ? (
+                  <ActivityIndicator size="small" color={Colors.text} />
+                ) : (
+                  <Text style={styles.secondaryButtonText}>{t('Choose another plan')}</Text>
+                )}
+              </Pressable>
+              <Pressable
+                onPress={() => void handleBack()}
+                disabled={saving}
+                style={[styles.backTextButton, saving && styles.secondaryButtonDisabled]}
+              >
+                <Ionicons name="arrow-back" size={16} color={Colors.textSecondary} />
+                <Text style={styles.backTextButtonLabel}>{t('Back to edit answers')}</Text>
+              </Pressable>
+            </>
+          ) : step > 0 ? (
             <Pressable
-              onPress={() => {
-                if (step === STEP_TITLES.length - 1) {
-                  replaceRoute(router, '/plan');
-                  return;
-                }
-                void handleBack();
-              }}
+              onPress={() => void handleBack()}
               disabled={saving}
-              style={styles.secondaryButton}
+              style={[styles.secondaryButton, saving && styles.secondaryButtonDisabled]}
             >
-              <Text style={styles.secondaryButtonText}>{t(step === STEP_TITLES.length - 1 ? 'Choose another plan' : 'Back')}</Text>
+              <Text style={styles.secondaryButtonText}>{t('Back')}</Text>
             </Pressable>
           ) : null}
         </View>
       </ScrollView>
+      <Modal visible={showLanguageModal} transparent animationType="fade" onRequestClose={() => setShowLanguageModal(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setShowLanguageModal(false)}>
+          <View style={[styles.modalCard, { maxHeight: '82%' }]}>
+            <View style={styles.modalHeaderRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.modalTitle}>{t('Select language')}</Text>
+                <Text style={styles.modalSubtitle}>{t('Scroll and select your preferred language')}</Text>
+              </View>
+              <Pressable onPress={() => setShowLanguageModal(false)} hitSlop={12}>
+                <Ionicons name="close" size={24} color={Colors.textSecondary} />
+              </Pressable>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={true} style={styles.languageModalScroll}>
+              {SUPPORTED_LANGUAGES.map((option) => {
+                const isSelected = data.language === option.code;
+                return (
+                  <Pressable
+                    key={option.code}
+                    style={[styles.modalOption, isSelected && styles.modalOptionActive]}
+                    onPress={() => {
+                      setShowLanguageModal(false);
+                      void handleLanguageSelect(option.code as OnboardingLanguage);
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.modalOptionText, isSelected && styles.modalOptionTextActive]}>
+                        {option.nativeLabel}
+                      </Text>
+                      {option.label !== option.nativeLabel ? (
+                        <Text style={[styles.modalOptionSubtext, isSelected && styles.modalOptionSubtextActive]}>
+                          {option.label}
+                        </Text>
+                      ) : null}
+                    </View>
+                    {isSelected ? <Ionicons name="checkmark-circle" size={20} color={Colors.primary} /> : null}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </Pressable>
+      </Modal>
       <Modal visible={showGenderModal} transparent animationType="fade" onRequestClose={() => setShowGenderModal(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setShowGenderModal(false)}>
           <View style={styles.modalCard}>
@@ -1554,6 +1754,95 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     marginBottom: 4,
   },
+  languageDropdownField: {
+    minHeight: 68,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0, 240, 208, 0.4)',
+    backgroundColor: 'rgba(26, 26, 46, 0.85)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  languageDropdownLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    flex: 1,
+    marginRight: 10,
+  },
+  languageIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0, 240, 208, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 240, 208, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  languageDropdownValue: {
+    color: '#FFF',
+    fontSize: 16,
+    fontFamily: 'Inter_700Bold',
+  },
+  languageDropdownSubtext: {
+    color: Colors.primary,
+    fontSize: 12,
+    fontFamily: 'Inter_500Medium',
+    marginTop: 2,
+  },
+  languageHintCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(0, 240, 208, 0.06)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 240, 208, 0.18)',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 16,
+  },
+  languageHintText: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    lineHeight: 16,
+    flex: 1,
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  modalSubtitle: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    marginTop: 2,
+  },
+  languageModalScroll: {
+    marginTop: 8,
+    marginBottom: 6,
+  },
+  modalOptionActive: {
+    borderColor: Colors.primary,
+    backgroundColor: 'rgba(0, 240, 208, 0.12)',
+  },
+  modalOptionSubtext: {
+    color: Colors.textMuted,
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    marginTop: 2,
+  },
+  modalOptionSubtextActive: {
+    color: Colors.primary,
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(7, 10, 15, 0.8)',
@@ -1619,6 +1908,23 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
     fontSize: 14,
     textAlign: 'center',
+  },
+  backTextButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginTop: 2,
+  },
+  backTextButtonLabel: {
+    color: Colors.textSecondary,
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+  },
+  progressDotClickable: {
+    borderColor: Colors.primary,
   },
   primaryButtonWrap: {
     width: '100%',
