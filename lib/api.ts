@@ -1769,7 +1769,7 @@ export async function apiRequest<T>(
         : options.body
           ? JSON.stringify(options.body)
           : undefined,
-    }, options.timeoutMs);
+    }, options.timeoutMs ?? (isFormDataBody ? 180_000 : REQUEST_TIMEOUT_MS));
 
     const data = await response.json().catch(() => ({}));
 

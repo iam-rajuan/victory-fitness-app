@@ -1305,6 +1305,7 @@ export default function ChallengesScreen() {
       const response = await apiRequest<CommunityPost>('/community/posts', {
         method: 'POST',
         body: formData,
+        timeoutMs: 180_000,
       });
       setCommunityPosts((current) => current.map((post) => (post.id === optimisticPostId ? response : post)));
       if (isWorkoutSharePost) {
