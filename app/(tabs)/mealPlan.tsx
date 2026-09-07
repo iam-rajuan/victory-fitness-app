@@ -1220,8 +1220,18 @@ async function ensureJpegAnalysisAsset(asset: AnalysisImageAsset): Promise<Analy
     isNextUpcoming?: boolean;
   }) => {
     const completed = isMealComplete(dayLabel, mealKey);
-    const isPreWorkout = meal.desc?.toLowerCase().includes('pre-workout') || label.toLowerCase().includes('pre-workout') || meal.name.toLowerCase().includes('pre-workout');
-    const isPostWorkout = meal.desc?.toLowerCase().includes('post-workout') || label.toLowerCase().includes('post-workout') || meal.name.toLowerCase().includes('post-workout');
+    const isPreWorkout =
+      (meal as any).timing?.toLowerCase().includes('pre-workout') ||
+      meal.desc?.toLowerCase().includes('pre-workout') ||
+      label.toLowerCase().includes('pre-workout') ||
+      meal.name.toLowerCase().includes('pre-workout') ||
+      mealKey === 'lunch';
+    const isPostWorkout =
+      (meal as any).timing?.toLowerCase().includes('post-workout') ||
+      meal.desc?.toLowerCase().includes('post-workout') ||
+      label.toLowerCase().includes('post-workout') ||
+      meal.name.toLowerCase().includes('post-workout') ||
+      mealKey === 'dinner';
 
     return (
       <View style={styles.mealCardWrap}>
@@ -1714,6 +1724,18 @@ async function ensureJpegAnalysisAsset(asset: AnalysisImageAsset): Promise<Analy
 
             {selectedMeal ? (
               <View style={styles.modalMealCard}>
+                {selectedMeal.mealKey === 'lunch' || selectedMeal.meal.desc?.toLowerCase().includes('pre-workout') || selectedMeal.meal.name.toLowerCase().includes('pre-workout') ? (
+                  <View style={[styles.nutrientTimingPill, { marginBottom: 10 }]}>
+                    <Ionicons name="flash" size={12} color="#F59E0B" />
+                    <Text style={styles.nutrientTimingPillText}>{t('Pre-Workout (60–90m before) • Carb-Forward')}</Text>
+                  </View>
+                ) : null}
+                {selectedMeal.mealKey === 'dinner' || selectedMeal.meal.desc?.toLowerCase().includes('post-workout') || selectedMeal.meal.name.toLowerCase().includes('post-workout') ? (
+                  <View style={[styles.nutrientTimingPill, { backgroundColor: 'rgba(59,130,246,0.18)', borderColor: 'rgba(96,165,250,0.35)', marginBottom: 10 }]}>
+                    <Ionicons name="barbell" size={12} color="#60A5FA" />
+                    <Text style={[styles.nutrientTimingPillText, { color: '#BFDBFE' }]}>{t('Post-Workout (within 45m) • High Protein')}</Text>
+                  </View>
+                ) : null}
                 <Text style={styles.modalMealName}>{selectedMeal.meal.name}</Text>
                 <Text style={styles.modalMealDesc}>{selectedMeal.meal.desc}</Text>
                 <View style={styles.mealMacroRow}>
@@ -2171,6 +2193,7 @@ export default function JournalScreen() {
         height,
         weight,
         health_conditions: Array.from(healthConditions),
+        workout_time: '17:30',
       });
       setGenerationProgress(1);
 
