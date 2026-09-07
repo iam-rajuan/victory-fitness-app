@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/Colors';
 import { ErrorPopupModal } from '../../components/ErrorPopupModal';
-import { apiRequest, streamCoachVictorMessage } from '../../lib/api';
+import { apiRequest, fetchCurrentUser, getAuthUser, streamCoachVictorMessage } from '../../lib/api';
 import { formatAppError } from '../../lib/error';
 import { goBackOrReplace } from '../../lib/navigation';
 import { fetchCoachVictorHistoryData } from '../../lib/screenData';
@@ -37,13 +37,19 @@ type ChatHistoryItem = {
   created_at: string;
 };
 
-const INITIAL_MESSAGES: Message[] = [
-  {
-    id: '1',
-    text: "Hi Admin! I'm Coach Victor. How can I help you with your fitness journey today?",
-    sender: 'coach',
-  },
-];
+function buildInitialCoachMessage(name?: string | null): Message[] {
+  const trimmed = (name || '').trim();
+  const firstName = trimmed ? trimmed.split(/\s+/)[0] : '';
+  const displayName = firstName && firstName.toLowerCase() !== 'admin' ? firstName : 'there';
+  return [
+    {
+      id: 'initial-coach-greeting',
+      text: `Hi ${displayName}! I'm Coach Victor. How can I help you with your fitness journey today?`,
+      sender: 'coach',
+    },
+  ];
+}
+
 
 const MessageBubble = memo(function MessageBubble({ item }: { item: Message }) {
   const isCoach = item.sender === 'coach';
@@ -153,7 +159,7 @@ export default function ChatScreen() {
   const checkingAccess = useModuleAccessGuard('/chat');
   const router = useRouter();
   const params = useLocalSearchParams<{ initialPrompt?: string }>();
-  const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
+  const [messages, setMessages] = useState<Message[]>(() => buildInitialCoachMessage());
   const [inputText, setInputText] = useState(typeof params.initialPrompt === 'string' ? params.initialPrompt : '');
   const [sending, setSending] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
@@ -169,9 +175,26 @@ export default function ChatScreen() {
   useEffect(() => {
     let cancelled = false;
 
-    const loadHistory = async () => {
+    const loadHistoryAndUser = async () => {
       setLoadingHistory(true);
       try {
+        let currentUserName = '';
+        try {
+          const cachedUser = await getAuthUser();
+          if (cachedUser?.name) {
+            currentUserName = cachedUser.name;
+          } else {
+            const freshUser = await fetchCurrentUser();
+            if (freshUser?.name) {
+              currentUserName = freshUser.name;
+            }
+          }
+        } catch {
+          // ignore user resolution error
+        }
+
+        const fallbackMessages = buildInitialCoachMessage(currentUserName);
+
         const response = await fetchCoachVictorHistoryData() as { messages: ChatHistoryItem[] };
         if (cancelled) {
           return;
@@ -183,10 +206,10 @@ export default function ChatScreen() {
           sender: item.role === 'assistant' ? 'coach' : 'user',
         }));
 
-        setMessages(mapped.length > 0 ? mapped : INITIAL_MESSAGES);
+        setMessages(mapped.length > 0 ? mapped : fallbackMessages);
       } catch (error) {
         if (!cancelled) {
-          setMessages(INITIAL_MESSAGES);
+          setMessages(buildInitialCoachMessage());
           setErrorDialog(formatAppError(error));
         }
       } finally {
@@ -196,7 +219,7 @@ export default function ChatScreen() {
       }
     };
 
-    void loadHistory();
+    void loadHistoryAndUser();
 
     return () => {
       cancelled = true;
