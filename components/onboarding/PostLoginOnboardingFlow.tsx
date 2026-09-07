@@ -1135,10 +1135,12 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
               <TextInput
                 value={data.identityStatement}
                 onChangeText={(value) => void updateData((current) => ({ ...current, identityStatement: value.slice(0, 240) }))}
-                placeholder={t('Example: I am becoming someone who keeps promises to myself.')}
+                placeholder={t('I am someone who...')}
                 placeholderTextColor={Colors.placeholder}
                 multiline
                 maxLength={240}
+                autoCorrect={false}
+                autoCapitalize="none"
                 textAlignVertical="top"
                 style={styles.notesInput}
               />

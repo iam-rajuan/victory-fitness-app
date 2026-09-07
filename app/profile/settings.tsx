@@ -184,7 +184,7 @@ export default function ProfileSettingsScreen() {
               placeholderTextColor="rgba(255, 255, 255, 0.4)"
               multiline
               autoCorrect={false}
-              autoCapitalize="sentences"
+              autoCapitalize="none"
               textAlignVertical="top"
               maxLength={280}
             />

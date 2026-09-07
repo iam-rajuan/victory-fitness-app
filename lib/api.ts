@@ -1896,19 +1896,20 @@ export async function streamCoachVictorMessage(
           if (raw === '[DONE]') {
             break;
           }
+          let data: { type?: string; token?: unknown; reply?: unknown; thread_id?: unknown; error?: unknown };
           try {
-            const data = JSON.parse(raw);
-            if (data.type === 'token' && typeof data.token === 'string') {
-              fullReply += data.token;
-              onToken(data.token);
-            } else if (data.type === 'done') {
-              if (data.reply) fullReply = data.reply;
-              if (data.thread_id) finalThreadId = data.thread_id;
-            } else if (data.type === 'error') {
-              throw new Error(data.error || 'Streaming error');
-            }
+            data = JSON.parse(raw);
           } catch {
-            // Incomplete chunk
+            continue;
+          }
+          if (data.type === 'token' && typeof data.token === 'string') {
+            fullReply += data.token;
+            onToken(data.token);
+          } else if (data.type === 'done') {
+            if (typeof data.reply === 'string') fullReply = data.reply;
+            if (typeof data.thread_id === 'string') finalThreadId = data.thread_id;
+          } else if (data.type === 'error') {
+            throw new Error(typeof data.error === 'string' ? data.error : 'Streaming error');
           }
         }
       }

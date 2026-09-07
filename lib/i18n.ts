@@ -427,6 +427,7 @@ const TRANSLATIONS: Partial<Record<LanguageCode, Record<string, string>>> = {
     'Who are you becoming?': 'Who are you becoming?',
     'Write one sentence about the identity you are building. This is optional and can be edited later.':
       'Write one sentence about the identity you are building. This is optional and can be edited later.',
+    'I am someone who...': 'I am someone who...',
     'Example: I am becoming someone who keeps promises to myself.':
       'Example: I am becoming someone who keeps promises to myself.',
     'Gold coaching can use this as a positive anchor in reminders and check-ins.':
@@ -1519,6 +1520,7 @@ const TRANSLATIONS: Partial<Record<LanguageCode, Record<string, string>>> = {
     'Who are you becoming?': 'Wer wirst du?',
     'Write one sentence about the identity you are building. This is optional and can be edited later.':
       'Schreibe einen Satz über die Identität, die du aufbaust. Das ist optional und kann später bearbeitet werden.',
+    'I am someone who...': 'Ich bin jemand, der...',
     'Example: I am becoming someone who keeps promises to myself.':
       'Beispiel: Ich werde jemand, der Versprechen an sich selbst hält.',
     'Gold coaching can use this as a positive anchor in reminders and check-ins.':
@@ -2512,6 +2514,7 @@ const TRANSLATIONS: Partial<Record<LanguageCode, Record<string, string>>> = {
     'Who are you becoming?': 'আপনি কেমন মানুষ হয়ে উঠছেন?',
     'Write one sentence about the identity you are building. This is optional and can be edited later.':
       'আপনি যে পরিচয় গড়ছেন তা নিয়ে একটি বাক্য লিখুন। এটি ঐচ্ছিক এবং পরে পরিবর্তন করা যাবে।',
+    'I am someone who...': 'আমি এমন একজন যে...',
     'Example: I am becoming someone who keeps promises to myself.':
       'উদাহরণ: আমি এমন একজন হচ্ছি যে নিজের প্রতিশ্রুতি রাখে।',
     'Gold coaching can use this as a positive anchor in reminders and check-ins.':
