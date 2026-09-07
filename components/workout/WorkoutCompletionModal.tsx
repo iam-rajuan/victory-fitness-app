@@ -115,8 +115,8 @@ export default function WorkoutCompletionModal({
 
   const activeFeedback = aiCoachFeedback || getImmediateCoachFeedback(difficulty, energy, painFlag, sweetSpotFlag, t);
 
-  // Upgrade Offer State
-  const [showUpgradeOffer, setShowUpgradeOffer] = useState(false);
+  // Upgrade Offer State (Section 17.1)
+  const [upgradeOffer, setUpgradeOffer] = useState<{ title: string; message: string } | null>(null);
   const [upgradeDismissed, setUpgradeDismissed] = useState(false);
 
   // Check Section 17.1 upgrade offer eligibility
@@ -126,15 +126,16 @@ export default function WorkoutCompletionModal({
     const checkUpgradeEligibility = async () => {
       // 1. Never on first-ever workout
       if (totalCompletedWorkouts <= 1) {
-        setShowUpgradeOffer(false);
+        setUpgradeOffer(null);
         return;
       }
 
       try {
         const user = await fetchCurrentUser();
         const tier = String(user?.subscription_tier || '').toUpperCase();
-        if (tier === 'GOLD' || tier === 'LIFETIME') {
-          setShowUpgradeOffer(false);
+        // Section 17.1 Trigger: Silver or Gold users not yet at next tier
+        if (tier !== 'SILVER' && tier !== 'GOLD') {
+          setUpgradeOffer(null);
           return;
         }
 
@@ -143,22 +144,44 @@ export default function WorkoutCompletionModal({
         if (lastShown) {
           const elapsed = Date.now() - parseInt(lastShown, 10);
           if (elapsed < UPGRADE_RATE_LIMIT_MS) {
-            setShowUpgradeOffer(false);
+            setUpgradeOffer(null);
             return;
           }
         }
 
-        // Eligible
-        setShowUpgradeOffer(true);
+        // Prompt content: 'You just finished workout #{streak_count}. Unlock unlimited AI coaching to keep this going.'
+        const streakCount = Math.max(Number(user?.workouts_completed || user?.streak_days || totalCompletedWorkouts || 1), 1);
+        const title = t('Keep this streak moving');
+        const message = `${t('You just finished workout #')}${streakCount}. ${t('Unlock unlimited AI coaching to keep this going.')}`;
+
+        setUpgradeOffer({ title, message });
         await AsyncStorage.setItem(UPGRADE_LAST_SHOWN_KEY, String(Date.now()));
-        void recordAnalyticsEvent('post_workout_upsell_shown', { day: dayLabel }).catch(() => undefined);
+
+        // Section 17.1: Reuses upgrade_screen_viewed analytics event with source: 'completion_card'
+        void recordAnalyticsEvent('upgrade_screen_viewed', {
+          source: 'completion_card',
+          day: dayLabel,
+          streak_count: streakCount,
+          tier,
+        }).catch(() => undefined);
       } catch {
-        setShowUpgradeOffer(false);
+        setUpgradeOffer(null);
       }
     };
 
     void checkUpgradeEligibility();
-  }, [visible, totalCompletedWorkouts, dayLabel]);
+  }, [visible, totalCompletedWorkouts, dayLabel, t]);
+
+  const handleUpgradeClick = () => {
+    // Section 17.1: Reuses upgrade_prompt_clicked analytics event with source: 'completion_card'
+    void recordAnalyticsEvent('upgrade_prompt_clicked', {
+      source: 'completion_card',
+      day: dayLabel,
+    }).catch(() => undefined);
+
+    onClose();
+    router.push('/plan');
+  };
 
   const handleWhatsAppShare = async () => {
     if (!completionCard) return;
@@ -296,7 +319,7 @@ export default function WorkoutCompletionModal({
             </View>
 
             {/* Section 17.1: Dismissible Upgrade Offer (Never blocks share flow) */}
-            {showUpgradeOffer && !upgradeDismissed ? (
+            {upgradeOffer && !upgradeDismissed ? (
               <View style={styles.upgradeOfferCard}>
                 <TouchableOpacity
                   style={styles.upgradeDismissBtn}
@@ -309,20 +332,15 @@ export default function WorkoutCompletionModal({
                     <Ionicons name="flash" size={20} color="#EAB308" />
                   </View>
                   <View style={styles.upgradeTextWrap}>
-                    <Text style={styles.upgradeTitle}>{t('Level Up to Victory Gold')}</Text>
-                    <Text style={styles.upgradeSubtitle}>
-                      {t('Unlock AI form review, 1-on-1 coach feedback & personalized hypertrophy progression.')}
-                    </Text>
+                    <Text style={styles.upgradeTitle}>{upgradeOffer.title}</Text>
+                    <Text style={styles.upgradeSubtitle}>{upgradeOffer.message}</Text>
                   </View>
                 </View>
                 <TouchableOpacity
                   style={styles.upgradeCtaBtn}
-                  onPress={() => {
-                    onClose();
-                    router.push('/plan');
-                  }}
+                  onPress={handleUpgradeClick}
                 >
-                  <Text style={styles.upgradeCtaText}>{t('Explore Gold Access')}</Text>
+                  <Text style={styles.upgradeCtaText}>{t('Unlock Unlimited AI Coaching')}</Text>
                   <Ionicons name="arrow-forward" size={14} color="#000" />
                 </TouchableOpacity>
               </View>
