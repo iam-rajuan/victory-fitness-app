@@ -537,18 +537,18 @@ function buildCommunityVideoHtml(videoUrl: string) {
       html, body {
         margin: 0;
         padding: 0;
-        background: #0b1020;
+        background: #040711;
         height: 100%;
         overflow: hidden;
       }
       video, iframe {
         width: 100%;
         height: 100%;
-        background: #0b1020;
+        background: #040711;
         border: 0;
       }
       video {
-        object-fit: cover;
+        object-fit: contain;
       }
     </style>
   </head>
@@ -2324,101 +2324,195 @@ export default function ChallengesScreen() {
                 </TouchableOpacity>
               </View>
             ) : (
-              <>
-                <View style={styles.composerCard}>
-                  <TextInput
-                    style={styles.composerInput}
-                    placeholder={t("What's on your mind?")}
-                    placeholderTextColor="rgba(255,255,255,0.35)"
-                    multiline
-                    value={communityDraft}
-                    onChangeText={setCommunityDraft}
-                  />
-                  <TextInput
-                    style={styles.composerLinkInput}
-                    placeholder={t('Paste a YouTube or Vimeo link')}
-                    placeholderTextColor="rgba(255,255,255,0.35)"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    keyboardType="url"
-                    value={communityVideoLink}
-                    onChangeText={(text) => {
-                      setCommunityVideoLink(text);
-                      if (text.trim()) {
-                        setCommunityMedia(null);
-                      }
-                    }}
-                  />
-                  <Text style={styles.composerLinkHint}>{getCommunityVideoLinkHint(t)}</Text>
-                  <View style={styles.composerDivider} />
-                  <View style={styles.composerActions}>
-                    {Platform.OS === 'web' && typeof document !== 'undefined'
-                      ? React.createElement('input', {
-                          type: 'file',
-                          ref: webFileInputRef,
-                          accept: 'image/*,video/*',
-                          style: { display: 'none' },
-                          onChange: handleWebFileSelect,
-                        })
-                      : null}
-                    <TouchableOpacity style={styles.composerImgBtn} onPress={handlePickCommunityMedia}>
-                      <Ionicons name="images-outline" size={22} color={communityMedia ? Colors.primary : 'rgba(255,255,255,0.45)'} />
-                    </TouchableOpacity>
+              <View style={styles.composerCard}>
+                <TextInput
+                  style={styles.composerInput}
+                  placeholder={t("What's on your mind?")}
+                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  multiline
+                  value={communityDraft}
+                  onChangeText={setCommunityDraft}
+                />
 
-                    <TouchableOpacity
-                      style={[styles.postBtn, communityPosting && { opacity: 0.7 }]}
-                      onPress={handleCommunityPost}
-                      disabled={communityPosting}
-                    >
-                      {communityPosting ? <ActivityIndicator size="small" color="#0A0A14" /> : <Text style={styles.postBtnText}>{t('Post')}</Text>}
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
+                {/* Device Media Attachment Inside Composer Card */}
                 {communityMedia?.uri ? (
-                  <View style={styles.communityPreviewCard}>
-                    {communityMedia.type === 'video' ? (
-                      <View style={styles.communityPreviewVideoWrap}>
-                        <CrossPlatformWebView
-                          source={{ html: buildCommunityVideoHtml(getCommunityVideoUrl(communityMedia.uri) || communityMedia.uri) }}
-                          style={styles.communityPreviewVideo}
-                          scrollEnabled={false}
-                          javaScriptEnabled
-                          mediaPlaybackRequiresUserAction
-                        />
-                        {communityPosting ? (
-                          <View style={styles.communityUploadOverlay}>
-                            <ActivityIndicator size="small" color="#FFFFFF" />
-                            <Text style={styles.communityUploadOverlayText}>{t('Uploading video...')}</Text>
-                          </View>
+                  <View style={styles.composerAttachmentBox}>
+                    <View style={styles.composerAttachmentHeader}>
+                      <View style={styles.composerAttachmentBadge}>
+                        <View style={styles.composerAttachmentBadgeIconWrap}>
+                          <Ionicons
+                            name={communityMedia.type === 'video' ? 'videocam' : 'image'}
+                            size={13}
+                            color="#00F0D0"
+                          />
+                        </View>
+                        <Text style={styles.composerAttachmentBadgeText}>
+                          {communityMedia.type === 'video' ? t('Video Attached') : t('Photo Attached')}
+                        </Text>
+                        {communityMedia.fileSize ? (
+                          <Text style={styles.composerAttachmentSizeText}>
+                            • {(communityMedia.fileSize / (1024 * 1024)).toFixed(1)} MB
+                          </Text>
                         ) : null}
                       </View>
-                    ) : (
-                      <Image source={{ uri: communityMedia.uri }} style={styles.communityPreviewImage} />
-                    )}
-                    <TouchableOpacity onPress={() => setCommunityMedia(null)} style={styles.communityPreviewRemove}>
-                      <Text style={styles.communityPreviewRemoveText}>{t('Remove media')}</Text>
-                    </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.composerAttachmentCloseBtn}
+                        onPress={() => setCommunityMedia(null)}
+                        activeOpacity={0.7}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Ionicons name="close" size={14} color="#F87171" />
+                        <Text style={styles.composerAttachmentCloseText}>{t('Remove')}</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.composerMediaFrame}>
+                      {communityMedia.type === 'video' ? (
+                        <View style={styles.composerVideoPlayerWrap}>
+                          <CrossPlatformWebView
+                            source={{ html: buildCommunityVideoHtml(getCommunityVideoUrl(communityMedia.uri) || communityMedia.uri) }}
+                            style={styles.composerVideoPlayer}
+                            scrollEnabled={false}
+                            javaScriptEnabled
+                            mediaPlaybackRequiresUserAction
+                          />
+                        </View>
+                      ) : (
+                        <Image
+                          source={{ uri: communityMedia.uri }}
+                          style={styles.composerImageAttachment}
+                          resizeMode="contain"
+                        />
+                      )}
+                      {communityPosting ? (
+                        <View style={styles.composerMediaUploadOverlay}>
+                          <ActivityIndicator size="small" color="#00F0D0" />
+                          <Text style={styles.composerMediaUploadOverlayText}>
+                            {communityMedia.type === 'video' ? t('Uploading video...') : t('Uploading photo...')}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
                   </View>
                 ) : null}
 
-                {!communityMedia?.uri && communityVideoLink.trim() ? (
-                  <View style={styles.communityPreviewCard}>
-                    <View style={styles.communityPreviewVideoWrap}>
-                      <CrossPlatformWebView
-                        source={{ html: buildCommunityVideoHtml(normalizeExternalCommunityVideoUrl(communityVideoLink) || communityVideoLink.trim()) }}
-                        style={styles.communityPreviewVideo}
-                        scrollEnabled={false}
-                        javaScriptEnabled
-                        mediaPlaybackRequiresUserAction
+                {/* Link Input (only when no device media is selected) */}
+                {!communityMedia?.uri ? (
+                  <View style={styles.composerLinkSection}>
+                    <View style={styles.composerLinkRow}>
+                      <Ionicons name="link-outline" size={16} color="rgba(255,255,255,0.4)" style={{ marginLeft: 12 }} />
+                      <TextInput
+                        style={styles.composerLinkInputField}
+                        placeholder={t('Paste a YouTube or Vimeo link')}
+                        placeholderTextColor="rgba(255,255,255,0.35)"
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        keyboardType="url"
+                        value={communityVideoLink}
+                        onChangeText={(text) => {
+                          setCommunityVideoLink(text);
+                          if (text.trim()) {
+                            setCommunityMedia(null);
+                          }
+                        }}
                       />
+                      {communityVideoLink.trim() ? (
+                        <TouchableOpacity
+                          style={styles.composerLinkClearBtn}
+                          onPress={() => setCommunityVideoLink('')}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Ionicons name="close-circle" size={16} color="rgba(255,255,255,0.5)" />
+                        </TouchableOpacity>
+                      ) : null}
                     </View>
-                    <TouchableOpacity onPress={() => setCommunityVideoLink('')} style={styles.communityPreviewRemove}>
-                      <Text style={styles.communityPreviewRemoveText}>{t('Remove link')}</Text>
-                    </TouchableOpacity>
+                    {communityVideoLink.trim() ? (
+                      <View style={styles.composerAttachmentBox}>
+                        <View style={styles.composerAttachmentHeader}>
+                          <View style={styles.composerAttachmentBadge}>
+                            <View style={styles.composerAttachmentBadgeIconWrap}>
+                              <Ionicons name="logo-youtube" size={13} color="#FF0000" />
+                            </View>
+                            <Text style={styles.composerAttachmentBadgeText}>{t('Web Video Linked')}</Text>
+                          </View>
+                          <TouchableOpacity
+                            style={styles.composerAttachmentCloseBtn}
+                            onPress={() => setCommunityVideoLink('')}
+                            activeOpacity={0.7}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          >
+                            <Ionicons name="close" size={14} color="#F87171" />
+                            <Text style={styles.composerAttachmentCloseText}>{t('Remove')}</Text>
+                          </TouchableOpacity>
+                        </View>
+                        <View style={styles.composerMediaFrame}>
+                          <View style={styles.composerVideoPlayerWrap}>
+                            <CrossPlatformWebView
+                              source={{ html: buildCommunityVideoHtml(normalizeExternalCommunityVideoUrl(communityVideoLink) || communityVideoLink.trim()) }}
+                              style={styles.composerVideoPlayer}
+                              scrollEnabled={false}
+                              javaScriptEnabled
+                              mediaPlaybackRequiresUserAction
+                            />
+                          </View>
+                        </View>
+                      </View>
+                    ) : (
+                      <Text style={styles.composerLinkHint}>{getCommunityVideoLinkHint(t)}</Text>
+                    )}
                   </View>
                 ) : null}
-              </>
+
+                <View style={styles.composerDivider} />
+
+                <View style={styles.composerActions}>
+                  {Platform.OS === 'web' && typeof document !== 'undefined'
+                    ? React.createElement('input', {
+                        type: 'file',
+                        ref: webFileInputRef,
+                        accept: 'image/*,video/*',
+                        style: { display: 'none' },
+                        onChange: handleWebFileSelect,
+                      })
+                    : null}
+                  <TouchableOpacity
+                    style={[styles.composerImgBtn, communityMedia && styles.composerImgBtnActive]}
+                    onPress={handlePickCommunityMedia}
+                    activeOpacity={0.75}
+                  >
+                    <Ionicons
+                      name={communityMedia ? 'images' : 'images-outline'}
+                      size={22}
+                      color={communityMedia ? '#00F0D0' : 'rgba(255,255,255,0.6)'}
+                    />
+                    {communityMedia ? <View style={styles.composerActiveDot} /> : null}
+                  </TouchableOpacity>
+
+                  {communityMedia ? (
+                    <View style={styles.composerMediaIndicatorBadge}>
+                      <Ionicons name={communityMedia.type === 'video' ? 'videocam' : 'image'} size={12} color="#00F0D0" />
+                      <Text style={styles.composerMediaIndicatorText} numberOfLines={1}>
+                        {communityMedia.type === 'video' ? t('1 video attached') : t('1 photo attached')}
+                      </Text>
+                    </View>
+                  ) : null}
+
+                  <TouchableOpacity
+                    style={[styles.postBtn, communityPosting && { opacity: 0.7 }]}
+                    onPress={handleCommunityPost}
+                    disabled={communityPosting}
+                    activeOpacity={0.85}
+                  >
+                    {communityPosting ? (
+                      <View style={styles.postPostingRow}>
+                        <ActivityIndicator size="small" color="#030712" />
+                        <Text style={styles.postBtnText}>{t('Posting...')}</Text>
+                      </View>
+                    ) : (
+                      <Text style={styles.postBtnText}>{t('Post')}</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
             )}
 
             {communityError ? (
@@ -4144,6 +4238,128 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginBottom: 12,
   },
+  /* Composer Media Attachment Inside Card */
+  composerAttachmentBox: {
+    marginHorizontal: 14,
+    marginBottom: 14,
+    backgroundColor: '#080C19',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 240, 208, 0.22)',
+    overflow: 'hidden',
+    shadowColor: '#00F0D0',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  composerAttachmentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  composerAttachmentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  composerAttachmentBadgeIconWrap: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(0, 240, 208, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  composerAttachmentBadgeText: {
+    color: '#E2E8F0',
+    fontSize: 12,
+    fontFamily: 'Inter_700Bold',
+  },
+  composerAttachmentSizeText: {
+    color: 'rgba(255, 255, 255, 0.45)',
+    fontSize: 11,
+    fontFamily: 'Inter_400Regular',
+  },
+  composerAttachmentCloseBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.25)',
+  },
+  composerAttachmentCloseText: {
+    color: '#F87171',
+    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  composerMediaFrame: {
+    width: '100%',
+    position: 'relative',
+    backgroundColor: '#040711',
+    overflow: 'hidden',
+  },
+  composerImageAttachment: {
+    width: '100%',
+    height: 240,
+    backgroundColor: '#040711',
+  },
+  composerVideoPlayerWrap: {
+    width: '100%',
+    height: 220,
+    backgroundColor: '#040711',
+  },
+  composerVideoPlayer: {
+    flex: 1,
+    backgroundColor: '#040711',
+  },
+  composerMediaUploadOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(3, 8, 20, 0.78)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  composerMediaUploadOverlayText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontFamily: 'Inter_700Bold',
+  },
+  composerLinkSection: {
+    marginBottom: 4,
+  },
+  composerLinkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 14,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+  },
+  composerLinkInputField: {
+    flex: 1,
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    outlineStyle: 'none' as any,
+  },
+  composerLinkClearBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
   composerDivider: {
     height: 1,
     backgroundColor: 'rgba(255,255,255,0.08)',
@@ -4158,6 +4374,39 @@ const styles = StyleSheet.create({
   },
   composerImgBtn: {
     padding: 6,
+    borderRadius: 10,
+    position: 'relative',
+  },
+  composerImgBtnActive: {
+    backgroundColor: 'rgba(0, 240, 208, 0.12)',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 240, 208, 0.3)',
+  },
+  composerActiveDot: {
+    position: 'absolute',
+    top: 3,
+    right: 3,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#00F0D0',
+  },
+  composerMediaIndicatorBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(0, 240, 208, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 240, 208, 0.25)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  composerMediaIndicatorText: {
+    color: '#00F0D0',
+    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
   },
   tierSelector: {
     flexDirection: 'row',
@@ -4186,6 +4435,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 6,
     elevation: 3,
+  },
+  postBtnDisabled: {
+    opacity: 0.7,
+  },
+  postPostingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   postBtnText: {
     color: '#030712',
