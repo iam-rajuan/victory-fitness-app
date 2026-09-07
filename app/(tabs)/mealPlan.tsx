@@ -47,7 +47,7 @@ import { fetchCurrentUserBodyMetrics } from '../../lib/api';
 
 const TOTAL_STEPS = 8;
 const PLAN_SUCCESS_SOUND = require('../../assets/sounds/plan-saved.wav');
-const PLAN_SUCCESS_HOLD_MS = 2500;
+const PLAN_SUCCESS_HOLD_MS = 750;
 const GENDER_PLACEHOLDER = 'Please select...';
 const MIN_FAVORITE_MEALS = 3;
 const PLAN_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
@@ -2259,7 +2259,8 @@ export default function JournalScreen() {
     .map((meal) => meal.trim())
     .filter(Boolean);
 
-  const generatePlan = async () => {
+  const generatePlan = async (forceRegenerate?: boolean) => {
+    const shouldForce = forceRegenerate !== false;
     if (generating) {
       return;
     }
@@ -2298,6 +2299,8 @@ export default function JournalScreen() {
         weight: effectiveWeight,
         health_conditions: Array.from(healthConditions),
         workout_time: '17:30',
+        regenerate: shouldForce,
+        force_refresh: shouldForce,
       });
       setGenerationProgress(1);
 
@@ -2383,7 +2386,7 @@ export default function JournalScreen() {
         <Animated.View style={[styles.successRing, { transform: [{ scale: successScale }] }]}>
           <Ionicons name="checkmark" size={42} color="#fff" />
         </Animated.View>
-        <Text style={styles.quoteText}>{t('Plan saved')}</Text>
+        <Text style={styles.quoteText}>{t('New Plan Ready!')}</Text>
       </View>
     );
   }
@@ -2431,7 +2434,7 @@ export default function JournalScreen() {
         title={errorDialog?.title ?? t('Error')}
         message={errorDialog?.message ?? ''}
         onClose={() => setErrorDialog(null)}
-        onRetry={errorDialog ? generatePlan : undefined}
+        onRetry={errorDialog ? () => { void generatePlan(true); } : undefined}
         retryLabel="Try Again"
       />
       <VictoryHeader />
@@ -2617,7 +2620,7 @@ export default function JournalScreen() {
             </View>
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity onPress={generatePlan} disabled={normalizedFavoriteMeals.length < MIN_FAVORITE_MEALS} activeOpacity={0.85}>
+          <TouchableOpacity onPress={() => { void generatePlan(true); }} disabled={normalizedFavoriteMeals.length < MIN_FAVORITE_MEALS} activeOpacity={0.85}>
             <View style={[styles.generateBtn, { backgroundColor: normalizedFavoriteMeals.length >= MIN_FAVORITE_MEALS ? Colors.accentPurple : '#2A2A40' }]}>
               {generating ? (
                 <ActivityIndicator color="#fff" />
