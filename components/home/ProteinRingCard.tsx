@@ -68,9 +68,10 @@ export default function ProteinRingCard({ onPressLogMeal }: ProteinRingCardProps
         STARTER_MEAL_PLAN['Mon'];
       setTodayPlan(resolvedDayPlan);
 
-      const targetKcal = resolvedDayPlan
-        ? resolvedDayPlan.breakfast.kcal + resolvedDayPlan.lunch.kcal + resolvedDayPlan.dinner.kcal
-        : 2100;
+      const dayMeals = Object.entries(resolvedDayPlan || {}).filter(
+        ([k, v]) => k !== 'day' && v && typeof v === 'object' && typeof (v as any).kcal === 'number'
+      );
+      const targetKcal = dayMeals.reduce((sum, [_, m]: any) => sum + (m.kcal || 0), 0) || 2100;
       setCaloriesTarget(targetKcal);
 
       const dayCompletions = (plan?.meal_completions?.[todayKey] as Record<string, boolean>) || {};
@@ -78,18 +79,12 @@ export default function ProteinRingCard({ onPressLogMeal }: ProteinRingCardProps
 
       let p = 0;
       let kcal = 0;
-      if (dayCompletions.breakfast && resolvedDayPlan?.breakfast) {
-        p += resolvedDayPlan.breakfast.p;
-        kcal += resolvedDayPlan.breakfast.kcal;
-      }
-      if (dayCompletions.lunch && resolvedDayPlan?.lunch) {
-        p += resolvedDayPlan.lunch.p;
-        kcal += resolvedDayPlan.lunch.kcal;
-      }
-      if (dayCompletions.dinner && resolvedDayPlan?.dinner) {
-        p += resolvedDayPlan.dinner.p;
-        kcal += resolvedDayPlan.dinner.kcal;
-      }
+      dayMeals.forEach(([key, meal]: any) => {
+        if (dayCompletions[key]) {
+          p += meal.p || 0;
+          kcal += meal.kcal || 0;
+        }
+      });
 
       setProteinConsumed(p);
       setCaloriesConsumed(kcal);
@@ -102,7 +97,7 @@ export default function ProteinRingCard({ onPressLogMeal }: ProteinRingCardProps
     void loadTargets();
   }, [loadTargets]);
 
-  const handleToggleMeal = async (mealKey: 'breakfast' | 'lunch' | 'dinner') => {
+  const handleToggleMeal = async (mealKey: string) => {
     if (updatingMealKey) return;
     const todayKey = getTodayPlanDay();
     const currentlyCompleted = Boolean(todayCompletions[mealKey]);
@@ -122,20 +117,17 @@ export default function ProteinRingCard({ onPressLogMeal }: ProteinRingCardProps
       };
       setTodayCompletions(nextDayCompletions);
 
+      const dayMeals = Object.entries(todayPlan || {}).filter(
+        ([k, v]) => k !== 'day' && v && typeof v === 'object' && typeof (v as any).kcal === 'number'
+      );
       let p = 0;
       let kcal = 0;
-      if (nextDayCompletions.breakfast && todayPlan?.breakfast) {
-        p += todayPlan.breakfast.p;
-        kcal += todayPlan.breakfast.kcal;
-      }
-      if (nextDayCompletions.lunch && todayPlan?.lunch) {
-        p += todayPlan.lunch.p;
-        kcal += todayPlan.lunch.kcal;
-      }
-      if (nextDayCompletions.dinner && todayPlan?.dinner) {
-        p += todayPlan.dinner.p;
-        kcal += todayPlan.dinner.kcal;
-      }
+      dayMeals.forEach(([key, meal]: any) => {
+        if (nextDayCompletions[key]) {
+          p += meal.p || 0;
+          kcal += meal.kcal || 0;
+        }
+      });
       setProteinConsumed(p);
       setCaloriesConsumed(kcal);
     } catch {
@@ -164,11 +156,25 @@ export default function ProteinRingCard({ onPressLogMeal }: ProteinRingCardProps
   const innerOffset = innerCircumference * (1 - proteinRatio);
 
   const todayKey = getTodayPlanDay();
-  const mealItems: Array<{ key: 'breakfast' | 'lunch' | 'dinner'; label: string; icon: string; meal?: { name: string; kcal: number; p: number } }> = [
-    { key: 'breakfast', label: t('Breakfast'), icon: '🍳', meal: todayPlan?.breakfast },
-    { key: 'lunch', label: t('Lunch'), icon: '🥗', meal: todayPlan?.lunch },
-    { key: 'dinner', label: t('Dinner'), icon: '🍲', meal: todayPlan?.dinner },
-  ];
+  const mealKeyLabels: Record<string, { label: string; icon: string }> = {
+    breakfast: { label: t('Breakfast'), icon: '🍳' },
+    lunch: { label: t('Lunch'), icon: '🥗' },
+    pre_workout: { label: t('Pre-Workout'), icon: '⚡' },
+    post_workout: { label: t('Post-Workout'), icon: '💪' },
+    dinner: { label: t('Dinner'), icon: '🍲' },
+    snack: { label: t('Snack'), icon: '🍎' },
+  };
+
+  const dayMealsForItems = Object.entries(todayPlan || {}).filter(
+    ([k, v]) => k !== 'day' && v && typeof v === 'object' && typeof (v as any).kcal === 'number'
+  );
+
+  const mealItems: Array<{ key: string; label: string; icon: string; meal?: { name: string; kcal: number; p: number } }> = dayMealsForItems.map(([key, m]: any) => ({
+    key,
+    label: mealKeyLabels[key]?.label || key.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
+    icon: mealKeyLabels[key]?.icon || '🍽️',
+    meal: m,
+  }));
 
   return (
     <View style={styles.card}>
