@@ -51,9 +51,9 @@ const PLAN_SUCCESS_HOLD_MS = 2500;
 const GENDER_PLACEHOLDER = 'Please select...';
 const MIN_FAVORITE_MEALS = 3;
 const PLAN_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
-const MEAL_KEYS = ['breakfast', 'lunch', 'dinner'] as const;
+const MEAL_KEYS = ['breakfast', 'lunch', 'pre_workout', 'post_workout', 'dinner'] as const;
 type PlanTabId = 'my_plan' | 'tracker' | 'meal_analysis';
-type MealKey = 'breakfast' | 'lunch' | 'dinner';
+type MealKey = (typeof MEAL_KEYS)[number] | string;
 type AnalysisImageAsset = {
   uri: string;
   fileName?: string | null;
@@ -150,7 +150,19 @@ function getMealLabel(mealKey: MealKey, t: (key: string) => string) {
   if (mealKey === 'lunch') {
     return t('Lunch');
   }
-  return t('Dinner');
+  if (mealKey === 'pre_workout') {
+    return t('Pre-Workout Fuel');
+  }
+  if (mealKey === 'post_workout') {
+    return t('Post-Workout Recovery');
+  }
+  if (mealKey === 'dinner') {
+    return t('Dinner');
+  }
+  if (mealKey === 'snack') {
+    return t('Snack');
+  }
+  return t(String(mealKey).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()));
 }
 
 function normalizeAdviceItems(reply: string) {
@@ -234,8 +246,8 @@ function getNextPlanDay(day: string) {
   return index >= 0 && index < PLAN_DAYS.length - 1 ? PLAN_DAYS[index + 1] : null;
 }
 
-type MealEntry = { name: string; desc: string; kcal: number; p: number; c: number; f: number; ingredients: string[]; instructions?: string[]; };
-type DayPlan = { breakfast: MealEntry; lunch: MealEntry; dinner: MealEntry; };
+type MealEntry = { name: string; desc: string; kcal: number; p: number; c: number; f: number; ingredients: string[]; instructions?: string[]; timing?: string; };
+type DayPlan = { breakfast: MealEntry; lunch: MealEntry; dinner: MealEntry; pre_workout?: MealEntry; post_workout?: MealEntry; [key: string]: MealEntry | undefined; };
 type NutritionProfile = {
   goal: string | null;
   cuisine: string;
@@ -297,6 +309,8 @@ const MEAL_PLAN: Record<string, DayPlan> = {
   Mon: {
     breakfast: { name: 'Oatmeal with Mashed Banana', desc: 'A small, comforting bowl of oats naturally sweetened.', kcal: 250, p: 4, c: 45, f: 5, ingredients: ['½ cup rolled oats', '1 ripe banana', '1 cup water', 'Pinch of cinnamon'] },
     lunch: { name: 'Rice and Mild Lentil Stew', desc: 'A balanced portion of complex carbs and plant protein.', kcal: 300, p: 8, c: 50, f: 5, ingredients: ['½ cup white rice', '½ cup red lentils', '1 tomato', '1 onion', 'Spices'], instructions: ['Rinse lentils and boil until soft.', 'Sauté onion and tomato, add lentils.', 'Serve over cooked rice.'] },
+    pre_workout: { name: 'Pre-Workout: Banana & Honey Toast', desc: 'Carb-forward energy snack (60–90m before workout) to saturate glycogen stores.', kcal: 260, p: 14, c: 52, f: 4, timing: '60–90m before workout', ingredients: ['1 banana', '2 slices whole-grain toast', '1 tbsp raw honey', 'Light whey shake'], instructions: ['Toast bread and top with sliced banana and honey.', 'Drink with 400ml water.'] },
+    post_workout: { name: 'Post-Workout: Recovery Shake & Potato', desc: 'High-protein recovery meal (within 45m of workout) to stimulate protein synthesis.', kcal: 340, p: 34, c: 38, f: 6, timing: 'Within 45m after workout', ingredients: ['1 scoop whey isolate or grilled chicken', '1 medium sweet potato', 'Steamed spinach'], instructions: ['Consume within 45 minutes of training.', 'Rehydrate with electrolyte water.'] },
     dinner: { name: 'Chicken and Sweet Potato Mash', desc: 'Lean protein paired with vitamin-rich sweet potatoes.', kcal: 250, p: 8, c: 30, f: 6, ingredients: ['100g chicken breast', '1 medium sweet potato', '1 tsp olive oil', 'Salt, pepper, garlic'], instructions: ['Boil and mash sweet potato.', 'Grill chicken with spices.', 'Serve alongside mash.'] },
   },
   Tue: {
@@ -487,11 +501,15 @@ function WebCamCaptureModal({
 function MealPlanResult({
   profile,
   initialPlan,
-  onCreateNewPlan,
+  onGenerateNewPlan,
+  onEditPreferences,
+  generatingPlan,
 }: {
   profile: NutritionProfile;
   initialPlan?: NutritionPlanApiResponse | null;
-  onCreateNewPlan: () => void;
+  onGenerateNewPlan: () => void;
+  onEditPreferences: () => void;
+  generatingPlan?: boolean;
 }) {
   const router = useRouter();
   const { t } = useLanguage();
@@ -752,14 +770,28 @@ function MealPlanResult({
           return acc;
         }
 
-        acc[day.day] = {
+        const dayEntry: DayPlan = {
           breakfast: day.breakfast,
           lunch: day.lunch,
           dinner: day.dinner,
         };
+        if (day.pre_workout) {
+          dayEntry.pre_workout = day.pre_workout as MealEntry;
+        }
+        if (day.post_workout) {
+          dayEntry.post_workout = day.post_workout as MealEntry;
+        }
+        Object.entries(day).forEach(([k, v]) => {
+          if (k !== 'day' && v && typeof v === 'object' && 'name' in v && 'kcal' in v) {
+            dayEntry[k] = v as MealEntry;
+          }
+        });
+
+        acc[day.day] = dayEntry;
         return acc;
       }, {})
     : MEAL_PLAN;
+
   const fallbackShoppingList = React.useMemo(() => {
     const categories: Record<string, { name: string; qty: string }[]> = {
       'Produce & Fresh': [],
@@ -772,18 +804,18 @@ function MealPlanResult({
     PLAN_DAYS.forEach((dayKey) => {
       const dayData = plan[dayKey];
       if (!dayData) return;
-      [dayData.breakfast, dayData.lunch, dayData.dinner].forEach((m) => {
-        if (!m?.ingredients) return;
-        m.ingredients.forEach((ing) => {
+      Object.entries(dayData).forEach(([k, m]) => {
+        if (k === 'day' || !m || typeof m !== 'object' || !Array.isArray((m as MealEntry).ingredients)) return;
+        (m as MealEntry).ingredients.forEach((ing) => {
           const trimmed = ing.trim();
           const lower = trimmed.toLowerCase();
           if (!trimmed || added.has(lower)) return;
           added.add(lower);
-          if (lower.includes('chicken') || lower.includes('salmon') || lower.includes('egg') || lower.includes('tuna') || lower.includes('beef') || lower.includes('turkey') || lower.includes('shrimp') || lower.includes('yogurt') || lower.includes('lentil') || lower.includes('tofu') || lower.includes('protein')) {
+          if (lower.includes('chicken') || lower.includes('salmon') || lower.includes('egg') || lower.includes('tuna') || lower.includes('beef') || lower.includes('turkey') || lower.includes('shrimp') || lower.includes('yogurt') || lower.includes('lentil') || lower.includes('tofu') || lower.includes('protein') || lower.includes('whey')) {
             categories['Proteins & Meats'].push({ name: trimmed, qty: 'Weekly supply' });
-          } else if (lower.includes('banana') || lower.includes('tomato') || lower.includes('onion') || lower.includes('berries') || lower.includes('avocado') || lower.includes('broccoli') || lower.includes('greens') || lower.includes('salad') || lower.includes('pepper') || lower.includes('cucumber') || lower.includes('fruit') || lower.includes('spinach')) {
+          } else if (lower.includes('banana') || lower.includes('tomato') || lower.includes('onion') || lower.includes('berries') || lower.includes('avocado') || lower.includes('broccoli') || lower.includes('greens') || lower.includes('salad') || lower.includes('pepper') || lower.includes('cucumber') || lower.includes('fruit') || lower.includes('spinach') || lower.includes('dates')) {
             categories['Produce & Fresh'].push({ name: trimmed, qty: 'Fresh weekly' });
-          } else if (lower.includes('oat') || lower.includes('rice') || lower.includes('bread') || lower.includes('wrap') || lower.includes('grain') || lower.includes('quinoa') || lower.includes('pasta') || lower.includes('potato') || lower.includes('pancake') || lower.includes('flour')) {
+          } else if (lower.includes('oat') || lower.includes('rice') || lower.includes('bread') || lower.includes('wrap') || lower.includes('grain') || lower.includes('quinoa') || lower.includes('pasta') || lower.includes('potato') || lower.includes('pancake') || lower.includes('flour') || lower.includes('toast')) {
             categories['Carbohydrates & Grains'].push({ name: trimmed, qty: '1-2 packs' });
           } else {
             categories['Pantry & Extras'].push({ name: trimmed, qty: 'To taste' });
@@ -799,25 +831,47 @@ function MealPlanResult({
   const activeShoppingList = Array.isArray(generatedPlan?.shopping_list) && generatedPlan.shopping_list.length > 0
     ? generatedPlan.shopping_list
     : fallbackShoppingList;
-  const day = activePlan[activeDay] ?? MEAL_PLAN[activeDay];
-  const dayMealStatuses = [
-    { key: 'breakfast', label: getMealLabel('breakfast', t), meal: day.breakfast, completed: isMealComplete(activeDay, 'breakfast') },
-    { key: 'lunch', label: getMealLabel('lunch', t), meal: day.lunch, completed: isMealComplete(activeDay, 'lunch') },
-    { key: 'dinner', label: getMealLabel('dinner', t), meal: day.dinner, completed: isMealComplete(activeDay, 'dinner') },
-  ];
-  const MEAL_CHRONO_ORDER: Record<MealKey, number> = { breakfast: 0, lunch: 1, dinner: 2 };
-  const orderedMealCards = [
-    { key: 'breakfast' as MealKey, label: t('Breakfast'), meal: day.breakfast, expandKey: `${activeDay}-b` },
-    { key: 'lunch' as MealKey, label: t('Lunch'), meal: day.lunch, expandKey: `${activeDay}-l` },
-    { key: 'dinner' as MealKey, label: t('Dinner'), meal: day.dinner, expandKey: `${activeDay}-d` },
-  ].sort((first, second) => {
-    const firstCompleted = isMealComplete(activeDay, first.key);
-    const secondCompleted = isMealComplete(activeDay, second.key);
-    if (firstCompleted !== secondCompleted) {
-      return Number(firstCompleted) - Number(secondCompleted);
-    }
-    return MEAL_CHRONO_ORDER[first.key] - MEAL_CHRONO_ORDER[second.key];
-  });
+
+  const day = activePlan[activeDay] ?? MEAL_PLAN[activeDay] ?? MEAL_PLAN['Mon'];
+  const dayMealEntries: [string, MealEntry][] = Object.entries(day).filter(
+    (entry): entry is [string, MealEntry] =>
+      entry[0] !== 'day' && Boolean(entry[1] && typeof entry[1] === 'object' && typeof (entry[1] as MealEntry).kcal === 'number')
+  );
+
+  const MEAL_CHRONO_ORDER: Record<string, number> = {
+    breakfast: 0,
+    lunch: 1,
+    pre_workout: 2,
+    post_workout: 3,
+    dinner: 4,
+    snack: 5,
+  };
+
+  const dayMealStatuses = dayMealEntries.map(([key, meal]) => ({
+    key,
+    label: getMealLabel(key, t),
+    meal,
+    completed: isMealComplete(activeDay, key),
+  }));
+
+  const orderedMealCards = dayMealEntries
+    .map(([key, meal]) => ({
+      key,
+      label: getMealLabel(key, t),
+      meal,
+      expandKey: `${activeDay}-${key}`,
+    }))
+    .sort((first, second) => {
+      const firstCompleted = isMealComplete(activeDay, first.key);
+      const secondCompleted = isMealComplete(activeDay, second.key);
+      if (firstCompleted !== secondCompleted) {
+        return Number(firstCompleted) - Number(secondCompleted);
+      }
+      const orderA = MEAL_CHRONO_ORDER[first.key] ?? 99;
+      const orderB = MEAL_CHRONO_ORDER[second.key] ?? 99;
+      return orderA - orderB;
+    });
+
   const completedMealsCount = dayMealStatuses.filter((item) => item.completed).length;
   const completedDayTotals = dayMealStatuses
     .filter((item) => item.completed)
@@ -830,10 +884,11 @@ function MealPlanResult({
       }),
       { kcal: 0, p: 0, c: 0, f: 0 }
     );
-  const totalKcal = day.breakfast.kcal + day.lunch.kcal + day.dinner.kcal;
-  const totalP = day.breakfast.p + day.lunch.p + day.dinner.p;
-  const totalC = day.breakfast.c + day.lunch.c + day.dinner.c;
-  const totalF = day.breakfast.f + day.lunch.f + day.dinner.f;
+
+  const totalKcal = dayMealEntries.reduce((sum, [_, m]) => sum + (m.kcal || 0), 0);
+  const totalP = dayMealEntries.reduce((sum, [_, m]) => sum + (m.p || 0), 0);
+  const totalC = dayMealEntries.reduce((sum, [_, m]) => sum + (m.c || 0), 0);
+  const totalF = dayMealEntries.reduce((sum, [_, m]) => sum + (m.f || 0), 0);
 
   const effectiveWeight = userWeight || profile.weight || (generatedPlan?.baseline_weight ? String(generatedPlan.baseline_weight) : '70');
   const { target: calculatedProteinTarget, multiplier: proteinMultiplier, weightKg: currentWeightKg } = calculateProteinTarget(
@@ -1221,17 +1276,15 @@ async function ensureJpegAnalysisAsset(asset: AnalysisImageAsset): Promise<Analy
   }) => {
     const completed = isMealComplete(dayLabel, mealKey);
     const isPreWorkout =
+      mealKey === 'pre_workout' ||
       (meal as any).timing?.toLowerCase().includes('pre-workout') ||
-      meal.desc?.toLowerCase().includes('pre-workout') ||
       label.toLowerCase().includes('pre-workout') ||
-      meal.name.toLowerCase().includes('pre-workout') ||
-      mealKey === 'lunch';
+      meal.name.toLowerCase().includes('pre-workout');
     const isPostWorkout =
+      mealKey === 'post_workout' ||
       (meal as any).timing?.toLowerCase().includes('post-workout') ||
-      meal.desc?.toLowerCase().includes('post-workout') ||
       label.toLowerCase().includes('post-workout') ||
-      meal.name.toLowerCase().includes('post-workout') ||
-      mealKey === 'dinner';
+      meal.name.toLowerCase().includes('post-workout');
 
     return (
       <View style={styles.mealCardWrap}>
@@ -1455,8 +1508,22 @@ async function ensureJpegAnalysisAsset(asset: AnalysisImageAsset): Promise<Analy
                 <Text style={styles.shoppingBtnText}>{t('Weekly Shopping List')}</Text>
               </View>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.newPlanBtn} activeOpacity={0.7} onPress={onCreateNewPlan}>
-              <Text style={styles.newPlanBtnText}>{t('Create New Plan')}</Text>
+
+            <TouchableOpacity
+              style={styles.regeneratePlanBtn}
+              activeOpacity={0.85}
+              onPress={onGenerateNewPlan}
+              disabled={generatingPlan}
+            >
+              <Ionicons name="sparkles" size={16} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={styles.regeneratePlanBtnText}>
+                {generatingPlan ? t('Generating Fresh Plan...') : t('Generate New Plan')}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.editPrefsBtn} activeOpacity={0.7} onPress={onEditPreferences}>
+              <Ionicons name="options-outline" size={15} color="rgba(255,255,255,0.7)" style={{ marginRight: 6 }} />
+              <Text style={styles.editPrefsBtnText}>{t('Customize Preferences')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -1983,14 +2050,47 @@ export default function JournalScreen() {
       setDone(false);
 
       try {
-        const onboarding = await fetchCurrentUserOnboarding();
-        if (onboarding && onboarding.personalProfile) {
-          const profile = onboarding.personalProfile;
-          if (profile.age) setAge(String(profile.age));
-          if (profile.gender) setGender(profile.gender);
-          if (profile.height) setHeight(String(profile.height));
-          if (profile.weight) setWeight(String(profile.weight));
+        const [onboarding, bodyMetrics] = await Promise.all([
+          fetchCurrentUserOnboarding().catch(() => null),
+          fetchCurrentUserBodyMetrics().catch(() => null),
+        ]);
+        if (onboarding) {
+          if (onboarding.personalProfile) {
+            const profile = onboarding.personalProfile;
+            if (profile.age) setAge(String(profile.age));
+            if (profile.gender) setGender(profile.gender);
+            if (profile.height) setHeight(String(profile.height));
+            if (profile.weight) setWeight(String(profile.weight));
+          }
+          if (bodyMetrics?.weight) {
+            setWeight(String(bodyMetrics.weight));
+          }
+          if (onboarding.anamnese) {
+            const anamnese = onboarding.anamnese;
+            if (anamnese.primaryGoal) {
+              const goalLower = anamnese.primaryGoal.toLowerCase();
+              if (goalLower.includes('loss') || goalLower.includes('fat') || goalLower.includes('burn')) setSelectedGoal('g1');
+              else if (goalLower.includes('muscle') || goalLower.includes('build') || goalLower.includes('strength')) setSelectedGoal('g2');
+              else if (goalLower.includes('maintain') || goalLower.includes('fit')) setSelectedGoal('g3');
+              else if (goalLower.includes('flex')) setSelectedGoal('g4');
+              else if (goalLower.includes('energy') || goalLower.includes('endurance')) setSelectedGoal('g5');
+            }
+            if (anamnese.activityLevel) {
+              const actLower = anamnese.activityLevel.toLowerCase();
+              if (actLower.includes('sedentary')) setSelectedActivity('a1');
+              else if (actLower.includes('light')) setSelectedActivity('a2');
+              else if (actLower.includes('active') && !actLower.includes('very')) setSelectedActivity('a3');
+              else if (actLower.includes('very')) setSelectedActivity('a4');
+            }
+            if (Array.isArray(anamnese.healthConcerns) && anamnese.healthConcerns.length > 0) {
+              setHealthConditions(new Set(anamnese.healthConcerns));
+            }
+          }
         }
+        setFavoriteMeals(['Grilled Chicken & Rice', 'Salmon & Sweet Potato', 'Oatmeal & Berries']);
+        setFavoriteMeal('Grilled Chicken & Rice');
+        if (!cuisine) setCuisine('Balanced Healthy');
+        if (!selectedDiet) setSelectedDiet('d1');
       } catch {
         // Fallback silently if user has not completed onboarding
       }
@@ -2163,13 +2263,17 @@ export default function JournalScreen() {
     if (generating) {
       return;
     }
-    if (normalizedFavoriteMeals.length < MIN_FAVORITE_MEALS) {
-      setErrorDialog({
-        title: t('Add more favourite meals'),
-        message: t('Add at least 3 favourite meals before we generate your plan.'),
-      });
-      return;
-    }
+    const effectiveFavMeals = normalizedFavoriteMeals.length >= MIN_FAVORITE_MEALS
+      ? normalizedFavoriteMeals
+      : ['Grilled Chicken & Rice', 'Salmon & Sweet Potato', 'Oatmeal & Berries'];
+    const effectiveGoal = selectedGoal || 'g3';
+    const effectiveCuisine = cuisine.trim() || 'Balanced Healthy';
+    const effectiveDiet = selectedDiet || 'd1';
+    const effectiveActivity = selectedActivity || 'a3';
+    const effectiveAge = age.trim() || '28';
+    const effectiveGender = gender !== GENDER_PLACEHOLDER ? gender : 'Male';
+    const effectiveHeight = height.trim() || '175';
+    const effectiveWeight = weight.trim() || '75';
 
     setGenerating(true);
     setGenerationSuccess(false);
@@ -2180,18 +2284,18 @@ export default function JournalScreen() {
 
     try {
       const response = await createNutritionPlan({
-        goal: selectedGoal,
-        cuisine,
-        favorite_meal: normalizedFavoriteMeals[0] ?? favoriteMeal,
-        favorite_meals: normalizedFavoriteMeals,
-        favorite_meals_json: normalizedFavoriteMeals,
-        diet: selectedDiet,
+        goal: effectiveGoal,
+        cuisine: effectiveCuisine,
+        favorite_meal: effectiveFavMeals[0],
+        favorite_meals: effectiveFavMeals,
+        favorite_meals_json: effectiveFavMeals,
+        diet: effectiveDiet,
         allergies,
-        activity_level: selectedActivity,
-        age,
-        gender,
-        height,
-        weight,
+        activity_level: effectiveActivity,
+        age: effectiveAge,
+        gender: effectiveGender,
+        height: effectiveHeight,
+        weight: effectiveWeight,
         health_conditions: Array.from(healthConditions),
         workout_time: '17:30',
       });
@@ -2306,12 +2410,16 @@ export default function JournalScreen() {
           healthConditions: Array.from(healthConditions),
         }}
         initialPlan={generatedPlan}
-        onCreateNewPlan={() => {
+        onGenerateNewPlan={() => {
+          void generatePlan();
+        }}
+        onEditPreferences={() => {
           setCreatingNewPlan(true);
           setStep(1);
           setErrorDialog(null);
           setGenerationStage(null);
         }}
+        generatingPlan={generating}
       />
     );
   }
@@ -2340,6 +2448,23 @@ export default function JournalScreen() {
 
         {step === 1 && (
           <View>
+            <TouchableOpacity
+              style={styles.oneTapBanner}
+              activeOpacity={0.88}
+              onPress={() => void generatePlan()}
+            >
+              <View style={styles.oneTapIconWrap}>
+                <Ionicons name="flash" size={20} color="#FFD700" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.oneTapTitle}>{t('1-Tap Quick Generate from Profile')}</Text>
+                <Text style={styles.oneTapSub}>
+                  {t('Instantly create an AI nutrition plan with pre/post-workout timing tailored to your profile.')}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.6)" />
+            </TouchableOpacity>
+
             <Text style={styles.bigQuestion}>{t('What is your primary goal?')}</Text>
             <Text style={styles.bigSub}>{t('Choose the goal that motivates you the most.')}</Text>
             <OptionList
@@ -3103,6 +3228,76 @@ const styles = StyleSheet.create({
   shoppingBtn: { marginTop: 8, marginBottom: 12 },
   shoppingBtnGrad: { borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   shoppingBtnText: { color: '#fff', fontSize: 16, fontWeight: '800', fontFamily: 'Inter_700Bold' },
+  regeneratePlanBtn: {
+    marginTop: 8,
+    marginBottom: 8,
+    borderRadius: 14,
+    paddingVertical: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    backgroundColor: '#7C3AED',
+    shadowColor: '#7C3AED',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  regeneratePlanBtnText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+    fontFamily: 'Inter_700Bold',
+  },
+  editPrefsBtn: {
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+  },
+  editPrefsBtnText: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+  },
+  oneTapBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(124, 58, 237, 0.12)',
+    borderWidth: 1.5,
+    borderColor: '#7C3AED',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    gap: 12,
+  },
+  oneTapIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  oneTapTitle: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '800',
+    fontFamily: 'Inter_700Bold',
+    marginBottom: 2,
+  },
+  oneTapSub: {
+    color: 'rgba(255, 255, 255, 0.65)',
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    lineHeight: 16,
+  },
   newPlanBtn: { 
     marginTop: 6, 
     marginBottom: 20, 

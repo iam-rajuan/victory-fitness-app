@@ -18,6 +18,9 @@ export type NutritionDayPlan = {
   breakfast: NutritionMealEntry;
   lunch: NutritionMealEntry;
   dinner: NutritionMealEntry;
+  pre_workout?: NutritionMealEntry | null;
+  post_workout?: NutritionMealEntry | null;
+  [key: string]: unknown;
 };
 
 export type NutritionShoppingItem = {
