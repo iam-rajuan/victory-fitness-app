@@ -188,13 +188,15 @@ const COMMUNITY_VIDEO_UPLOAD_MIME_TYPES = new Set([
   'video/mp4',
   'video/quicktime',
   'video/webm',
+  'video/x-m4v',
+  'video/ogg',
 ]);
 
 const VIDEO_FILE_EXTENSIONS = ['.mp4', '.mov', '.m4v', '.webm', '.ogg'];
-const COMMUNITY_IMAGE_MAX_SIZE_BYTES = 1 * 1024 * 1024;
-const COMMUNITY_VIDEO_MAX_SIZE_BYTES = 20 * 1024 * 1024;
+const COMMUNITY_IMAGE_MAX_SIZE_BYTES = 15 * 1024 * 1024;
+const COMMUNITY_VIDEO_MAX_SIZE_BYTES = 50 * 1024 * 1024;
 
-function inferCommunityMediaType(asset: ImagePicker.ImagePickerAsset): 'image' | 'video' {
+function inferCommunityMediaType(asset: any): 'image' | 'video' {
   if (asset.type === 'image') {
     return 'image';
   }
@@ -202,7 +204,7 @@ function inferCommunityMediaType(asset: ImagePicker.ImagePickerAsset): 'image' |
     return 'video';
   }
 
-  const mimeType = String(asset.mimeType || '').trim().toLowerCase();
+  const mimeType = String(asset.mimeType || asset.type || '').trim().toLowerCase();
   if (mimeType.startsWith('image/')) {
     return 'image';
   }
@@ -213,7 +215,7 @@ function inferCommunityMediaType(asset: ImagePicker.ImagePickerAsset): 'image' |
     return 'video';
   }
 
-  const fileName = String(asset.fileName || '').trim().toLowerCase();
+  const fileName = String(asset.fileName || asset.name || '').trim().toLowerCase();
   if (VIDEO_FILE_EXTENSIONS.some((extension) => fileName.endsWith(extension))) {
     return 'video';
   }
@@ -223,24 +225,28 @@ function inferCommunityMediaType(asset: ImagePicker.ImagePickerAsset): 'image' |
     return 'video';
   }
 
-  if (uri.startsWith('blob:') || uri.startsWith('data:video/')) {
+  if (uri.startsWith('data:video/')) {
     return 'video';
   }
 
   return 'image';
 }
 
-function inferCommunityMimeType(asset: ImagePicker.ImagePickerAsset, mediaType: 'image' | 'video'): string {
-  const mimeType = String(asset.mimeType || '').trim().toLowerCase();
+function inferCommunityMimeType(asset: any, mediaType: 'image' | 'video'): string {
+  const mimeType = String(asset.mimeType || asset.type || '').trim().toLowerCase();
+  const fileName = String(asset.fileName || asset.name || '').toLowerCase();
   if (mediaType === 'video') {
-    if (mimeType === 'video/quicktime' || String(asset.fileName || '').toLowerCase().endsWith('.mov')) {
+    if (mimeType === 'video/quicktime' || fileName.endsWith('.mov')) {
       return 'video/quicktime';
     }
-    if (mimeType === 'video/webm' || String(asset.fileName || '').toLowerCase().endsWith('.webm')) {
+    if (mimeType === 'video/webm' || fileName.endsWith('.webm')) {
       return 'video/webm';
     }
-    if (mimeType === 'video/mp4' || mimeType === 'video/x-m4v' || String(asset.fileName || '').toLowerCase().endsWith('.mp4') || String(asset.fileName || '').toLowerCase().endsWith('.m4v')) {
+    if (mimeType === 'video/mp4' || mimeType === 'video/x-m4v' || fileName.endsWith('.mp4') || fileName.endsWith('.m4v')) {
       return 'video/mp4';
+    }
+    if (mimeType === 'video/ogg' || fileName.endsWith('.ogg')) {
+      return 'video/ogg';
     }
     return 'video/mp4';
   }
@@ -248,12 +254,16 @@ function inferCommunityMimeType(asset: ImagePicker.ImagePickerAsset, mediaType: 
   if (mimeType.startsWith('image/')) {
     return mimeType;
   }
+  if (fileName.endsWith('.png')) return 'image/png';
+  if (fileName.endsWith('.webp')) return 'image/webp';
+  if (fileName.endsWith('.gif')) return 'image/gif';
+  if (fileName.endsWith('.heic') || fileName.endsWith('.heif')) return 'image/heic';
 
   return 'image/jpeg';
 }
 
 function getCommunityUploadName(asset: any, mediaType: 'image' | 'video') {
-  const fileName = String(asset.fileName || '').trim();
+  const fileName = String(asset.fileName || asset.name || '').trim();
   if (fileName) {
     return fileName;
   }
@@ -266,7 +276,7 @@ function getCommunityMediaSizeBytes(asset: any) {
   return Math.max(fileSize, fileObjectSize);
 }
 
-function buildCommunityUploadFormData(params: {
+async function buildCommunityUploadFormData(params: {
   content: string;
   media: CommunityMediaAsset | null;
   externalVideoUrl: string;
@@ -289,7 +299,8 @@ function buildCommunityUploadFormData(params: {
     formData.append('media_type', params.media.type);
 
     if (params.media.file) {
-      formData.append('media_file', params.media.file);
+      const uploadName = params.media.fileName || (params.media.file as any).name || getCommunityUploadName(params.media, params.media.type);
+      formData.append('media_file', params.media.file as any, uploadName);
     } else if (Platform.OS === 'web' && typeof window !== 'undefined' && params.media.uri) {
       const uri = params.media.uri;
       try {
@@ -305,6 +316,11 @@ function buildCommunityUploadFormData(params: {
           }
           const fileObj = new File([u8arr], params.media.fileName || 'workout-completion.png', { type: mime });
           formData.append('media_file', fileObj);
+        } else if (uri.startsWith('blob:')) {
+          const res = await fetch(uri);
+          const blob = await res.blob();
+          const uploadName = params.media.fileName || getCommunityUploadName(params.media, params.media.type);
+          formData.append('media_file', blob, uploadName);
         } else {
           formData.append('media_file', {
             uri: params.media.uri,
@@ -312,7 +328,8 @@ function buildCommunityUploadFormData(params: {
             type: params.media.mimeType,
           } as any);
         }
-      } catch {
+      } catch (err) {
+        console.warn('Failed to convert web media to blob:', err);
         formData.append('media_file', {
           uri: params.media.uri,
           name: getCommunityUploadName(params.media, params.media.type),
@@ -366,6 +383,22 @@ function formatCommunityPostTime(value: string, t: (key: string, params?: Record
   }
 
   return createdAt.toLocaleDateString();
+}
+
+function getCommunityTierBadgeInfo(audience?: string, t?: (key: string) => string) {
+  const norm = String(audience || 'ALL').toUpperCase();
+  switch (norm) {
+    case 'SILVER':
+      return { bg: 'rgba(148, 163, 184, 0.18)', border: 'rgba(148, 163, 184, 0.45)', text: '#CBD5E1', icon: 'shield-outline', label: t ? t('SILVER') : 'SILVER' };
+    case 'GOLD':
+      return { bg: 'rgba(245, 158, 11, 0.18)', border: 'rgba(245, 158, 11, 0.45)', text: '#FBBF24', icon: 'trophy-outline', label: t ? t('GOLD') : 'GOLD' };
+    case 'PLATINUM':
+      return { bg: 'rgba(6, 182, 212, 0.18)', border: 'rgba(6, 182, 212, 0.45)', text: '#38BDF8', icon: 'diamond-outline', label: t ? t('PLATINUM') : 'PLATINUM' };
+    case 'INNER_CIRCLE':
+      return { bg: 'rgba(168, 85, 247, 0.18)', border: 'rgba(168, 85, 247, 0.45)', text: '#C084FC', icon: 'ribbon-outline', label: t ? t('INNER CIRCLE') : 'INNER CIRCLE' };
+    default:
+      return { bg: 'rgba(34, 197, 94, 0.18)', border: 'rgba(34, 197, 94, 0.45)', text: '#4ADE80', icon: 'globe-outline', label: t ? t('GLOBAL') : 'GLOBAL' };
+  }
 }
 
 function parseChallengeInvitePost(content: string) {
@@ -653,6 +686,59 @@ export default function ChallengesScreen() {
   const [screenRefreshing, setScreenRefreshing] = useState(false);
   const [communityMedia, setCommunityMedia] = useState<CommunityMediaAsset | null>(null);
   const [isWorkoutShareMode, setIsWorkoutShareMode] = useState(false);
+  const webFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleSelectedMediaFile = (file: File) => {
+    const isVideo = file.type.startsWith('video/') || VIDEO_FILE_EXTENSIONS.some((ext) => file.name.toLowerCase().endsWith(ext));
+    const mediaType: 'image' | 'video' = isVideo ? 'video' : 'image';
+    const maxSize = isVideo ? COMMUNITY_VIDEO_MAX_SIZE_BYTES : COMMUNITY_IMAGE_MAX_SIZE_BYTES;
+
+    if (file.size > maxSize) {
+      const maxMb = Math.floor(maxSize / (1024 * 1024));
+      Alert.alert(
+        isVideo ? t('Video too large') : t('Image too large'),
+        isVideo
+          ? t(`Please choose a video that is ${maxMb}MB or smaller.`)
+          : t(`Please choose an image that is ${maxMb}MB or smaller.`)
+      );
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    let mimeType = file.type;
+    if (!mimeType) {
+      const lowerName = file.name.toLowerCase();
+      if (lowerName.endsWith('.png')) mimeType = 'image/png';
+      else if (lowerName.endsWith('.webp')) mimeType = 'image/webp';
+      else if (lowerName.endsWith('.gif')) mimeType = 'image/gif';
+      else if (lowerName.endsWith('.heic') || lowerName.endsWith('.heif')) mimeType = 'image/heic';
+      else if (lowerName.endsWith('.mp4')) mimeType = 'video/mp4';
+      else if (lowerName.endsWith('.mov')) mimeType = 'video/quicktime';
+      else if (lowerName.endsWith('.webm')) mimeType = 'video/webm';
+      else mimeType = isVideo ? 'video/mp4' : 'image/jpeg';
+    }
+
+    setCommunityMedia({
+      uri: objectUrl,
+      mimeType,
+      fileName: file.name,
+      fileSize: file.size,
+      file: file,
+      type: mediaType,
+    });
+    setCommunityVideoLink('');
+    setCommunityError('');
+  };
+
+  const handleWebFileSelect = (event: any) => {
+    const file = event?.target?.files?.[0];
+    if (file) {
+      handleSelectedMediaFile(file);
+    }
+    if (event?.target) {
+      event.target.value = '';
+    }
+  };
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [commentSubmitting, setCommentSubmitting] = useState<Record<string, boolean>>({});
@@ -1210,7 +1296,7 @@ export default function ChallengesScreen() {
     setCommunityPosts((current) => [optimisticPost, ...current]);
     try {
       const isWorkoutSharePost = postingDraft.includes('#WorkoutCompleted') || postingDraft.includes('#workoutcompleted');
-      const formData = buildCommunityUploadFormData({
+      const formData = await buildCommunityUploadFormData({
         content: postingDraft || '',
         media: postingMedia,
         externalVideoUrl: postingVideoLink,
@@ -1241,6 +1327,31 @@ export default function ChallengesScreen() {
 
   const handlePickCommunityMedia = async () => {
     try {
+      if (Platform.OS === 'web') {
+        if (webFileInputRef.current) {
+          webFileInputRef.current.click();
+          return;
+        }
+        if (typeof document !== 'undefined') {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = 'image/*,video/*';
+          input.style.display = 'none';
+          document.body.appendChild(input);
+          input.onchange = (e: any) => {
+            const file = e.target?.files?.[0];
+            if (file) {
+              handleSelectedMediaFile(file);
+            }
+            try {
+              document.body.removeChild(input);
+            } catch {}
+          };
+          input.click();
+          return;
+        }
+      }
+
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
         Alert.alert(t('Permission needed'), t('Please allow photo library access to add media.'));
@@ -1250,12 +1361,12 @@ export default function ChallengesScreen() {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images', 'videos'],
         allowsEditing: false,
-        quality: 0.8,
+        quality: 0.85,
         base64: false,
         videoExportPreset: ImagePicker.VideoExportPreset.MediumQuality,
       });
 
-      if (result.canceled || result.assets.length === 0) {
+      if (result.canceled || !result.assets || result.assets.length === 0) {
         return;
       }
 
@@ -1265,12 +1376,12 @@ export default function ChallengesScreen() {
       const assetSize = getCommunityMediaSizeBytes(asset);
 
       if (assetType === 'image' && assetSize > COMMUNITY_IMAGE_MAX_SIZE_BYTES) {
-        Alert.alert(t('Image too large'), t('Please choose an image that is 1MB or smaller.'));
+        Alert.alert(t('Image too large'), t('Please choose an image that is 15MB or smaller.'));
         return;
       }
 
       if (assetType === 'video' && assetSize > COMMUNITY_VIDEO_MAX_SIZE_BYTES) {
-        Alert.alert(t('Video too large'), t('Please choose a video that is 20MB or smaller.'));
+        Alert.alert(t('Video too large'), t('Please choose a video that is 50MB or smaller.'));
         return;
       }
 
@@ -1284,7 +1395,7 @@ export default function ChallengesScreen() {
         mimeType: assetMimeType,
         fileName: asset.fileName || null,
         fileSize: asset.fileSize ?? null,
-        file: asset.file ?? null,
+        file: (asset as any).file ?? null,
         width: asset.width,
         height: asset.height,
         type: assetType,
@@ -2240,6 +2351,15 @@ export default function ChallengesScreen() {
                   <Text style={styles.composerLinkHint}>{getCommunityVideoLinkHint(t)}</Text>
                   <View style={styles.composerDivider} />
                   <View style={styles.composerActions}>
+                    {Platform.OS === 'web' && typeof document !== 'undefined'
+                      ? React.createElement('input', {
+                          type: 'file',
+                          ref: webFileInputRef,
+                          accept: 'image/*,video/*',
+                          style: { display: 'none' },
+                          onChange: handleWebFileSelect,
+                        })
+                      : null}
                     <TouchableOpacity style={styles.composerImgBtn} onPress={handlePickCommunityMedia}>
                       <Ionicons name="images-outline" size={22} color={communityMedia ? Colors.primary : 'rgba(255,255,255,0.45)'} />
                     </TouchableOpacity>
@@ -2323,7 +2443,7 @@ export default function ChallengesScreen() {
                       <View style={styles.postMetaRow}>
                         <View style={styles.postAuthorWrap}>
                           <Text style={styles.postAuthor}>{post.author_name}</Text>
-                          {(post.author_role === 'admin' || post.is_admin_broadcast) ? (
+                          {(post.author_role?.toLowerCase() === 'admin' || post.is_admin_broadcast) ? (
                             <View style={styles.verifiedAdminBadge}>
                               <Ionicons name="checkmark-circle" size={13} color="#38BDF8" />
                               <Text style={styles.verifiedAdminText}>{t('Official')}</Text>
@@ -2331,9 +2451,15 @@ export default function ChallengesScreen() {
                           ) : null}
                         </View>
                         <Text style={styles.postTime}>{formatCommunityPostTime(post.created_at, t)}</Text>
-                        <View style={[styles.tierBadge, { backgroundColor: post.audience === 'ALL' ? '#22C55E' : '#A855F7' }]}>
-                          <Text style={styles.tierBadgeText}>{post.audience}</Text>
-                        </View>
+                        {(() => {
+                          const badge = getCommunityTierBadgeInfo(post.audience, t);
+                          return (
+                            <View style={[styles.tierBadge, { backgroundColor: badge.bg, borderColor: badge.border, borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 3 }]}>
+                              <Ionicons name={badge.icon as any} size={10} color={badge.text} />
+                              <Text style={[styles.tierBadgeText, { color: badge.text }]}>{badge.label}</Text>
+                            </View>
+                          );
+                        })()}
                       </View>
                     </View>
                   </View>
