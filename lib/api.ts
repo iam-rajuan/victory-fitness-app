@@ -131,12 +131,21 @@ export function resolveRemoteAssetUrl(url: string | null | undefined): string {
     return '';
   }
 
-  if (normalizedUrl.startsWith('data:')) {
+  if (normalizedUrl.startsWith('data:') || normalizedUrl.startsWith('blob:') || normalizedUrl.startsWith('file:')) {
     return normalizedUrl;
   }
 
   if (normalizedUrl.startsWith('/')) {
     return `${API_URL}${normalizedUrl}`;
+  }
+
+  if (/^https?:\/\//i.test(normalizedUrl)) {
+    if (Platform.OS === 'android') {
+      if (normalizedUrl.includes('://127.0.0.1') || normalizedUrl.includes('://localhost')) {
+        return normalizedUrl.replace('://127.0.0.1', '://10.0.2.2').replace('://localhost', '://10.0.2.2');
+      }
+    }
+    return normalizedUrl;
   }
 
   return resolveApiUrl(normalizedUrl);

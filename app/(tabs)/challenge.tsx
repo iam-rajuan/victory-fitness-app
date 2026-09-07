@@ -671,6 +671,7 @@ export default function ChallengesScreen() {
   const [communityFilterPickerOpen, setCommunityFilterPickerOpen] = useState(false);
   const [inviteModalChallenge, setInviteModalChallenge] = useState<ReadyChallenge | null>(null);
   const [copiedInvitePostIds, setCopiedInvitePostIds] = useState<Record<string, boolean>>({});
+  const [fullscreenCardImage, setFullscreenCardImage] = useState<string | null>(null);
 
   const handleCopyPostInviteLink = async (postId: string, inviteUrl: string) => {
     try {
@@ -2467,15 +2468,23 @@ export default function ChallengesScreen() {
                         <Text style={styles.postBody}>{post.content}</Text>
                       ) : null}
                       {getImageSource(post.image_url) ? (
-                        <View style={styles.postMediaFrame}>
+                        <TouchableOpacity
+                          style={styles.postMediaFrame}
+                          activeOpacity={0.92}
+                          onPress={() => setFullscreenCardImage(post.image_url)}
+                        >
                           <Image source={getImageSource(post.image_url)!} style={styles.postImagePreview} />
+                          <View style={styles.cardZoomHintBadge}>
+                            <Ionicons name="expand" size={12} color="#00F0D0" />
+                            <Text style={styles.cardZoomHintText}>{t('Tap to view card')}</Text>
+                          </View>
                           {post.is_pending_upload ? (
                             <View style={styles.postUploadingOverlay}>
                               <ActivityIndicator size="small" color="#FFFFFF" />
                               <Text style={styles.postUploadingText}>{t('Uploading...')}</Text>
                             </View>
                           ) : null}
-                        </View>
+                        </TouchableOpacity>
                       ) : getCommunityVideoUrl(post.video_url) ? (
                         <View style={styles.postMediaFrame}>
                           <View style={styles.postVideoPreviewWrap}>
@@ -2675,6 +2684,45 @@ export default function ChallengesScreen() {
         </View>
       </Modal>
 
+      {/* ── FULLSCREEN CARD IMAGE LIGHTBOX MODAL ── */}
+      <Modal
+        visible={fullscreenCardImage !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setFullscreenCardImage(null)}
+      >
+        <View style={styles.fullscreenCardOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setFullscreenCardImage(null)} />
+
+          {/* Top Bar with Badge and Close */}
+          <View style={styles.fullscreenCardHeader}>
+            <View style={styles.fullscreenCardBadge}>
+              <Ionicons name="trophy" size={14} color="#F59E0B" />
+              <Text style={styles.fullscreenCardBadgeText}>{t('WORKOUT COMPLETION CARD')}</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.fullscreenCardCloseBtn}
+              onPress={() => setFullscreenCardImage(null)}
+              accessibilityLabel={t('Close card view')}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="close" size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Showcase Area */}
+          <Pressable style={styles.fullscreenCardBody} onPress={() => setFullscreenCardImage(null)}>
+            {fullscreenCardImage ? (
+              <Image
+                source={{ uri: resolveRemoteAssetUrl(fullscreenCardImage) }}
+                style={styles.fullscreenCardImage}
+                resizeMode="contain"
+              />
+            ) : null}
+          </Pressable>
+        </View>
+      </Modal>
+
       <Modal
         visible={selectedCommunityPost !== null}
         transparent
@@ -2711,7 +2759,16 @@ export default function ChallengesScreen() {
                 {selectedCommunityPost.content ? <Text style={styles.postModalBody}>{selectedCommunityPost.content}</Text> : null}
 
                 {getImageSource(selectedCommunityPost.image_url) ? (
-                  <Image source={getImageSource(selectedCommunityPost.image_url)!} style={styles.postModalImage} />
+                  <TouchableOpacity
+                    activeOpacity={0.92}
+                    onPress={() => setFullscreenCardImage(selectedCommunityPost.image_url)}
+                  >
+                    <Image source={getImageSource(selectedCommunityPost.image_url)!} style={styles.postModalImage} />
+                    <View style={styles.cardZoomHintBadge}>
+                      <Ionicons name="expand" size={12} color="#00F0D0" />
+                      <Text style={styles.cardZoomHintText}>{t('Full screen')}</Text>
+                    </View>
+                  </TouchableOpacity>
                 ) : getCommunityVideoUrl(selectedCommunityPost.video_url) ? (
                   <View style={styles.postModalVideoWrap}>
                     <CrossPlatformWebView
@@ -4527,10 +4584,94 @@ const styles = StyleSheet.create({
   },
   postModalImage: {
     width: '100%',
-    height: 320,
+    height: 380,
     borderRadius: 16,
-    resizeMode: 'cover',
+    resizeMode: 'contain',
+    backgroundColor: '#070B16',
   },
+  /* Fullscreen Card Lightbox */
+  fullscreenCardOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(3, 7, 18, 0.96)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullscreenCardHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 52 : 24,
+    paddingBottom: 14,
+  },
+  fullscreenCardBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(245, 158, 11, 0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.35)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  fullscreenCardBadgeText: {
+    color: '#F59E0B',
+    fontSize: 11,
+    fontFamily: 'Inter_800ExtraBold',
+    letterSpacing: 0.5,
+  },
+  fullscreenCardCloseBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fullscreenCardBody: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 80,
+    paddingBottom: 30,
+  },
+  fullscreenCardImage: {
+    width: '100%',
+    height: '100%',
+    maxWidth: 480,
+    maxHeight: 760,
+    resizeMode: 'contain',
+    borderRadius: 18,
+  },
+  cardZoomHintBadge: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(3, 7, 18, 0.85)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 240, 208, 0.3)',
+  },
+  cardZoomHintText: {
+    color: '#00F0D0',
+    fontSize: 11,
+    fontFamily: 'Inter_700Bold',
+  },
+
   postModalVideoWrap: {
     width: '100%',
     height: 320,
