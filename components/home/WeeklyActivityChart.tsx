@@ -40,27 +40,59 @@ export function WeeklyActivityChart({ weeklyData }: WeeklyActivityChartProps) {
 
   // Staggered animated values for each of the 7 bars
   const barAnims = useRef(days.map(() => new Animated.Value(0))).current;
+  const cardRef = useRef<View | null>(null);
+  const animatedOnceRef = useRef(false);
 
   useEffect(() => {
-    const animations = barAnims.map((anim, idx) => {
-      const targetRatio = Math.min(1, Math.max(0.08, days[idx].durationMinutes / 60));
-      return Animated.timing(anim, {
-        toValue: targetRatio,
-        duration: 700,
-        delay: idx * 60,
-        easing: Easing.bezier(0.16, 1, 0.3, 1),
-        useNativeDriver: false,
-      });
-    });
+    const runAnimation = () => {
+      if (animatedOnceRef.current) return;
+      animatedOnceRef.current = true;
 
-    Animated.parallel(animations).start();
+      barAnims.forEach((anim) => anim.setValue(0));
+      const animations = barAnims.map((anim, idx) => {
+        const targetRatio = Math.min(1, Math.max(0.08, days[idx].durationMinutes / 60));
+        return Animated.timing(anim, {
+          toValue: targetRatio,
+          duration: 750,
+          delay: idx * 60,
+          easing: Easing.bezier(0.16, 1, 0.3, 1),
+          useNativeDriver: false,
+        });
+      });
+
+      Animated.parallel(animations).start();
+    };
+
+    // On web, use IntersectionObserver so it triggers as soon as scrolled into viewport
+    if (Platform.OS === 'web' && typeof IntersectionObserver !== 'undefined') {
+      const el = cardRef.current as unknown as HTMLElement | null;
+      if (el) {
+        const observer = new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              if (entry.isIntersecting) {
+                runAnimation();
+                observer.disconnect();
+                break;
+              }
+            }
+          },
+          { threshold: 0.15 }
+        );
+        observer.observe(el);
+        return () => observer.disconnect();
+      }
+    }
+
+    // Native fallback
+    runAnimation();
   }, [barAnims, days]);
 
   const totalCompleted = days.filter((d) => d.completed).length;
   const totalMinutes = days.reduce((acc, curr) => acc + curr.durationMinutes, 0);
 
   return (
-    <View style={styles.card}>
+    <View ref={cardRef} style={styles.card}>
       {/* Header */}
       <View style={styles.headerRow}>
         <View style={styles.titleWithIcon}>
