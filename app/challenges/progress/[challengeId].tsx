@@ -1256,6 +1256,7 @@ export default function ChallengeProgressScreen() {
                   return (
                     <View key={`day-${day.day_number}`} style={[
                       styles.dayCard,
+                      isCurrentDay && styles.dayCardCurrent,
                       dayProgress?.completed && styles.dayCardCompleted,
                       isMissed && styles.dayCardMissed,
                     ]}>
@@ -1274,6 +1275,7 @@ export default function ChallengeProgressScreen() {
                         ]}>
                           <Text style={[
                             styles.dayNumberText,
+                            isCurrentDay && styles.dayNumberTextCurrent,
                             dayProgress?.completed && styles.dayNumberTextCompleted,
                             isMissed && styles.dayNumberTextMissed,
                           ]}>D{day.day_number}</Text>
@@ -1285,35 +1287,72 @@ export default function ChallengeProgressScreen() {
                       </View>
                       <View style={styles.dayRight}>
                         <View style={styles.dayPointsBadge}>
+                          <Ionicons name="flash" size={11} color={Colors.gold} />
                           <Text style={styles.dayPointsText}>{dayPoints} pts</Text>
                         </View>
-                        <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-forward'} size={18} color={Colors.textMuted} />
+                        <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={18} color={Colors.gold} />
                       </View>
                     </TouchableOpacity>
 
                     <View style={styles.dayProgressBarBg}>
-                      <View style={[styles.dayProgressBarFill, { width: `${Math.max(progressFraction * 100, dayProgress?.completed ? 100 : 0)}%` }]} />
+                      <View
+                        style={[
+                          styles.dayProgressBarFill,
+                          dayProgress?.completed && styles.dayProgressBarFillCompleted,
+                          { width: `${Math.max(progressFraction * 100, dayProgress?.completed ? 100 : 0)}%` }
+                        ]}
+                      />
                     </View>
 
-                    <View style={styles.dayMetaRow}>
-                      <Text style={styles.dayMetaText}>
-                        {dayExerciseCount > 0 ? `${completedExerciseCount}/${dayExerciseCount} exercises completed` : `${day.sections.length} sections`}
-                      </Text>
-                      {isCurrentDay && !dayProgress?.completed ? (
-                        <View style={styles.urgencyPill}>
-                          <Ionicons name="flash" size={11} color="#FBBF24" />
-                          <Text style={styles.urgencyPillText}>{t('Finish today or lose points')}</Text>
-                        </View>
-                      ) : null}
-                      {isMissed ? <Text style={styles.dayMissedLabel}>Missed</Text> : null}
+                    {/* Daily Stats Row matching strength-plan.tsx */}
+                    <View style={styles.statsRow}>
+                      <View style={styles.statBox}>
+                        <Text style={styles.statLabel}>{t('EXERCISES')}</Text>
+                        <Text style={styles.statValue}>
+                          {dayExerciseCount > 0 ? `${completedExerciseCount}/${dayExerciseCount}` : `${day.sections.length} ${t('sec')}`}
+                        </Text>
+                      </View>
+                      <View style={styles.statDivider} />
+                      <View style={styles.statBox}>
+                        <Text style={styles.statLabel}>{t('POINTS')}</Text>
+                        <Text style={[styles.statValue, { color: Colors.gold }]}>{dayPoints} pts</Text>
+                      </View>
+                      <View style={styles.statDivider} />
+                      <View style={styles.statBox}>
+                        <Text style={styles.statLabel}>{t('STATUS')}</Text>
+                        <Text
+                          style={[
+                            styles.statValue,
+                            dayProgress?.completed && { color: Colors.victoryGreen },
+                            isCurrentDay && { color: Colors.gold },
+                            isMissed && { color: '#EF4444' },
+                            !dayProgress?.completed && !isCurrentDay && !isMissed && { color: 'rgba(247, 243, 238, 0.55)' },
+                            { fontSize: 11, fontFamily: Fonts.heading },
+                          ]}
+                        >
+                          {dayProgress?.completed ? t('COMPLETED') : isCurrentDay ? t('TODAY') : isMissed ? t('MISSED') : t('UPCOMING')}
+                        </Text>
+                      </View>
                     </View>
+
+                    {isCurrentDay && !dayProgress?.completed ? (
+                      <View style={styles.urgencyPill}>
+                        <Ionicons name="flash" size={11} color={Colors.gold} />
+                        <Text style={styles.urgencyPillText}>{t('Finish today or lose points')}</Text>
+                      </View>
+                    ) : null}
+                    {isMissed ? <Text style={styles.dayMissedLabel}>{t('Missed')}</Text> : null}
 
                     {isExpanded ? (
                       <View style={styles.dayDetails}>
-                        {day.notes ? <Text style={styles.dayNotes}>{day.notes}</Text> : null}
-                        {!allSectionsCompleted ? (
-                          <Text style={styles.helperText}>Finish all exercises in all sections, then mark the day done.</Text>
+                        {day.notes ? (
+                          <View style={styles.dayNotesCard}>
+                            <Ionicons name="information-circle-outline" size={16} color={Colors.gold} />
+                            <Text style={styles.dayNotesText}>{day.notes}</Text>
+                          </View>
                         ) : null}
+
+                        <Text style={styles.sectionHeader}>{t("TODAY'S SECTIONS")}</Text>
 
                         {day.sections.map((section) => {
                           const sectionKey = `${day.day_number}:${section.id}`;
@@ -1323,6 +1362,7 @@ export default function ChallengeProgressScreen() {
                           const completedCount = sectionCompleted ? section.exercises.length : getSectionCompletedCount(section, completedExerciseIds);
                           const totalCount = section.exercises.length;
                           const canCompleteSection = totalCount === 0 || completedCount >= totalCount;
+                          const sectionBusy = completionUpdatingKey === `section-${day.day_number}-${section.id}`;
                           return (
                             <View key={section.id} style={[styles.sectionCard, sectionCompleted && styles.sectionCardCompleted]}>
                               <TouchableOpacity
@@ -1331,116 +1371,122 @@ export default function ChallengeProgressScreen() {
                                 onPress={() => toggleSectionExpanded(sectionKey)}
                                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                               >
-                                <View style={styles.sectionLeft}>
-                                  <View style={[styles.sectionStatusDot, sectionCompleted && styles.sectionStatusDotCompleted]} />
-                                  <View style={styles.sectionTextWrap}>
-                                    <Text style={styles.sectionTitle}>{section.title}</Text>
-                                    <Text style={styles.sectionDescription}>
-                                      {section.description || `${section.estimated_minutes} min`}
-                                    </Text>
-                                  </View>
+                                <View style={styles.sectionTitleWrap}>
+                                  <Text style={styles.exerciseType}>{t('SECTION')}</Text>
+                                  <Text style={styles.sectionTitle}>{section.title}</Text>
+                                  <Text style={styles.sectionMetaText}>
+                                    {totalCount > 0 ? `${completedCount}/${totalCount} ${t('exercises')} · ${sectionPoints} pts · ${section.estimated_minutes || 10} min` : `${section.estimated_minutes || 10} min`}
+                                  </Text>
+                                  {section.description ? (
+                                    <Text style={styles.sectionDescription}>{section.description}</Text>
+                                  ) : null}
                                 </View>
-                                <View style={styles.sectionRight}>
-                                  <View style={styles.sectionPointsBadge}>
-                                    <Text style={styles.sectionPointsText}>{sectionPoints} pts</Text>
-                                  </View>
-                                  <Ionicons name={sectionExpanded ? 'chevron-up' : 'chevron-forward'} size={18} color={Colors.textMuted} />
+                                <View style={styles.sectionActions}>
+                                  {canUpdateProgress ? (
+                                    <TouchableOpacity
+                                      style={[
+                                        styles.exerciseCheckButton,
+                                        sectionCompleted && styles.exerciseCheckButtonCompleted,
+                                        (!canCompleteSection && !sectionCompleted) && styles.buttonDisabled,
+                                      ]}
+                                      activeOpacity={0.8}
+                                      disabled={Boolean(dayProgress?.completed) || !canCompleteSection || sectionBusy}
+                                      onPress={() => confirmSectionDayCompletion(day.day_number, section.id, !sectionCompleted)}
+                                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    >
+                                      {sectionBusy ? (
+                                        <ActivityIndicator size="small" color={sectionCompleted ? '#fff' : Colors.gold} />
+                                      ) : (
+                                        <Ionicons
+                                          name={sectionCompleted ? 'checkmark-circle' : 'checkmark-circle-outline'}
+                                          size={22}
+                                          color={sectionCompleted ? '#fff' : Colors.gold}
+                                        />
+                                      )}
+                                    </TouchableOpacity>
+                                  ) : (
+                                    <View style={styles.readOnlyBadge}>
+                                      <Text style={styles.readOnlyBadgeText}>{t('Read only')}</Text>
+                                    </View>
+                                  )}
+                                  <Ionicons
+                                    name={sectionExpanded ? 'chevron-up' : 'chevron-down'}
+                                    size={18}
+                                    color="rgba(247, 243, 238, 0.45)"
+                                  />
                                 </View>
                               </TouchableOpacity>
 
-                              <View style={styles.sectionMetaRow}>
-                                <Text style={styles.sectionMetaText}>
-                                  {totalCount > 0 ? `${completedCount}/${totalCount} exercises` : `${section.estimated_minutes} min`}
-                                </Text>
-                                {canUpdateProgress ? (
-                                  <TouchableOpacity
-                                    style={[
-                                      styles.compactButton,
-                                      dayProgress?.completed && styles.compactButtonCompleted,
-                                      (dayProgress?.completed || !canCompleteSection) && styles.buttonDisabled,
-                                    ]}
-                                    disabled={Boolean(dayProgress?.completed) || !canCompleteSection || completionUpdatingKey === `section-${day.day_number}-${section.id}`}
-                                    onPress={() => confirmSectionDayCompletion(day.day_number, section.id, !Boolean(dayProgress?.completed))}
-                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                                  >
-                                    {completionUpdatingKey === `section-${day.day_number}-${section.id}` ? (
-                                      <ActivityIndicator size="small" color={dayProgress?.completed ? '#001311' : Colors.primary} />
-                                    ) : (
-                                      <Text style={[styles.compactButtonText, dayProgress?.completed && styles.compactButtonTextCompleted]}>
-                                        {dayProgress?.completed ? 'Day completed' : 'Complete section'}
-                                      </Text>
-                                    )}
-                                  </TouchableOpacity>
-                                ) : (
-                                  <View style={styles.readOnlyBadge}>
-                                    <Text style={styles.readOnlyBadgeText}>Read only</Text>
-                                  </View>
-                                )}
-                              </View>
-                              {!sectionCompleted && totalCount > 0 && completedCount < totalCount ? (
-                                <Text style={styles.helperText}>Complete every exercise in this section before marking the section complete.</Text>
-                              ) : null}
-
                               {sectionExpanded ? (
-                                <View style={styles.exerciseList}>
+                                <View style={styles.sectionExercises}>
                                   {section.exercises.map((exercise) => {
                                     const exerciseCompleted = isExerciseCompleted(section, exercise.id, completedExerciseIds, completedSectionIds);
                                     const exerciseKey = `exercise-${day.day_number}-${exercise.id}`;
+                                    const exerciseBusy = completionUpdatingKey === exerciseKey;
+                                    const exPoints = unitPointMap[exercise.id] || 0;
                                     return (
-                                      <View key={exercise.id} style={[styles.exerciseCard, exerciseCompleted && styles.exerciseCardCompleted]}>
-                                        <View style={styles.exerciseTextWrap}>
-                                          <View style={styles.exerciseTopRow}>
-                                            <Text style={styles.exerciseName}>{exercise.name}</Text>
-                                            <Text style={styles.exercisePoints}>{unitPointMap[exercise.id] || 0} pts</Text>
+                                      <View key={exercise.id} style={[styles.exerciseSubCard, exerciseCompleted && styles.exerciseSubCardCompleted]}>
+                                        <View style={styles.exerciseHeader}>
+                                          <View style={{ flex: 1, paddingRight: 8 }}>
+                                            <Text style={styles.exerciseType}>{(section.title || 'EXERCISE').toUpperCase()}</Text>
+                                            <Text style={styles.exerciseSubCardTitle}>{exercise.name}</Text>
                                           </View>
-                                          <Text style={styles.exerciseDetails}>{exercise.details}</Text>
-                                          {exercise.notes ? <Text style={styles.exerciseNotes}>{exercise.notes}</Text> : null}
-                                          <View style={styles.exerciseActionRow}>
-                                            {canUpdateProgress ? (
-                                              <TouchableOpacity
-                                                style={[
-                                                  styles.exerciseCheck,
-                                                  styles.exerciseCheckWide,
-                                                  exerciseCompleted && styles.exerciseCheckCompleted,
-                                                  exerciseCompleted && styles.buttonDisabled,
-                                                ]}
-                                                disabled={exerciseCompleted || completionUpdatingKey === exerciseKey}
-                                                onPress={() => void toggleExerciseCompletion(day.day_number, section.id, exercise.id, !exerciseCompleted)}
-                                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                                              >
-                                                {completionUpdatingKey === exerciseKey ? (
-                                                  <ActivityIndicator size="small" color={exerciseCompleted ? '#001311' : Colors.primary} />
-                                                ) : (
-                                                  <View style={styles.exerciseCheckContent}>
-                                                    <Ionicons
-                                                      name={exerciseCompleted ? 'checkmark-circle' : 'ellipse-outline'}
-                                                      size={16}
-                                                      color={exerciseCompleted ? '#001311' : Colors.primary}
-                                                    />
-                                                    <Text style={[styles.exerciseCheckText, exerciseCompleted && styles.exerciseCheckTextCompleted]}>
-                                                      {exerciseCompleted ? 'Completed' : 'Complete exercise'}
-                                                    </Text>
-                                                  </View>
-                                                )}
-                                              </TouchableOpacity>
-                                            ) : (
-                                              <View style={[styles.readOnlyBadge, styles.readOnlyBadgeLarge]}>
-                                                <Text style={styles.readOnlyBadgeText}>Read only</Text>
-                                              </View>
-                                            )}
-                                            {exercise.workout_vimeo_id || exercise.workout_video_url ? (
-                                              <TouchableOpacity
-                                                onPress={() => openLinkedWorkout(exercise)}
-                                                style={styles.videoButton}
-                                                activeOpacity={0.85}
-                                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                                              >
-                                                <Ionicons name="play-circle" size={15} color="#001311" />
-                                                <Text style={styles.videoButtonText}>Instruction video</Text>
-                                              </TouchableOpacity>
-                                            ) : null}
-                                          </View>
+                                          {canUpdateProgress ? (
+                                            <TouchableOpacity
+                                              style={[
+                                                styles.exerciseCheckButton,
+                                                exerciseCompleted && styles.exerciseCheckButtonCompleted,
+                                              ]}
+                                              activeOpacity={0.8}
+                                              disabled={exerciseCompleted || exerciseBusy}
+                                              onPress={() => void toggleExerciseCompletion(day.day_number, section.id, exercise.id, !exerciseCompleted)}
+                                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                            >
+                                              {exerciseBusy ? (
+                                                <ActivityIndicator size="small" color={exerciseCompleted ? '#fff' : Colors.gold} />
+                                              ) : (
+                                                <Ionicons
+                                                  name={exerciseCompleted ? 'checkmark-circle' : 'checkmark-circle-outline'}
+                                                  size={22}
+                                                  color={exerciseCompleted ? '#fff' : Colors.gold}
+                                                />
+                                              )}
+                                            </TouchableOpacity>
+                                          ) : (
+                                            <View style={styles.readOnlyBadge}>
+                                              <Text style={styles.readOnlyBadgeText}>{t('Read only')}</Text>
+                                            </View>
+                                          )}
                                         </View>
+
+                                        {/* Metrics Row matching strength-plan.tsx */}
+                                        <View style={styles.exerciseMetrics}>
+                                          <View style={styles.metricItem}>
+                                            <Ionicons name="flash-outline" size={13} color={Colors.gold} />
+                                            <Text style={styles.metricValue}>{exPoints} pts</Text>
+                                          </View>
+                                          {exercise.details ? (
+                                            <View style={styles.metricItem}>
+                                              <Ionicons name="repeat-outline" size={13} color={Colors.gold} />
+                                              <Text style={styles.metricValue}>{exercise.details}</Text>
+                                            </View>
+                                          ) : null}
+                                          {exercise.workout_vimeo_id || exercise.workout_video_url ? (
+                                            <TouchableOpacity
+                                              onPress={() => openLinkedWorkout(exercise)}
+                                              style={[styles.metricItem, styles.metricItemVideo]}
+                                              activeOpacity={0.8}
+                                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                            >
+                                              <Ionicons name="play-circle-outline" size={13} color={Colors.gold} />
+                                              <Text style={[styles.metricValue, { color: Colors.gold }]}>{t('Instruction video')}</Text>
+                                            </TouchableOpacity>
+                                          ) : null}
+                                        </View>
+
+                                        {exercise.notes ? (
+                                          <Text style={styles.exerciseNotes}>{exercise.notes}</Text>
+                                        ) : null}
                                       </View>
                                     );
                                   })}
@@ -1450,35 +1496,37 @@ export default function ChallengeProgressScreen() {
                           );
                         })}
 
+                        {/* Full-width Day Completion CTA Button */}
                         {canUpdateProgress ? (
                           <TouchableOpacity
                             style={[
-                              styles.dayDoneButton,
-                              dayProgress?.completed && styles.dayDoneButtonCompleted,
+                              styles.completeSessionBtn,
+                              dayProgress?.completed && styles.completeSessionBtnCompleted,
                               (dayProgress?.completed || !allSectionsCompleted) && styles.buttonDisabled,
                             ]}
                             disabled={Boolean(dayProgress?.completed) || completionUpdatingKey === `day-${day.day_number}` || !allSectionsCompleted}
                             onPress={() => confirmDayCompletion(day.day_number, true)}
+                            activeOpacity={0.8}
                             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                           >
                             {completionUpdatingKey === `day-${day.day_number}` ? (
-                              <ActivityIndicator size="small" color={dayProgress?.completed ? '#001311' : Colors.primary} />
+                              <ActivityIndicator size="small" color={dayProgress?.completed ? '#fff' : Colors.obsidian} />
                             ) : (
                               <>
                                 <Ionicons
                                   name={dayProgress?.completed ? 'checkmark-circle' : 'checkmark-circle-outline'}
-                                  size={18}
-                                  color={dayProgress?.completed ? '#001311' : Colors.primary}
+                                  size={20}
+                                  color={dayProgress?.completed ? '#fff' : Colors.obsidian}
                                 />
-                                <Text style={[styles.dayDoneButtonText, dayProgress?.completed && styles.dayDoneButtonTextCompleted]}>
-                                  {dayProgress?.completed ? 'Day completed' : 'Mark day done'}
+                                <Text style={[styles.completeSessionBtnText, dayProgress?.completed && styles.completeSessionBtnTextCompleted]}>
+                                  {dayProgress?.completed ? t('DAY COMPLETED') : t('MARK DAY COMPLETED')}
                                 </Text>
                               </>
                             )}
                           </TouchableOpacity>
                         ) : (
                           <View style={styles.readOnlyNoticeInline}>
-                            <Text style={styles.readOnlyNoticeInlineText}>{readOnlyReason || 'Progress is read-only right now.'}</Text>
+                            <Text style={styles.readOnlyNoticeInlineText}>{readOnlyReason || t('Progress is read-only right now.')}</Text>
                           </View>
                         )}
                         {dayProgress?.completed ? (
@@ -1489,8 +1537,8 @@ export default function ChallengeProgressScreen() {
                               disabled={anyReportActionBusy}
                               accessibilityLabel="Download completed challenge card"
                             >
-                              {isReportActionBusy('download', `day-${day.day_number}-download`) ? <ActivityIndicator size="small" color={Colors.primary} /> : <Ionicons name="download-outline" size={20} color={Colors.primary} />}
-                              <Text style={styles.cardActionText}>Download</Text>
+                              {isReportActionBusy('download', `day-${day.day_number}-download`) ? <ActivityIndicator size="small" color={Colors.gold} /> : <Ionicons name="download-outline" size={18} color={Colors.gold} />}
+                              <Text style={styles.cardActionText}>{t('Download')}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                               style={[styles.cardActionButton, isReportActionBusy('share', `day-${day.day_number}-share`) && styles.cardActionButtonBusy]}
@@ -1498,8 +1546,8 @@ export default function ChallengeProgressScreen() {
                               disabled={anyReportActionBusy}
                               accessibilityLabel="Share completed challenge card"
                             >
-                              {isReportActionBusy('share', `day-${day.day_number}-share`) ? <ActivityIndicator size="small" color={Colors.primary} /> : <Ionicons name="share-social-outline" size={20} color={Colors.primary} />}
-                              <Text style={styles.cardActionText}>Share</Text>
+                              {isReportActionBusy('share', `day-${day.day_number}-share`) ? <ActivityIndicator size="small" color={Colors.gold} /> : <Ionicons name="share-social-outline" size={18} color={Colors.gold} />}
+                              <Text style={styles.cardActionText}>{t('Share')}</Text>
                             </TouchableOpacity>
                           </View>
                         ) : null}
@@ -1538,7 +1586,7 @@ const styles = StyleSheet.create({
   confirmModalCard: {
     width: '100%',
     maxWidth: 360,
-    backgroundColor: '#101827',
+    backgroundColor: Colors.obsidian,
     borderRadius: 22,
     paddingHorizontal: 20,
     paddingTop: 22,
@@ -1659,7 +1707,7 @@ const styles = StyleSheet.create({
   scrollContent: { padding: 16, paddingBottom: 28, gap: 14 },
   heroCard: {
     borderRadius: 18,
-    backgroundColor: '#0D1526',
+    backgroundColor: 'rgba(13, 43, 69, 0.45)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
     padding: 16,
@@ -1670,14 +1718,14 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontSize: 11,
     fontFamily: Fonts.heading,
-    backgroundColor: 'rgba(0,240,208,0.1)',
+    backgroundColor: 'rgba(201, 148, 58, 0.12)',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
   },
   heroMetaMuted: {
-    color: '#F59E0B',
-    backgroundColor: 'rgba(245,158,11,0.12)',
+    color: Colors.gold,
+    backgroundColor: 'rgba(201, 148, 58, 0.12)',
   },
   chatShortcut: {
     marginTop: 14,
@@ -1693,28 +1741,28 @@ const styles = StyleSheet.create({
   chatShortcutText: { color: '#001311', fontSize: 12, fontFamily: Fonts.heading },
   pageCardActionsWrap: {
     borderRadius: 16,
-    backgroundColor: '#0D1526',
+    backgroundColor: 'rgba(13, 43, 69, 0.45)',
     borderWidth: 1,
-    borderColor: 'rgba(0,240,208,0.16)',
+    borderColor: 'rgba(181, 101, 29, 0.25)',
     padding: 14,
   },
   pageCardActionsTitle: { color: '#E5E7EB', fontSize: 12, fontFamily: Fonts.heading },
   statusNotice: {
     borderRadius: 12,
-    backgroundColor: 'rgba(245,158,11,0.08)',
+    backgroundColor: 'rgba(201, 148, 58, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(245,158,11,0.16)',
+    borderColor: 'rgba(201, 148, 58, 0.25)',
     padding: 12,
   },
   statusNoticeText: {
-    color: '#FCD34D',
+    color: Colors.gold,
     fontSize: 12,
     lineHeight: 18,
     fontFamily: Fonts.body,
   },
   legendCard: {
     borderRadius: 16,
-    backgroundColor: '#101827',
+    backgroundColor: Colors.obsidian,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
     padding: 14,
@@ -1723,9 +1771,9 @@ const styles = StyleSheet.create({
   legendText: { color: Colors.textSecondary, fontSize: 12, lineHeight: 18, fontFamily: Fonts.body, marginTop: 6 },
   emptyPlanNotice: {
     borderRadius: 16,
-    backgroundColor: '#101827',
+    backgroundColor: Colors.obsidian,
     borderWidth: 1,
-    borderColor: 'rgba(245,158,11,0.2)',
+    borderColor: 'rgba(181, 101, 29, 0.25)',
     padding: 16,
     gap: 8,
   },
@@ -1740,103 +1788,193 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontFamily: Fonts.body,
   },
-  dayList: { gap: 12 },
+  dayList: { gap: 14 },
   dayCard: {
     borderRadius: 18,
-    backgroundColor: '#0F172A',
+    backgroundColor: 'rgba(13, 43, 69, 0.45)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-    padding: 14,
-    gap: 10,
+    borderColor: 'rgba(181, 101, 29, 0.25)',
+    padding: 16,
+    gap: 12,
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  dayCardCurrent: {
+    borderColor: Colors.gold,
+    shadowColor: Colors.gold,
+    shadowOpacity: 0.15,
   },
   dayCardCompleted: {
-    backgroundColor: '#0E1A16',
-    borderColor: 'rgba(34,197,94,0.24)',
+    backgroundColor: 'rgba(26, 122, 74, 0.08)',
+    borderColor: 'rgba(26, 122, 74, 0.45)',
   },
   dayCardMissed: {
     backgroundColor: 'rgba(239, 68, 68, 0.05)',
-    borderColor: 'rgba(239, 68, 68, 0.24)',
+    borderColor: 'rgba(239, 68, 68, 0.3)',
   },
   dayNumberBadgeMissed: {
-    backgroundColor: '#EF4444',
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    borderColor: 'rgba(239, 68, 68, 0.4)',
   },
   dayNumberTextMissed: {
-    color: '#FFF',
+    color: '#EF4444',
   },
   dayMissedLabel: {
     color: '#EF4444',
     fontSize: 11,
     fontFamily: Fonts.heading,
+    marginTop: 4,
   },
   dayRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
   dayLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   dayNumberBadge: {
-    width: 42,
-    height: 42,
+    width: 40,
+    height: 40,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(247, 243, 238, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(181, 101, 29, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  dayNumberBadgeCurrent: { backgroundColor: 'rgba(0,240,208,0.16)', borderWidth: 1, borderColor: 'rgba(0,240,208,0.3)' },
-  dayNumberBadgeCompleted: { backgroundColor: Colors.primary },
-  dayNumberText: { color: '#fff', fontSize: 12, fontFamily: Fonts.dataBold },
-  dayNumberTextCompleted: { color: '#001311' },
+  dayNumberBadgeCurrent: {
+    backgroundColor: Colors.gold,
+    borderColor: Colors.gold,
+  },
+  dayNumberBadgeCompleted: {
+    backgroundColor: Colors.victoryGreen,
+    borderColor: Colors.victoryGreen,
+  },
+  dayNumberText: { color: Colors.ivory, fontSize: 13, fontFamily: Fonts.dataBold },
+  dayNumberTextCurrent: { color: Colors.obsidian, fontFamily: Fonts.heading },
+  dayNumberTextCompleted: { color: '#FFFFFF', fontFamily: Fonts.heading },
   dayTextWrap: { flex: 1 },
-  dayTitle: { color: '#fff', fontSize: 14, fontFamily: Fonts.display },
-  dayFocus: { color: Colors.textSecondary, fontSize: 12, lineHeight: 18, fontFamily: Fonts.body, marginTop: 2 },
+  dayTitle: { color: Colors.ivory, fontSize: 15, fontFamily: Fonts.display },
+  dayFocus: { color: 'rgba(247, 243, 238, 0.65)', fontSize: 12, lineHeight: 18, fontFamily: Fonts.body, marginTop: 2 },
   dayRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   dayPointsBadge: {
-    borderRadius: 999,
-    backgroundColor: 'rgba(245,158,11,0.14)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  dayPointsText: { color: '#F59E0B', fontSize: 11, fontFamily: Fonts.dataBold },
-  dayProgressBarBg: {
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    overflow: 'hidden',
-  },
-  dayProgressBarFill: {
-    height: '100%',
-    borderRadius: 999,
-    backgroundColor: Colors.primary,
-  },
-  dayMetaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  dayMetaText: { color: Colors.textMuted, fontSize: 11, fontFamily: Fonts.body },
-  dayCurrentLabel: { color: Colors.primary, fontSize: 11, fontFamily: Fonts.heading },
-  urgencyPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(245,158,11,0.12)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: 'rgba(201, 148, 58, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(201, 148, 58, 0.3)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  dayPointsText: { color: Colors.gold, fontSize: 11, fontFamily: Fonts.dataBold },
+  dayProgressBarBg: {
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(247, 243, 238, 0.08)',
+    overflow: 'hidden',
+    marginTop: 2,
+  },
+  dayProgressBarFill: {
+    height: '100%',
+    borderRadius: 2,
+    backgroundColor: Colors.gold,
+  },
+  dayProgressBarFillCompleted: {
+    backgroundColor: Colors.victoryGreen,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(13, 13, 13, 0.55)',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(181, 101, 29, 0.15)',
+    marginTop: 4,
+  },
+  statBox: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  statLabel: {
+    color: Colors.copper,
+    fontSize: 9,
+    fontFamily: Fonts.heading,
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  statValue: {
+    color: Colors.ivory,
+    fontSize: 13,
+    fontFamily: Fonts.dataBold,
+  },
+  statDivider: {
+    width: 1,
+    height: 22,
+    backgroundColor: 'rgba(181, 101, 29, 0.2)',
+  },
+  dayMetaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  dayMetaText: { color: Colors.textMuted, fontSize: 11, fontFamily: Fonts.body },
+  dayCurrentLabel: { color: Colors.gold, fontSize: 11, fontFamily: Fonts.heading },
+  urgencyPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(201, 148, 58, 0.12)',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(245,158,11,0.25)',
+    borderColor: 'rgba(201, 148, 58, 0.28)',
+    alignSelf: 'flex-start',
+    marginTop: 4,
   },
   urgencyPillText: {
-    color: '#FBBF24',
-    fontSize: 10,
+    color: Colors.gold,
+    fontSize: 11,
     fontFamily: Fonts.heading,
   },
-  dayDetails: { gap: 10, marginTop: 4 },
+  dayDetails: { gap: 12, marginTop: 8 },
+  dayNotesCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: 'rgba(13, 43, 69, 0.35)',
+    borderWidth: 1,
+    borderColor: 'rgba(181, 101, 29, 0.2)',
+    borderRadius: 12,
+    padding: 12,
+  },
+  dayNotesText: {
+    color: 'rgba(247, 243, 238, 0.8)',
+    fontSize: 12,
+    lineHeight: 18,
+    fontFamily: Fonts.body,
+    flex: 1,
+  },
   dayNotes: { color: Colors.textSecondary, fontSize: 12, lineHeight: 18, fontFamily: Fonts.body },
   helperText: { color: Colors.textMuted, fontSize: 12, lineHeight: 18, fontFamily: Fonts.bodyMedium },
+  sectionHeader: {
+    color: 'rgba(247, 243, 238, 0.55)',
+    fontSize: 11,
+    fontFamily: Fonts.heading,
+    letterSpacing: 1.5,
+    marginTop: 6,
+    marginBottom: 2,
+    paddingHorizontal: 2,
+  },
   sectionCard: {
-    borderRadius: 14,
-    backgroundColor: '#111827',
+    backgroundColor: 'rgba(13, 43, 69, 0.35)',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-    padding: 12,
-    gap: 8,
+    borderColor: 'rgba(181, 101, 29, 0.2)',
+    padding: 14,
   },
   sectionCardCompleted: {
-    backgroundColor: '#122019',
-    borderColor: 'rgba(34,197,94,0.22)',
+    borderColor: 'rgba(26, 122, 74, 0.4)',
+    backgroundColor: 'rgba(26, 122, 74, 0.05)',
   },
   sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
   sectionLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
@@ -1844,42 +1982,151 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(247, 243, 238, 0.18)',
   },
-  sectionStatusDotCompleted: { backgroundColor: Colors.primary },
-  sectionTextWrap: { flex: 1 },
-  sectionTitle: { color: '#fff', fontSize: 13, fontFamily: Fonts.display },
-  sectionDescription: { color: Colors.textSecondary, fontSize: 11, lineHeight: 17, fontFamily: Fonts.body, marginTop: 2 },
+  sectionStatusDotCompleted: { backgroundColor: Colors.victoryGreen },
+  sectionTitleWrap: { flex: 1 },
+  sectionTitle: { color: Colors.ivory, fontSize: 14, fontFamily: Fonts.display },
+  sectionDescription: { color: 'rgba(247, 243, 238, 0.65)', fontSize: 11, lineHeight: 16, fontFamily: Fonts.body, marginTop: 2 },
   sectionRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  sectionActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   sectionPointsBadge: {
     borderRadius: 999,
-    backgroundColor: 'rgba(0,240,208,0.12)',
+    backgroundColor: 'rgba(201, 148, 58, 0.12)',
     paddingHorizontal: 9,
     paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(201, 148, 58, 0.25)',
   },
-  sectionPointsText: { color: Colors.primary, fontSize: 10, fontFamily: Fonts.dataBold },
+  sectionPointsText: { color: Colors.gold, fontSize: 10, fontFamily: Fonts.dataBold },
   sectionMetaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
-  sectionMetaText: { color: Colors.textMuted, fontSize: 11, fontFamily: Fonts.body },
+  sectionMetaText: { color: 'rgba(247, 243, 238, 0.65)', fontSize: 11, fontFamily: Fonts.data, marginTop: 3 },
+  sectionExercises: { gap: 8, marginTop: 10 },
+  exerciseType: {
+    color: Colors.copper,
+    fontSize: 9,
+    fontFamily: Fonts.heading,
+    letterSpacing: 1,
+    marginBottom: 2,
+  },
+  exerciseSubCardTitle: {
+    color: Colors.ivory,
+    fontSize: 14,
+    fontFamily: Fonts.heading,
+  },
+  exerciseCheckButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(201, 148, 58, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(201, 148, 58, 0.25)',
+  },
+  exerciseCheckButtonCompleted: {
+    backgroundColor: Colors.victoryGreen,
+    borderColor: Colors.victoryGreen,
+  },
+  exerciseSubCard: {
+    backgroundColor: 'rgba(13, 13, 13, 0.65)',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(181, 101, 29, 0.18)',
+  },
+  exerciseSubCardCompleted: {
+    borderColor: 'rgba(26, 122, 74, 0.35)',
+    backgroundColor: 'rgba(26, 122, 74, 0.08)',
+  },
+  exerciseHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  exerciseMetrics: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  metricItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(201, 148, 58, 0.08)',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(201, 148, 58, 0.2)',
+  },
+  metricItemVideo: {
+    backgroundColor: 'rgba(201, 148, 58, 0.15)',
+    borderColor: 'rgba(201, 148, 58, 0.35)',
+  },
+  metricValue: {
+    color: Colors.ivory,
+    fontSize: 12,
+    fontFamily: Fonts.data,
+  },
+  exerciseNotes: {
+    color: 'rgba(247, 243, 238, 0.55)',
+    fontSize: 11,
+    lineHeight: 16,
+    fontFamily: Fonts.body,
+    marginTop: 6,
+  },
+  completeSessionBtn: {
+    backgroundColor: Colors.gold,
+    borderRadius: 14,
+    minHeight: 50,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  completeSessionBtnCompleted: {
+    backgroundColor: Colors.victoryGreen,
+  },
+  completeSessionBtnText: {
+    color: Colors.obsidian,
+    fontSize: 13,
+    fontFamily: Fonts.heading,
+    letterSpacing: 0.5,
+    textAlign: 'center',
+  },
+  completeSessionBtnTextCompleted: {
+    color: '#FFFFFF',
+  },
   compactButton: {
     borderRadius: 999,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.gold,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
   compactButtonCompleted: {
-    backgroundColor: 'rgba(34,197,94,0.18)',
+    backgroundColor: 'rgba(26, 122, 74, 0.25)',
     borderWidth: 1,
-    borderColor: 'rgba(34,197,94,0.28)',
+    borderColor: 'rgba(26, 122, 74, 0.4)',
   },
-  compactButtonText: { color: '#001311', fontSize: 11, fontFamily: Fonts.heading },
-  compactButtonTextCompleted: { color: '#DCFCE7' },
+  compactButtonText: { color: Colors.obsidian, fontSize: 11, fontFamily: Fonts.heading },
+  compactButtonTextCompleted: { color: Colors.ivory },
   readOnlyBadge: {
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    backgroundColor: 'rgba(148,163,184,0.16)',
+    backgroundColor: 'rgba(247, 243, 238, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.24)',
+    borderColor: 'rgba(181, 101, 29, 0.2)',
   },
   readOnlyBadgeLarge: {
     minHeight: 40,
@@ -1888,21 +2135,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   readOnlyBadgeText: {
-    color: '#CBD5E1',
+    color: Colors.copper,
     fontSize: 11,
     fontFamily: Fonts.heading,
   },
   exerciseList: { gap: 8, marginTop: 4 },
   exerciseCard: {
     borderRadius: 12,
-    backgroundColor: '#0B1220',
+    backgroundColor: 'rgba(13, 13, 13, 0.65)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(181, 101, 29, 0.18)',
     padding: 10,
   },
   exerciseCardCompleted: {
-    backgroundColor: '#0E1A16',
-    borderColor: 'rgba(34,197,94,0.2)',
+    backgroundColor: 'rgba(26, 122, 74, 0.08)',
+    borderColor: 'rgba(26, 122, 74, 0.35)',
   },
   exerciseActionRow: {
     flexDirection: 'row',
@@ -1917,13 +2164,13 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,240,208,0.08)',
+    backgroundColor: 'rgba(201, 148, 58, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(0,240,208,0.22)',
+    borderColor: 'rgba(201, 148, 58, 0.25)',
   },
   exerciseCheckCompleted: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: Colors.victoryGreen,
+    borderColor: Colors.victoryGreen,
   },
   exerciseCheckWide: {
     minWidth: 150,
@@ -1935,19 +2182,18 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   exerciseCheckText: {
-    color: Colors.primary,
+    color: Colors.gold,
     fontSize: 11,
     fontFamily: Fonts.heading,
   },
   exerciseCheckTextCompleted: {
-    color: '#001311',
+    color: '#FFFFFF',
   },
   exerciseTextWrap: { flex: 1 },
   exerciseTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 },
-  exerciseName: { color: '#fff', fontSize: 12, fontFamily: Fonts.heading, flex: 1 },
-  exercisePoints: { color: '#F59E0B', fontSize: 11, fontFamily: Fonts.dataBold },
+  exerciseName: { color: Colors.ivory, fontSize: 13, fontFamily: Fonts.heading, flex: 1 },
+  exercisePoints: { color: Colors.gold, fontSize: 11, fontFamily: Fonts.dataBold },
   exerciseDetails: { color: Colors.textSecondary, fontSize: 12, lineHeight: 17, fontFamily: Fonts.body, marginTop: 3 },
-  exerciseNotes: { color: Colors.textMuted, fontSize: 11, lineHeight: 16, fontFamily: Fonts.body, marginTop: 3 },
   videoButton: {
     marginTop: 8,
     alignSelf: 'flex-start',
@@ -1955,17 +2201,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     borderRadius: 999,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.gold,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
-  videoButtonText: { color: '#001311', fontSize: 11, fontFamily: Fonts.heading },
+  videoButtonText: { color: Colors.obsidian, fontSize: 11, fontFamily: Fonts.heading },
   dayDoneButton: {
     marginTop: 4,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(0,240,208,0.24)',
-    backgroundColor: 'rgba(0,240,208,0.08)',
+    borderColor: 'rgba(201, 148, 58, 0.3)',
+    backgroundColor: 'rgba(201, 148, 58, 0.1)',
     paddingHorizontal: 14,
     paddingVertical: 10,
     flexDirection: 'row',
@@ -1974,37 +2220,37 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   dayDoneButtonCompleted: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
+    backgroundColor: Colors.victoryGreen,
+    borderColor: Colors.victoryGreen,
   },
-  dayDoneButtonText: { color: Colors.primary, fontSize: 12, fontFamily: Fonts.heading },
-  dayDoneButtonTextCompleted: { color: '#001311' },
+  dayDoneButtonText: { color: Colors.gold, fontSize: 12, fontFamily: Fonts.heading },
+  dayDoneButtonTextCompleted: { color: '#FFFFFF' },
   readOnlyNoticeInline: {
     marginTop: 4,
     borderRadius: 12,
-    backgroundColor: 'rgba(148,163,184,0.12)',
+    backgroundColor: 'rgba(13, 43, 69, 0.4)',
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.18)',
+    borderColor: 'rgba(181, 101, 29, 0.2)',
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
   readOnlyNoticeInlineText: {
-    color: '#CBD5E1',
+    color: Colors.copper,
     fontSize: 12,
     lineHeight: 18,
     fontFamily: Fonts.bodyMedium,
   },
   completedDayActions: { flexDirection: 'row', gap: 10, marginTop: 10 },
-  celebrationBackdrop: { flex: 1, backgroundColor: '#050B14', alignItems: 'center', justifyContent: 'center', padding: 20, overflow: 'hidden' },
+  celebrationBackdrop: { flex: 1, backgroundColor: Colors.obsidian, alignItems: 'center', justifyContent: 'center', padding: 20, overflow: 'hidden' },
   confettiPiece: { position: 'absolute', top: -20, width: 8, height: 16, borderRadius: 2 },
-  celebrationCard: { width: '100%', maxWidth: 390, backgroundColor: '#101B2A', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(0,240,208,0.32)', padding: 20, alignItems: 'center' },
-  celebrationBadge: { width: 58, height: 58, borderRadius: 29, backgroundColor: Colors.accentGold, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  celebrationEyebrow: { color: Colors.primary, fontSize: 11, letterSpacing: 1.3, fontFamily: Fonts.heading },
-  celebrationTitle: { color: '#fff', fontSize: 24, textAlign: 'center', fontFamily: Fonts.display, marginTop: 6 },
+  celebrationCard: { width: '100%', maxWidth: 390, backgroundColor: Colors.obsidian, borderRadius: 24, borderWidth: 1, borderColor: 'rgba(181, 101, 29, 0.35)', padding: 20, alignItems: 'center' },
+  celebrationBadge: { width: 58, height: 58, borderRadius: 29, backgroundColor: Colors.gold, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  celebrationEyebrow: { color: Colors.copper, fontSize: 11, letterSpacing: 1.3, fontFamily: Fonts.heading },
+  celebrationTitle: { color: Colors.ivory, fontSize: 24, textAlign: 'center', fontFamily: Fonts.display, marginTop: 6 },
   celebrationText: { color: Colors.textSecondary, fontSize: 13, lineHeight: 19, textAlign: 'center', fontFamily: Fonts.body, marginTop: 8 },
   celebrationPostcard: { width: '100%', alignItems: 'center' },
   postcardDots: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignContent: 'space-between', opacity: 0.15 },
-  postcardDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: Colors.primary },
+  postcardDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: Colors.gold },
   
   /* Backdrop Styles */
   backdropDots: {
@@ -2024,7 +2270,7 @@ const styles = StyleSheet.create({
     width: 3,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: '#00B7F0',
+    backgroundColor: Colors.gold,
     margin: 14,
   },
   celebrationCardContainer: {
@@ -2044,9 +2290,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(13, 43, 69, 0.5)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: 'rgba(181, 101, 29, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2054,8 +2300,8 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-    backgroundColor: '#050B14',
+    borderColor: 'rgba(181, 101, 29, 0.3)',
+    backgroundColor: Colors.obsidian,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
@@ -2063,15 +2309,14 @@ const styles = StyleSheet.create({
   avatarInnerBox: {
     width: 28,
     height: 28,
-    backgroundColor: '#00B7F0',
+    backgroundColor: Colors.gold,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarQuestionMark: {
-    color: '#ffffff',
+    color: Colors.obsidian,
     fontSize: 18,
-    fontWeight: '900',
-    fontFamily: 'Inter_900Black',
+    fontFamily: Fonts.heading,
   },
   
   /* New Postcard Redesign Styles */
@@ -2081,45 +2326,42 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   newPostcardBrandText: {
-    color: '#F8FAFC',
-    fontSize: 30,
+    color: Colors.ivory,
+    fontSize: 28,
     fontFamily: Fonts.display,
-    fontWeight: '900',
-    letterSpacing: -0.8,
+    letterSpacing: -0.5,
     textAlign: 'center',
     marginTop: 4,
   },
   newPostcardCard: {
-    backgroundColor: '#111113',
+    backgroundColor: Colors.obsidian,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: 'rgba(181, 101, 29, 0.3)',
     paddingHorizontal: 20,
     paddingVertical: 22,
     marginBottom: 14,
     width: '100%',
   },
   newPostcardLabel: {
-    color: '#00B7F0',
+    color: Colors.copper,
     fontSize: 10,
     letterSpacing: 1.5,
     fontFamily: Fonts.heading,
-    fontWeight: '700',
     marginBottom: 12,
     textAlign: 'center',
   },
   newPostcardTitle: {
-    color: '#fff',
+    color: Colors.ivory,
     fontSize: 20,
     lineHeight: 26,
     fontFamily: Fonts.display,
-    fontWeight: '900',
     textAlign: 'center',
     marginBottom: 12,
   },
   newPostcardDivider: {
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(181, 101, 29, 0.2)',
     marginBottom: 16,
     width: '100%',
   },
@@ -2137,14 +2379,13 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#00B7F0',
+    backgroundColor: Colors.gold,
   },
   newPostcardExerciseText: {
     flex: 1,
-    color: '#CBD5E1',
+    color: Colors.ivory,
     fontSize: 11,
     fontFamily: Fonts.heading,
-    fontWeight: '700',
     letterSpacing: 0.25,
   },
   newPostcardMetricsRow: {
@@ -2158,9 +2399,9 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     minHeight: 88,
-    backgroundColor: '#111113',
+    backgroundColor: 'rgba(13, 43, 69, 0.45)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: 'rgba(181, 101, 29, 0.25)',
     borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 12,
@@ -2168,33 +2409,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   newPostcardMetricLabel: {
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: Colors.copper,
     fontSize: 9,
     letterSpacing: 1.2,
     fontFamily: Fonts.heading,
-    fontWeight: '700',
     marginBottom: 6,
     textAlign: 'center',
   },
   newPostcardMetricValue: {
-    color: '#fff',
+    color: Colors.ivory,
     fontSize: 20,
     lineHeight: 24,
     fontFamily: Fonts.dataBold,
-    fontWeight: '900',
     textAlign: 'center',
   },
   newPostcardMetricValueGut: {
-    color: '#FF4B72',
+    color: Colors.gold,
     fontSize: 18,
     lineHeight: 20,
     fontFamily: Fonts.dataBold,
-    fontWeight: '900',
     textAlign: 'center',
     width: '100%',
   },
   newPostcardUserPill: {
-    backgroundColor: '#00B7F0',
+    backgroundColor: Colors.gold,
     borderRadius: 999,
     paddingVertical: 10,
     paddingHorizontal: 24,
@@ -2203,15 +2441,14 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   newPostcardUserPillText: {
-    color: '#000000',
+    color: Colors.obsidian,
     fontSize: 12,
     fontFamily: Fonts.heading,
-    fontWeight: '900',
     letterSpacing: 1.1,
     textAlign: 'center',
   },
   newPostcardUrl: {
-    color: 'rgba(255, 255, 255, 0.3)',
+    color: 'rgba(247, 243, 238, 0.4)',
     textAlign: 'center',
     fontSize: 9,
     letterSpacing: 2.2,
@@ -2227,11 +2464,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 14,
     marginTop: 16,
-    shadowColor: Colors.gold,
+    shadowColor: Colors.navy,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 4,
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 3,
   },
   shareCommunityBtnText: {
     color: Colors.obsidian,
@@ -2240,16 +2477,27 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
 
-  postcardShareLabel: { color: '#E5E7EB', fontSize: 10, letterSpacing: 1.2, fontFamily: Fonts.heading, marginTop: 12 },
+  postcardShareLabel: { color: Colors.ivory, fontSize: 10, letterSpacing: 1.2, fontFamily: Fonts.heading, marginTop: 12 },
   postcardSocialRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', width: '100%', marginTop: 8, paddingHorizontal: 4 },
-  celebrationPrimary: { width: '100%', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, backgroundColor: Colors.primary, borderRadius: 12, paddingVertical: 13, marginTop: 16 },
-  celebrationPrimaryText: { color: '#06201C', fontSize: 13, fontFamily: Fonts.heading },
-  celebrationSecondary: { width: '100%', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(0,240,208,0.35)', borderRadius: 12, paddingVertical: 12, marginTop: 9 },
-  celebrationSecondaryText: { color: Colors.primary, fontSize: 13, fontFamily: Fonts.heading },
+  celebrationPrimary: { width: '100%', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, backgroundColor: Colors.gold, borderRadius: 12, paddingVertical: 13, marginTop: 16 },
+  celebrationPrimaryText: { color: Colors.obsidian, fontSize: 13, fontFamily: Fonts.heading },
+  celebrationSecondary: { width: '100%', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(181, 101, 29, 0.35)', borderRadius: 12, paddingVertical: 12, marginTop: 9 },
+  celebrationSecondaryText: { color: Colors.gold, fontSize: 13, fontFamily: Fonts.heading },
   cardActions: { width: '100%', flexDirection: 'row', gap: 10, marginTop: 12 },
-  cardActionButton: { flex: 1, minHeight: 54, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(0,240,208,0.32)', borderRadius: 12, backgroundColor: 'rgba(0,240,208,0.08)' },
+  cardActionButton: {
+    flex: 1,
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(181, 101, 29, 0.3)',
+    borderRadius: 12,
+    backgroundColor: 'rgba(201, 148, 58, 0.08)',
+  },
   cardActionButtonBusy: { opacity: 0.5 },
-  cardActionText: { color: Colors.primary, fontSize: 13, fontFamily: Fonts.heading },
+  cardActionText: { color: Colors.gold, fontSize: 13, fontFamily: Fonts.heading },
   celebrationClose: { paddingVertical: 10, marginTop: 3 },
   celebrationCloseText: { color: Colors.textMuted, fontSize: 12, fontFamily: Fonts.heading },
   buttonDisabled: { opacity: 0.5 },
