@@ -368,7 +368,6 @@ export default function ProfileScreen() {
   const points = me?.points ?? 0;
   const workoutsCompleted = me?.workouts_completed ?? 0;
   const workoutsTotal = me?.workouts_total ?? 0;
-  const canAccessLongevity = canAccessFeature('longevity', me);
   const canAccessCoachVictor = canAccessFeature('coach_victor', me);
   const streakDays = me?.streak_days ?? 0;
   const rank = me?.rank ?? 'Noob';
@@ -656,34 +655,10 @@ export default function ProfileScreen() {
               <Ionicons name="lock-closed" size={16} color="rgba(255,255,255,0.5)" />
             </TouchableOpacity>
           )}
-          {canAccessLongevity ? (
-            <View style={styles.coachCard}>
-              <View style={[styles.coachIconWrap, { backgroundColor: Colors.accentPurple }]}>
-              <Ionicons name="pulse" size={22} color="#fff" />
-            </View>
-              <View style={{ flex: 1 }}>
-              <Text style={styles.coachName}>LONGEVITY OS</Text>
-              <Text style={[styles.coachStatus, { color: '#A855F7' }]}>⚡ {t('Optimizing for you')}</Text>
-            </View>
-              <TouchableOpacity
-                style={styles.coachArrow}
-                onPress={() => router.push('/profile/longevity-os')}
-              >
-                <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.4)" />
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity style={[styles.coachCard, styles.lockedCard]} activeOpacity={0.85} onPress={() => setRestrictedSection(t('Longevity OS'))}>
-              <View style={[styles.coachIconWrap, { backgroundColor: Colors.accentPurple }]}>
-                <Ionicons name="pulse" size={22} color="#fff" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.coachName}>LONGEVITY OS</Text>
-                <Text style={[styles.coachStatus, { color: '#A855F7' }]}>{t('Upgrade required')}</Text>
-              </View>
-              <Ionicons name="lock-closed" size={16} color="rgba(255,255,255,0.5)" />
-            </TouchableOpacity>
-          )}
+          {/*
+            Longevity OS is temporarily hidden from Profile.
+            Keep the full feature implementation, access checks, and route intact for later re-enable.
+          */}
           <TouchableOpacity style={[styles.coachCard, styles.planCard]} activeOpacity={0.86} onPress={() => setShowSubscriptionModal(true)}>
             <View style={[styles.coachIconWrap, { backgroundColor: Colors.accentGold }]}>
               <Ionicons name="card-outline" size={22} color="#fff" />
