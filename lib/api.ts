@@ -1029,6 +1029,36 @@ export async function updateCurrentUserProfile(payload: {
   return user;
 }
 
+export interface HabitConsistencyResponse {
+  identity_statement: string;
+  workout_unlock_label: string;
+  training_trigger_context: string;
+  training_trigger_action: string;
+  has_trigger: boolean;
+  current_score: number;
+  weeks: Array<{
+    label: string;
+    week_start: string;
+    week_end: string;
+    trigger_days: number;
+    trained_trigger_days: number;
+    score: number;
+  }>;
+}
+
+export async function fetchHabitConsistency(): Promise<HabitConsistencyResponse> {
+  return apiRequest<HabitConsistencyResponse>('/me/habit-consistency');
+}
+
+export interface RuntimeFeatureFlagsResponse {
+  provider: string;
+  items: Array<{ key: string; enabled: boolean; reason: string }>;
+}
+
+export async function fetchRuntimeFeatureFlags(): Promise<RuntimeFeatureFlagsResponse> {
+  return apiRequest<RuntimeFeatureFlagsResponse>('/me/feature-flags');
+}
+
 function normalizeOnboardingState(state: OnboardingState): OnboardingState {
   const personalProfile = (state.personalProfile || {}) as Partial<OnboardingPersonalProfile>;
   const anamnese = (state.anamnese || {}) as Partial<OnboardingAnamnese>;

@@ -184,13 +184,6 @@ export default function WorkoutCompletionModal({
         }
         await AsyncStorage.setItem(UPGRADE_LAST_SHOWN_KEY, String(Date.now()));
 
-        // Section 17.1: Reuses upgrade_screen_viewed analytics event with source: 'completion_card'
-        void recordAnalyticsEvent('upgrade_screen_viewed', {
-          source: 'completion_card',
-          day: dayLabel,
-          streak_count: streakCount,
-          tier,
-        }).catch(() => undefined);
       } catch {
         setUpgradeOffer(null);
       }
@@ -203,12 +196,6 @@ export default function WorkoutCompletionModal({
     if (completionCardRecordId) {
       void updateCompletionCardUpsellState(completionCardRecordId, { upsell_clicked: true }).catch(() => undefined);
     }
-    // Section 17.1: Reuses upgrade_prompt_clicked analytics event with source: 'completion_card'
-    void recordAnalyticsEvent('upgrade_prompt_clicked', {
-      source: 'completion_card',
-      day: dayLabel,
-    }).catch(() => undefined);
-
     onClose();
     router.push('/plan');
   };

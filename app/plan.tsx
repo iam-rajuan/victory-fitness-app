@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  Easing,
   FlatList,
   Linking,
   Modal,
@@ -17,7 +19,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { ApiError, createStripeCheckoutSession, fetchCurrentUser, fetchSubscriptionPlans, startPhaseOneBetaSubscription, SubscriptionPlan } from '../lib/api';
+import { ApiError, createStripeCheckoutSession, fetchCurrentUser, fetchRuntimeFeatureFlags, fetchSubscriptionPlans, startPhaseOneBetaSubscription, SubscriptionPlan } from '../lib/api';
 import {
   AppPlanCard,
   BillingCycle,
@@ -189,6 +191,7 @@ export default function PlanSelectionScreen() {
   const params = useLocalSearchParams<{ checkout?: string; entry?: string }>();
   const { t } = useLanguage();
   const flatListRef = useRef<FlatList>(null);
+  const entryAnimation = useRef(new Animated.Value(0)).current;
   const { width: screenWidth } = useWindowDimensions();
   const isCompactWidth = screenWidth < 380;
   const cardGap = isCompactWidth ? 12 : 14;
@@ -205,6 +208,8 @@ export default function PlanSelectionScreen() {
   const [planItems, setPlanItems] = useState<SubscriptionPlan[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [hasInitialScrolled, setHasInitialScrolled] = useState(false);
+  const [entryAnimationEnabled, setEntryAnimationEnabled] = useState(false);
+  const [entryAnimationComplete, setEntryAnimationComplete] = useState(false);
   const entry = String(params.entry ?? '').trim().toLowerCase();
   const isOnboardingEntry = entry === 'onboarding';
   const isProfileEntry = entry === 'profile' || entry === 'profile_upgrade' || entry === 'subscription_management';
@@ -217,15 +222,19 @@ export default function PlanSelectionScreen() {
     }
 
     try {
-      const [user, plansResponse] = await Promise.all([
+      const [user, plansResponse, featureFlags] = await Promise.all([
         fetchCurrentUser(),
         fetchSubscriptionPlans(),
+        fetchRuntimeFeatureFlags().catch(() => null),
       ]);
       const normalizedTier = getDisplayTierForUser(user);
       setCurrentTier(normalizedTier);
       setSelectedTier(normalizedTier === 'NONE' ? 'GOLD_BETA' : normalizedTier);
       setUserName(String(user.name || 'Member'));
       setPlanItems(Array.isArray(plansResponse?.items) ? plansResponse.items : []);
+      const animationFlag = featureFlags?.items?.find((item) => item.key === 'upgrade_entry_animation');
+      setEntryAnimationEnabled(Boolean(animationFlag?.enabled));
+      setEntryAnimationComplete(!animationFlag?.enabled);
       return user;
     } catch {
       Alert.alert(t('Access error'), t('Unable to load your subscription state right now.'));
@@ -240,6 +249,19 @@ export default function PlanSelectionScreen() {
   useEffect(() => {
     void loadSubscriptionState(true);
   }, [loadSubscriptionState]);
+
+  useEffect(() => {
+    if (loading || !entryAnimationEnabled || entryAnimationComplete) {
+      return;
+    }
+    entryAnimation.setValue(0);
+    Animated.timing(entryAnimation, {
+      toValue: 1,
+      duration: 600,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start(() => setEntryAnimationComplete(true));
+  }, [entryAnimation, entryAnimationComplete, entryAnimationEnabled, loading]);
 
   useEffect(() => {
     let cancelled = false;
@@ -434,6 +456,24 @@ export default function PlanSelectionScreen() {
         <View style={styles.loadingWrap}>
           <ActivityIndicator color="#18D2EF" size="large" />
           <Text style={styles.loadingText}>{t('Loading your access plans...')}</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (entryAnimationEnabled && !entryAnimationComplete) {
+    const silverOpacity = entryAnimation.interpolate({ inputRange: [0, 1], outputRange: [1, 0] });
+    const goldOpacity = entryAnimation.interpolate({ inputRange: [0, 1], outputRange: [0.15, 1] });
+    const goldScale = entryAnimation.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1] });
+    return (
+      <SafeAreaView style={styles.screen}>
+        <View style={styles.entryAnimationWrap}>
+          <Animated.View style={[styles.entryTierOutline, styles.entrySilverOutline, { opacity: silverOpacity }]}>
+            <Text style={styles.entrySilverText}>{t('SILVER')}</Text>
+          </Animated.View>
+          <Animated.View style={[styles.entryTierOutline, styles.entryGoldOutline, { opacity: goldOpacity, transform: [{ scale: goldScale }] }]}>
+            <Text style={styles.entryGoldText}>{t('GOLD')}</Text>
+          </Animated.View>
         </View>
       </SafeAreaView>
     );
@@ -1381,6 +1421,47 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_500Medium',
     marginLeft: 20,
     marginTop: 2,
+  },
+  entryAnimationWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+  },
+  entryTierOutline: {
+    position: 'absolute',
+    width: '78%',
+    maxWidth: 320,
+    height: 190,
+    borderRadius: 18,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  entrySilverOutline: {
+    borderColor: '#94A3B8',
+    backgroundColor: 'rgba(148, 163, 184, 0.08)',
+  },
+  entryGoldOutline: {
+    borderColor: '#F59E0B',
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 18,
+    elevation: 8,
+  },
+  entrySilverText: {
+    color: '#CBD5E1',
+    fontSize: 18,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: 0,
+  },
+  entryGoldText: {
+    color: '#F59E0B',
+    fontSize: 22,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: 0,
   },
 });
 

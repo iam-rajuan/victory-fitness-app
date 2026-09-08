@@ -18,7 +18,7 @@ export type AppPlanCard = {
 };
 
 const SILVER_FEATURE_ACCESS = ['home', 'workout', 'challenge', 'community', 'profile'] as const;
-const GOLD_FEATURE_ACCESS = [...SILVER_FEATURE_ACCESS, 'mealPlan'] as const;
+const GOLD_FEATURE_ACCESS = [...SILVER_FEATURE_ACCESS, 'mealPlan', 'coach_victor'] as const;
 const GOLD_BETA_FEATURE_ACCESS = [...GOLD_FEATURE_ACCESS] as const;
 const PLATINUM_FEATURE_ACCESS = [...GOLD_FEATURE_ACCESS, 'nutrition_tracker', 'meal_analysis', 'workoutplan', 'longevity'] as const;
 const INNER_CIRCLE_FEATURE_ACCESS = [...PLATINUM_FEATURE_ACCESS, 'application', 'coach_victor', 'longevity_plan'] as const;
@@ -47,7 +47,7 @@ const SILVER_ROUTE_ACCESS = [
   '/profile',
   '/journal',
 ] as const;
-const GOLD_ROUTE_ACCESS = [...SILVER_ROUTE_ACCESS, '/mealPlan'] as const;
+const GOLD_ROUTE_ACCESS = [...SILVER_ROUTE_ACCESS, '/mealPlan', '/chat'] as const;
 const PLATINUM_ROUTE_ACCESS = [...GOLD_ROUTE_ACCESS, '/workoutplan', '/profile/longevity-os'] as const;
 const INNER_CIRCLE_ROUTE_ACCESS = [...PLATINUM_ROUTE_ACCESS, '/profile/application', '/community', '/chat'] as const;
 const NOTIFICATION_ROUTE = '/notifications';

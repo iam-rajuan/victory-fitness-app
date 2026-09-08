@@ -11,7 +11,7 @@ export default function SocialContagionWidget() {
   const { t } = useLanguage();
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [userLoaded, setUserLoaded] = useState(false);
-  const [activeCount, setActiveCount] = useState(1270);
+  const [activeCount, setActiveCount] = useState(0);
   const [userTrainedToday, setUserTrainedToday] = useState(false);
   const [headline, setHeadline] = useState('');
   const [recentCompletions, setRecentCompletions] = useState<NetworkActivityResponse['recent_completions']>([]);
@@ -126,21 +126,19 @@ export default function SocialContagionWidget() {
       </View>
 
       <View style={styles.countRow}>
-        <View style={styles.avatarStack}>
-          <View style={[styles.avatarMini, { backgroundColor: '#00F0D0' }]}>
-            <Text style={styles.avatarInitial}>M</Text>
+        {recentCompletions.length > 0 ? (
+          <View style={styles.avatarStack}>
+            {recentCompletions.slice(0, 4).map((item, index) => (
+              <View
+                key={item.id || `${item.name}-${index}`}
+                style={[styles.avatarMini, { backgroundColor: item.avatar_color || Colors.primary, marginLeft: index === 0 ? 0 : -8 }]}
+              >
+                <Text style={styles.avatarInitial}>{String(item.name || '?').trim().slice(0, 1).toUpperCase()}</Text>
+              </View>
+            ))}
           </View>
-          <View style={[styles.avatarMini, { backgroundColor: '#A855F7', marginLeft: -8 }]}>
-            <Text style={styles.avatarInitial}>E</Text>
-          </View>
-          <View style={[styles.avatarMini, { backgroundColor: '#FFD700', marginLeft: -8 }]}>
-            <Text style={styles.avatarInitial}>D</Text>
-          </View>
-          <View style={[styles.avatarMini, { backgroundColor: '#38BDF8', marginLeft: -8 }]}>
-            <Text style={styles.avatarInitial}>S</Text>
-          </View>
-        </View>
-        <View style={{ flex: 1, marginLeft: 12 }}>
+        ) : null}
+        <View style={{ flex: 1, marginLeft: recentCompletions.length > 0 ? 12 : 0 }}>
           <Text style={styles.countText}>
             {t(computedHeadline)}
           </Text>

@@ -207,6 +207,7 @@ function isSupportedAppLanguage(value: OnboardingLanguage): value is LanguageCod
 }
 type Props = {
   user: AuthUser;
+  initialStep?: number;
 };
 type ValidationErrors = Record<string, string>;
 function getSuggestedTier(anamnese: OnboardingAnamnese): OnboardingSuggestion {
@@ -230,7 +231,7 @@ function deriveCountryFromLocale() {
   const detected = detectCountryFromDeviceLocale();
   return detected ? ALL_COUNTRIES.find((country) => country.code === detected.country.code) ?? null : null;
 }
-export default function PostLoginOnboardingFlow({ user }: Props) {
+export default function PostLoginOnboardingFlow({ user, initialStep }: Props) {
   const router = useRouter();
   const { setLanguage, t } = useLanguage();
   const [loading, setLoading] = useState(true);
@@ -293,7 +294,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
           setSelectedCountry(nextData.country);
         }
         setData(nextData);
-        setStep(Math.min(nextData.currentStep ?? 0, STEP_TITLES.length - 1));
+        setStep(Math.min(initialStep ?? nextData.currentStep ?? 0, STEP_TITLES.length - 1));
         setLoading(false);
       }
     };
@@ -301,7 +302,7 @@ export default function PostLoginOnboardingFlow({ user }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [user.id]);
+  }, [initialStep, user.id]);
   useEffect(() => {
     if (data?.language) {
       return;

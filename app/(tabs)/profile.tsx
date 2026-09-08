@@ -26,7 +26,7 @@ import AccessRestrictionModal from '../../components/AccessRestrictionModal';
 import AccountabilityPartnerCard from '../../components/profile/AccountabilityPartnerCard';
 import PointsProgressionCard from '../../components/profile/PointsProgressionCard';
 import SubscriptionManagementModal from '../../components/profile/SubscriptionManagementModal';
-import { BodyMetrics, fetchCurrentUser, fetchCurrentUserBodyMetrics, getAuthUser, logout, updateCurrentUserBodyMetrics, updateCurrentUserProfile } from '../../lib/api';
+import { BodyMetrics, HabitConsistencyResponse, fetchCurrentUser, fetchCurrentUserBodyMetrics, fetchHabitConsistency, getAuthUser, logout, updateCurrentUserBodyMetrics, updateCurrentUserProfile } from '../../lib/api';
 import { canAccessFeature, canAccessPlanRoute } from '../../lib/access';
 import { SUPPORTED_LANGUAGES, LanguageCode, useLanguage } from '../../lib/i18n';
 import { syncOnboardingProfileFields } from '../../lib/onboarding';
@@ -234,6 +234,7 @@ export default function ProfileScreen() {
   const [refreshing, setRefreshing] = React.useState(false);
   const [restrictedSection, setRestrictedSection] = React.useState('');
   const [showSubscriptionModal, setShowSubscriptionModal] = React.useState(false);
+  const [habitConsistency, setHabitConsistency] = React.useState<HabitConsistencyResponse | null>(null);
 
   const bodyMetricsSummary = React.useMemo(() => {
     const parts = [
@@ -327,9 +328,16 @@ export default function ProfileScreen() {
       ]);
       setMe(response);
       setBodyMetrics(metricsResponse);
+      if (canAccessFeature('longevity', response)) {
+        const consistency = await fetchHabitConsistency().catch(() => null);
+        setHabitConsistency(consistency);
+      } else {
+        setHabitConsistency(null);
+      }
     } catch {
       setMe(null);
       setBodyMetrics({ age: '', height: '', weight: '', gender: '' });
+      setHabitConsistency(null);
     } finally {
       if (showLoading) {
         setLoadingMe(false);
@@ -720,6 +728,30 @@ export default function ProfileScreen() {
               <Text style={styles.emptyMindsetText}>
                 {t('Set your identity statement, session unlock rewards, and if-then training triggers in Settings.')}
               </Text>
+            ) : null}
+
+            {habitConsistency ? (
+              <View style={styles.consistencyTrendBox}>
+                <View style={styles.consistencyTrendHeader}>
+                  <Text style={styles.consistencyTrendTitle}>{t('HABIT CONSISTENCY')}</Text>
+                  <Text style={styles.consistencyTrendScore}>{Math.round(habitConsistency.current_score)}%</Text>
+                </View>
+                <View style={styles.consistencyBarsRow}>
+                  {habitConsistency.weeks.map((week) => (
+                    <View key={week.week_start} style={styles.consistencyWeekCol}>
+                      <View style={styles.consistencyBarTrack}>
+                        <View style={[styles.consistencyBarFill, { height: `${Math.max(Math.min(week.score, 100), 3)}%` }]} />
+                      </View>
+                      <Text style={styles.consistencyWeekLabel} numberOfLines={1}>{week.label.split(' - ')[0]}</Text>
+                    </View>
+                  ))}
+                </View>
+                <Text style={styles.consistencyTrendNote}>
+                  {habitConsistency.has_trigger
+                    ? t('Based on training days after your saved trigger.')
+                    : t('Add a training trigger to start tracking this trend.')}
+                </Text>
+              </View>
             ) : null}
           </View>
 
@@ -1579,6 +1611,70 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     lineHeight: 18,
     paddingVertical: 6,
+  },
+  consistencyTrendBox: {
+    backgroundColor: 'rgba(168, 85, 247, 0.07)',
+    borderWidth: 1,
+    borderColor: 'rgba(168, 85, 247, 0.2)',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 4,
+  },
+  consistencyTrendHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  consistencyTrendTitle: {
+    color: 'rgba(255, 255, 255, 0.55)',
+    fontSize: 10,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: 0.6,
+  },
+  consistencyTrendScore: {
+    color: '#A855F7',
+    fontSize: 15,
+    fontFamily: 'Inter_700Bold',
+  },
+  consistencyBarsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    height: 72,
+    gap: 8,
+  },
+  consistencyWeekCol: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  consistencyBarTrack: {
+    width: '100%',
+    maxWidth: 42,
+    height: 48,
+    borderRadius: 7,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
+  },
+  consistencyBarFill: {
+    width: '100%',
+    backgroundColor: '#A855F7',
+    borderRadius: 7,
+  },
+  consistencyWeekLabel: {
+    color: 'rgba(255, 255, 255, 0.45)',
+    fontSize: 9,
+    fontFamily: 'Inter_500Medium',
+    marginTop: 6,
+  },
+  consistencyTrendNote: {
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontSize: 11,
+    lineHeight: 15,
+    fontFamily: 'Inter_400Regular',
+    marginTop: 8,
   },
   mindsetActionsRow: {
     flexDirection: 'row',
