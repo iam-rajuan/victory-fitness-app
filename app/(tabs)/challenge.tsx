@@ -22,6 +22,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import CrossPlatformWebView from '../../components/CrossPlatformWebView';
 import { Colors } from '../../constants/Colors';
+import { Fonts } from '../../constants/Typography';
 import AccessRestrictionModal from '../../components/AccessRestrictionModal';
 import { apiRequest, fetchCurrentUser, getAuthUser, resolveRemoteAssetUrl } from '../../lib/api';
 import { canAccessFeature, normalizeSubscriptionTier } from '../../lib/access';
@@ -1930,8 +1931,8 @@ export default function ChallengesScreen() {
             {(hasReadyToStartChallenges || hasUpcomingChallenges || hasCompletedChallenges || challengeOverview.active_challenges.length > 0) ? (
               <>
                 <View style={[styles.subSectionHeader, { marginTop: 4 }]}>
-                  <Ionicons name="rocket" size={16} color="#4F8EF7" />
-                  <Text style={[styles.subSectionTitle, { color: '#4F8EF7' }]}>{t('Challenge Library')}</Text>
+                  <Ionicons name="rocket" size={16} color={Colors.gold} />
+                  <Text style={[styles.subSectionTitle, { color: Colors.gold }]}>{t('Challenge Library')}</Text>
                 </View>
                 <Text style={styles.challengeLibraryLead}>{t('Grow through out of the Comfort zone')}</Text>
                 <ScrollView
@@ -3172,7 +3173,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#fff',
     letterSpacing: 8,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
   },
   brandSubtitle: {
     fontSize: 12,
@@ -3180,7 +3181,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     letterSpacing: 6,
     marginTop: 4,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.heading,
   },
 
   /* Page Title */
@@ -3196,12 +3197,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Colors.primary,
     letterSpacing: 3,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
   },
   pageSubtitle: {
     fontSize: 13,
     color: Colors.textMuted,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     marginTop: 2,
   },
   inviteBtn: {
@@ -3217,7 +3218,7 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 12,
     fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
 
   /* Tabs */
@@ -3254,7 +3255,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.textMuted,
     letterSpacing: 0.5,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   tabTextLocked: {
     opacity: 0.58,
@@ -3281,7 +3282,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Colors.primary,
     letterSpacing: 0.5,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   challengeStatusCard: {
     backgroundColor: 'rgba(239,68,68,0.12)',
@@ -3308,18 +3309,18 @@ const styles = StyleSheet.create({
   challengeLimitTitle: {
     color: '#fff',
     fontSize: 14,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   challengeLimitCount: {
     color: Colors.primary,
     fontSize: 13,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
   },
   challengeLimitText: {
     color: 'rgba(255,255,255,0.68)',
     fontSize: 12,
     lineHeight: 18,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     marginBottom: 10,
   },
   challengeLimitBarTrack: {
@@ -3336,7 +3337,7 @@ const styles = StyleSheet.create({
   challengeStatusText: {
     color: '#FCA5A5',
     fontSize: 12,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   challengeLoadingWrap: {
     flexDirection: 'row',
@@ -3348,7 +3349,7 @@ const styles = StyleSheet.create({
   challengeLoadingText: {
     color: Colors.textMuted,
     fontSize: 12,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   skeletonBlock: {
     backgroundColor: 'rgba(255,255,255,0.08)',
@@ -3387,13 +3388,13 @@ const styles = StyleSheet.create({
   challengeEmptyText: {
     color: Colors.textMuted,
     fontSize: 12,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   challengeLibraryLead: {
     color: '#D5DEF0',
     fontSize: 16,
     lineHeight: 22,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
     marginBottom: 6,
   },
   durationTabsRow: {
@@ -3424,7 +3425,7 @@ const styles = StyleSheet.create({
   durationTabText: {
     color: '#C7D2E5',
     fontSize: 11,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   durationTabTextActive: {
     color: '#fff',
@@ -3467,7 +3468,7 @@ const styles = StyleSheet.create({
     color: '#F5A43C',
     fontSize: 9,
     textTransform: 'uppercase',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   challengeLibraryFieldLabel: {
     marginTop: 8,
@@ -3476,7 +3477,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   challengeParticipantHighlight: {
     flexDirection: 'row',
@@ -3492,12 +3493,12 @@ const styles = StyleSheet.create({
   challengeParticipantCountText: {
     color: '#38BDF8',
     fontSize: 16,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
   },
   challengeParticipantLabelText: {
     color: 'rgba(255, 255, 255, 0.72)',
     fontSize: 11,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.heading,
   },
   postAuthorWrap: {
     flexDirection: 'row',
@@ -3518,7 +3519,7 @@ const styles = StyleSheet.create({
   verifiedAdminText: {
     color: '#38BDF8',
     fontSize: 10,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     textTransform: 'uppercase',
   },
   lockedPostContainer: {
@@ -3539,7 +3540,7 @@ const styles = StyleSheet.create({
     color: '#D1D5DB',
     fontSize: 14,
     lineHeight: 20,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   lockedPostOverlay: {
     alignItems: 'center',
@@ -3561,14 +3562,14 @@ const styles = StyleSheet.create({
   lockedBadgeText: {
     color: '#F59E0B',
     fontSize: 11,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     textTransform: 'uppercase',
   },
   lockedPromptText: {
     color: 'rgba(255, 255, 255, 0.8)',
     fontSize: 12,
     textAlign: 'center',
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.bodyMedium,
     maxWidth: 320,
     lineHeight: 18,
   },
@@ -3585,7 +3586,7 @@ const styles = StyleSheet.create({
   lockedUpgradeBtnText: {
     color: Colors.obsidian,
     fontSize: 12,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   challengeLibraryPointsBadge: {
     backgroundColor: '#FFC233',
@@ -3596,13 +3597,13 @@ const styles = StyleSheet.create({
   challengeLibraryPointsText: {
     color: '#4C2A00',
     fontSize: 10,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
   },
   challengeLibraryDescription: {
     color: '#E5E7EB',
     fontSize: 10,
     lineHeight: 13,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     marginTop: 1,
   },
   challengeExpandBtn: {
@@ -3614,14 +3615,14 @@ const styles = StyleSheet.create({
   challengeExpandBtnText: {
     color: '#BFDBFE',
     fontSize: 11,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.heading,
   },
   challengeWhyText: {
     marginTop: 6,
     color: '#CBD5E1',
     fontSize: 10,
     lineHeight: 14,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   challengeLibraryProgressRow: {
     flexDirection: 'row',
@@ -3646,7 +3647,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     minWidth: 32,
     textAlign: 'right',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
   },
   challengeLibraryFooter: {
     flexDirection: 'row',
@@ -3671,7 +3672,7 @@ const styles = StyleSheet.create({
   challengeLibraryMetaText: {
     color: 'rgba(255,255,255,0.65)',
     fontSize: 10,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.bodyMedium,
   },
   challengeLibraryActionRow: {
     flexDirection: 'row',
@@ -3694,7 +3695,7 @@ const styles = StyleSheet.create({
   challengeInviteBtnText: {
     color: '#EAF4FF',
     fontSize: 10,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   challengeStatusBtn: {
     flexDirection: 'row',
@@ -3719,7 +3720,7 @@ const styles = StyleSheet.create({
   challengeStatusBtnText: {
     color: '#052E16',
     fontSize: 10,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   challengeStatusBtnTextLocked: {
     color: '#E9D5FF',
@@ -3750,7 +3751,7 @@ const styles = StyleSheet.create({
   chatAvatarEmoji: {
     fontSize: 22,
     color: '#fff',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
   },
   chatAvatarImage: {
     width: '100%',
@@ -3764,13 +3765,13 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     marginBottom: 3,
   },
   chatLastMsg: {
     color: Colors.textMuted,
     fontSize: 12,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   chatRight: {
     alignItems: 'flex-end',
@@ -3779,7 +3780,7 @@ const styles = StyleSheet.create({
   chatTime: {
     color: Colors.textMuted,
     fontSize: 11,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.data,
   },
   unreadBadge: {
     backgroundColor: Colors.primary,
@@ -3794,7 +3795,7 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 11,
     fontWeight: '800',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
   },
 
   /* Your Active Challenges */
@@ -3822,7 +3823,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   activePointsBadge: {
     flexDirection: 'row',
@@ -3837,7 +3838,7 @@ const styles = StyleSheet.create({
     color: '#F59E0B',
     fontSize: 11,
     fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
   },
   activeProgressRow: {
     flexDirection: 'row',
@@ -3859,7 +3860,7 @@ const styles = StyleSheet.create({
   progressLabel: {
     fontSize: 11,
     color: Colors.textMuted,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     minWidth: 50,
     textAlign: 'right',
   },
@@ -3870,12 +3871,12 @@ const styles = StyleSheet.create({
   activeMetaText: {
     fontSize: 12,
     color: Colors.textMuted,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   daysLeftText: {
     fontSize: 12,
     fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
   },
 
   /* Completed */
@@ -3904,13 +3905,13 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     marginBottom: 3,
   },
   completedMeta: {
     color: Colors.textMuted,
     fontSize: 12,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   completedPts: {
     flexDirection: 'row',
@@ -3925,7 +3926,7 @@ const styles = StyleSheet.create({
     color: '#F59E0B',
     fontSize: 12,
     fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
   },
 
   /* Ready to Start */
@@ -3953,12 +3954,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   readyDesc: {
     color: Colors.textMuted,
     fontSize: 13,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     lineHeight: 19,
     marginBottom: 12,
   },
@@ -3976,7 +3977,7 @@ const styles = StyleSheet.create({
   metaText: {
     fontSize: 12,
     color: Colors.textMuted,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   difficultyBadge: {
     paddingHorizontal: 8,
@@ -3990,7 +3991,7 @@ const styles = StyleSheet.create({
   difficultyText: {
     fontSize: 10,
     fontWeight: '800',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.3,
   },
   startBtn: {
@@ -4006,7 +4007,7 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 13,
     fontWeight: '800',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.5,
   },
   upcomingStartBtn: {
@@ -4034,7 +4035,7 @@ const styles = StyleSheet.create({
     color: '#C4B5FD',
     fontSize: 11,
     lineHeight: 16,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
 
 
@@ -4049,13 +4050,13 @@ const styles = StyleSheet.create({
     fontSize: 36,
     fontWeight: '800',
     color: '#fff',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
     marginTop: 8,
   },
   communityBannerLabel: {
     fontSize: 14,
     color: 'rgba(255,255,255,0.75)',
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     marginBottom: 16,
   },
   communityInviteBtn: {
@@ -4068,7 +4069,7 @@ const styles = StyleSheet.create({
     color: '#3730A3',
     fontSize: 14,
     fontWeight: '800',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   feedCard: {
     flexDirection: 'row',
@@ -4093,7 +4094,7 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 16,
     fontWeight: '800',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
   },
   feedContent: {
     flex: 1,
@@ -4101,19 +4102,19 @@ const styles = StyleSheet.create({
   feedText: {
     fontSize: 13,
     color: 'rgba(255,255,255,0.8)',
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     lineHeight: 18,
   },
   feedUser: {
     color: '#fff',
     fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   feedTime: {
     fontSize: 11,
     color: Colors.textMuted,
     marginTop: 3,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.data,
   },
   feedPts: {
     backgroundColor: 'rgba(245,158,11,0.12)',
@@ -4125,7 +4126,7 @@ const styles = StyleSheet.create({
     color: '#F59E0B',
     fontSize: 11,
     fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
   },
   /* Community Composer */
   composerCard: {
@@ -4170,7 +4171,7 @@ const styles = StyleSheet.create({
   communityFilterCountText: {
     color: '#07111F',
     fontSize: 10,
-    fontFamily: 'Inter_800ExtraBold',
+    fontFamily: Fonts.dataBold,
   },
   communityFilterModalBackdrop: {
     flex: 1,
@@ -4202,7 +4203,7 @@ const styles = StyleSheet.create({
   communityFilterOptionText: {
     color: '#D7E0F0',
     fontSize: 11,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   communityFilterOptionTextActive: {
     color: Colors.primary,
@@ -4224,19 +4225,19 @@ const styles = StyleSheet.create({
   communityFilterDoneText: {
     color: Colors.primary,
     fontSize: 12,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   searchInput: {
     color: '#fff',
     fontSize: 16,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     paddingVertical: 12,
     outlineStyle: 'none' as any,
   },
   composerInput: {
     color: '#fff',
     fontSize: 14,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 12,
@@ -4246,7 +4247,7 @@ const styles = StyleSheet.create({
   composerLinkInput: {
     color: '#fff',
     fontSize: 13,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     marginHorizontal: 16,
     marginBottom: 14,
     paddingHorizontal: 12,
@@ -4260,7 +4261,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.45)',
     fontSize: 11,
     lineHeight: 16,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     marginHorizontal: 16,
     marginBottom: 12,
   },
@@ -4305,12 +4306,12 @@ const styles = StyleSheet.create({
   composerAttachmentBadgeText: {
     color: '#E2E8F0',
     fontSize: 12,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   composerAttachmentSizeText: {
     color: 'rgba(255, 255, 255, 0.45)',
     fontSize: 11,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.data,
   },
   composerAttachmentCloseBtn: {
     flexDirection: 'row',
@@ -4326,7 +4327,7 @@ const styles = StyleSheet.create({
   composerAttachmentCloseText: {
     color: '#F87171',
     fontSize: 11,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.heading,
   },
   composerMediaFrame: {
     width: '100%',
@@ -4358,7 +4359,7 @@ const styles = StyleSheet.create({
   composerMediaUploadOverlayText: {
     color: '#FFFFFF',
     fontSize: 13,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   composerLinkSection: {
     marginBottom: 4,
@@ -4377,7 +4378,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: '#FFFFFF',
     fontSize: 13,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     paddingHorizontal: 10,
     paddingVertical: 10,
     outlineStyle: 'none' as any,
@@ -4432,7 +4433,7 @@ const styles = StyleSheet.create({
   composerMediaIndicatorText: {
     color: Colors.gold,
     fontSize: 11,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.heading,
   },
   tierSelector: {
     flexDirection: 'row',
@@ -4448,7 +4449,7 @@ const styles = StyleSheet.create({
   tierText: {
     color: 'rgba(255,255,255,0.75)',
     fontSize: 13,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   postBtn: {
     marginLeft: 'auto',
@@ -4474,7 +4475,7 @@ const styles = StyleSheet.create({
     color: Colors.obsidian,
     fontSize: 13,
     fontWeight: '800',
-    fontFamily: 'Inter_800ExtraBold',
+    fontFamily: Fonts.heading,
   },
   /* Dedicated Workout Share Showcase Styles */
   workoutShareContainer: {
@@ -4516,7 +4517,7 @@ const styles = StyleSheet.create({
   workoutShareTrophyText: {
     color: '#F59E0B',
     fontSize: 11,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.5,
   },
   workoutShareRewardPill: {
@@ -4533,7 +4534,7 @@ const styles = StyleSheet.create({
   workoutShareRewardText: {
     color: Colors.gold,
     fontSize: 10,
-    fontFamily: 'Inter_800ExtraBold',
+    fontFamily: Fonts.dataBold,
     letterSpacing: 0.4,
   },
   workoutShareCloseBtn: {
@@ -4547,7 +4548,7 @@ const styles = StyleSheet.create({
   workoutShareTitle: {
     color: '#FFFFFF',
     fontSize: 15,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
     marginBottom: 14,
   },
   workoutShareMediaFrame: {
@@ -4585,7 +4586,7 @@ const styles = StyleSheet.create({
   workoutShareCardOverlayText: {
     color: Colors.gold,
     fontSize: 11,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.heading,
   },
   workoutShareInputWrap: {
     backgroundColor: 'rgba(255, 255, 255, 0.04)',
@@ -4598,13 +4599,13 @@ const styles = StyleSheet.create({
   workoutShareInputLabel: {
     color: 'rgba(255, 255, 255, 0.6)',
     fontSize: 12,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.heading,
     marginBottom: 6,
   },
   workoutShareInput: {
     color: '#FFFFFF',
     fontSize: 13,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     minHeight: 65,
     textAlignVertical: 'top',
     lineHeight: 19,
@@ -4639,7 +4640,7 @@ const styles = StyleSheet.create({
   workoutSharePostBtnText: {
     color: Colors.obsidian,
     fontSize: 14,
-    fontFamily: 'Inter_800ExtraBold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.3,
   },
   workoutSharePointsBadge: {
@@ -4651,7 +4652,7 @@ const styles = StyleSheet.create({
   workoutSharePointsBadgeText: {
     color: Colors.gold,
     fontSize: 11,
-    fontFamily: 'Inter_800ExtraBold',
+    fontFamily: Fonts.dataBold,
   },
   communityErrorCard: {
     backgroundColor: 'rgba(239,68,68,0.12)',
@@ -4664,7 +4665,7 @@ const styles = StyleSheet.create({
   communityErrorText: {
     color: '#FCA5A5',
     fontSize: 13,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     lineHeight: 18,
   },
   communityLoadingWrap: {
@@ -4677,7 +4678,7 @@ const styles = StyleSheet.create({
   communityLoadingText: {
     color: Colors.textMuted,
     fontSize: 13,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   communityPreviewCard: {
     backgroundColor: '#13132A',
@@ -4717,7 +4718,7 @@ const styles = StyleSheet.create({
   communityUploadOverlayText: {
     color: '#FFFFFF',
     fontSize: 13,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   communityPreviewRemove: {
     alignSelf: 'flex-end',
@@ -4727,7 +4728,7 @@ const styles = StyleSheet.create({
   communityPreviewRemoveText: {
     color: '#FCA5A5',
     fontSize: 12,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
 
   /* Post Card */
@@ -4762,7 +4763,7 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 18,
     fontWeight: '800',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
   },
   postMeta: {
     flex: 1,
@@ -4777,12 +4778,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   postTime: {
     color: Colors.textMuted,
     fontSize: 12,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.data,
   },
   tierBadge: {
     paddingHorizontal: 8,
@@ -4794,13 +4795,13 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 10,
     fontWeight: '800',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.5,
   },
   postBody: {
     color: 'rgba(255,255,255,0.85)',
     fontSize: 14,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     lineHeight: 22,
     marginBottom: 14,
   },
@@ -4843,7 +4844,7 @@ const styles = StyleSheet.create({
   postVideoBadgeText: {
     color: '#FFFFFF',
     fontSize: 12,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   postUploadingOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -4856,7 +4857,7 @@ const styles = StyleSheet.create({
   postUploadingText: {
     color: '#FFFFFF',
     fontSize: 13,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   postFooter: {
     flexDirection: 'row',
@@ -4879,7 +4880,7 @@ const styles = StyleSheet.create({
   postActionText: {
     color: 'rgba(255,255,255,0.5)',
     fontSize: 13,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   postActionTextActive: {
     color: '#FCA5A5',
@@ -4913,14 +4914,14 @@ const styles = StyleSheet.create({
   confirmTitle: {
     color: '#FFFFFF',
     fontSize: 18,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
     marginBottom: 8,
   },
   confirmText: {
     color: 'rgba(255,255,255,0.72)',
     fontSize: 14,
     lineHeight: 21,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   confirmActions: {
     flexDirection: 'row',
@@ -4942,7 +4943,7 @@ const styles = StyleSheet.create({
   confirmCancelText: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.heading,
   },
   confirmDeleteButton: {
     minWidth: 96,
@@ -4959,7 +4960,7 @@ const styles = StyleSheet.create({
   confirmDeleteText: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   postModalOverlay: {
     flex: 1,
@@ -4991,7 +4992,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.9)',
     fontSize: 15,
     lineHeight: 24,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     marginBottom: 16,
   },
   postModalImage: {
@@ -5035,7 +5036,7 @@ const styles = StyleSheet.create({
   fullscreenCardBadgeText: {
     color: '#F59E0B',
     fontSize: 11,
-    fontFamily: 'Inter_800ExtraBold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.5,
   },
   fullscreenCardCloseBtn: {
@@ -5081,7 +5082,7 @@ const styles = StyleSheet.create({
   cardZoomHintText: {
     color: Colors.gold,
     fontSize: 11,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
 
   postModalVideoWrap: {
@@ -5123,7 +5124,7 @@ const styles = StyleSheet.create({
   commentAvatarText: {
     color: '#fff',
     fontSize: 12,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
   },
   commentBubble: {
     flex: 1,
@@ -5142,18 +5143,18 @@ const styles = StyleSheet.create({
   commentAuthor: {
     color: '#fff',
     fontSize: 12,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   commentTime: {
     color: Colors.textMuted,
     fontSize: 11,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.data,
   },
   commentContent: {
     color: 'rgba(255,255,255,0.82)',
     fontSize: 13,
     lineHeight: 18,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   commentComposer: {
     flexDirection: 'row',
@@ -5169,7 +5170,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     color: '#fff',
     fontSize: 13,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     outlineStyle: 'none' as any,
   },
   commentSendBtn: {
@@ -5184,7 +5185,7 @@ const styles = StyleSheet.create({
   commentSendText: {
     color: '#000',
     fontSize: 12,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
 
   /* Tier Dropdown */
@@ -5223,12 +5224,12 @@ const styles = StyleSheet.create({
   tierOptionText: {
     color: 'rgba(255,255,255,0.75)',
     fontSize: 13,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   tierOptionTextActive: {
     color: Colors.primary,
     fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   /* Challenge Invite Modal Styles */
   inviteModalOverlay: {
@@ -5281,14 +5282,14 @@ const styles = StyleSheet.create({
   inviteModalTitle: {
     color: '#fff',
     fontSize: 22,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
     fontWeight: '700',
     textAlign: 'center',
   },
   inviteModalSubtitle: {
     color: '#94A3B8',
     fontSize: 14,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     marginTop: 4,
     marginBottom: 18,
     textAlign: 'center',
@@ -5315,7 +5316,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     flex: 1,
     marginRight: 8,
   },
@@ -5329,7 +5330,7 @@ const styles = StyleSheet.create({
     color: Colors.gold,
     fontSize: 12,
     fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
   },
   invitePerkList: {
     gap: 8,
@@ -5342,7 +5343,7 @@ const styles = StyleSheet.create({
   invitePerkText: {
     color: '#CBD5E1',
     fontSize: 13,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   inviteLinkContainer: {
     width: '100%',
@@ -5361,7 +5362,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: '#94A3B8',
     fontSize: 12,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     marginRight: 8,
   },
   inviteCopyBtn: {
@@ -5380,7 +5381,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   invitePrimaryShareBtn: {
     width: '100%',
@@ -5397,7 +5398,7 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 15,
     fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   inviteSecondaryCommunityBtn: {
     width: '100%',
@@ -5419,7 +5420,7 @@ const styles = StyleSheet.create({
     color: '#E2E8F0',
     fontSize: 14,
     fontWeight: '600',
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.heading,
   },  /* Workout Milestone & Challenge Invite Post Styles */
   workoutMilestoneCard: {
     backgroundColor: 'rgba(245, 158, 11, 0.08)',
@@ -5448,7 +5449,7 @@ const styles = StyleSheet.create({
     color: '#F59E0B',
     fontSize: 11,
     fontWeight: '800',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.5,
   },
   workoutPointsPill: {
@@ -5461,13 +5462,13 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 11,
     fontWeight: '800',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
   },
   workoutMilestoneText: {
     color: '#F1F5F9',
     fontSize: 14,
     lineHeight: 22,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.bodyMedium,
   },
   challengeInvitePostCard: {
     backgroundColor: '#0E172E',
@@ -5502,7 +5503,7 @@ const styles = StyleSheet.create({
   challengeInvitePostBadgeText: {
     color: Colors.gold,
     fontSize: 11,
-    fontFamily: 'Inter_800ExtraBold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.5,
   },
   challengeInvitePointsPill: {
@@ -5519,7 +5520,7 @@ const styles = StyleSheet.create({
   challengeInvitePointsPillText: {
     color: '#F59E0B',
     fontSize: 11,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
   },
   challengeInviteHeroBox: {
     flexDirection: 'row',
@@ -5548,14 +5549,14 @@ const styles = StyleSheet.create({
   challengeInviteTitle: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
     lineHeight: 22,
     marginBottom: 2,
   },
   challengeInviteSubtitle: {
     color: '#94A3B8',
     fontSize: 12,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   challengeInviteStatsRow: {
     flexDirection: 'row',
@@ -5578,7 +5579,7 @@ const styles = StyleSheet.create({
   challengeInviteStatChipText: {
     color: '#CBD5E1',
     fontSize: 12,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.dataBold,
   },
   challengeInviteCategoryChip: {
     backgroundColor: 'rgba(201, 148, 58, 0.1)',
@@ -5587,7 +5588,7 @@ const styles = StyleSheet.create({
   challengeInviteCategoryChipText: {
     color: Colors.gold,
     fontSize: 12,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   challengeInviteActionsRow: {
     flexDirection: 'row',
@@ -5612,7 +5613,7 @@ const styles = StyleSheet.create({
   challengeInviteAcceptBtnText: {
     color: Colors.obsidian,
     fontSize: 13,
-    fontFamily: 'Inter_800ExtraBold',
+    fontFamily: Fonts.heading,
   },
   challengeInviteCopyBtn: {
     flexDirection: 'row',
@@ -5633,7 +5634,7 @@ const styles = StyleSheet.create({
   challengeInviteCopyBtnText: {
     color: Colors.gold,
     fontSize: 12,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   challengeInviteCopyBtnTextSuccess: {
     color: '#22C55E',

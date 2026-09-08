@@ -271,8 +271,19 @@ export default function StrengthPlanDashboard() {
         updatePlanProgressState(updatedPlan);
 
         // Log workout session to backend with ACTUAL recorded duration!
+        const matchedDay = plan.days?.find((d) => d.day?.toLowerCase() === dayLabel.toLowerCase());
+        const dayTitle = matchedDay?.title || matchedDay?.day || dayLabel;
+        const planSummary = plan.summary || 'Strength Plan';
+        const cleanPlanName = planSummary.includes(' using ')
+          ? planSummary.split(' using ')[0].replace(/ plan/i, '').trim()
+          : (planSummary.toLowerCase().includes(' plan')
+              ? planSummary.split(/ plan/i)[0].trim()
+              : planSummary.trim());
+        const workoutTitle = dayTitle ? `${cleanPlanName} - ${dayTitle}` : cleanPlanName;
+
         void createWorkoutLog({
           workout_id: `${plan.plan_id}-${dayLabel.toLowerCase().replace(/\s+/g, '-')}`,
+          title: workoutTitle,
           duration_seconds: finalDuration,
           status: 'completed',
         }).catch(() => undefined);

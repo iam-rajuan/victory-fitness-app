@@ -6,6 +6,9 @@ import PostLoginOnboardingFlow from '../../components/onboarding/PostLoginOnboar
 import { AuthUser, fetchCurrentUser } from '../../lib/api';
 import { useLanguage } from '../../lib/i18n';
 
+import { Colors } from '../../constants/Colors';
+import { Fonts } from '../../constants/Typography';
+
 export default function OnboardMotivationScreen() {
   const { t } = useLanguage();
   const [user, setUser] = React.useState<AuthUser | null>(null);
@@ -33,7 +36,7 @@ export default function OnboardMotivationScreen() {
   if (loading || !user) {
     return (
       <SafeAreaView style={styles.screen}>
-        <ActivityIndicator size="large" color="#00F0D0" />
+        <ActivityIndicator size="large" color={Colors.gold} />
         <Text style={styles.loadingText}>{t('Loading your profile...')}</Text>
       </SafeAreaView>
     );
@@ -47,11 +50,12 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#070909',
+    backgroundColor: Colors.obsidian,
     gap: 12,
   },
   loadingText: {
-    color: 'rgba(255,255,255,0.7)',
+    color: Colors.textSecondary,
     fontSize: 13,
+    fontFamily: Fonts.body,
   },
 });

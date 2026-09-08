@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
+import { Fonts } from '../../constants/Typography';
 import { useLanguage } from '../../lib/i18n';
 
 const SUGGESTION_CHIPS = [
@@ -143,13 +144,13 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: Colors.gold,
     fontSize: 12,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 1.2,
   },
   headerSub: {
     color: Colors.textMuted,
     fontSize: 11,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     marginTop: 1,
   },
   inputContainer: {
@@ -167,7 +168,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: Colors.ivory,
     fontSize: 14,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     paddingVertical: 10,
     outlineStyle: 'none' as any,
   },
@@ -201,7 +202,7 @@ const styles = StyleSheet.create({
   chipText: {
     color: Colors.ivory,
     fontSize: 12,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.bodyMedium,
   },
   chipActive: {
     backgroundColor: Colors.gold,
@@ -210,6 +211,6 @@ const styles = StyleSheet.create({
   },
   chipTextActive: {
     color: Colors.obsidian,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
 });

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
+import { Fonts } from '../../constants/Typography';
 import { useLanguage } from '../../lib/i18n';
 import {
   AccountabilityPartnerResponse,
@@ -147,7 +148,7 @@ export default function AccountabilityPartnerCard({ onStatusChange }: Accountabi
     return (
       <View style={styles.card}>
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="small" color={Colors.accentBlue} />
+          <ActivityIndicator size="small" color={Colors.gold} />
           <Text style={styles.loadingText}>{t('Checking accountability partner...')}</Text>
         </View>
       </View>
@@ -165,7 +166,7 @@ export default function AccountabilityPartnerCard({ onStatusChange }: Accountabi
       <View style={styles.cardHeader}>
         <View style={styles.headerTitleWrap}>
           <View style={styles.iconCircle}>
-            <Ionicons name="people" size={16} color="#00F0D0" />
+            <Ionicons name="people" size={16} color={Colors.gold} />
           </View>
           <View style={styles.headerTitles}>
             <Text style={styles.cardTitle} numberOfLines={1} ellipsizeMode="tail">{t('ACCOUNTABILITY DUO')}</Text>
@@ -175,9 +176,9 @@ export default function AccountabilityPartnerCard({ onStatusChange }: Accountabi
         {isPaired && (
           <TouchableOpacity onPress={handleUnpair} disabled={unpairing} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} style={{ flexShrink: 0 }}>
             {unpairing ? (
-              <ActivityIndicator size="small" color="#EF4444" />
+              <ActivityIndicator size="small" color={Colors.accentDanger} />
             ) : (
-              <Ionicons name="close-circle-outline" size={20} color="rgba(255,255,255,0.4)" />
+              <Ionicons name="close-circle-outline" size={20} color={Colors.textMuted} />
             )}
           </TouchableOpacity>
         )}
@@ -211,12 +212,12 @@ export default function AccountabilityPartnerCard({ onStatusChange }: Accountabi
             <View style={styles.dailyStatusBadgeWrap}>
               {trainedToday ? (
                 <View style={styles.trainedBadge}>
-                  <Ionicons name="checkmark-circle" size={26} color="#10B981" />
+                  <Ionicons name="checkmark-circle" size={26} color={Colors.victoryGreen} />
                   <Text style={styles.trainedBadgeText}>{t('Trained')}</Text>
                 </View>
               ) : (
                 <View style={styles.notTrainedBadge}>
-                  <Ionicons name="ellipse-outline" size={26} color="#9CA3AF" />
+                  <Ionicons name="ellipse-outline" size={26} color={Colors.textMuted} />
                   <Text style={styles.notTrainedBadgeText}>{t('Resting')}</Text>
                 </View>
               )}
@@ -245,10 +246,10 @@ export default function AccountabilityPartnerCard({ onStatusChange }: Accountabi
                 activeOpacity={0.85}
               >
                 {nudging ? (
-                  <ActivityIndicator size="small" color="#04111F" />
+                  <ActivityIndicator size="small" color={Colors.obsidian} />
                 ) : (
                   <>
-                    <Ionicons name="notifications" size={15} color="#04111F" />
+                    <Ionicons name="notifications" size={15} color={Colors.obsidian} />
                     <Text style={styles.nudgeBtnText}>{t('Send 8pm Nudge')}</Text>
                   </>
                 )}
@@ -262,7 +263,7 @@ export default function AccountabilityPartnerCard({ onStatusChange }: Accountabi
       {isPending ? (
         <View style={styles.pendingContainer}>
           <View style={styles.pendingBadgeRow}>
-            <Ionicons name="time-outline" size={18} color="#F59E0B" />
+            <Ionicons name="time-outline" size={18} color={Colors.copper} />
             <Text style={styles.pendingTitle}>{t('Pairing Request Pending')}</Text>
           </View>
           {generatedCode ? (
@@ -302,7 +303,7 @@ export default function AccountabilityPartnerCard({ onStatusChange }: Accountabi
               onPress={() => setShowInviteModal(true)}
               activeOpacity={0.85}
             >
-              <Ionicons name="person-add" size={16} color="#04111F" />
+              <Ionicons name="person-add" size={16} color={Colors.obsidian} />
               <Text style={styles.primaryActionText}>{t('Invite Partner')}</Text>
             </TouchableOpacity>
 
@@ -311,7 +312,7 @@ export default function AccountabilityPartnerCard({ onStatusChange }: Accountabi
               onPress={() => setShowAcceptModal(true)}
               activeOpacity={0.85}
             >
-              <Ionicons name="key-outline" size={16} color="#00F0D0" />
+              <Ionicons name="key-outline" size={16} color={Colors.gold} />
               <Text style={styles.secondaryActionText}>{t('Enter Code')}</Text>
             </TouchableOpacity>
           </View>
@@ -323,9 +324,9 @@ export default function AccountabilityPartnerCard({ onStatusChange }: Accountabi
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t('INVITE ACCOUNTABILITY PARTNER')}</Text>
+              <Text style={styles.modalTitle}>{t('INVITE ACCOUNTABILITY DUO')}</Text>
               <TouchableOpacity onPress={() => setShowInviteModal(false)} disabled={submittingInvite}>
-                <Ionicons name="close" size={22} color="rgba(255,255,255,0.7)" />
+                <Ionicons name="close" size={22} color={Colors.textSecondary} />
               </TouchableOpacity>
             </View>
             <Text style={styles.modalSubtext}>
@@ -337,7 +338,7 @@ export default function AccountabilityPartnerCard({ onStatusChange }: Accountabi
               value={inviteEmail}
               onChangeText={setInviteEmail}
               placeholder="partner@example.com (optional)"
-              placeholderTextColor="rgba(255,255,255,0.4)"
+              placeholderTextColor={Colors.placeholder}
               autoCapitalize="none"
               keyboardType="email-address"
               editable={!submittingInvite}
@@ -357,7 +358,7 @@ export default function AccountabilityPartnerCard({ onStatusChange }: Accountabi
                 disabled={submittingInvite}
               >
                 {submittingInvite ? (
-                  <ActivityIndicator size="small" color="#04111F" />
+                  <ActivityIndicator size="small" color={Colors.obsidian} />
                 ) : (
                   <Text style={styles.modalConfirmText}>{t('Generate Code')}</Text>
                 )}
@@ -374,7 +375,7 @@ export default function AccountabilityPartnerCard({ onStatusChange }: Accountabi
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t('ENTER INVITE CODE')}</Text>
               <TouchableOpacity onPress={() => setShowAcceptModal(false)} disabled={submittingAccept}>
-                <Ionicons name="close" size={22} color="rgba(255,255,255,0.7)" />
+                <Ionicons name="close" size={22} color={Colors.textSecondary} />
               </TouchableOpacity>
             </View>
             <Text style={styles.modalSubtext}>
@@ -386,7 +387,7 @@ export default function AccountabilityPartnerCard({ onStatusChange }: Accountabi
               value={inputCode}
               onChangeText={(txt) => setInputCode(txt.toUpperCase().slice(0, 10))}
               placeholder="e.g. A9B2C4"
-              placeholderTextColor="rgba(255,255,255,0.4)"
+              placeholderTextColor={Colors.placeholder}
               autoCapitalize="characters"
               maxLength={10}
               editable={!submittingAccept}
@@ -406,7 +407,7 @@ export default function AccountabilityPartnerCard({ onStatusChange }: Accountabi
                 disabled={submittingAccept}
               >
                 {submittingAccept ? (
-                  <ActivityIndicator size="small" color="#04111F" />
+                  <ActivityIndicator size="small" color={Colors.obsidian} />
                 ) : (
                   <Text style={styles.modalConfirmText}>{t('Accept & Pair')}</Text>
                 )}
@@ -421,14 +422,19 @@ export default function AccountabilityPartnerCard({ onStatusChange }: Accountabi
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#121422',
+    backgroundColor: Colors.surfaceCard,
     marginHorizontal: 16,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: 'rgba(0, 240, 208, 0.16)',
+    borderColor: Colors.cardBorder,
     padding: 18,
     marginBottom: 16,
     overflow: 'hidden',
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 2,
   },
   loadingWrap: {
     flexDirection: 'row',
@@ -437,9 +443,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   loadingText: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: Colors.textSecondary,
     fontSize: 13,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.bodyMedium,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -463,21 +469,22 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(0, 240, 208, 0.15)',
+    backgroundColor: 'rgba(201, 148, 58, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(201, 148, 58, 0.3)',
   },
   cardTitle: {
-    color: '#fff',
+    color: Colors.text,
     fontSize: 14,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.5,
   },
   cardSubtitle: {
-    color: 'rgba(255, 255, 255, 0.45)',
+    color: Colors.textMuted,
     fontSize: 11,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   activeContainer: {
     paddingTop: 4,
@@ -485,9 +492,11 @@ const styles = StyleSheet.create({
   partnerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: 'rgba(13, 43, 69, 0.4)',
     borderRadius: 14,
     padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(181, 101, 29, 0.15)',
   },
   partnerAvatarWrap: {
     marginRight: 12,
@@ -496,31 +505,29 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(0, 240, 208, 0.2)',
+    backgroundColor: 'rgba(201, 148, 58, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(0, 240, 208, 0.4)',
+    borderColor: 'rgba(201, 148, 58, 0.4)',
   },
   partnerInitials: {
-    color: '#00F0D0',
+    color: Colors.gold,
     fontSize: 16,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   partnerInfo: {
     flex: 1,
   },
   partnerName: {
-    color: '#fff',
+    color: Colors.text,
     fontSize: 15,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   partnerEmail: {
-    color: 'rgba(255, 255, 255, 0.45)',
+    color: Colors.textMuted,
     fontSize: 11,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   partnerStatsRow: {
     flexDirection: 'row',
@@ -529,12 +536,12 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   partnerStatText: {
-    color: 'rgba(255, 255, 255, 0.75)',
+    color: Colors.textSecondary,
     fontSize: 11,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.data,
   },
   partnerStatDivider: {
-    color: 'rgba(255, 255, 255, 0.25)',
+    color: Colors.textMuted,
     fontSize: 10,
   },
   dailyStatusBadgeWrap: {
@@ -547,20 +554,18 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   trainedBadgeText: {
-    color: '#10B981',
+    color: Colors.victoryGreen,
     fontSize: 10,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   notTrainedBadge: {
     alignItems: 'center',
     gap: 2,
   },
   notTrainedBadgeText: {
-    color: '#9CA3AF',
+    color: Colors.textMuted,
     fontSize: 10,
-    fontWeight: '600',
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.bodyMedium,
   },
   statusFooter: {
     marginTop: 12,
@@ -570,21 +575,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   statusSuccessText: {
-    color: '#10B981',
+    color: Colors.victoryGreen,
     fontSize: 12,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.bodyMedium,
   },
   statusWarningText: {
-    color: '#F59E0B',
+    color: Colors.copper,
     fontSize: 12,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.bodyMedium,
   },
   nudgeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#00F0D0',
+    backgroundColor: Colors.gold,
     borderRadius: 12,
     paddingVertical: 10,
     marginTop: 4,
@@ -593,15 +598,14 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   nudgeBtnText: {
-    color: '#04111F',
+    color: Colors.obsidian,
     fontSize: 13,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   pendingContainer: {
-    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+    backgroundColor: 'rgba(181, 101, 29, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.25)',
+    borderColor: 'rgba(181, 101, 29, 0.25)',
     borderRadius: 14,
     padding: 14,
   },
@@ -612,43 +616,45 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   pendingTitle: {
-    color: '#F59E0B',
+    color: Colors.copper,
     fontSize: 13,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   codeBox: {
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'rgba(13, 13, 13, 0.6)',
     borderRadius: 10,
     padding: 12,
     alignItems: 'center',
     marginVertical: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(181, 101, 29, 0.2)',
   },
   codeLabel: {
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: Colors.textMuted,
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.5,
     marginBottom: 4,
   },
   codeValue: {
-    color: '#00F0D0',
+    color: Colors.gold,
     fontSize: 24,
-    fontWeight: '900',
-    fontFamily: 'Inter_900Black',
+    fontFamily: Fonts.dataBold,
     letterSpacing: 3,
   },
   codeSubtext: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: Colors.textSecondary,
     fontSize: 11,
     textAlign: 'center',
     marginTop: 6,
     lineHeight: 16,
+    fontFamily: Fonts.body,
   },
   pendingSubtext: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: Colors.textSecondary,
     fontSize: 12,
     lineHeight: 18,
+    fontFamily: Fonts.body,
   },
   cancelPendingBtn: {
     marginTop: 10,
@@ -657,18 +663,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   cancelPendingText: {
-    color: '#EF4444',
+    color: Colors.accentDanger,
     fontSize: 12,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.heading,
   },
   emptyContainer: {
     paddingTop: 2,
   },
   emptyPrompt: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: Colors.textSecondary,
     fontSize: 12,
     lineHeight: 18,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     marginBottom: 14,
   },
   emptyActionsRow: {
@@ -681,15 +687,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#00F0D0',
+    backgroundColor: Colors.gold,
     borderRadius: 12,
     paddingVertical: 11,
   },
   primaryActionText: {
-    color: '#04111F',
+    color: Colors.obsidian,
     fontSize: 13,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   secondaryActionBtn: {
     flex: 1,
@@ -697,21 +702,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: 'rgba(0, 240, 208, 0.1)',
+    backgroundColor: 'rgba(201, 148, 58, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 240, 208, 0.3)',
+    borderColor: 'rgba(201, 148, 58, 0.3)',
     borderRadius: 12,
     paddingVertical: 11,
   },
   secondaryActionText: {
-    color: '#00F0D0',
+    color: Colors.gold,
     fontSize: 13,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.82)',
+    backgroundColor: 'rgba(13, 13, 13, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -719,11 +723,16 @@ const styles = StyleSheet.create({
   modalCard: {
     width: '100%',
     maxWidth: 400,
-    backgroundColor: '#0F1216',
+    backgroundColor: Colors.surfaceCard,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: Colors.cardBorder,
     padding: 20,
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 4,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -732,34 +741,33 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   modalTitle: {
-    color: '#fff',
+    color: Colors.text,
     fontSize: 15,
-    fontWeight: '800',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
     letterSpacing: 0.5,
   },
   modalSubtext: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: Colors.textSecondary,
     fontSize: 12,
     lineHeight: 18,
     marginBottom: 16,
+    fontFamily: Fonts.body,
   },
   modalInput: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: Colors.inputBackground,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.14)',
+    borderColor: Colors.inputBorder,
     borderRadius: 12,
-    color: '#fff',
+    color: Colors.text,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 14,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.bodyMedium,
     marginBottom: 18,
   },
   codeInput: {
     fontSize: 20,
-    fontWeight: '800',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
     textAlign: 'center',
     letterSpacing: 3,
   },
@@ -769,26 +777,26 @@ const styles = StyleSheet.create({
   },
   modalCancelBtn: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(247, 243, 238, 0.08)',
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
   },
   modalCancelText: {
-    color: '#fff',
+    color: Colors.textSecondary,
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: Fonts.heading,
   },
   modalConfirmBtn: {
     flex: 1,
-    backgroundColor: '#00F0D0',
+    backgroundColor: Colors.gold,
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
   },
   modalConfirmText: {
-    color: '#04111F',
+    color: Colors.obsidian,
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: Fonts.heading,
   },
 });

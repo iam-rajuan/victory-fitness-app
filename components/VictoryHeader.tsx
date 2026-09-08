@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { fetchAppNotifications, getAuthUser, fetchCurrentUser } from '../lib/api';
 import { subscribeToPushNotifications } from '../lib/pushNotifications';
 import { Colors } from '../constants/Colors';
+import { Fonts } from '../constants/Typography';
 import { useLanguage } from '../lib/i18n';
 
 interface VictoryHeaderProps {
@@ -196,14 +197,13 @@ const styles = StyleSheet.create({
   },
   greetingPrefix: {
     color: Colors.textSecondary,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.heading,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
   },
   greetingName: {
-    fontWeight: '700',
     color: Colors.gold,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
   },
   rightBlock: {
     alignItems: 'flex-end',
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
   notificationButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(13, 43, 69, 0.45)',
+    backgroundColor: 'rgba(13, 43, 69, 0.6)',
     borderWidth: 1,
     borderColor: 'rgba(181, 101, 29, 0.3)',
   },
@@ -233,8 +233,8 @@ const styles = StyleSheet.create({
   },
   unreadBadgeText: {
     color: Colors.ivory,
-    fontSize: 8,
-    fontFamily: 'Inter_700Bold',
+    fontSize: 9,
+    fontFamily: Fonts.dataBold,
     textAlign: 'center',
   },
 });

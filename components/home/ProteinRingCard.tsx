@@ -12,6 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
+import { Fonts } from '../../constants/Typography';
 import { fetchCurrentUser, fetchCurrentUserBodyMetrics } from '../../lib/api';
 import {
   getLatestNutritionPlan,
@@ -425,7 +426,7 @@ const styles = StyleSheet.create({
   eyebrow: {
     color: Colors.gold,
     fontSize: 11,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 1.2,
     marginBottom: 4,
     textTransform: 'uppercase',
@@ -433,7 +434,7 @@ const styles = StyleSheet.create({
   title: {
     color: Colors.ivory,
     fontSize: 18,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.2,
   },
   logBtn: {
@@ -448,7 +449,7 @@ const styles = StyleSheet.create({
   logBtnText: {
     color: Colors.obsidian,
     fontSize: 12,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   contentRow: {
     flexDirection: 'row',
@@ -491,13 +492,13 @@ const styles = StyleSheet.create({
   ringCenterProteinVal: {
     color: Colors.gold,
     fontSize: 22,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
     lineHeight: 26,
   },
   ringCenterProteinLabel: {
     color: Colors.textSecondary,
     fontSize: 9,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 1,
     marginTop: -2,
     marginBottom: 2,
@@ -505,7 +506,7 @@ const styles = StyleSheet.create({
   ringCenterCaloriesSub: {
     color: Colors.textMuted,
     fontSize: 11,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.data,
   },
   statsColumn: {
     flex: 1,
@@ -547,13 +548,13 @@ const styles = StyleSheet.create({
   statTitleGold: {
     color: Colors.gold,
     fontSize: 10,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.8,
   },
   statTitleCyan: {
     color: Colors.copper,
     fontSize: 10,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.8,
   },
   statValueRow: {
@@ -564,24 +565,24 @@ const styles = StyleSheet.create({
   statValGold: {
     color: Colors.ivory,
     fontSize: 18,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
     marginRight: 4,
   },
   statTargetGold: {
     color: Colors.textSecondary,
     fontSize: 12,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.data,
   },
   statValCyan: {
     color: Colors.ivory,
     fontSize: 18,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
     marginRight: 4,
   },
   statTargetCyan: {
     color: Colors.textSecondary,
     fontSize: 12,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.data,
   },
   progressBarBg: {
     height: 5,
@@ -603,21 +604,21 @@ const styles = StyleSheet.create({
   statPercentGold: {
     color: Colors.gold,
     fontSize: 10,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.dataBold,
   },
   statPercentCyan: {
     color: Colors.copper,
     fontSize: 10,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.dataBold,
   },
   // Modal styles
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(13, 13, 13, 0.80)',
     justifyContent: 'flex-end',
   },
   modalSheet: {
-    backgroundColor: '#0D1B2A',
+    backgroundColor: Colors.surfaceCard,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 22,
@@ -642,13 +643,13 @@ const styles = StyleSheet.create({
   modalEyebrow: {
     color: Colors.gold,
     fontSize: 11,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 1.2,
   },
   modalTitle: {
     color: Colors.ivory,
     fontSize: 20,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
     marginTop: 2,
   },
   modalCloseIconBtn: {
@@ -662,7 +663,7 @@ const styles = StyleSheet.create({
   modalSubtitle: {
     color: Colors.textSecondary,
     fontSize: 12,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     lineHeight: 18,
     marginBottom: 16,
   },
@@ -674,11 +675,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#111F30',
+    backgroundColor: Colors.navy,
     borderRadius: 14,
     padding: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: 'rgba(181, 101, 29, 0.25)',
   },
   mealItemCardCompleted: {
     borderColor: 'rgba(26, 122, 74, 0.50)',
@@ -700,7 +701,7 @@ const styles = StyleSheet.create({
   mealItemLabel: {
     color: Colors.ivory,
     fontSize: 12,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   mealItemDoneBadge: {
     backgroundColor: 'rgba(26, 122, 74, 0.25)',
@@ -711,18 +712,18 @@ const styles = StyleSheet.create({
   mealItemDoneText: {
     color: Colors.victoryGreen,
     fontSize: 9,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   mealItemName: {
     color: Colors.ivory,
     fontSize: 13,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.bodyMedium,
     marginBottom: 2,
   },
   mealItemMacros: {
     color: Colors.textMuted,
     fontSize: 11,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.data,
   },
   mealActionButton: {
     flexDirection: 'row',
@@ -743,12 +744,12 @@ const styles = StyleSheet.create({
   mealActionButtonTextPending: {
     color: Colors.obsidian,
     fontSize: 12,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   mealActionButtonTextCompleted: {
     color: Colors.victoryGreen,
     fontSize: 12,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   fullPlanBtn: {
     backgroundColor: 'rgba(181, 101, 29, 0.15)',
@@ -761,6 +762,6 @@ const styles = StyleSheet.create({
   fullPlanBtnText: {
     color: Colors.gold,
     fontSize: 13,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
 });

@@ -5,6 +5,7 @@ import Constants from 'expo-constants';
 import { fetchHomepageQuote } from '../../lib/api';
 import { useLanguage } from '../../lib/i18n';
 import { Colors } from '../../constants/Colors';
+import { Fonts } from '../../constants/Typography';
 
 // Curated pool of version release quotes.
 // Guarantees each app release version has an inspiring, deterministic quote
@@ -116,15 +117,14 @@ const styles = StyleSheet.create({
   },
   quoteTitle: {
     fontSize: 10,
-    fontWeight: '700',
     color: Colors.gold,
     letterSpacing: 1.5,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   quoteIcon: {
     fontSize: 36,
     color: 'rgba(201, 148, 58, 0.22)',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     height: 30,
     lineHeight: 36,
   },
@@ -133,17 +133,16 @@ const styles = StyleSheet.create({
   },
   quoteText: {
     fontSize: 16,
-    fontWeight: '600',
     color: Colors.ivory,
-    lineHeight: 22,
-    fontFamily: 'Inter_600SemiBold',
+    lineHeight: 23,
+    fontFamily: Fonts.display,
     marginBottom: 8,
   },
   quoteAuthor: {
     fontSize: 12,
     color: Colors.copper,
     textAlign: 'right',
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.bodyMedium,
     fontStyle: 'italic',
   },
 });

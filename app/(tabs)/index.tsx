@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl, Text, TouchableOpacity, TextInput } from 'react-native';
 import { Colors } from '../../constants/Colors';
+import { Fonts } from '../../constants/Typography';
 import VictoryHeader from '../../components/VictoryHeader';
 import GreetingCard from '../../components/home/GreetingCard';
 import FeatureCards from '../../components/home/FeatureCards';
@@ -313,12 +314,17 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   weightReminderCard: {
-    backgroundColor: '#13132A',
+    backgroundColor: Colors.surfaceCard,
     borderRadius: 20,
     padding: 18,
     borderWidth: 1,
-    borderColor: 'rgba(226, 179, 78, 0.35)',
+    borderColor: 'rgba(181, 101, 29, 0.25)',
     marginBottom: 20,
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 2,
   },
   weightReminderHeader: {
     flexDirection: 'row',
@@ -327,10 +333,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   weightReminderEyebrow: {
-    color: Colors.accentGold,
+    color: Colors.gold,
     fontSize: 11,
     letterSpacing: 1.2,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   weightReminderCloseBtn: {
     color: Colors.textMuted,
@@ -339,16 +345,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   weightReminderTitle: {
-    color: '#fff',
+    color: Colors.ivory,
     fontSize: 17,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
     marginBottom: 6,
   },
   weightReminderText: {
     color: Colors.textSecondary,
     fontSize: 13,
     lineHeight: 18,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     marginBottom: 14,
   },
   weightActionRow: {
@@ -358,26 +364,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   weightConfirmBtn: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.gold,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
   weightConfirmBtnText: {
-    color: '#062724',
+    color: Colors.obsidian,
     fontSize: 13,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   weightUpdateBtn: {
-    backgroundColor: Colors.accentSurface,
+    backgroundColor: Colors.navy,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(181, 101, 29, 0.35)',
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
   weightUpdateBtnText: {
-    color: Colors.text,
+    color: Colors.ivory,
     fontSize: 13,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.heading,
   },
   weightSnoozeBtn: {
     paddingHorizontal: 10,
@@ -386,7 +394,7 @@ const styles = StyleSheet.create({
   weightSnoozeBtnText: {
     color: Colors.textMuted,
     fontSize: 12,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.heading,
   },
   weightEditContainer: {
     marginTop: 4,
@@ -395,11 +403,11 @@ const styles = StyleSheet.create({
     height: 46,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.inputBorder,
-    backgroundColor: Colors.inputBackground,
-    color: Colors.text,
+    borderColor: 'rgba(181, 101, 29, 0.35)',
+    backgroundColor: Colors.surfaceCard,
+    color: Colors.ivory,
     paddingHorizontal: 14,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     fontSize: 14,
     marginBottom: 10,
     outlineStyle: 'none' as any,
@@ -409,15 +417,15 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   weightSaveBtn: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.gold,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
   weightSaveBtnText: {
-    color: '#062724',
+    color: Colors.obsidian,
     fontSize: 13,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   weightCancelBtn: {
     borderRadius: 12,
@@ -429,47 +437,52 @@ const styles = StyleSheet.create({
   weightCancelBtnText: {
     color: Colors.textMuted,
     fontSize: 13,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.heading,
   },
   lockedSectionCard: {
-    backgroundColor: '#13132A',
+    backgroundColor: Colors.surfaceCard,
     borderRadius: 20,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(181, 101, 29, 0.25)',
     marginBottom: 24,
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 2,
   },
   lockedSectionEyebrow: {
-    color: Colors.accentGold,
+    color: Colors.gold,
     fontSize: 11,
     letterSpacing: 1.2,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     marginBottom: 10,
   },
   lockedSectionTitle: {
-    color: '#fff',
+    color: Colors.ivory,
     fontSize: 18,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
     marginBottom: 8,
   },
   lockedSectionText: {
     color: Colors.textSecondary,
     fontSize: 13,
     lineHeight: 19,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     marginBottom: 16,
   },
   lockedSectionBtn: {
     alignSelf: 'flex-start',
-    backgroundColor: Colors.accentGold,
+    backgroundColor: Colors.gold,
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
   lockedSectionBtnText: {
-    color: '#1F1300',
+    color: Colors.obsidian,
     fontSize: 13,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.5,
   },
 });

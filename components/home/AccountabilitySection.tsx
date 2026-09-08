@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
+import { Fonts } from '../../constants/Typography';
 import { useLanguage } from '../../lib/i18n';
 
 const days = [
@@ -21,8 +22,8 @@ export default function AccountabilitySection() {
       <View style={styles.sectionHeader}>
         <Text style={styles.accountabilityTitle}>{t('Accountability')}</Text>
         <View style={styles.accountabilityIcons}>
-          <Ionicons name="chatbubble-outline" size={24} color={Colors.accentBlue} />
-          <Ionicons name="add" size={24} color={Colors.accentBlue} style={{ marginLeft: 16 }} />
+          <Ionicons name="chatbubble-outline" size={22} color={Colors.gold} />
+          <Ionicons name="add" size={22} color={Colors.gold} style={{ marginLeft: 16 }} />
         </View>
       </View>
 
@@ -30,7 +31,7 @@ export default function AccountabilitySection() {
         <View style={styles.accountabilityTopRow}>
           <View style={styles.streakWrapper}>
             <View style={styles.streakAddBtn}>
-              <Ionicons name="fitness" size={16} color={Colors.accentPurple} />
+              <Ionicons name="flame" size={16} color={Colors.gold} />
             </View>
             <View style={{ marginLeft: 12 }}>
               <Text style={styles.streakSub}>{t('STREAK')}</Text>
@@ -56,7 +57,7 @@ export default function AccountabilitySection() {
         <View style={styles.modernDaysRow}>
           {days.map((d, i) => (
             <View key={i} style={styles.modernDayItem}>
-              <Text style={[styles.modernDayLabel, d.active && { color: Colors.accentBlue }]}>
+              <Text style={[styles.modernDayLabel, d.active && { color: Colors.gold }]}>
                 {d.name}
               </Text>
               <View style={[styles.modernDayDot, d.active && styles.modernDayDotActive]} />
@@ -66,12 +67,12 @@ export default function AccountabilitySection() {
 
         <View style={styles.championsBannerPill}>
           <View style={styles.avatarStack}>
-            <View style={[styles.avatarMini, { backgroundColor: '#444' }]} />
-            <View style={[styles.avatarMini, { backgroundColor: '#666', marginLeft: -8 }]} />
-            <View style={[styles.avatarMini, { backgroundColor: '#888', marginLeft: -8 }]} />
+            <View style={[styles.avatarMini, { backgroundColor: Colors.navy }]} />
+            <View style={[styles.avatarMini, { backgroundColor: Colors.copper, marginLeft: -8 }]} />
+            <View style={[styles.avatarMini, { backgroundColor: Colors.gold, marginLeft: -8 }]} />
           </View>
           <Text style={styles.championsBannerText}>
-            <Text style={{ color: Colors.accentBlue, fontWeight: '700' }}>1,270</Text> {t('CHAMPIONS TRAINING TODAY')}
+            <Text style={{ color: Colors.gold, fontFamily: Fonts.dataBold }}>1,270</Text> {t('CHAMPIONS TRAINING TODAY')}
           </Text>
         </View>
       </View>
@@ -82,77 +83,68 @@ export default function AccountabilitySection() {
 const styles = StyleSheet.create({
   section: { marginBottom: 24 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  accountabilityTitle: { fontSize: 24, fontWeight: '800', color: Colors.accentBlue, fontFamily: 'Inter_700Bold' },
+  accountabilityTitle: { fontSize: 20, color: Colors.ivory, fontFamily: Fonts.display },
   accountabilityIcons: { flexDirection: 'row', alignItems: 'center' },
   accountabilityCard: {
-    backgroundColor: '#1E2530',
+    backgroundColor: Colors.surfaceCard,
     borderRadius: 20,
     padding: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
+    borderColor: 'rgba(181, 101, 29, 0.25)',
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 2,
   },
   accountabilityTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   streakWrapper: { flexDirection: 'row', alignItems: 'center' },
   streakAddBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 14,
-    backgroundColor: 'rgba(168, 85, 247, 0.1)',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(201, 148, 58, 0.16)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(168, 85, 247, 0.2)',
+    borderColor: 'rgba(201, 148, 58, 0.35)',
   },
-  streakSub: { color: Colors.textMuted, fontSize: 12, fontWeight: '500', letterSpacing: 1 },
-  streakVal: { color: '#fff', fontSize: 12, fontWeight: '500', fontFamily: 'Inter_500Medium' },
+  streakSub: { color: Colors.gold, fontSize: 11, letterSpacing: 1, fontFamily: Fonts.heading },
+  streakVal: { color: Colors.ivory, fontSize: 13, fontFamily: Fonts.dataBold },
   atRiskBtn: {
-    backgroundColor: Colors.accentPurple,
+    backgroundColor: Colors.copper,
     borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
-  atRiskText: { color: '#fff', fontSize: 8, fontWeight: '900', letterSpacing: 1, fontFamily: 'Inter_700Bold' },
+  atRiskText: { color: Colors.ivory, fontSize: 9, letterSpacing: 0.8, fontFamily: Fonts.heading },
   milestoneContainer: { marginBottom: 24 },
   milestoneTextRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
-  dividerSubtle: { height: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginVertical: 16 },
-  milestoneLabel: { color: Colors.textMuted, fontSize: 12, fontWeight: '600', letterSpacing: 0.5 },
-  milestonePercent: { color: Colors.accentBlue, fontSize: 14, fontWeight: '700' },
-  modernProgressBg: { height: 8, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' },
+  dividerSubtle: { height: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginVertical: 14 },
+  milestoneLabel: { color: Colors.textSecondary, fontSize: 11, letterSpacing: 0.5, fontFamily: Fonts.heading },
+  milestonePercent: { color: Colors.gold, fontSize: 13, fontFamily: Fonts.dataBold },
+  modernProgressBg: { height: 6, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden' },
   modernProgressFill: {
     height: '100%',
-    backgroundColor: Colors.accentBlue,
-    borderRadius: 4,
-    shadowColor: Colors.accentBlue,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 6,
+    backgroundColor: Colors.gold,
+    borderRadius: 3,
   },
-  modernDaysRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 },
+  modernDaysRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
   modernDayItem: { alignItems: 'center' },
-  modernDayLabel: { color: Colors.textMuted, fontSize: 11, fontWeight: '700', marginBottom: 8 },
-  modernDayDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: 'rgba(255,255,255,0.1)' },
+  modernDayLabel: { color: Colors.textSecondary, fontSize: 10, marginBottom: 8, fontFamily: Fonts.data },
+  modernDayDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.12)' },
   modernDayDotActive: {
-    backgroundColor: Colors.accentBlue,
-    shadowColor: Colors.accentBlue,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 6,
-    elevation: 4,
+    backgroundColor: Colors.gold,
   },
   championsBannerPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
     borderRadius: 16,
     padding: 12,
     justifyContent: 'center',
   },
   avatarStack: { flexDirection: 'row', marginRight: 12 },
-  avatarMini: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: '#151528' },
-  championsBannerText: { color: Colors.textSecondary, fontSize: 12, fontWeight: '500' },
+  avatarMini: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: Colors.surfaceCard },
+  championsBannerText: { color: Colors.textSecondary, fontSize: 11, fontFamily: Fonts.bodyMedium },
 });

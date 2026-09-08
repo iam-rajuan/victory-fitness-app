@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '../../constants/Colors';
+import { Fonts } from '../../constants/Typography';
 import { useLanguage } from '../../lib/i18n';
 
 const emojis = ['😡', '😟', '😐', '😊', '🤩'];
@@ -40,43 +41,48 @@ export default function MoodSection() {
 
 const styles = StyleSheet.create({
   moodCard: {
-    backgroundColor: '#151528',
+    backgroundColor: Colors.surfaceCard,
     borderRadius: 20,
     padding: 24,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: 'rgba(181, 101, 29, 0.25)',
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 2,
   },
   moodTitle: {
-    color: Colors.accentBlue,
+    color: Colors.ivory,
     fontSize: 19,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
     marginBottom: 12,
   },
   moodSubtitle: {
     color: Colors.textSecondary,
     fontSize: 14,
     lineHeight: 21,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     marginBottom: 24,
   },
   journalActionBtn: {
-    backgroundColor: Colors.accentBlue,
+    backgroundColor: Colors.navy,
     borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(181, 101, 29, 0.35)',
     paddingVertical: 14,
     alignItems: 'center',
     marginBottom: 20,
   },
   journalActionText: {
-    color: '#fff',
-    fontWeight: '700',
+    color: Colors.ivory,
     fontSize: 14,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   moodDivider: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     marginBottom: 20,
   },
   moodPromptText: {
@@ -85,7 +91,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     textAlign: 'center',
     marginBottom: 20,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.bodyMedium,
   },
   moodEmojiRow: {
     flexDirection: 'row',

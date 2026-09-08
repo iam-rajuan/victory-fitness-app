@@ -16,6 +16,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/Colors';
+import { Fonts } from '../../constants/Typography';
 import { ErrorPopupModal } from '../../components/ErrorPopupModal';
 import { apiRequest, fetchCurrentUser, getAuthUser, streamCoachVictorMessage } from '../../lib/api';
 import { formatAppError } from '../../lib/error';
@@ -436,7 +437,7 @@ export default function ChatScreen() {
               activeOpacity={0.7}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <Ionicons name="arrow-forward" size={20} color={sending || !inputText.trim() ? 'rgba(255,255,255,0.4)' : '#fff'} />
+              <Ionicons name="arrow-forward" size={20} color={sending || !inputText.trim() ? Colors.textMuted : Colors.obsidian} />
             </TouchableOpacity>
           </View>
         </View>
@@ -509,25 +510,25 @@ function renderCoachMessage(text: string) {
 }
 
 function renderInlineMarkdown(text: string, keyPrefix: string) {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  const tokens = text.split(/(\*\*[^*]+\*\*)/g);
 
-  return parts.map((part, index) => {
-    if (part.startsWith('**') && part.endsWith('**')) {
+  return tokens.map((token, idx) => {
+    const boldMatch = token.match(/^\*\*([^*]+)\*\*$/);
+    if (boldMatch) {
       return (
-        <Text key={`${keyPrefix}-${index}`} style={styles.markdownBold}>
-          {part.slice(2, -2)}
+        <Text key={`${keyPrefix}-bold-${idx}`} style={styles.markdownBold}>
+          {boldMatch[1]}
         </Text>
       );
     }
-
-    return <Text key={`${keyPrefix}-${index}`}>{part}</Text>;
+    return <React.Fragment key={`${keyPrefix}-txt-${idx}`}>{token}</React.Fragment>;
   });
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: Colors.background,
   },
   flex: {
     flex: 1,
@@ -535,6 +536,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -559,20 +561,20 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: Colors.accentBlue,
+    backgroundColor: Colors.gold,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: Colors.accentBlue,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   avatarInner: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#000',
+    backgroundColor: Colors.obsidian,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -580,26 +582,26 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   headerTitle: {
-    color: Colors.accentBlue,
+    color: Colors.text,
     fontSize: 14,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   statusDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#4ade80',
-    marginRight: 4,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: Colors.victoryGreen,
+    marginRight: 5,
   },
   statusText: {
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: Colors.textMuted,
     fontSize: 10,
-    fontWeight: '600',
+    fontFamily: Fonts.bodyMedium,
+    letterSpacing: 0.5,
   },
   listContent: {
     padding: 16,
@@ -620,40 +622,42 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   coachBubble: {
-    backgroundColor: '#1E2530',
+    backgroundColor: Colors.surfaceCard,
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
     borderBottomLeftRadius: 4,
   },
   userBubble: {
-    backgroundColor: Colors.accentBlue,
+    backgroundColor: Colors.gold,
     borderBottomRightRadius: 4,
   },
   messageText: {
     fontSize: 15,
     lineHeight: 22,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   coachText: {
-    color: '#D1D5DB',
+    color: Colors.text,
   },
   userText: {
-    color: '#000',
+    color: Colors.obsidian,
   },
   markdownText: {
-    color: '#D1D5DB',
+    color: Colors.text,
     fontSize: 15,
     lineHeight: 22,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     marginBottom: 8,
   },
   markdownBold: {
-    color: '#FFFFFF',
-    fontFamily: 'Inter_700Bold',
+    color: Colors.text,
+    fontFamily: Fonts.bodyBold,
   },
   markdownHeading: {
-    color: '#FFFFFF',
+    color: Colors.text,
     fontSize: 16,
     lineHeight: 22,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     marginTop: 8,
     marginBottom: 8,
   },
@@ -661,10 +665,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 24,
     marginTop: 0,
+    fontFamily: Fonts.display,
   },
   markdownHeadingTwo: {
     fontSize: 17,
     lineHeight: 23,
+    fontFamily: Fonts.heading,
   },
   markdownListRow: {
     flexDirection: 'row',
@@ -672,25 +678,25 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   markdownListMarker: {
-    color: Colors.accentBlue,
+    color: Colors.gold,
     fontSize: 15,
     lineHeight: 22,
     width: 18,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   markdownNumberMarker: {
-    color: Colors.accentBlue,
+    color: Colors.gold,
     fontSize: 15,
     lineHeight: 22,
     minWidth: 26,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   markdownGap: {
     height: 6,
   },
   markdownDivider: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: Colors.divider,
     marginVertical: 10,
   },
   typingBubble: {
@@ -706,12 +712,13 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: Colors.accentBlue,
+    backgroundColor: Colors.gold,
   },
   inputBar: {
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.05)',
+    borderTopColor: Colors.divider,
+    backgroundColor: Colors.obsidian,
   },
   historyLoading: {
     position: 'absolute',
@@ -723,12 +730,12 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E2530',
+    backgroundColor: Colors.surfaceCard,
     borderRadius: 24,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: Colors.cardBorder,
   },
   inputWrapperDisabled: {
     opacity: 0.72,
@@ -736,26 +743,24 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    color: '#fff',
+    color: Colors.text,
     fontSize: 15,
     maxHeight: 120,
     paddingTop: 8,
     paddingBottom: 8,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     outlineStyle: 'none' as any,
   },
   sendButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: Colors.gold,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
   },
   sendButtonDisabled: {
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: 'rgba(201, 148, 58, 0.2)',
   },
 });
-
-

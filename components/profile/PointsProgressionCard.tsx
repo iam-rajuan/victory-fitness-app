@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
+import { Fonts } from '../../constants/Typography';
 import { useLanguage } from '../../lib/i18n';
 import {
   PointsBreakdownResponse,
@@ -208,6 +209,11 @@ const styles = StyleSheet.create({
     padding: 18,
     marginBottom: 16,
     overflow: 'hidden',
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 2,
   },
   loadingWrap: {
     flexDirection: 'row',
@@ -218,7 +224,7 @@ const styles = StyleSheet.create({
   loadingText: {
     color: 'rgba(255, 255, 255, 0.6)',
     fontSize: 13,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.bodyMedium,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -250,14 +256,13 @@ const styles = StyleSheet.create({
   cardTitle: {
     color: Colors.ivory,
     fontSize: 13,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.5,
   },
   cardSubtitle: {
     color: Colors.textSecondary,
     fontSize: 11,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   ptsTotalBadge: {
     backgroundColor: 'rgba(201, 148, 58, 0.15)',
@@ -271,8 +276,7 @@ const styles = StyleSheet.create({
   ptsTotalBadgeText: {
     color: Colors.gold,
     fontSize: 11,
-    fontWeight: '800',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
   },
   tierProgressionBox: {
     backgroundColor: 'rgba(255, 255, 255, 0.04)',
@@ -299,15 +303,13 @@ const styles = StyleSheet.create({
   tierLabelCurrent: {
     color: Colors.gold,
     fontSize: 12,
-    fontWeight: '800',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
     letterSpacing: 0.5,
   },
   tierLabelNext: {
     color: Colors.textSecondary,
     fontSize: 11,
-    fontWeight: '600',
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.heading,
   },
   progressBarBg: {
     height: 8,
@@ -329,12 +331,12 @@ const styles = StyleSheet.create({
   tierPctText: {
     color: 'rgba(255, 255, 255, 0.5)',
     fontSize: 10,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.data,
   },
   tierTargetText: {
     color: 'rgba(255, 255, 255, 0.5)',
     fontSize: 10,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.body,
   },
   breakdownSection: {
     paddingTop: 2,
@@ -342,7 +344,7 @@ const styles = StyleSheet.create({
   breakdownTitle: {
     color: 'rgba(255, 255, 255, 0.5)',
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.5,
     marginBottom: 10,
   },
@@ -371,12 +373,11 @@ const styles = StyleSheet.create({
     flex: 1,
     color: 'rgba(255, 255, 255, 0.8)',
     fontSize: 11,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.bodyMedium,
   },
   categoryPillValue: {
     fontSize: 12,
-    fontWeight: '800',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
   },
   chartContainer: {
     flexDirection: 'row',
@@ -403,12 +404,12 @@ const styles = StyleSheet.create({
   chartColPts: {
     color: 'rgba(255, 255, 255, 0.4)',
     fontSize: 9,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.data,
     marginBottom: 4,
   },
   chartColPtsSelected: {
     color: Colors.gold,
-    fontWeight: '700',
+    fontFamily: Fonts.dataBold,
   },
   chartBarTrack: {
     width: 14,
@@ -429,12 +430,12 @@ const styles = StyleSheet.create({
   chartColDayName: {
     color: 'rgba(255, 255, 255, 0.5)',
     fontSize: 10,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.data,
     marginTop: 6,
   },
   chartColDayNameSelected: {
     color: Colors.gold,
-    fontWeight: '700',
+    fontFamily: Fonts.dataBold,
   },
   selectedDayDetailBox: {
     backgroundColor: 'rgba(255, 255, 255, 0.04)',
@@ -450,14 +451,12 @@ const styles = StyleSheet.create({
   detailDateText: {
     color: Colors.ivory,
     fontSize: 12,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   detailTotalText: {
     color: Colors.gold,
     fontSize: 11,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
   },
   detailChipsRow: {
     flexDirection: 'row',
@@ -467,6 +466,6 @@ const styles = StyleSheet.create({
   detailChip: {
     color: 'rgba(255, 255, 255, 0.7)',
     fontSize: 10,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.data,
   },
 });

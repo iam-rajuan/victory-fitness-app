@@ -1,0 +1,402 @@
+import re
+
+file_path = r'd:\RAJUAN-PERSONAL\VSCODE\victora\victory-fitness-app\components\home\ChallengesSection.tsx'
+
+with open(file_path, 'r', encoding='utf-8') as f:
+    content = f.read()
+
+target_marker = 'const styles = StyleSheet.create({'
+idx = content.find(target_marker)
+if idx == -1:
+    print("Could not find styles marker!")
+    exit(1)
+
+new_styles = """const styles = StyleSheet.create({
+  section: { marginBottom: 24 },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    color: Colors.primary,
+    letterSpacing: 1.5,
+    paddingTop: 10,
+    paddingBottom: 10,
+    fontFamily: Fonts.heading,
+    textTransform: 'uppercase',
+  },
+  headerInviteBtn: {
+    backgroundColor: 'rgba(13, 43, 69, 0.45)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(181, 101, 29, 0.35)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  headerInviteBtnText: {
+    color: Colors.gold,
+    fontSize: 12,
+    fontFamily: Fonts.heading,
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(127,29,29,0.25)',
+    borderWidth: 1,
+    borderColor: 'rgba(248,113,113,0.4)',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  errorBannerText: {
+    flex: 1,
+    color: '#FECACA',
+    fontSize: 12,
+    lineHeight: 18,
+    fontFamily: Fonts.bodyMedium,
+  },
+  challengeLibraryLead: {
+    color: Colors.ivory,
+    fontSize: 18,
+    lineHeight: 24,
+    fontFamily: Fonts.display,
+    marginBottom: 14,
+  },
+  challengesScroll: {
+    paddingVertical: 4,
+    marginBottom: 8,
+  },
+  urgencyBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(201, 148, 58, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(201, 148, 58, 0.35)',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 4,
+  },
+  urgencyIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(201, 148, 58, 0.16)',
+    marginRight: 10,
+  },
+  urgencyCopy: { flex: 1 },
+  urgencyTitle: { color: Colors.gold, fontSize: 13, fontFamily: Fonts.heading },
+  urgencyText: { color: Colors.textSecondary, fontSize: 11, marginTop: 3, fontFamily: Fonts.body },
+  cardWrap: {
+    paddingRight: 12,
+    paddingVertical: 8,
+  },
+  challengeLibraryCard: {
+    backgroundColor: Colors.surfaceCard,
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(181, 101, 29, 0.25)',
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  challengeLibraryImage: {
+    width: '100%',
+    height: 164,
+    borderRadius: 14,
+    marginBottom: 14,
+    backgroundColor: Colors.navy,
+  },
+  challengeLibraryCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginBottom: 3,
+  },
+  challengeLibraryTitleWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  challengeLibraryTitle: {
+    color: Colors.ivory,
+    fontSize: 15,
+    lineHeight: 20,
+    fontFamily: Fonts.display,
+  },
+  challengeLibraryCategory: {
+    marginTop: 2,
+    color: Colors.copper,
+    fontSize: 10,
+    textTransform: 'uppercase',
+    fontFamily: Fonts.heading,
+  },
+  challengeLibraryFieldLabel: {
+    marginTop: 10,
+    marginBottom: 3,
+    color: Colors.textSecondary,
+    fontSize: 9,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    fontFamily: Fonts.heading,
+  },
+  challengeLibraryPointsBadge: {
+    backgroundColor: 'rgba(201, 148, 58, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(201, 148, 58, 0.35)',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  challengeLibraryPointsText: {
+    color: Colors.gold,
+    fontSize: 12,
+    fontFamily: Fonts.dataBold,
+  },
+  challengeLibraryDescription: {
+    marginTop: 0,
+    color: Colors.textSecondary,
+    fontSize: 11,
+    lineHeight: 16,
+    fontFamily: Fonts.body,
+  },
+  challengeExpandBtn: {
+    marginTop: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  challengeExpandBtnText: {
+    color: Colors.gold,
+    fontSize: 11,
+    fontFamily: Fonts.heading,
+  },
+  challengeWhyText: {
+    marginTop: 8,
+    color: Colors.textSecondary,
+    fontSize: 11,
+    lineHeight: 16,
+    fontFamily: Fonts.body,
+  },
+  challengeLibraryProgressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 14,
+  },
+  challengeLibraryProgressTrack: {
+    flex: 1,
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    overflow: 'hidden',
+  },
+  challengeLibraryProgressFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: Colors.victoryGreen,
+  },
+  challengeLibraryProgressText: {
+    color: Colors.gold,
+    fontSize: 12,
+    minWidth: 42,
+    textAlign: 'right',
+    fontFamily: Fonts.dataBold,
+  },
+  challengeLibraryFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginTop: 18,
+  },
+  challengeLibraryMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 14,
+    flex: 1,
+  },
+  challengeLibraryMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  challengeLibraryMetaText: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    fontFamily: Fonts.data,
+  },
+  challengeLibraryActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  challengeInviteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: Colors.navy,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(181, 101, 29, 0.35)',
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+  },
+  challengeInviteBtnText: {
+    color: Colors.ivory,
+    fontSize: 12,
+    fontFamily: Fonts.heading,
+  },
+  challengeStatusBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+  },
+  challengeStatusBtnPending: {
+    opacity: 0.78,
+  },
+  challengeStatusBtnActive: {
+    backgroundColor: Colors.victoryGreen,
+  },
+  challengeStatusBtnLocked: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  challengeStatusBtnText: {
+    color: Colors.ivory,
+    fontSize: 12,
+    fontFamily: Fonts.heading,
+  },
+  challengeStatusBtnTextLocked: {
+    color: Colors.textSecondary,
+  },
+  emptyCard: {
+    backgroundColor: Colors.surfaceCard,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(181, 101, 29, 0.25)',
+    padding: 18,
+  },
+  emptyTitle: {
+    color: Colors.ivory,
+    fontSize: 15,
+    fontFamily: Fonts.heading,
+  },
+  emptyText: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 6,
+    fontFamily: Fonts.body,
+  },
+  skeletonCard: {
+    backgroundColor: Colors.surfaceCard,
+    borderRadius: 18,
+    padding: 16,
+    marginRight: 12,
+    marginVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(181, 101, 29, 0.2)',
+  },
+  skeletonImage: {
+    height: 164,
+    borderRadius: 14,
+    marginBottom: 14,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  skeletonHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
+  skeletonTitleBlock: {
+    width: '55%',
+    height: 22,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  skeletonBadgeBlock: {
+    width: 86,
+    height: 30,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  skeletonStatusText: {
+    width: '28%',
+    height: 14,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    marginBottom: 12,
+  },
+  skeletonLineLg: {
+    width: '100%',
+    height: 16,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    marginBottom: 8,
+  },
+  skeletonLineMd: {
+    width: '88%',
+    height: 16,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    marginBottom: 16,
+  },
+  skeletonFooterRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 18,
+  },
+  skeletonFooterText: {
+    width: '38%',
+    height: 16,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  skeletonOpenBlock: {
+    width: 110,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  urgencyNudgeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(201, 148, 58, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(201, 148, 58, 0.35)',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginTop: 10,
+    marginBottom: 4,
+    alignSelf: 'flex-start',
+  },
+  urgencyNudgeText: {
+    color: Colors.gold,
+    fontSize: 12,
+    fontFamily: Fonts.heading,
+    letterSpacing: 0.2,
+  },
+});
+"""
+
+updated_content = content[:idx] + new_styles
+with open(file_path, 'w', encoding='utf-8') as f:
+    f.write(updated_content)
+
+print("Updated ChallengesSection.tsx styles successfully!")

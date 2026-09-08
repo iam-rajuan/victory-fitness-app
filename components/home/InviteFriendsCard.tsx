@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Platform, Share } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
+import { Fonts } from '../../constants/Typography';
 import { useLanguage } from '../../lib/i18n';
 
 export default function InviteFriendsCard() {
@@ -49,12 +50,10 @@ export default function InviteFriendsCard() {
   };
 
   return (
-    <View
-      style={[styles.premiumInviteCard, { backgroundColor: Colors.accentPurple }]}
-    >
+    <View style={styles.premiumInviteCard}>
       <View style={styles.inviteTopRow}>
         <View style={styles.inviteFriendsIcon}>
-          <Ionicons name="people-outline" size={28} color="rgba(255,255,255,0.85)" />
+          <Ionicons name="people" size={24} color={Colors.gold} />
         </View>
         <View style={styles.goldBadge}>
           <Text style={styles.goldBadgeText}>+100 {t('Points')}</Text>
@@ -75,10 +74,18 @@ export default function InviteFriendsCard() {
 
 const styles = StyleSheet.create({
   premiumInviteCard: {
+    backgroundColor: Colors.surfaceCard,
     borderRadius: 20,
     padding: 20,
     marginBottom: 24,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(181, 101, 29, 0.25)',
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 2,
   },
   inviteTopRow: {
     flexDirection: 'row',
@@ -90,42 +97,48 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(201, 148, 58, 0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(201, 148, 58, 0.35)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   goldBadge: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: 'rgba(201, 148, 58, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(201, 148, 58, 0.35)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
   },
-  goldBadgeText: { color: '#000', fontSize: 13, fontWeight: '800' },
+  goldBadgeText: {
+    color: Colors.gold,
+    fontSize: 12,
+    fontFamily: Fonts.dataBold,
+  },
   premiumInviteTitle: {
     fontSize: 19,
-    fontWeight: '800',
-    color: '#fff',
+    color: Colors.ivory,
     marginBottom: 10,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
   },
   premiumInviteDesc: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.8)',
+    color: Colors.textSecondary,
     lineHeight: 20,
     marginBottom: 20,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   premiumInviteBtn: {
-    backgroundColor: '#4F8EF7',
+    backgroundColor: Colors.gold,
     borderRadius: 14,
-    paddingVertical: 15,
+    paddingVertical: 14,
     width: '100%',
     alignItems: 'center',
-    shadowColor: '#4F8EF7',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 6,
   },
-  premiumInviteBtnText: { color: '#fff', fontSize: 13, fontWeight: '800', fontFamily: 'Inter_700Bold' },
+  premiumInviteBtnText: {
+    color: Colors.obsidian,
+    fontSize: 13,
+    fontFamily: Fonts.heading,
+  },
 });

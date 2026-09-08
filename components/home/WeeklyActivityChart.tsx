@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
+import { Fonts } from '../../constants/Typography';
 import { fetchCurrentUser } from '../../lib/api';
 import { useLanguage } from '../../lib/i18n';
 
@@ -246,12 +247,12 @@ const styles = StyleSheet.create({
   cardTitle: {
     color: Colors.text,
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: Fonts.heading,
   },
   cardSubtitle: {
     color: Colors.textSecondary,
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: Fonts.body,
     marginTop: 1,
   },
   targetBadge: {
@@ -265,7 +266,7 @@ const styles = StyleSheet.create({
   targetBadgeText: {
     color: Colors.copper,
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: Fonts.heading,
   },
   chartContainer: {
     flexDirection: 'row',
@@ -317,11 +318,11 @@ const styles = StyleSheet.create({
   dayLabelText: {
     color: Colors.textMuted,
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: Fonts.data,
   },
   dayLabelTodayText: {
     color: Colors.obsidian,
-    fontWeight: '800',
+    fontFamily: Fonts.dataBold,
   },
   dayLabelCompletedText: {
     color: Colors.victoryGreen,

@@ -18,6 +18,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../../constants/Colors';
+import { Fonts } from '../../constants/Typography';
 import { AuthInput } from '../../components/AuthInput';
 import { AuthButton } from '../../components/AuthButton';
 import { ErrorPopupModal } from '../../components/ErrorPopupModal';
@@ -244,7 +245,7 @@ export default function RegisterScreen() {
             {params.challenge_id ? (
               <View style={styles.challengeInviteBanner}>
                 <View style={styles.challengeInviteBadge}>
-                  <Ionicons name="trophy" size={14} color="#052E16" />
+                  <Ionicons name="trophy" size={14} color={Colors.obsidian} />
                   <Text style={styles.challengeInviteBadgeText}>CHALLENGE INVITE</Text>
                 </View>
                 <Text style={styles.challengeInviteBannerTitle}>You've been invited to join a Challenge!</Text>
@@ -378,7 +379,13 @@ export default function RegisterScreen() {
             {/* Login Link */}
             <View style={styles.linkContainer}>
               <Text style={styles.linkText}>Already have an account? </Text>
-              <TouchableOpacity onPress={() => router.push('/login')} activeOpacity={0.7}>
+              <TouchableOpacity
+                onPress={() => {
+                  void clearAuthTokens();
+                  router.push('/login');
+                }}
+                activeOpacity={0.7}
+              >
                 <Text style={styles.linkHighlight}>Log In</Text>
               </TouchableOpacity>
             </View>
@@ -440,33 +447,32 @@ const styles = StyleSheet.create({
   },
   heading: {
     fontSize: 30,
-    fontWeight: '800',
     color: Colors.primary,
     letterSpacing: 2,
     marginBottom: 6,
     textAlign: 'center',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
   },
   subheading: {
     fontSize: 15,
     color: Colors.textSecondary,
     marginBottom: 24,
     textAlign: 'center',
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   formCard: {
     width: '100%',
     maxWidth: 420,
-    backgroundColor: 'rgba(18, 22, 34, 0.82)',
+    backgroundColor: 'rgba(19, 31, 46, 0.88)',
     borderRadius: 24,
     padding: 22,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.35,
-    shadowRadius: 20,
-    elevation: 10,
+    borderColor: Colors.cardBorder,
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 4,
     alignItems: 'center',
   },
   consentWrapper: {
@@ -586,10 +592,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
   },
   challengeInviteBanner: {
-    backgroundColor: 'rgba(0, 240, 208, 0.12)',
+    backgroundColor: 'rgba(201, 148, 58, 0.12)',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(0, 240, 208, 0.35)',
+    borderColor: 'rgba(201, 148, 58, 0.35)',
     padding: 16,
     marginBottom: 20,
     alignItems: 'center',
@@ -598,31 +604,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#00F0D0',
+    backgroundColor: Colors.gold,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
     marginBottom: 8,
   },
   challengeInviteBadgeText: {
-    color: '#052E16',
+    color: Colors.obsidian,
     fontSize: 11,
-    fontWeight: '800',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.5,
   },
   challengeInviteBannerTitle: {
-    color: '#FFFFFF',
+    color: Colors.text,
     fontSize: 16,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
     textAlign: 'center',
     marginBottom: 4,
   },
   challengeInviteBannerText: {
-    color: '#CBD5E1',
+    color: Colors.textSecondary,
     fontSize: 13,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     textAlign: 'center',
     lineHeight: 18,
   },

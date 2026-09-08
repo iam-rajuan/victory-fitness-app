@@ -5,6 +5,8 @@ import { StatusBar } from 'expo-status-bar';
 import { clearAuthTokens, fetchCurrentUser, getValidAuthTokens } from '../lib/api';
 import { getPostAuthRoute, isAdminRestrictedFromApp } from '../lib/access';
 import { replaceRoute } from '../lib/navigation';
+import { Colors } from '../constants/Colors';
+import { Fonts } from '../constants/Typography';
 
 export default function SplashScreen() {
   const router = useRouter();
@@ -81,7 +83,7 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0D0D0D',
+    backgroundColor: Colors.obsidian,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -90,29 +92,27 @@ const styles = StyleSheet.create({
   },
   brandTitle: {
     fontSize: 32,
-    fontWeight: '800',
-    color: '#fff',
+    color: Colors.text,
     letterSpacing: 10,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
   },
   brandSubtitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
+    color: Colors.textSecondary,
     letterSpacing: 8,
     marginTop: 8,
-    fontFamily: 'Inter_600SemiBold',
-    opacity: 0.8,
+    fontFamily: Fonts.heading,
   },
   pulseDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#06B6D4',
+    backgroundColor: Colors.gold,
     marginTop: 30,
-    shadowColor: '#06B6D4',
+    shadowColor: Colors.gold,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 10,
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
   },
 });
+

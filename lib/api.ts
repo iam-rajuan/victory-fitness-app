@@ -1215,7 +1215,7 @@ export async function fetchWorkoutLogs(page = 1, limit = 20, status?: string): P
   return apiRequest<WorkoutLogsResponse>(`/workout-logs?${params.toString()}`);
 }
 
-export async function createWorkoutLog(payload: { workout_id: string; duration_seconds: number; status: string; market?: string }): Promise<{ id: string; status: string }> {
+export async function createWorkoutLog(payload: { workout_id: string; title?: string; duration_seconds: number; status: string; market?: string }): Promise<{ id: string; status: string }> {
   return apiRequest<{ id: string; status: string }>('/workout-logs', {
     method: 'POST',
     body: payload,

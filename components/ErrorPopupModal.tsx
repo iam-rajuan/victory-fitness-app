@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
+import { Fonts } from '../constants/Typography';
 import { useLanguage } from '../lib/i18n';
 
 type ErrorPopupModalProps = {
@@ -58,7 +59,7 @@ export function ErrorPopupModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.72)',
+    backgroundColor: 'rgba(13, 13, 13, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
@@ -66,13 +67,13 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 340,
-    backgroundColor: '#101827',
+    backgroundColor: Colors.obsidian,
     borderRadius: 22,
     paddingHorizontal: 20,
     paddingTop: 22,
     paddingBottom: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(181, 101, 29, 0.35)',
   },
   iconWrap: {
     width: 52,
@@ -85,10 +86,9 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   title: {
-    color: Colors.text,
+    color: Colors.ivory,
     fontSize: 20,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
     textAlign: 'center',
     marginBottom: 10,
   },
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontSize: 14,
     lineHeight: 21,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     textAlign: 'center',
     marginBottom: 18,
   },
@@ -114,23 +114,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   retryButton: {
-    backgroundColor: 'rgba(6, 182, 212, 0.16)',
+    backgroundColor: Colors.navy,
     borderWidth: 1,
-    borderColor: 'rgba(6, 182, 212, 0.35)',
+    borderColor: 'rgba(181, 101, 29, 0.35)',
   },
   retryText: {
-    color: Colors.accentBlue,
+    color: Colors.ivory,
     fontSize: 14,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   closeButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.gold,
   },
   closeText: {
-    color: '#001311',
+    color: Colors.obsidian,
     fontSize: 14,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
 });

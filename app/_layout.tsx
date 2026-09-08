@@ -2,13 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Stack, usePathname, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, AppState, Text, TouchableOpacity, View, StyleSheet } from 'react-native';
-import {
-  useFonts,
-  Inter_400Regular,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from '@expo-google-fonts/inter';
+import { useFonts } from 'expo-font';
 import { Colors } from '../constants/Colors';
+import { Fonts } from '../constants/Typography';
 import PwaInstallPrompt from '../components/PwaInstallPrompt';
 import { clearAuthTokens, fetchCurrentUser, getAuthUser, getValidAuthTokens, setAuthFailureHandler } from '../lib/api';
 import { getPostAuthRoute, isAdminRestrictedFromApp, isPublicRoute, isRouteAllowedForPlan, isSubscriptionActive } from '../lib/access';
@@ -45,9 +41,23 @@ export default function RootLayout() {
   const lastLoggedRouteRef = useRef<string | null>(null);
   const knownNotificationIdsRef = useRef<Set<string> | null>(null);
   const [fontsLoaded] = useFonts({
-    Inter_400Regular,
-    Inter_600SemiBold,
-    Inter_700Bold,
+    // Role 1: Display / Hero
+    'ClashDisplay-Bold': require('../assets/fonts/ClashDisplay-Bold.ttf'),
+    // Role 2: Headings
+    'DMSans-SemiBold': require('../assets/fonts/DMSans_600SemiBold.ttf'),
+    // Role 3: Body
+    'Inter-Regular': require('../assets/fonts/Inter_400Regular.ttf'),
+    'Inter-Medium': require('../assets/fonts/Inter_500Medium.ttf'),
+    'Inter-SemiBold': require('../assets/fonts/Inter_600SemiBold.ttf'),
+    'Inter-Bold': require('../assets/fonts/Inter_700Bold.ttf'),
+    // Role 4: Data / Numbers
+    'JetBrainsMono-Medium': require('../assets/fonts/JetBrainsMono_500Medium.ttf'),
+    'JetBrainsMono-Bold': require('../assets/fonts/JetBrainsMono_700Bold.ttf'),
+    // Backward-compatibility keys for existing code
+    Inter_400Regular: require('../assets/fonts/Inter_400Regular.ttf'),
+    Inter_500Medium: require('../assets/fonts/Inter_500Medium.ttf'),
+    Inter_600SemiBold: require('../assets/fonts/Inter_600SemiBold.ttf'),
+    Inter_700Bold: require('../assets/fonts/Inter_700Bold.ttf'),
   });
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [toastNotification, setToastNotification] = useState<PushNotificationEvent | null>(null);

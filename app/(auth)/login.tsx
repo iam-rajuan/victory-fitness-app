@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Colors } from '../../constants/Colors';
+import { Fonts } from '../../constants/Typography';
 import { AuthInput } from '../../components/AuthInput';
 import { AuthButton } from '../../components/AuthButton';
 import { ErrorPopupModal } from '../../components/ErrorPopupModal';
@@ -60,10 +61,6 @@ export default function LoginScreen() {
           await clearAuthTokens();
           useDefaultLanguage();
           if (!cancelled) {
-            setErrorDialog({
-              title: t('App access restricted'),
-              message: t('Admin accounts can only sign in to the Victory Fitness dashboard.'),
-            });
             setCheckingAuth(false);
           }
           return;
@@ -375,16 +372,16 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     fontSize: 13,
     marginHorizontal: 12,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.heading,
     textTransform: 'uppercase',
   },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(7, 10, 15, 0.78)',
+    backgroundColor: 'rgba(13, 13, 13, 0.85)',
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(7, 10, 15, 0.85)',
+    backgroundColor: 'rgba(13, 13, 13, 0.88)',
     justifyContent: 'center',
     alignItems: 'center',
     pointerEvents: 'auto',
@@ -414,33 +411,32 @@ const styles = StyleSheet.create({
   },
   heading: {
     fontSize: 30,
-    fontWeight: '800',
     color: Colors.primary,
     letterSpacing: 2,
     marginBottom: 6,
     textAlign: 'center',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
   },
   subheading: {
     fontSize: 15,
     color: Colors.textSecondary,
     marginBottom: 28,
     textAlign: 'center',
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   formCard: {
     width: '100%',
     maxWidth: 420,
-    backgroundColor: 'rgba(18, 22, 34, 0.82)',
+    backgroundColor: 'rgba(19, 31, 46, 0.88)',
     borderRadius: 24,
     padding: 22,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.35,
-    shadowRadius: 20,
-    elevation: 10,
+    borderColor: Colors.cardBorder,
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 4,
     alignItems: 'center',
   },
   forgotPassword: {
@@ -451,7 +447,7 @@ const styles = StyleSheet.create({
   forgotPasswordText: {
     fontSize: 13,
     color: Colors.primary,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.heading,
   },
   linkContainer: {
     flexDirection: 'row',
@@ -462,13 +458,12 @@ const styles = StyleSheet.create({
   linkText: {
     fontSize: 14,
     color: Colors.textSecondary,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   linkHighlight: {
     fontSize: 14,
     color: Colors.primary,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   footer: {
     alignItems: 'center',
@@ -478,11 +473,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.primary,
     marginBottom: 4,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   footerContact: {
     fontSize: 12,
     color: Colors.textMuted,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
 });

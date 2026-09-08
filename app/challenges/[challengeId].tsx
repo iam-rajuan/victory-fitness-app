@@ -20,6 +20,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
+import { Fonts } from '../../constants/Typography';
 import { apiRequest, getAuthUser } from '../../lib/api';
 import { ErrorPopupModal } from '../../components/ErrorPopupModal';
 import { formatAppError } from '../../lib/error';
@@ -581,35 +582,93 @@ export default function ChallengeDetailScreen() {
                       )}
                     </View>
                     <View style={styles.heroActions}>
+                      {detail.has_joined ? (
+                        <View style={styles.membershipStatusRow}>
+                          <View
+                            style={[
+                              styles.membershipBadge,
+                              detail.viewer_membership_status === 'COMPLETED'
+                                ? styles.membershipBadgeCompleted
+                                : styles.membershipBadgeActive,
+                            ]}
+                          >
+                            <View
+                              style={[
+                                styles.membershipBadgeDot,
+                                detail.viewer_membership_status === 'COMPLETED'
+                                  ? styles.membershipBadgeDotCompleted
+                                  : styles.membershipBadgeDotActive,
+                              ]}
+                            />
+                            <Text
+                              style={[
+                                styles.membershipBadgeText,
+                                detail.viewer_membership_status === 'COMPLETED'
+                                  ? styles.membershipBadgeTextCompleted
+                                  : styles.membershipBadgeTextActive,
+                              ]}
+                            >
+                              {ctaLabel}
+                            </Text>
+                          </View>
+                          {currentCalendarDay ? (
+                            <Text style={styles.membershipDayHint}>
+                              {t('Day')} {currentCalendarDay} {t('of')} {totalDaysCount}
+                            </Text>
+                          ) : null}
+                        </View>
+                      ) : null}
+
                       {showCompleteToday ? (
                         <TouchableOpacity
-                          style={[styles.secondaryButton, (!canCompleteToday || completingToday || isCurrentDayCompleted) && styles.secondaryButtonDisabled]}
+                          style={[
+                            styles.primaryActionButton,
+                            isCurrentDayCompleted && styles.primaryActionButtonCompleted,
+                            (!canCompleteToday || completingToday) && !isCurrentDayCompleted && styles.primaryActionButtonDisabled,
+                          ]}
                           activeOpacity={0.88}
                           onPress={() => void handleCompleteToday()}
                           disabled={!canCompleteToday || completingToday || isCurrentDayCompleted}
                         >
                           {completingToday ? (
-                            <ActivityIndicator color="#EAF4FF" size="small" />
+                            <ActivityIndicator color={Colors.obsidian} size="small" />
                           ) : (
-                            <Text style={styles.secondaryButtonText}>{completeButtonLabel}</Text>
+                            <View style={styles.buttonContentRow}>
+                              <Ionicons
+                                name={isCurrentDayCompleted ? "checkmark-circle" : "checkmark-circle-outline"}
+                                size={18}
+                                color={isCurrentDayCompleted ? '#FFFFFF' : Colors.obsidian}
+                              />
+                              <Text
+                                style={[
+                                  styles.primaryActionButtonText,
+                                  isCurrentDayCompleted && styles.primaryActionButtonTextCompleted,
+                                ]}
+                              >
+                                {completeButtonLabel}
+                              </Text>
+                            </View>
                           )}
                         </TouchableOpacity>
-                      ) : null}
-                      {detail.has_joined ? (
+                      ) : detail.has_joined ? (
                         <View
                           style={[
-                            styles.primaryButton,
-                            styles.primaryButtonJoined,
-                            detail.viewer_membership_status === 'COMPLETED' && styles.primaryButtonCompleted,
+                            styles.primaryActionButton,
+                            styles.primaryActionButtonCompleted,
                           ]}
                         >
-                          <Text style={styles.primaryButtonText}>{ctaLabel}</Text>
+                          <View style={styles.buttonContentRow}>
+                            <Ionicons name="trophy-outline" size={18} color="#FFFFFF" />
+                            <Text style={[styles.primaryActionButtonText, styles.primaryActionButtonTextCompleted]}>
+                              {ctaLabel}
+                            </Text>
+                          </View>
                         </View>
                       ) : (
                         <TouchableOpacity
                           style={[
-                            styles.primaryButton,
-                            ctaDisabled && styles.primaryButtonDisabled,
+                            styles.primaryActionButton,
+                            ctaDisabled && styles.primaryActionButtonDisabled,
                           ]}
                           activeOpacity={0.88}
                           onPress={() => {
@@ -618,12 +677,16 @@ export default function ChallengeDetailScreen() {
                           disabled={ctaDisabled}
                         >
                           {starting ? (
-                            <ActivityIndicator color="#FFF7ED" size="small" />
+                            <ActivityIndicator color={Colors.obsidian} size="small" />
                           ) : (
-                            <Text style={styles.primaryButtonText}>{ctaLabel}</Text>
+                            <View style={styles.buttonContentRow}>
+                              <Ionicons name="flash-outline" size={18} color={Colors.obsidian} />
+                              <Text style={styles.primaryActionButtonText}>{ctaLabel}</Text>
+                            </View>
                           )}
                         </TouchableOpacity>
                       )}
+
                       <TouchableOpacity
                         style={styles.inviteFriendDetailBtn}
                         activeOpacity={0.88}
@@ -742,7 +805,7 @@ const styles = StyleSheet.create({
   confirmModalTitle: {
     color: '#FFF',
     fontSize: 20,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
     textAlign: 'center',
     marginBottom: 10,
   },
@@ -750,7 +813,7 @@ const styles = StyleSheet.create({
     color: '#D1D5DB',
     fontSize: 14,
     lineHeight: 21,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     textAlign: 'center',
     marginBottom: 18,
   },
@@ -771,7 +834,7 @@ const styles = StyleSheet.create({
   confirmModalSecondaryText: {
     color: '#FFF',
     fontSize: 14,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   confirmModalPrimaryButton: {
     minWidth: 108,
@@ -785,7 +848,7 @@ const styles = StyleSheet.create({
   confirmModalPrimaryText: {
     color: '#001311',
     fontSize: 14,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   header: {
     flexDirection: 'row',
@@ -797,20 +860,25 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.06)',
   },
-  headerTitle: { color: '#FFF', fontSize: 22, fontFamily: 'Inter_700Bold' },
+  headerTitle: { color: '#FFF', fontSize: 22, fontFamily: Fonts.display },
   scrollContent: { padding: 20, paddingBottom: 32 },
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 18 },
-  backText: { color: Colors.gold, fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  backText: { color: Colors.gold, fontSize: 14, fontFamily: Fonts.heading },
   heroCard: {
-    backgroundColor: '#13132A',
+    backgroundColor: Colors.surfaceCard,
     borderRadius: 24,
-    padding: 24,
+    padding: 22,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: Colors.cardBorder,
     marginBottom: 20,
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 2,
   },
-  heroTitle: { color: '#FFF', fontSize: 28, lineHeight: 36, fontFamily: 'Inter_700Bold', marginBottom: 12 },
-  heroDescription: { color: '#E5E7EB', fontSize: 16, lineHeight: 24, fontFamily: 'Inter_400Regular', marginBottom: 16 },
+  heroTitle: { color: '#FFF', fontSize: 28, lineHeight: 36, fontFamily: Fonts.display, marginBottom: 12 },
+  heroDescription: { color: '#E5E7EB', fontSize: 16, lineHeight: 24, fontFamily: Fonts.body, marginBottom: 16 },
   whyItMattersCard: {
     backgroundColor: 'rgba(245, 158, 11, 0.08)',
     borderColor: 'rgba(245, 158, 11, 0.28)',
@@ -828,7 +896,7 @@ const styles = StyleSheet.create({
   whyItMattersTitle: {
     color: '#F59E0B',
     fontSize: 13,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.3,
     textTransform: 'uppercase',
   },
@@ -836,7 +904,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.88)',
     fontSize: 14,
     lineHeight: 21,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   dayStripWrap: {
     borderRadius: 22,
@@ -850,12 +918,12 @@ const styles = StyleSheet.create({
   dayStripTitle: {
     color: '#F8FAFC',
     fontSize: 15,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
   },
   dayStripSubtitle: {
     color: '#94A3B8',
     fontSize: 12,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     marginTop: 4,
     marginBottom: 14,
   },
@@ -871,7 +939,7 @@ const styles = StyleSheet.create({
     color: '#FCD34D',
     fontSize: 12,
     lineHeight: 18,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.bodyMedium,
   },
   dayStrip: { gap: 12, paddingRight: 8 },
   dayChip: {
@@ -890,8 +958,8 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   dayChipCompleted: {
-    backgroundColor: '#22C55E',
-    borderColor: '#22C55E',
+    backgroundColor: Colors.victoryGreen,
+    borderColor: Colors.victoryGreen,
   },
   dayChipCurrent: {
     borderColor: 'rgba(148,163,184,0.82)',
@@ -904,7 +972,7 @@ const styles = StyleSheet.create({
   dayChipText: {
     color: '#E5E7EB',
     fontSize: 16,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   dayChipTextCompleted: {
     color: '#052E16',
@@ -927,7 +995,7 @@ const styles = StyleSheet.create({
   overviewEyebrow: {
     color: '#FBBF24',
     fontSize: 11,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     textTransform: 'uppercase',
     letterSpacing: 0.7,
     marginBottom: 8,
@@ -936,20 +1004,20 @@ const styles = StyleSheet.create({
     color: '#F8FAFC',
     fontSize: 16,
     lineHeight: 22,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
     marginBottom: 6,
   },
   overviewBody: {
     color: '#D1D5DB',
     fontSize: 14,
     lineHeight: 21,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.bodyMedium,
   },
   overviewSubtle: {
     color: '#94A3B8',
     fontSize: 13,
     lineHeight: 20,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     marginTop: 8,
   },
   heroDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginBottom: 18 },
@@ -975,12 +1043,12 @@ const styles = StyleSheet.create({
   trackerTitle: {
     color: '#FFFFFF',
     fontSize: 17,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
   },
   trackerSubtitle: {
     color: '#94A3B8',
     fontSize: 12,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     marginTop: 4,
   },
   trackerPill: {
@@ -997,7 +1065,7 @@ const styles = StyleSheet.create({
   trackerPillText: {
     color: Colors.gold,
     fontSize: 13,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   trackerStatsRow: {
     flexDirection: 'row',
@@ -1014,12 +1082,12 @@ const styles = StyleSheet.create({
   trackerStatValue: {
     color: '#FFFFFF',
     fontSize: 18,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
   },
   trackerStatLabel: {
     color: '#CBD5E1',
     fontSize: 11,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.heading,
     marginTop: 4,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -1040,7 +1108,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   legendDotCompleted: {
-    backgroundColor: '#22C55E',
+    backgroundColor: Colors.victoryGreen,
   },
   legendDotCurrent: {
     backgroundColor: '#94A3B8',
@@ -1051,81 +1119,157 @@ const styles = StyleSheet.create({
   legendText: {
     color: '#CBD5E1',
     fontSize: 11,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.heading,
   },
-  heroActions: { flexDirection: 'row', alignItems: 'center', gap: 10, width: '100%' },
   pointsBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(245, 158, 11, 0.12)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(245, 158, 11, 0.3)',
+    backgroundColor: 'rgba(201, 148, 58, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(181, 101, 29, 0.35)',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 6,
     marginBottom: 4,
   },
-  pointsText: { color: '#FBBF24', fontSize: 13, fontFamily: 'Inter_700Bold', textTransform: 'uppercase', letterSpacing: 0.5 },
-  primaryButton: {
-    flex: 1,
+  pointsText: { color: Colors.gold, fontSize: 13, fontFamily: Fonts.dataBold, textTransform: 'uppercase', letterSpacing: 0.5 },
+  heroActions: {
+    flexDirection: 'column',
+    width: '100%',
+    gap: 12,
+    marginTop: 14,
+  },
+  membershipStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 2,
+    marginBottom: 2,
+  },
+  membershipBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  membershipBadgeActive: {
+    backgroundColor: 'rgba(26, 122, 74, 0.15)',
+    borderColor: 'rgba(26, 122, 74, 0.35)',
+  },
+  membershipBadgeCompleted: {
+    backgroundColor: 'rgba(201, 148, 58, 0.15)',
+    borderColor: 'rgba(201, 148, 58, 0.35)',
+  },
+  membershipBadgeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  membershipBadgeDotActive: {
+    backgroundColor: Colors.victoryGreen,
+  },
+  membershipBadgeDotCompleted: {
+    backgroundColor: Colors.gold,
+  },
+  membershipBadgeText: {
+    fontSize: 11,
+    fontFamily: Fonts.heading,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  membershipBadgeTextActive: {
+    color: Colors.victoryGreen,
+  },
+  membershipBadgeTextCompleted: {
+    color: Colors.gold,
+  },
+  membershipDayHint: {
+    color: Colors.textMuted,
+    fontSize: 12,
+    fontFamily: Fonts.data,
+  },
+  primaryActionButton: {
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
     borderRadius: 16,
-    backgroundColor: '#FF735C',
+    backgroundColor: Colors.gold,
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  primaryButtonJoined: { backgroundColor: '#22C55E' },
-  primaryButtonCompleted: { backgroundColor: '#2563EB' },
-  primaryButtonDisabled: { opacity: 0.55 },
-  primaryButtonText: { color: '#FFF7ED', fontSize: 16, fontFamily: 'Inter_700Bold' },
-  secondaryButton: {
-    flex: 1,
+  primaryActionButtonCompleted: {
+    backgroundColor: Colors.victoryGreen,
+  },
+  primaryActionButtonDisabled: {
+    backgroundColor: 'rgba(247, 243, 238, 0.12)',
+    opacity: 0.6,
+  },
+  primaryActionButtonText: {
+    color: Colors.obsidian,
+    fontSize: 15,
+    fontFamily: Fonts.heading,
+    letterSpacing: 0.5,
+  },
+  primaryActionButtonTextCompleted: {
+    color: '#FFFFFF',
+  },
+  buttonContentRow: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-    borderRadius: 16,
-    backgroundColor: '#2563EB',
+    gap: 8,
   },
-  secondaryButtonDisabled: {
-    backgroundColor: '#374151',
-    opacity: 0.55,
-  },
-  secondaryButtonText: { color: '#EAF4FF', fontSize: 14, fontFamily: 'Inter_700Bold' },
   participantsCard: {
-    backgroundColor: '#13132A',
+    backgroundColor: Colors.surfaceCard,
     borderRadius: 20,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: Colors.cardBorder,
     marginBottom: 20,
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 2,
   },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
-  sectionTitle: { color: '#FFF', fontSize: 18, fontFamily: 'Inter_700Bold' },
+  sectionTitle: { color: '#FFF', fontSize: 18, fontFamily: Fonts.display },
   participantsRow: { gap: 14, paddingRight: 10 },
   participantChip: { width: 72, alignItems: 'center', gap: 8 },
   participantAvatar: { width: 52, height: 52, borderRadius: 26 },
   participantAvatarFallback: { backgroundColor: '#374151', alignItems: 'center', justifyContent: 'center' },
-  participantAvatarText: { color: '#FFF', fontSize: 18, fontFamily: 'Inter_700Bold' },
-  participantName: { color: '#D1D5DB', fontSize: 11, textAlign: 'center', fontFamily: 'Inter_500Medium' },
-  emptyHelper: { color: '#9CA3AF', fontSize: 15, fontFamily: 'Inter_400Regular' },
+  participantAvatarText: { color: '#FFF', fontSize: 18, fontFamily: Fonts.display },
+  participantName: { color: '#D1D5DB', fontSize: 11, textAlign: 'center', fontFamily: Fonts.bodyMedium },
+  emptyHelper: { color: '#9CA3AF', fontSize: 15, fontFamily: Fonts.body },
   hubCard: {
-    backgroundColor: '#13132A',
+    backgroundColor: Colors.surfaceCard,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: Colors.cardBorder,
     overflow: 'hidden',
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 2,
   },
-  hubTitle: { color: '#FFF', fontSize: 20, fontFamily: 'Inter_700Bold', paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16 },
+  hubTitle: { color: '#FFF', fontSize: 20, fontFamily: Fonts.display, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16 },
   hubDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.08)' },
   messagesWrap: { minHeight: 220, padding: 20, gap: 14 },
   messageRow: { backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 14, padding: 14 },
-  messageAuthor: { color: '#FFF', fontSize: 13, fontFamily: 'Inter_700Bold', marginBottom: 4 },
-  messageTime: { color: '#9CA3AF', fontSize: 11, fontFamily: 'Inter_400Regular', marginBottom: 8 },
-  messageBody: { color: '#E5E7EB', fontSize: 14, lineHeight: 20, fontFamily: 'Inter_400Regular' },
+  messageAuthor: { color: '#FFF', fontSize: 13, fontFamily: Fonts.heading, marginBottom: 4 },
+  messageTime: { color: '#9CA3AF', fontSize: 11, fontFamily: Fonts.data, marginBottom: 8 },
+  messageBody: { color: '#E5E7EB', fontSize: 14, lineHeight: 20, fontFamily: Fonts.body },
   emptyMessages: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 34 },
-  emptyMessagesTitle: { color: '#6B7280', fontSize: 28, fontFamily: 'Inter_400Regular', marginBottom: 8 },
-  emptyMessagesText: { color: '#6B7280', fontSize: 16, textAlign: 'center', fontFamily: 'Inter_400Regular' },
+  emptyMessagesTitle: { color: '#6B7280', fontSize: 28, fontFamily: Fonts.display, marginBottom: 8 },
+  emptyMessagesText: { color: '#6B7280', fontSize: 16, textAlign: 'center', fontFamily: Fonts.body },
   composerRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1145,7 +1289,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     color: '#FFF',
     fontSize: 16,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     outlineStyle: 'none' as any,
   },
   sendButton: {
@@ -1158,22 +1302,21 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: { opacity: 0.45 },
   inviteFriendDetailBtn: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: 'rgba(201, 148, 58, 0.14)',
+    backgroundColor: 'rgba(201, 148, 58, 0.12)',
     borderWidth: 1,
     borderColor: 'rgba(181, 101, 29, 0.35)',
     borderRadius: 14,
-    paddingVertical: 12,
+    paddingVertical: 13,
     paddingHorizontal: 16,
-    marginTop: 10,
   },
   inviteFriendDetailBtnText: {
     color: Colors.gold,
     fontSize: 14,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
 });

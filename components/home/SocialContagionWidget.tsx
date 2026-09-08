@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
+import { Fonts } from '../../constants/Typography';
 import { AuthUser, fetchCurrentUser, fetchNetworkActivity, NetworkActivityResponse } from '../../lib/api';
 import { useLanguage } from '../../lib/i18n';
 
@@ -165,38 +166,43 @@ export default function SocialContagionWidget() {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#101426',
+    backgroundColor: Colors.surfaceCard,
     borderRadius: 20,
     padding: 18,
     borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.25)',
+    borderColor: 'rgba(181, 101, 29, 0.25)',
     marginBottom: 20,
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 2,
   },
   lockedCard: {
-    borderColor: 'rgba(148, 163, 184, 0.2)',
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    borderColor: 'rgba(181, 101, 29, 0.25)',
+    backgroundColor: Colors.surfaceCard,
   },
   silverBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: 'rgba(148, 163, 184, 0.15)',
+    backgroundColor: 'rgba(201, 148, 58, 0.15)',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.3)',
+    borderColor: 'rgba(201, 148, 58, 0.35)',
   },
   silverBadgeText: {
-    color: '#CBD5E1',
+    color: Colors.gold,
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.8,
   },
   lockedTitle: {
-    color: '#FFF',
+    color: Colors.ivory,
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: Fonts.display,
     marginTop: 10,
     marginBottom: 4,
   },
@@ -204,21 +210,22 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontSize: 12,
     lineHeight: 17,
+    fontFamily: Fonts.body,
     marginBottom: 14,
   },
   upgradeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#00F0D0',
+    backgroundColor: Colors.gold,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 12,
   },
   upgradeBtnText: {
-    color: '#050814',
+    color: Colors.obsidian,
     fontSize: 12,
-    fontWeight: '800',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.5,
   },
   headerRow: {
@@ -236,17 +243,12 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#10B981',
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 6,
-    elevation: 3,
+    backgroundColor: Colors.victoryGreen,
   },
   liveText: {
-    color: '#10B981',
+    color: Colors.victoryGreen,
     fontSize: 11,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 1.1,
   },
   privacyLink: {
@@ -257,7 +259,7 @@ const styles = StyleSheet.create({
   privacyLinkText: {
     color: Colors.textMuted,
     fontSize: 11,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.bodyMedium,
   },
   countRow: {
     flexDirection: 'row',
@@ -273,19 +275,19 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
     borderWidth: 2,
-    borderColor: '#101426',
+    borderColor: Colors.surfaceCard,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarInitial: {
-    color: '#000',
+    color: Colors.obsidian,
     fontSize: 11,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
   },
   countText: {
-    color: '#E2E8F0',
+    color: Colors.ivory,
     fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.heading,
     lineHeight: 20,
   },
   recentList: {
@@ -308,15 +310,15 @@ const styles = StyleSheet.create({
     flex: 1,
     color: Colors.textSecondary,
     fontSize: 12,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   recentItemName: {
-    color: '#FFF',
-    fontFamily: 'Inter_600SemiBold',
+    color: Colors.ivory,
+    fontFamily: Fonts.heading,
   },
   recentItemTime: {
     color: Colors.textMuted,
     fontSize: 11,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.data,
   },
 });

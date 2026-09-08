@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'rea
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
+import { Fonts } from '../../constants/Typography';
 import { useLanguage } from '../../lib/i18n';
 import {
   createStrengthWorkoutPlan,
@@ -265,7 +266,7 @@ export default function WorkoutSection({
                 ) : (
                   <>
                     <Ionicons name="play" size={16} color={Colors.obsidian} style={{ marginRight: 6 }} />
-                    <Text style={[styles.workoutBtnPrimaryText, { color: Colors.obsidian, fontWeight: '800' }]}>{t('START PLAN')}</Text>
+                    <Text style={styles.workoutBtnPrimaryText}>{t('START PLAN')}</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -312,12 +313,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
     color: Colors.primary,
     letterSpacing: 1.5,
     marginBottom: 12,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     textTransform: 'uppercase',
   },
   plansContainer: {
@@ -329,6 +329,11 @@ const styles = StyleSheet.create({
     padding: 20,
     borderWidth: 1,
     borderColor: 'rgba(181, 101, 29, 0.25)',
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 2,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -339,19 +344,19 @@ const styles = StyleSheet.create({
   cardEyebrow: {
     color: Colors.gold,
     fontSize: 11,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 1.1,
   },
   planTitle: {
     color: Colors.ivory,
     fontSize: 20,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
     marginBottom: 6,
   },
   planDescription: {
     color: Colors.textSecondary,
     fontSize: 13,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     lineHeight: 18,
     marginBottom: 14,
   },
@@ -364,12 +369,12 @@ const styles = StyleSheet.create({
   progressText: {
     color: Colors.textSecondary,
     fontSize: 12,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.bodyMedium,
   },
   progressPercent: {
     color: Colors.gold,
     fontSize: 13,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
   },
   progressBarContainer: {
     height: 6,
@@ -395,7 +400,7 @@ const styles = StyleSheet.create({
   actionBtnText: {
     color: Colors.obsidian,
     fontSize: 13,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   actionBtnIcon: {
     marginLeft: 2,
@@ -407,14 +412,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(181, 101, 29, 0.25)',
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 2,
   },
   workoutHeading: {
     fontSize: 20,
-    fontWeight: '700',
     color: Colors.ivory,
     textAlign: 'center',
     marginBottom: 8,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
     textTransform: 'uppercase',
   },
   workoutDesc: {
@@ -423,7 +432,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 20,
     lineHeight: 20,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   workoutFallbackButtons: {
     width: '100%',
@@ -438,10 +447,9 @@ const styles = StyleSheet.create({
   },
   workoutBtnPrimaryText: {
     color: Colors.obsidian,
-    fontWeight: '700',
     fontSize: 13,
     letterSpacing: 0.5,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   workoutBtnOutline: {
     width: '100%',
@@ -454,9 +462,8 @@ const styles = StyleSheet.create({
   },
   workoutBtnOutlineText: {
     color: Colors.ivory,
-    fontWeight: '700',
     fontSize: 13,
     letterSpacing: 0.5,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
 });

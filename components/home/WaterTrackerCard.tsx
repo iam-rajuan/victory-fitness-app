@@ -12,6 +12,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
+import { Fonts } from '../../constants/Typography';
 import { useLanguage } from '../../lib/i18n';
 
 const DEFAULT_TARGET_ML = 2500;
@@ -260,12 +261,12 @@ const styles = StyleSheet.create({
   cardTitle: {
     color: Colors.text,
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: Fonts.heading,
   },
   cardSubtitle: {
     color: Colors.textSecondary,
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: Fonts.data,
     marginTop: 1,
   },
   badgeContainer: {
@@ -282,7 +283,7 @@ const styles = StyleSheet.create({
   badgeText: {
     color: Colors.victoryGreen,
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: Fonts.heading,
   },
   bodyRow: {
     flexDirection: 'row',
@@ -348,6 +349,7 @@ const styles = StyleSheet.create({
   infoLabel: {
     color: Colors.textSecondary,
     fontSize: 12,
+    fontFamily: Fonts.body,
     lineHeight: 16,
     marginBottom: 10,
   },
@@ -365,15 +367,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 9,
     borderRadius: 12,
-    shadowColor: Colors.gold,
+    shadowColor: Colors.navy,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 6,
   },
   addCupBtnText: {
     color: Colors.obsidian,
     fontSize: 13,
-    fontWeight: '800',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.3,
   },
   minusBtn: {
@@ -397,7 +399,7 @@ const styles = StyleSheet.create({
   reminderText: {
     color: Colors.textSecondary,
     fontSize: 11,
-    fontWeight: '500',
+    fontFamily: Fonts.bodyMedium,
   },
   schedulePillRow: {
     flexDirection: 'row',
@@ -416,6 +418,6 @@ const styles = StyleSheet.create({
   timeSlotText: {
     color: Colors.victoryGreen,
     fontSize: 9,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.data,
   },
 });

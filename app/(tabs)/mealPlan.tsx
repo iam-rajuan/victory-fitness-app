@@ -22,6 +22,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { setAudioModeAsync, useAudioPlayer } from 'expo-audio';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors } from '../../constants/Colors';
+import { Fonts } from '../../constants/Typography';
 import AccessRestrictionModal from '../../components/AccessRestrictionModal';
 import { ErrorPopupModal } from '../../components/ErrorPopupModal';
 import { ScreenState } from '../../components/ScreenState';
@@ -1321,7 +1322,7 @@ async function ensureJpegAnalysisAsset(asset: AnalysisImageAsset): Promise<Analy
           <Text style={styles.mealDesc}>{meal.desc}</Text>
           <View style={styles.mealMacroRow}>
             <View style={styles.macroChip}><Text>🔥</Text><Text style={[styles.macroChipText, { color: '#F97316' }]}>{meal.kcal} kcal</Text></View>
-            <View style={styles.macroChip}><Text>💪</Text><Text style={[styles.macroChipText, { color: '#4F8EF7' }]}>{meal.p}g P</Text></View>
+            <View style={styles.macroChip}><Text>💪</Text><Text style={[styles.macroChipText, { color: Colors.gold }]}>{meal.p}g P</Text></View>
             <View style={styles.macroChip}><Text>🌾</Text><Text style={[styles.macroChipText, { color: '#22C55E' }]}>{meal.c}g C</Text></View>
             <View style={styles.macroChip}><Text>🥑</Text><Text style={[styles.macroChipText, { color: '#F59E0B' }]}>{meal.f}g F</Text></View>
           </View>
@@ -1807,7 +1808,7 @@ async function ensureJpegAnalysisAsset(asset: AnalysisImageAsset): Promise<Analy
                 <Text style={styles.modalMealDesc}>{selectedMeal.meal.desc}</Text>
                 <View style={styles.mealMacroRow}>
                   <View style={styles.macroChip}><Text>🔥</Text><Text style={[styles.macroChipText, { color: '#F97316' }]}>{selectedMeal.meal.kcal} kcal</Text></View>
-                  <View style={styles.macroChip}><Text>💪</Text><Text style={[styles.macroChipText, { color: '#4F8EF7' }]}>{selectedMeal.meal.p}g P</Text></View>
+                  <View style={styles.macroChip}><Text>💪</Text><Text style={[styles.macroChipText, { color: Colors.gold }]}>{selectedMeal.meal.p}g P</Text></View>
                   <View style={styles.macroChip}><Text>🌾</Text><Text style={[styles.macroChipText, { color: '#22C55E' }]}>{selectedMeal.meal.c}g C</Text></View>
                   <View style={styles.macroChip}><Text>🥑</Text><Text style={[styles.macroChipText, { color: '#F59E0B' }]}>{selectedMeal.meal.f}g F</Text></View>
                 </View>
@@ -2644,34 +2645,34 @@ const styles = StyleSheet.create({
   progressBarFill: { height: '100%' },
 
   scrollContent: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 24 },
-  stepCounter: { color: Colors.textMuted, fontSize: 12, fontFamily: 'Inter_400Regular', marginBottom: 24, letterSpacing: 0.5 },
+  stepCounter: { color: Colors.textMuted, fontSize: 12, fontFamily: Fonts.data, marginBottom: 24, letterSpacing: 0.5 },
 
-  bigQuestion: { fontSize: 28, fontWeight: '800', color: '#fff', fontFamily: 'Inter_700Bold', lineHeight: 38, marginBottom: 12 },
-  bigSub: { fontSize: 14, color: Colors.textMuted, fontFamily: 'Inter_400Regular', lineHeight: 21, marginBottom: 32 },
+  bigQuestion: { fontSize: 28, fontWeight: '800', color: '#fff', fontFamily: Fonts.display, lineHeight: 38, marginBottom: 12 },
+  bigSub: { fontSize: 14, color: Colors.textMuted, fontFamily: Fonts.body, lineHeight: 21, marginBottom: 32 },
 
   optionList: { gap: 10 },
   optionCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#13132A', borderRadius: 16, paddingHorizontal: 18, paddingVertical: 16, borderWidth: 1.5, borderColor: '#1E1E38', gap: 16 },
   optionCardActive: { borderColor: '#A855F7', backgroundColor: 'rgba(168,85,247,0.10)' },
   optionEmoji: { fontSize: 24, width: 32, textAlign: 'center' },
-  optionLabel: { fontSize: 16, fontWeight: '700', color: 'rgba(255,255,255,0.8)', fontFamily: 'Inter_700Bold' },
+  optionLabel: { fontSize: 16, fontWeight: '700', color: 'rgba(255,255,255,0.8)', fontFamily: Fonts.heading },
   optionLabelActive: { color: '#fff' },
-  optionSub: { fontSize: 12, color: Colors.textMuted, fontFamily: 'Inter_400Regular', marginTop: 2 },
+  optionSub: { fontSize: 12, color: Colors.textMuted, fontFamily: Fonts.body, marginTop: 2 },
   optionCheck: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#A855F7', justifyContent: 'center', alignItems: 'center' },
 
   textInputCard: { backgroundColor: '#13132A', borderRadius: 14, padding: 16, marginBottom: 16, borderWidth: 1.5, borderColor: '#1E1E38' },
-  textInput: { color: '#fff', fontSize: 15, fontFamily: 'Inter_400Regular', lineHeight: 24, minHeight: 90 },
+  textInput: { color: '#fff', fontSize: 15, fontFamily: Fonts.body, lineHeight: 24, minHeight: 90 },
   textInputSingle: { minHeight: 0 },
   mealRequirementText: { color: Colors.textMuted, fontSize: 13, fontFamily: 'Inter_600SemiBold', marginBottom: 12, textAlign: 'center' },
   addMealButton: { minHeight: 48, borderRadius: 14, borderWidth: 1.5, borderColor: 'rgba(0, 240, 208, 0.35)', backgroundColor: 'rgba(0, 240, 208, 0.08)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  addMealButtonText: { color: Colors.primary, fontSize: 14, fontFamily: 'Inter_700Bold' },
+  addMealButtonText: { color: Colors.primary, fontSize: 14, fontFamily: Fonts.heading },
 
-  fieldLabel: { color: Colors.textMuted, fontSize: 13, fontFamily: 'Inter_400Regular', marginBottom: 8, marginTop: 4, letterSpacing: 0.2 },
+  fieldLabel: { color: Colors.textMuted, fontSize: 13, fontFamily: Fonts.body, marginBottom: 8, marginTop: 4, letterSpacing: 0.2 },
   genderSelector: { flexDirection: 'row', alignItems: 'center' },
   genderDropdown: { backgroundColor: '#1E1E38', borderRadius: 12, overflow: 'hidden', marginTop: -12, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
   genderOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
   genderOptionActive: { backgroundColor: 'rgba(168,85,247,0.1)' },
-  genderOptionText: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontFamily: 'Inter_400Regular' },
-  genderOptionTextActive: { color: '#A855F7', fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  genderOptionText: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontFamily: Fonts.body },
+  genderOptionTextActive: { color: '#A855F7', fontWeight: '700', fontFamily: Fonts.heading },
 
   loadingScreen: { flex: 1, backgroundColor: '#0D1220', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
   jobCard: {
@@ -2688,12 +2689,12 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontSize: 11,
     letterSpacing: 2,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     marginBottom: 10,
     textTransform: 'uppercase',
   },
-  quoteText: { color: '#fff', fontSize: 20, fontWeight: '800', fontFamily: 'Inter_700Bold', textAlign: 'center', lineHeight: 30, letterSpacing: 0.5 },
-  loadingDetailText: { color: Colors.textMuted, fontSize: 14, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 22, marginTop: 14, maxWidth: 300, alignSelf: 'center' },
+  quoteText: { color: '#fff', fontSize: 20, fontWeight: '800', fontFamily: Fonts.display, textAlign: 'center', lineHeight: 30, letterSpacing: 0.5 },
+  loadingDetailText: { color: Colors.textMuted, fontSize: 14, fontFamily: Fonts.body, textAlign: 'center', lineHeight: 22, marginTop: 14, maxWidth: 300, alignSelf: 'center' },
   jobProgressTrack: {
     height: 8,
     borderRadius: 999,
@@ -2708,24 +2709,24 @@ const styles = StyleSheet.create({
   },
   successRing: { width: 96, height: 96, borderRadius: 48, backgroundColor: Colors.accentPurple, justifyContent: 'center', alignItems: 'center', marginBottom: 24 },
   planLoading: { paddingVertical: 24, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  planLoadingText: { color: Colors.textMuted, fontSize: 14, fontFamily: 'Inter_400Regular' },
+  planLoadingText: { color: Colors.textMuted, fontSize: 14, fontFamily: Fonts.body },
 
   bottomBar: { position: 'absolute', bottom: 64, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 14, backgroundColor: Colors.background, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)', zIndex: 10 },
   backBtn: { paddingHorizontal: 8, paddingVertical: 8 },
-  backBtnText: { color: 'rgba(255,255,255,0.6)', fontSize: 16, fontFamily: 'Inter_400Regular' },
+  backBtnText: { color: 'rgba(255,255,255,0.6)', fontSize: 16, fontFamily: Fonts.body },
   backBtnDisabled: { color: 'rgba(255,255,255,0.2)' },
   nextBtn: { paddingHorizontal: 36, paddingVertical: 14, borderRadius: 14 },
   generateBtn: { paddingHorizontal: 28, paddingVertical: 14, borderRadius: 14 },
-  nextBtnText: { color: '#fff', fontSize: 16, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  nextBtnText: { color: '#fff', fontSize: 16, fontWeight: '700', fontFamily: Fonts.heading },
   nextBtnDisabled: { color: 'rgba(255,255,255,0.35)' },
   /* Wizard Header */
   wizardHeader: { alignItems: 'center', paddingTop: 52, paddingBottom: 16, backgroundColor: Colors.background },
-  wizardBrandTitle: { fontSize: 24, fontWeight: '700', color: '#fff', letterSpacing: 8, fontFamily: 'Inter_700Bold' },
-  wizardBrandSub: { fontSize: 12, fontWeight: '600', color: '#fff', letterSpacing: 6, marginTop: 4, fontFamily: 'Inter_600SemiBold' },
+  wizardBrandTitle: { fontSize: 24, fontWeight: '700', color: '#fff', letterSpacing: 8, fontFamily: Fonts.display },
+  wizardBrandSub: { fontSize: 12, fontWeight: '600', color: '#fff', letterSpacing: 6, marginTop: 4, fontFamily: Fonts.heading },
 
   /* ── MealPlanResult ── */
   planBrand: { alignItems: 'center', paddingTop: 52, paddingBottom: 8 },
-  planBrandTitle: { fontSize: 22, fontWeight: '800', color: '#fff', letterSpacing: 6, fontFamily: 'Inter_700Bold' },
+  planBrandTitle: { fontSize: 22, fontWeight: '800', color: '#fff', letterSpacing: 6, fontFamily: Fonts.display },
   planBrandSub: { fontSize: 11, fontWeight: '600', color: '#fff', letterSpacing: 5, marginTop: 2 },
 
   planTabRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' },
@@ -2736,8 +2737,8 @@ const styles = StyleSheet.create({
   planTabTextActive: { color: '#A855F7' },
 
   planContent: { paddingHorizontal: 18, paddingTop: 20 },
-  planTitle: { fontSize: 22, fontWeight: '800', color: '#fff', fontFamily: 'Inter_700Bold', lineHeight: 30, marginBottom: 10 },
-  planDesc: { fontSize: 13, color: Colors.textMuted, fontFamily: 'Inter_400Regular', lineHeight: 20, marginBottom: 20 },
+  planTitle: { fontSize: 22, fontWeight: '800', color: '#fff', fontFamily: Fonts.display, lineHeight: 30, marginBottom: 10 },
+  planDesc: { fontSize: 13, color: Colors.textMuted, fontFamily: Fonts.body, lineHeight: 20, marginBottom: 20 },
 
   dayScroll: { marginBottom: 0 },
   dayBtn: { paddingHorizontal: 16, paddingVertical: 10, marginRight: 4 },
@@ -2751,7 +2752,7 @@ const styles = StyleSheet.create({
   totalsGrid: { flexDirection: 'row', justifyContent: 'space-between' },
   totalsItem: { alignItems: 'center', gap: 4 },
   totalsIcon: { fontSize: 18 },
-  totalsVal: { fontSize: 13, fontWeight: '700', color: '#fff', fontFamily: 'Inter_700Bold' },
+  totalsVal: { fontSize: 13, fontWeight: '700', color: '#fff', fontFamily: Fonts.dataBold },
 
   dailyMetricGrid: {
     flexDirection: 'row',
@@ -2776,17 +2777,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textTransform: 'uppercase',
     letterSpacing: 0.9,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   dailyMetricValue: {
     color: '#fff',
     fontSize: 20,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
   },
   dailyMetricSubtext: {
     color: Colors.accentGold,
     fontSize: 11,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.data,
     marginTop: -2,
   },
   weightNoticeBanner: {
@@ -2808,7 +2809,7 @@ const styles = StyleSheet.create({
   trackerProgressText: {
     color: Colors.textMuted,
     fontSize: 12,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     marginTop: 10,
   },
 
@@ -2832,13 +2833,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textTransform: 'uppercase',
     letterSpacing: 0.9,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     marginBottom: 4,
   },
   summaryValue: {
     color: '#fff',
     fontSize: 22,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
   },
   summaryPill: {
     backgroundColor: 'rgba(168,85,247,0.14)',
@@ -2852,7 +2853,7 @@ const styles = StyleSheet.create({
     color: '#D8B4FE',
     fontSize: 11,
     letterSpacing: 1.2,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   summaryMealList: {
     gap: 10,
@@ -2871,13 +2872,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 1.1,
     textTransform: 'uppercase',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     marginBottom: 4,
   },
   summaryMealName: {
     color: '#fff',
     fontSize: 14,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.bodyMedium,
     maxWidth: 210,
   },
   summaryStatusChip: {
@@ -2895,7 +2896,7 @@ const styles = StyleSheet.create({
   summaryStatusText: {
     color: Colors.textMuted,
     fontSize: 11,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
@@ -2936,7 +2937,7 @@ const styles = StyleSheet.create({
     color: '#10B981',
     fontSize: 10,
     fontWeight: '800',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
@@ -2957,23 +2958,23 @@ const styles = StyleSheet.create({
     color: '#FDE68A',
     fontSize: 11,
     fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
-  mealLabel: { fontSize: 13, fontWeight: '700', color: '#A855F7', fontFamily: 'Inter_700Bold', letterSpacing: 0.3 },
+  mealLabel: { fontSize: 13, fontWeight: '700', color: '#A855F7', fontFamily: Fonts.heading, letterSpacing: 0.3 },
   mealCompleteBadge: {
     alignSelf: 'flex-start',
     color: '#22C55E',
     fontSize: 10,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 1.4,
     marginBottom: 8,
     textTransform: 'uppercase',
   },
-  mealName: { fontSize: 16, fontWeight: '800', color: '#fff', fontFamily: 'Inter_700Bold', marginBottom: 4 },
-  mealDesc: { fontSize: 13, color: Colors.textMuted, fontFamily: 'Inter_400Regular', lineHeight: 19, marginBottom: 12 },
+  mealName: { fontSize: 16, fontWeight: '800', color: '#fff', fontFamily: Fonts.heading, marginBottom: 4 },
+  mealDesc: { fontSize: 13, color: Colors.textMuted, fontFamily: Fonts.body, lineHeight: 19, marginBottom: 12 },
   mealMacroRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
   macroChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  macroChipText: { fontSize: 12, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  macroChipText: { fontSize: 12, fontWeight: '700', fontFamily: Fonts.dataBold },
   mealHintRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2983,7 +2984,7 @@ const styles = StyleSheet.create({
   mealHintText: {
     color: 'rgba(255,255,255,0.48)',
     fontSize: 12,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   mealActionPanel: {
     marginTop: -4,
@@ -2994,14 +2995,14 @@ const styles = StyleSheet.create({
   mealActionTitle: {
     color: '#fff',
     fontSize: 15,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     marginBottom: 4,
   },
   mealActionSub: {
     color: Colors.textMuted,
     fontSize: 12,
     lineHeight: 18,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     marginBottom: 12,
   },
 
@@ -3029,7 +3030,7 @@ const styles = StyleSheet.create({
   completeMealBtnText: {
     color: '#fff',
     fontSize: 13,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   completeMealBtnTextDone: {
     color: '#22C55E',
@@ -3041,7 +3042,7 @@ const styles = StyleSheet.create({
   mealActionSecondaryText: {
     color: Colors.textMuted,
     fontSize: 13,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.bodyMedium,
   },
 
   modalBackdrop: {
@@ -3095,21 +3096,21 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontSize: 11,
     letterSpacing: 2,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     textTransform: 'uppercase',
     marginBottom: 8,
   },
   modalTitle: {
     color: '#fff',
     fontSize: 24,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
     marginBottom: 8,
   },
   modalSubtitle: {
     color: Colors.textMuted,
     fontSize: 14,
     lineHeight: 21,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     marginBottom: 16,
   },
   modalMealCard: {
@@ -3123,21 +3124,21 @@ const styles = StyleSheet.create({
   modalMealName: {
     color: '#fff',
     fontSize: 18,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     marginBottom: 6,
   },
   modalMealDesc: {
     color: Colors.textMuted,
     fontSize: 13,
     lineHeight: 20,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     marginBottom: 14,
   },
   modalMealSection: {
     color: Colors.primary,
     fontSize: 12,
     letterSpacing: 1.1,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     marginBottom: 8,
     textTransform: 'uppercase',
   },
@@ -3145,7 +3146,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 13,
     lineHeight: 20,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     marginBottom: 6,
   },
   modalCompleteBtn: {
@@ -3165,7 +3166,7 @@ const styles = StyleSheet.create({
   modalCompleteBtnText: {
     color: '#050816',
     fontSize: 15,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   modalCompleteBtnTextDone: {
     color: '#22C55E',
@@ -3179,7 +3180,7 @@ const styles = StyleSheet.create({
   modalSecondaryActionText: {
     color: Colors.textMuted,
     fontSize: 14,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.bodyMedium,
   },
   modalCancelBtn: {
     alignItems: 'center',
@@ -3188,7 +3189,7 @@ const styles = StyleSheet.create({
   modalCancelBtnText: {
     color: Colors.textMuted,
     fontSize: 14,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.bodyMedium,
   },
   sourcePickerSheet: {
     backgroundColor: '#13132A',
@@ -3218,19 +3219,19 @@ const styles = StyleSheet.create({
   sourcePickerOptionTitle: {
     color: '#fff',
     fontSize: 15,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     marginBottom: 4,
   },
   sourcePickerOptionSub: {
     color: Colors.textMuted,
     fontSize: 12,
     lineHeight: 18,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
 
   shoppingBtn: { marginTop: 8, marginBottom: 12 },
   shoppingBtnGrad: { borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
-  shoppingBtnText: { color: '#fff', fontSize: 16, fontWeight: '800', fontFamily: 'Inter_700Bold' },
+  shoppingBtnText: { color: '#fff', fontSize: 16, fontWeight: '800', fontFamily: Fonts.heading },
   regeneratePlanBtn: {
     marginTop: 8,
     marginBottom: 8,
@@ -3250,7 +3251,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   editPrefsBtn: {
     marginBottom: 20,
@@ -3267,7 +3268,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.8)',
     fontSize: 14,
     fontWeight: '600',
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.heading,
   },
   oneTapBanner: {
     flexDirection: 'row',
@@ -3292,13 +3293,13 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontWeight: '800',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
     marginBottom: 2,
   },
   oneTapSub: {
     color: 'rgba(255, 255, 255, 0.65)',
     fontSize: 12,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     lineHeight: 16,
   },
   newPlanBtn: { 
@@ -3312,19 +3313,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(168, 85, 247, 0.04)'
   },
-  newPlanBtnText: { color: '#A855F7', fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  newPlanBtnText: { color: '#A855F7', fontSize: 15, fontWeight: '700', fontFamily: Fonts.heading },
 
   /* Tracker */
   trackerSection: { backgroundColor: '#13132A', borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)' },
   trackerSectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
   trackerSectionIcon: { fontSize: 20 },
-  trackerSectionTitle: { fontSize: 15, fontWeight: '800', color: '#fff', fontFamily: 'Inter_700Bold', letterSpacing: 0.5 },
+  trackerSectionTitle: { fontSize: 15, fontWeight: '800', color: '#fff', fontFamily: Fonts.heading, letterSpacing: 0.5 },
   macroGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   macroGridCell: { width: '47%', backgroundColor: '#0D0D1E', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
-  macroGridLabel: { fontSize: 10, color: Colors.textMuted, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8, fontFamily: 'Inter_400Regular' },
+  macroGridLabel: { fontSize: 10, color: Colors.textMuted, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8, fontFamily: Fonts.body },
   macroGridValRow: { flexDirection: 'row', alignItems: 'baseline' },
-  macroGridVal: { fontSize: 32, fontWeight: '800', color: Colors.primary, fontFamily: 'Inter_700Bold' },
-  macroGridUnit: { fontSize: 13, color: Colors.textMuted, fontFamily: 'Inter_400Regular' },
+  macroGridVal: { fontSize: 32, fontWeight: '800', color: Colors.primary, fontFamily: Fonts.dataBold },
+  macroGridUnit: { fontSize: 13, color: Colors.textMuted, fontFamily: Fonts.body },
   getSuggestionsBtn: {
     backgroundColor: '#8B5CF6',
     borderRadius: 14,
@@ -3341,7 +3342,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 3,
   },
-  getSuggestionsBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800', fontFamily: 'Inter_700Bold', letterSpacing: 0.8 },
+  getSuggestionsBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800', fontFamily: Fonts.heading, letterSpacing: 0.8 },
   advicePanel: {
     marginTop: 12,
     backgroundColor: '#101426',
@@ -3362,13 +3363,13 @@ const styles = StyleSheet.create({
     color: '#C4B5FD',
     letterSpacing: 1.3,
     textTransform: 'uppercase',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     marginBottom: 6,
   },
   advicePanelTitle: {
     color: '#fff',
     fontSize: 18,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     lineHeight: 24,
   },
   advicePanelPill: {
@@ -3383,7 +3384,7 @@ const styles = StyleSheet.create({
   advicePanelPillText: {
     color: '#F5F3FF',
     fontSize: 11,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
@@ -3418,16 +3419,16 @@ const styles = StyleSheet.create({
     color: '#000000',
     fontSize: 13,
     fontWeight: '800',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   adviceItemText: {
     color: '#FFFFFF',
     fontSize: 14,
     lineHeight: 22,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.bodyMedium,
     flex: 1,
   },
-  adviceFallbackText: { color: '#F8FAFC', fontSize: 14, lineHeight: 22, fontFamily: 'Inter_500Medium' },
+  adviceFallbackText: { color: '#F8FAFC', fontSize: 14, lineHeight: 22, fontFamily: Fonts.bodyMedium },
   mealSearchRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
   mealSearchInput: {
     backgroundColor: 'rgba(255,255,255,0.05)',
@@ -3435,21 +3436,21 @@ const styles = StyleSheet.create({
     padding: 16,
     color: '#fff',
     fontSize: 16,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     minHeight: 100,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
     outlineStyle: 'none' as any,
   },
   mealSearchBtn: { backgroundColor: Colors.primary, borderRadius: 10, paddingHorizontal: 16, justifyContent: 'center' },
-  mealSearchBtnText: { color: '#000', fontSize: 12, fontWeight: '800', fontFamily: 'Inter_700Bold', letterSpacing: 0.5 },
-  todayLogsLabel: { fontSize: 10, color: Colors.textMuted, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10, fontFamily: 'Inter_400Regular' },
-  todayLogsEmpty: { color: Colors.textMuted, fontSize: 13, fontFamily: 'Inter_400Regular', fontStyle: 'italic', lineHeight: 20 },
+  mealSearchBtnText: { color: '#000', fontSize: 12, fontWeight: '800', fontFamily: Fonts.heading, letterSpacing: 0.5 },
+  todayLogsLabel: { fontSize: 10, color: Colors.textMuted, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10, fontFamily: Fonts.body },
+  todayLogsEmpty: { color: Colors.textMuted, fontSize: 13, fontFamily: Fonts.body, fontStyle: 'italic', lineHeight: 20 },
 
   /* Meal Analysis */
   analysisCard: { backgroundColor: '#13132A', borderRadius: 16, padding: 20, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)' },
-  analysisTitle: { fontSize: 22, fontWeight: '800', color: '#fff', fontFamily: 'Inter_700Bold', lineHeight: 30, marginBottom: 10 },
-  analysisDesc: { fontSize: 14, color: Colors.textMuted, fontFamily: 'Inter_400Regular', lineHeight: 21, marginBottom: 20 },
+  analysisTitle: { fontSize: 22, fontWeight: '800', color: '#fff', fontFamily: Fonts.display, lineHeight: 30, marginBottom: 10 },
+  analysisDesc: { fontSize: 14, color: Colors.textMuted, fontFamily: Fonts.body, lineHeight: 21, marginBottom: 20 },
   analysisPreviewCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -3483,13 +3484,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textTransform: 'uppercase',
     letterSpacing: 0.9,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     marginBottom: 4,
   },
   analysisPreviewText: {
     color: '#fff',
     fontSize: 14,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.bodyMedium,
   },
   analysisResultCard: {
     backgroundColor: '#13132A',
@@ -3509,7 +3510,7 @@ const styles = StyleSheet.create({
   analysisLoadingText: {
     color: '#fff',
     fontSize: 14,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.bodyMedium,
   },
   analysisResultHeader: {
     flexDirection: 'row',
@@ -3521,13 +3522,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textTransform: 'uppercase',
     letterSpacing: 0.9,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     marginBottom: 4,
   },
   analysisResultTitle: {
     color: '#fff',
     fontSize: 18,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
   },
   analysisConfidencePill: {
     alignSelf: 'flex-start',
@@ -3543,13 +3544,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textTransform: 'uppercase',
     letterSpacing: 1,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
   },
   analysisResultSummary: {
     color: Colors.textMuted,
     fontSize: 13,
     lineHeight: 20,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   analysisResultGrid: {
     flexDirection: 'row',
@@ -3569,13 +3570,13 @@ const styles = StyleSheet.create({
     fontSize: 10,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.body,
     marginBottom: 6,
   },
   analysisResultMetricValue: {
     color: '#fff',
     fontSize: 18,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
   },
   analysisNotesBlock: {
     gap: 6,
@@ -3584,13 +3585,13 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     fontSize: 13,
     lineHeight: 20,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   analysisErrorText: {
     color: '#FCA5A5',
     fontSize: 13,
     lineHeight: 20,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.bodyMedium,
   },
   analysisHistoryCard: {
     backgroundColor: '#13132A',
@@ -3609,14 +3610,14 @@ const styles = StyleSheet.create({
   analysisHistoryTitle: {
     color: '#fff',
     fontSize: 16,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   analysisHistoryCount: {
     minWidth: 28,
     textAlign: 'center',
     color: '#D8B4FE',
     fontSize: 12,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
     backgroundColor: 'rgba(168,85,247,0.14)',
     borderWidth: 1,
     borderColor: 'rgba(168,85,247,0.28)',
@@ -3637,13 +3638,13 @@ const styles = StyleSheet.create({
   analysisHistoryRowTitle: {
     color: '#fff',
     fontSize: 14,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     marginBottom: 4,
   },
   analysisHistoryRowMeta: {
     color: Colors.textMuted,
     fontSize: 12,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   analysisHistoryRowPill: {
     alignSelf: 'flex-start',
@@ -3657,13 +3658,13 @@ const styles = StyleSheet.create({
   analysisHistoryRowPillText: {
     color: '#86EFAC',
     fontSize: 11,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   analysisUploadGrad: { borderRadius: 14, paddingVertical: 16, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10 },
-  analysisUploadText: { color: '#fff', fontSize: 15, fontWeight: '700', fontFamily: 'Inter_700Bold' },
+  analysisUploadText: { color: '#fff', fontSize: 15, fontWeight: '700', fontFamily: Fonts.heading },
   analysisEmptyCard: { backgroundColor: '#13132A', borderRadius: 16, padding: 32, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)' },
-  analysisEmptyText: { color: 'rgba(255,255,255,0.5)', fontSize: 16, fontWeight: '700', fontFamily: 'Inter_700Bold', marginTop: 14, marginBottom: 8 },
-  analysisEmptySub: { color: Colors.textMuted, fontSize: 13, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 20 },
+  analysisEmptyText: { color: 'rgba(255,255,255,0.5)', fontSize: 16, fontWeight: '700', fontFamily: Fonts.body, marginTop: 14, marginBottom: 8 },
+  analysisEmptySub: { color: Colors.textMuted, fontSize: 13, fontFamily: Fonts.body, textAlign: 'center', lineHeight: 20 },
 
   /* ── Shopping List ── */
   jsonCard: {
@@ -3675,30 +3676,27 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   jsonText: {
-    color: '#D1D5DB',
-    fontSize: 11,
-    lineHeight: 17,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontFamily: Fonts.data,
   },
 
   slHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 18, paddingTop: 56, paddingBottom: 16, backgroundColor: Colors.background },
   slBackBtn: { padding: 4 },
-  slTitle: { fontSize: 16, fontWeight: '800', color: '#fff', fontFamily: 'Inter_700Bold' },
-  slSubtitle: { fontSize: 12, color: Colors.textMuted, fontFamily: 'Inter_400Regular', marginTop: 2 },
+  slTitle: { fontSize: 16, fontWeight: '800', color: '#fff', fontFamily: Fonts.display },
+  slSubtitle: { fontSize: 12, color: Colors.textMuted, fontFamily: Fonts.body, marginTop: 2 },
   slClearBtn: { padding: 8 },
-  slClearText: { color: '#A855F7', fontSize: 13, fontFamily: 'Inter_400Regular' },
+  slClearText: { color: '#A855F7', fontSize: 13, fontFamily: Fonts.body },
   slProgressBg: { height: 4, backgroundColor: 'rgba(255,255,255,0.1)', width: '100%' },
   slProgressFill: { height: '100%', backgroundColor: '#A855F7' },
   slScroll: { paddingHorizontal: 18, paddingTop: 16, paddingBottom: 40 },
-  slCategoryHeader: { fontSize: 14, fontWeight: '800', color: '#A855F7', fontFamily: 'Inter_700Bold', letterSpacing: 0.3, marginTop: 20, marginBottom: 4 },
+  slCategoryHeader: { fontSize: 14, fontWeight: '800', color: '#A855F7', fontFamily: Fonts.heading, letterSpacing: 0.3, marginTop: 20, marginBottom: 4 },
   slSection: { backgroundColor: '#13132A', borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)', overflow: 'hidden', marginBottom: 4 },
   slRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 13, gap: 12 },
   slRowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
   slCheckBox: { width: 20, height: 20, borderRadius: 4, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.25)', justifyContent: 'center', alignItems: 'center' },
   slCheckBoxActive: { backgroundColor: '#A855F7', borderColor: '#A855F7' },
-  slItemName: { flex: 1, fontSize: 14, color: '#fff', fontFamily: 'Inter_400Regular' },
+  slItemName: { flex: 1, fontSize: 14, color: '#fff', fontFamily: Fonts.body },
   slItemNameChecked: { color: Colors.textMuted, textDecorationLine: 'line-through' },
-  slItemQty: { fontSize: 13, color: Colors.textMuted, fontFamily: 'Inter_400Regular', textAlign: 'right', maxWidth: 130 },
+  slItemQty: { fontSize: 13, color: Colors.textMuted, fontFamily: Fonts.body, textAlign: 'right', maxWidth: 130 },
   slItemQtyChecked: { color: 'rgba(255,255,255,0.2)' },
   copyToastWrap: {
     position: 'absolute',
@@ -3728,7 +3726,7 @@ const styles = StyleSheet.create({
   copyToastText: {
     color: '#fff',
     fontSize: 13,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
 
   slBottomBar: {
@@ -3766,17 +3764,17 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '800',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.3,
   },
   generateBtnText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   analysisBtn: { backgroundColor: '#fff', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
-  analysisBtnText: { color: Colors.accentPurple, fontSize: 14, fontWeight: '800', fontFamily: 'Inter_700Bold', letterSpacing: 0.5 },
+  analysisBtnText: { color: Colors.accentPurple, fontSize: 14, fontWeight: '800', fontFamily: Fonts.heading, letterSpacing: 0.5 },
   analysisActionBtnRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
   analysisActionBtn: {
     flex: 1,
@@ -3801,7 +3799,7 @@ const styles = StyleSheet.create({
     color: '#0D0D1E',
     fontSize: 14,
     fontWeight: '800',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.3,
   },
   webcamModalBackdrop: {
@@ -3830,7 +3828,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '800',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
   },
   webcamCloseBtn: {
     width: 32,
@@ -3867,7 +3865,7 @@ const styles = StyleSheet.create({
   webcamGuideText: {
     color: 'rgba(255,255,255,0.7)',
     fontSize: 12,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.bodyMedium,
     marginTop: 8,
     textShadowColor: 'rgba(0,0,0,0.8)',
     textShadowOffset: { width: 0, height: 1 },
@@ -3914,13 +3912,13 @@ const styles = StyleSheet.create({
     color: '#F87171',
     fontSize: 14,
     fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     textAlign: 'center',
   },
   webcamErrorSub: {
     color: Colors.textMuted,
     fontSize: 12,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     textAlign: 'center',
   },
 });

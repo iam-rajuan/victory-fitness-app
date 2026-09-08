@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
+import { Fonts } from '../../constants/Typography';
 import { ErrorPopupModal } from '../../components/ErrorPopupModal';
 import { apiRequest } from '../../lib/api';
 import { formatAppError } from '../../lib/error';
@@ -359,7 +360,7 @@ export default function JournalHistoryScreen() {
                     }}
                     disabled={!draftContent.trim() || !draftMood || savingEdit}
                   >
-                    {savingEdit ? <ActivityIndicator color="#001311" /> : <Text style={styles.saveButtonText}>{t('Save')}</Text>}
+                    {savingEdit ? <ActivityIndicator color={Colors.obsidian} /> : <Text style={styles.saveButtonText}>{t('Save')}</Text>}
                   </TouchableOpacity>
                 </View>
               </>
@@ -402,7 +403,7 @@ export default function JournalHistoryScreen() {
                     }}
                     disabled={deleting}
                   >
-                    <Ionicons name="create-outline" size={18} color={Colors.accentBlue} />
+                    <Ionicons name="create-outline" size={18} color={Colors.gold} />
                     <Text style={styles.editButtonText}>{t('Edit Journal')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -560,10 +561,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   screenTitle: {
-    color: '#fff',
+    color: Colors.text,
     fontSize: 16,
     letterSpacing: 2,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
   },
   headerSpacer: {
     width: 44,
@@ -575,30 +576,35 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: Colors.surfaceCard,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: Colors.cardBorder,
     paddingHorizontal: 24,
   },
   emptyTitle: {
-    color: '#fff',
+    color: Colors.text,
     fontSize: 16,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   emptyText: {
     color: Colors.textMuted,
     fontSize: 14,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     textAlign: 'center',
   },
   entryCard: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 24,
+    backgroundColor: Colors.surfaceCard,
+    borderRadius: 20,
     padding: 20,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: Colors.cardBorder,
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 2,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -607,26 +613,25 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   dateText: {
-    color: '#fff',
+    color: Colors.text,
     fontSize: 14,
-    fontWeight: '800',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 1,
   },
   timeText: {
-    color: 'rgba(255,255,255,0.4)',
+    color: Colors.textMuted,
     fontSize: 12,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     marginTop: 2,
   },
   moodEmoji: {
     fontSize: 32,
   },
   entryText: {
-    color: 'rgba(255,255,255,0.7)',
+    color: Colors.textSecondary,
     fontSize: 15,
     lineHeight: 22,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   entryPreview: {
     marginBottom: 16,
@@ -640,16 +645,16 @@ const styles = StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: 2.5,
-    backgroundColor: Colors.accentBlue,
+    backgroundColor: Colors.gold,
     marginTop: 9,
   },
   previewSection: {
     marginBottom: 4,
   },
   previewSectionTitle: {
-    color: '#fff',
+    color: Colors.gold,
     fontSize: 12,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.6,
     marginBottom: 4,
     textTransform: 'uppercase',
@@ -659,29 +664,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.04)',
+    borderTopColor: Colors.divider,
     paddingTop: 12,
   },
   viewMoreText: {
-    color: Colors.accentBlue,
+    color: Colors.gold,
     fontSize: 12,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     marginRight: 4,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.78)',
+    backgroundColor: 'rgba(13, 13, 13, 0.85)',
     justifyContent: 'center',
     padding: 20,
   },
   modalCard: {
     maxHeight: '80%',
-    backgroundColor: '#1A1A1A',
+    backgroundColor: Colors.surfaceCard,
     borderRadius: 28,
     padding: 22,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: Colors.cardBorder,
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 4,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -694,22 +703,22 @@ const styles = StyleSheet.create({
     paddingRight: 12,
   },
   modalDateText: {
-    color: '#fff',
+    color: Colors.text,
     fontSize: 16,
-    fontFamily: 'Inter_700Bold',
-    letterSpacing: 1,
+    fontFamily: Fonts.display,
+    letterSpacing: 0.5,
   },
   modalTimeText: {
-    color: 'rgba(255,255,255,0.5)',
+    color: Colors.textMuted,
     fontSize: 13,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     marginTop: 4,
   },
   modalCloseButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(247, 243, 238, 0.08)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -720,15 +729,15 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: Colors.divider,
   },
   modalMoodEmoji: {
     fontSize: 28,
   },
   modalMoodLabel: {
-    color: Colors.accentBlue,
+    color: Colors.gold,
     fontSize: 13,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 1.2,
   },
   moodPickerRow: {
@@ -743,26 +752,26 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderColor: Colors.cardBorder,
+    backgroundColor: 'rgba(247, 243, 238, 0.04)',
     alignItems: 'center',
     gap: 4,
   },
   moodOptionActive: {
-    borderColor: 'rgba(6,182,212,0.45)',
-    backgroundColor: 'rgba(6,182,212,0.14)',
+    borderColor: Colors.gold,
+    backgroundColor: 'rgba(201, 148, 58, 0.15)',
   },
   moodOptionEmoji: {
     fontSize: 22,
   },
   moodOptionLabel: {
-    color: 'rgba(255,255,255,0.68)',
+    color: Colors.textSecondary,
     fontSize: 11,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.6,
   },
   moodOptionLabelActive: {
-    color: Colors.accentBlue,
+    color: Colors.gold,
   },
   modalBody: {
     maxHeight: 380,
@@ -772,12 +781,12 @@ const styles = StyleSheet.create({
     maxHeight: 420,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: '#111111',
-    color: '#fff',
+    borderColor: Colors.cardBorder,
+    backgroundColor: Colors.obsidian,
+    color: Colors.text,
     fontSize: 16,
     lineHeight: 24,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     paddingHorizontal: 16,
     paddingVertical: 16,
     marginBottom: 16,
@@ -791,27 +800,27 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 52,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(247, 243, 238, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelButtonText: {
-    color: '#fff',
+    color: Colors.textSecondary,
     fontSize: 14,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   saveButton: {
     flex: 1,
     height: 52,
     borderRadius: 16,
-    backgroundColor: Colors.accentBlue,
+    backgroundColor: Colors.gold,
     alignItems: 'center',
     justifyContent: 'center',
   },
   saveButtonText: {
-    color: '#001311',
+    color: Colors.obsidian,
     fontSize: 14,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   modalActionRow: {
     flexDirection: 'row',
@@ -827,13 +836,13 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(6,182,212,0.3)',
-    backgroundColor: 'rgba(6,182,212,0.08)',
+    borderColor: Colors.gold,
+    backgroundColor: 'rgba(201, 148, 58, 0.1)',
   },
   editButtonText: {
-    color: Colors.accentBlue,
+    color: Colors.gold,
     fontSize: 14,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   deleteButton: {
     flex: 1,
@@ -844,8 +853,8 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(248,113,113,0.28)',
-    backgroundColor: 'rgba(248,113,113,0.08)',
+    borderColor: 'rgba(239, 68, 68, 0.28)',
+    backgroundColor: 'rgba(239, 68, 68, 0.08)',
   },
   deleteButtonDisabled: {
     opacity: 0.55,
@@ -853,22 +862,22 @@ const styles = StyleSheet.create({
   deleteButtonText: {
     color: '#F87171',
     fontSize: 14,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   modalEntryText: {
-    color: 'rgba(255,255,255,0.82)',
+    color: Colors.textSecondary,
     fontSize: 16,
     lineHeight: 25,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     paddingBottom: 12,
   },
   sectionBlock: {
     paddingBottom: 6,
   },
   sectionTitle: {
-    color: Colors.accentBlue,
+    color: Colors.gold,
     fontSize: 12,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 1.1,
     textTransform: 'uppercase',
     marginBottom: 8,
@@ -883,12 +892,12 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: Colors.accentBlue,
+    backgroundColor: Colors.gold,
     marginTop: 10,
   },
   confirmOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.78)',
+    backgroundColor: 'rgba(13, 13, 13, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
@@ -896,28 +905,33 @@ const styles = StyleSheet.create({
   confirmCard: {
     width: '100%',
     maxWidth: 340,
-    backgroundColor: '#101827',
+    backgroundColor: Colors.surfaceCard,
     borderRadius: 22,
     paddingHorizontal: 20,
     paddingTop: 22,
     paddingBottom: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: Colors.cardBorder,
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 4,
   },
   confirmIconWrap: {
     width: 48,
     height: 48,
     borderRadius: 24,
     alignSelf: 'center',
-    backgroundColor: 'rgba(248,113,113,0.12)',
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 14,
   },
   confirmTitle: {
-    color: '#fff',
+    color: Colors.text,
     fontSize: 20,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
     textAlign: 'center',
     marginBottom: 10,
   },
@@ -925,7 +939,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontSize: 14,
     lineHeight: 21,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     textAlign: 'center',
     marginBottom: 18,
   },
@@ -941,12 +955,12 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(247, 243, 238, 0.08)',
   },
   confirmCancelText: {
-    color: '#fff',
+    color: Colors.textSecondary,
     fontSize: 14,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   confirmDeleteButton: {
     minWidth: 110,
@@ -960,6 +974,6 @@ const styles = StyleSheet.create({
   confirmDeleteText: {
     color: '#fff',
     fontSize: 14,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
 });

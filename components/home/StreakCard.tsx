@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
+import { Fonts } from '../../constants/Typography';
 import { fetchCurrentUser } from '../../lib/api';
 import { useLanguage } from '../../lib/i18n';
 
@@ -189,7 +190,7 @@ const styles = StyleSheet.create({
   streakSub: {
     color: Colors.gold,
     fontSize: 10.5,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 1.1,
   },
   daysRow: {
@@ -202,12 +203,12 @@ const styles = StyleSheet.create({
   streakVal: {
     color: Colors.ivory,
     fontSize: 18,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
   },
   activeTag: {
     color: Colors.victoryGreen,
     fontSize: 11.5,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.bodyMedium,
   },
   inactiveTag: {
     color: Colors.textMuted,
@@ -231,7 +232,7 @@ const styles = StyleSheet.create({
   atRiskText: {
     color: Colors.copper,
     fontSize: 9.5,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.4,
   },
   milestoneSection: {
@@ -245,13 +246,13 @@ const styles = StyleSheet.create({
   milestoneLabel: {
     color: Colors.textMuted,
     fontSize: 11,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.5,
   },
   milestonePercent: {
     color: Colors.gold,
     fontSize: 12,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
   },
   progressBg: {
     height: 7,
@@ -277,7 +278,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: Colors.textSecondary,
     fontSize: 12,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     lineHeight: 16,
   },
   actionBtn: {
@@ -292,6 +293,6 @@ const styles = StyleSheet.create({
   actionBtnText: {
     color: Colors.obsidian,
     fontSize: 12,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
 });

@@ -29,6 +29,8 @@ import {
 } from '../lib/access';
 import { useLanguage } from '../lib/i18n';
 import { replaceRoute } from '../lib/navigation';
+import { Colors } from '../constants/Colors';
+import { Fonts } from '../constants/Typography';
 
 type AppPlanViewModel = AppPlanCard & {
   planId: string;
@@ -95,81 +97,81 @@ function getTierDesign(tier: SubscriptionTier) {
   switch (tier) {
     case 'GOLD_BETA':
       return {
-        bg: '#1C1917',
-        accentColor: '#F59E0B',
-        badgeBg: 'rgba(245, 158, 11, 0.18)',
-        borderColor: '#44403C',
-        activeBorderColor: '#F59E0B',
-        glowColor: 'rgba(245, 158, 11, 0.35)',
+        bg: Colors.surfaceCard,
+        accentColor: Colors.gold,
+        badgeBg: 'rgba(201, 148, 58, 0.16)',
+        borderColor: Colors.cardBorder,
+        activeBorderColor: Colors.gold,
+        glowColor: 'rgba(201, 148, 58, 0.2)',
         iconName: 'ribbon-outline' as const,
         tag: 'BETA ACCESS',
-        pillBg: '#F59E0B',
-        pillText: '#000000',
+        pillBg: Colors.gold,
+        pillText: Colors.obsidian,
       };
     case 'SILVER':
       return {
-        bg: '#0F172A',
-        accentColor: '#94A3B8',
-        badgeBg: 'rgba(148, 163, 184, 0.16)',
-        borderColor: '#334155',
-        activeBorderColor: '#94A3B8',
-        glowColor: 'rgba(148, 163, 184, 0.25)',
+        bg: Colors.surfaceCard,
+        accentColor: Colors.copper,
+        badgeBg: 'rgba(181, 101, 29, 0.14)',
+        borderColor: Colors.cardBorder,
+        activeBorderColor: Colors.copper,
+        glowColor: 'rgba(181, 101, 29, 0.2)',
         iconName: 'medal-outline' as const,
         tag: 'ESSENTIALS',
-        pillBg: 'rgba(148, 163, 184, 0.15)',
-        pillText: '#CBD5E1',
+        pillBg: 'rgba(181, 101, 29, 0.2)',
+        pillText: Colors.copper,
       };
     case 'GOLD':
       return {
-        bg: '#1C1917',
-        accentColor: '#F59E0B',
-        badgeBg: 'rgba(245, 158, 11, 0.18)',
-        borderColor: '#44403C',
-        activeBorderColor: '#F59E0B',
-        glowColor: 'rgba(245, 158, 11, 0.35)',
+        bg: Colors.surfaceCard,
+        accentColor: Colors.gold,
+        badgeBg: 'rgba(201, 148, 58, 0.16)',
+        borderColor: Colors.cardBorder,
+        activeBorderColor: Colors.gold,
+        glowColor: 'rgba(201, 148, 58, 0.2)',
         iconName: 'ribbon-outline' as const,
         tag: 'MOST POPULAR',
-        pillBg: '#F59E0B',
-        pillText: '#000000',
+        pillBg: Colors.gold,
+        pillText: Colors.obsidian,
       };
     case 'PLATINUM':
       return {
-        bg: '#0B132B',
-        accentColor: '#38BDF8',
-        badgeBg: 'rgba(56, 189, 248, 0.18)',
-        borderColor: '#1E293B',
-        activeBorderColor: '#38BDF8',
-        glowColor: 'rgba(56, 189, 248, 0.4)',
+        bg: Colors.surfaceCard,
+        accentColor: Colors.gold,
+        badgeBg: 'rgba(201, 148, 58, 0.16)',
+        borderColor: Colors.cardBorder,
+        activeBorderColor: Colors.gold,
+        glowColor: 'rgba(201, 148, 58, 0.2)',
         iconName: 'diamond-outline' as const,
         tag: 'RECOMMENDED',
-        pillBg: '#38BDF8',
-        pillText: '#021417',
+        pillBg: Colors.gold,
+        pillText: Colors.obsidian,
       };
     case 'INNER_CIRCLE':
       return {
-        bg: '#1F1122',
-        accentColor: '#FB7185',
-        badgeBg: 'rgba(251, 113, 133, 0.18)',
-        borderColor: '#4C1D24',
-        activeBorderColor: '#FB7185',
-        glowColor: 'rgba(251, 113, 133, 0.35)',
+        bg: Colors.surfaceCard,
+        accentColor: Colors.copper,
+        badgeBg: 'rgba(181, 101, 29, 0.18)',
+        borderColor: Colors.cardBorder,
+        activeBorderColor: Colors.copper,
+        glowColor: 'rgba(181, 101, 29, 0.2)',
         iconName: 'sparkles-outline' as const,
         tag: 'EXCLUSIVE',
-        pillBg: '#FB7185',
-        pillText: '#1F1122',
+        pillBg: Colors.copper,
+        pillText: Colors.ivory,
       };
     default:
       return {
-        bg: '#0F172A',
-        accentColor: '#64748B',
-        badgeBg: 'rgba(100, 116, 139, 0.16)',
-        borderColor: '#334155',
-        activeBorderColor: '#64748B',
-        glowColor: 'rgba(100, 116, 139, 0.2)',
+        bg: Colors.surfaceCard,
+        accentColor: Colors.copper,
+        badgeBg: 'rgba(181, 101, 29, 0.12)',
+        borderColor: Colors.cardBorder,
+        activeBorderColor: Colors.copper,
+        glowColor: 'rgba(181, 101, 29, 0.15)',
         iconName: 'key-outline' as const,
         tag: 'BASIC',
-        pillBg: 'rgba(100, 116, 139, 0.15)',
-        pillText: '#94A3B8',
+        pillBg: 'rgba(181, 101, 29, 0.12)',
+        pillText: Colors.copper,
       };
   }
 }
@@ -589,9 +591,10 @@ export default function PlanSelectionScreen() {
                         backgroundColor: design.bg,
                         borderColor: active ? design.activeBorderColor : design.borderColor,
                         borderWidth: active ? 2 : 1,
-                        shadowColor: active ? design.accentColor : '#000000',
-                        shadowOpacity: active ? 0.35 : 0.15,
-                        shadowRadius: active ? 18 : 8,
+                        shadowColor: Colors.navy,
+                        shadowOpacity: active ? 0.25 : 0.12,
+                        shadowRadius: active ? 10 : 5,
+                        elevation: 2,
                         transform: [{ scale: active ? 1 : 0.98 }],
                       },
                     ]}
@@ -675,7 +678,7 @@ export default function PlanSelectionScreen() {
                     <View style={styles.cardFooter}>
                       {current ? (
                         <View style={styles.currentActivePill}>
-                          <Ionicons name="checkmark-circle-sharp" size={14} color="#38BDF8" />
+                          <Ionicons name="checkmark-circle-sharp" size={14} color={Colors.gold} />
                           <Text style={styles.currentActiveText}>{t('Active on your profile')}</Text>
                         </View>
                       ) : null}
@@ -684,9 +687,9 @@ export default function PlanSelectionScreen() {
                         activeOpacity={0.85}
                         style={[
                           styles.cardBtn,
-                          active && !current && { backgroundColor: '#18D2EF' },
-                          current && { backgroundColor: 'rgba(56, 189, 248, 0.15)', borderWidth: 1, borderColor: '#38BDF8' },
-                          !active && !current && { backgroundColor: '#1E293B', borderWidth: 1, borderColor: '#334155' },
+                          active && !current && { backgroundColor: Colors.gold },
+                          current && { backgroundColor: 'rgba(201, 148, 58, 0.15)', borderWidth: 1, borderColor: Colors.gold },
+                          !active && !current && { backgroundColor: 'rgba(247, 243, 238, 0.06)', borderWidth: 1, borderColor: Colors.cardBorder },
                         ]}
                         onPress={() => {
                           if (current) {
@@ -710,9 +713,9 @@ export default function PlanSelectionScreen() {
                         <Text
                           style={[
                             styles.cardBtnText,
-                            active && !current && { color: '#021417', fontFamily: 'Inter_700Bold' },
-                            current && { color: '#38BDF8', fontFamily: 'Inter_700Bold' },
-                            !active && !current && { color: '#E2E8F0', fontFamily: 'Inter_600SemiBold' },
+                            active && !current && { color: Colors.obsidian, fontFamily: Fonts.heading },
+                            current && { color: Colors.gold, fontFamily: Fonts.heading },
+                            !active && !current && { color: Colors.textSecondary, fontFamily: Fonts.heading },
                           ]}
                         >
                           {actionLabel}
@@ -740,7 +743,7 @@ export default function PlanSelectionScreen() {
             </View>
 
             <View style={styles.swipeHintRow}>
-              <Ionicons name="swap-horizontal" size={14} color="#64748B" />
+              <Ionicons name="swap-horizontal" size={14} color={Colors.textMuted} />
               <Text style={styles.swipeHintText}>{t('Swipe to compare all access plans')}</Text>
             </View>
           </View>
@@ -764,7 +767,7 @@ export default function PlanSelectionScreen() {
               <View style={styles.checkoutReceipt}>
                 <View style={styles.receiptRow}>
                   <Text style={styles.receiptLabel}>{t('Membership Plan')}</Text>
-                  <Text style={[styles.receiptValue, { color: selectedTierDesign.accentColor, fontFamily: 'Inter_700Bold' }]}>
+                  <Text style={[styles.receiptValue, { color: selectedTierDesign.accentColor, fontFamily: Fonts.heading }]}>
                     {selectedPlan.title.toUpperCase()}
                   </Text>
                 </View>
@@ -786,7 +789,7 @@ export default function PlanSelectionScreen() {
                     </View>
                     <View style={styles.receiptRow}>
                       <Text style={styles.receiptLabel}>{t('Special Offer Discount')}</Text>
-                      <Text style={[styles.receiptValue, { color: '#10B981', fontFamily: 'Inter_600SemiBold' }]}>
+                      <Text style={[styles.receiptValue, { color: Colors.victoryGreen, fontFamily: Fonts.dataBold }]}>
                         {`- ${formatEuroAmount(selectedPlanPricing.savings)}`}
                       </Text>
                     </View>
@@ -837,7 +840,7 @@ export default function PlanSelectionScreen() {
                   <Text style={styles.modalSecondaryText}>{t('Cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.modalPrimary} onPress={handleConfirm} disabled={saving}>
-                  {saving ? <ActivityIndicator color="#021417" /> : <Text style={styles.modalPrimaryText}>{t('Confirm Now')}</Text>}
+                  {saving ? <ActivityIndicator color={Colors.obsidian} /> : <Text style={styles.modalPrimaryText}>{t('Confirm Now')}</Text>}
                 </TouchableOpacity>
               </View>
             </View>
@@ -849,11 +852,11 @@ export default function PlanSelectionScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#090D16' },
-  page: { flex: 1, backgroundColor: '#090D16' },
+  screen: { flex: 1, backgroundColor: Colors.obsidian },
+  page: { flex: 1, backgroundColor: Colors.obsidian },
   content: { paddingTop: 16, paddingBottom: 40 },
-  loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 14, backgroundColor: '#090D16' },
-  loadingText: { color: '#94A3B8', fontSize: 14, fontFamily: 'Inter_400Regular' },
+  loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 14, backgroundColor: Colors.obsidian },
+  loadingText: { color: Colors.textMuted, fontSize: 14, fontFamily: Fonts.body },
 
   /* Top Navigation Bar */
   topNavBar: {
@@ -868,9 +871,9 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(247, 243, 238, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: 'rgba(247, 243, 238, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -885,16 +888,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(24, 210, 239, 0.1)',
+    backgroundColor: 'rgba(201, 148, 58, 0.12)',
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(24, 210, 239, 0.25)',
+    borderColor: 'rgba(201, 148, 58, 0.3)',
   },
-  kicker: { color: '#18D2EF', fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 2 },
-  title: { color: '#FFFFFF', fontSize: 26, fontFamily: 'Inter_700Bold', marginTop: 12, textAlign: 'center', letterSpacing: -0.5 },
-  subtitle: { color: '#94A3B8', fontSize: 13, lineHeight: 20, fontFamily: 'Inter_400Regular', marginTop: 8, textAlign: 'center', maxWidth: 640 },
+  kicker: { color: Colors.gold, fontSize: 10, fontFamily: Fonts.heading, letterSpacing: 2 },
+  title: { color: Colors.text, fontSize: 26, fontFamily: Fonts.display, marginTop: 12, textAlign: 'center', letterSpacing: 0.2 },
+  subtitle: { color: Colors.textSecondary, fontSize: 13, lineHeight: 20, fontFamily: Fonts.body, marginTop: 8, textAlign: 'center', maxWidth: 640 },
 
   /* Master Billing Segment Switch */
   billingContainer: {
@@ -906,11 +909,11 @@ const styles = StyleSheet.create({
   billingSegmentTrack: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0F172A',
+    backgroundColor: Colors.surfaceCard,
     borderRadius: 999,
     padding: 4,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: Colors.cardBorder,
     width: '100%',
     maxWidth: 390,
   },
@@ -924,34 +927,34 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   billingSegmentBtnActive: {
-    backgroundColor: '#18D2EF',
-    shadowColor: '#18D2EF',
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    backgroundColor: Colors.gold,
+    shadowColor: Colors.navy,
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
   },
   billingSegmentText: {
-    color: '#94A3B8',
+    color: Colors.textSecondary,
     fontSize: 12,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 1,
   },
   billingSegmentTextActive: {
-    color: '#021417',
+    color: Colors.obsidian,
   },
   yearlySaveBadge: {
     position: 'absolute',
     top: -12,
     right: 12,
-    backgroundColor: '#10B981',
+    backgroundColor: Colors.victoryGreen,
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: 999,
     zIndex: 10,
   },
   yearlySaveBadgeText: {
-    color: '#022C22',
+    color: Colors.ivory,
     fontSize: 8,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.5,
   },
 
@@ -981,14 +984,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 5,
     borderRadius: 999,
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
+    shadowColor: Colors.navy,
+    shadowOpacity: 0.15,
     shadowRadius: 6,
     zIndex: 10,
   },
   topTagText: {
     fontSize: 10,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.8,
   },
 
@@ -1008,31 +1011,31 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   stepBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(247, 243, 238, 0.08)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: 'rgba(247, 243, 238, 0.12)',
   },
   stepBadgeText: {
-    color: '#94A3B8',
+    color: Colors.textMuted,
     fontSize: 11,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
 
   /* Title & Subtitle */
   cardTitle: {
-    color: '#FFFFFF',
+    color: Colors.text,
     fontSize: 20,
-    fontFamily: 'Inter_700Bold',
-    letterSpacing: -0.3,
+    fontFamily: Fonts.display,
+    letterSpacing: 0.3,
   },
   cardDescription: {
-    color: '#94A3B8',
+    color: Colors.textSecondary,
     fontSize: 13,
     lineHeight: 19,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     marginTop: 8,
     minHeight: 56,
   },
@@ -1050,22 +1053,22 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   discountBadge: {
-    backgroundColor: 'rgba(52, 211, 153, 0.2)',
+    backgroundColor: 'rgba(26, 122, 74, 0.16)',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: 'rgba(52, 211, 153, 0.35)',
+    borderColor: 'rgba(26, 122, 74, 0.35)',
   },
   discountBadgeText: {
-    color: '#34D399',
+    color: Colors.victoryGreen,
     fontSize: 10,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   originalPriceText: {
-    color: '#64748B',
+    color: Colors.textMuted,
     fontSize: 13,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.data,
     textDecorationLine: 'line-through',
   },
   priceMainRow: {
@@ -1074,44 +1077,44 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   priceNumber: {
-    color: '#FFFFFF',
+    color: Colors.text,
     fontSize: 28,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
     letterSpacing: -0.5,
   },
   pricePeriod: {
-    color: '#94A3B8',
+    color: Colors.textSecondary,
     fontSize: 13,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.body,
   },
   priceMainText: {
-    color: '#FFFFFF',
+    color: Colors.text,
     fontSize: 22,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
   },
   priceSubText: {
-    color: '#64748B',
+    color: Colors.textMuted,
     fontSize: 12,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     marginTop: 4,
   },
   savingsText: {
-    color: '#34D399',
+    color: Colors.victoryGreen,
     fontSize: 11,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.bodySemiBold,
     marginTop: 4,
   },
   bestValueText: {
-    color: '#18D2EF',
+    color: Colors.gold,
     fontSize: 10,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     marginTop: 4,
     letterSpacing: 1,
   },
 
   divider: {
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: Colors.divider,
     marginVertical: 14,
   },
 
@@ -1133,9 +1136,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   featureText: {
-    color: '#F1F5F9',
+    color: Colors.text,
     fontSize: 13,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.body,
     flex: 1,
     lineHeight: 19,
   },
@@ -1150,14 +1153,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: 'rgba(56, 189, 248, 0.1)',
+    backgroundColor: 'rgba(201, 148, 58, 0.12)',
     paddingVertical: 6,
     borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(201, 148, 58, 0.3)',
   },
   currentActiveText: {
-    color: '#38BDF8',
+    color: Colors.gold,
     fontSize: 11,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   cardBtn: {
     borderRadius: 14,
@@ -1182,11 +1187,11 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#334155',
+    backgroundColor: 'rgba(247, 243, 238, 0.15)',
   },
   paginationDotActive: {
     width: 24,
-    backgroundColor: '#18D2EF',
+    backgroundColor: Colors.gold,
   },
 
   /* Swipe Hint */
@@ -1198,9 +1203,9 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   swipeHintText: {
-    color: '#64748B',
+    color: Colors.textMuted,
     fontSize: 11,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.body,
   },
 
   /* Summary Card */
@@ -1208,8 +1213,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginTop: 16,
     borderRadius: 20,
-    backgroundColor: '#0F172A',
+    backgroundColor: Colors.surfaceCard,
     borderWidth: 1.5,
+    borderColor: Colors.cardBorder,
     padding: 18,
     gap: 8,
   },
@@ -1224,95 +1230,102 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   summaryLabel: {
-    color: '#94A3B8',
+    color: Colors.textMuted,
     fontSize: 11,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 1.2,
   },
   summaryTierTitle: {
     fontSize: 16,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
   },
   summaryOfferBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(52, 211, 153, 0.15)',
+    backgroundColor: 'rgba(26, 122, 74, 0.15)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
     marginTop: 4,
   },
   summaryOfferText: {
-    color: '#34D399',
+    color: Colors.victoryGreen,
     fontSize: 12,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.heading,
   },
   summaryPriceText: {
-    color: '#FFFFFF',
+    color: Colors.text,
     fontSize: 18,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
     marginTop: 4,
   },
   summaryAccessText: {
-    color: '#94A3B8',
+    color: Colors.textSecondary,
     fontSize: 12,
     lineHeight: 18,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   summaryBold: {
-    color: '#E2E8F0',
-    fontFamily: 'Inter_600SemiBold',
+    color: Colors.text,
+    fontFamily: Fonts.bodySemiBold,
   },
 
   /* Bottom Confirm Button */
   confirmButton: {
     marginTop: 20,
     marginHorizontal: 20,
-    backgroundColor: '#18D2EF',
+    backgroundColor: Colors.gold,
     borderRadius: 18,
     paddingVertical: 18,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    shadowColor: '#18D2EF',
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
+    shadowColor: Colors.navy,
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 3,
   },
   confirmButtonDisabled: {
-    backgroundColor: 'rgba(56, 189, 248, 0.18)',
+    backgroundColor: 'rgba(201, 148, 58, 0.2)',
     borderWidth: 1,
-    borderColor: '#38BDF8',
+    borderColor: Colors.copper,
     shadowOpacity: 0,
   },
   confirmButtonText: {
-    color: '#021417',
+    color: Colors.obsidian,
     fontSize: 15,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.8,
   },
 
   /* Modal */
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    backgroundColor: 'rgba(13, 13, 13, 0.85)',
     justifyContent: 'center',
     padding: 20,
   },
   modalCard: {
-    backgroundColor: '#0F172A',
+    backgroundColor: Colors.surfaceCard,
     borderRadius: 24,
     borderWidth: 1.5,
+    borderColor: Colors.cardBorder,
     padding: 22,
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 4,
   },
   modalHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  modalTitle: { color: '#FFFFFF', fontSize: 20, fontFamily: 'Inter_700Bold' },
-  modalText: { color: '#94A3B8', fontSize: 14, lineHeight: 22, fontFamily: 'Inter_400Regular', marginTop: 14 },
+  modalTitle: { color: Colors.text, fontSize: 20, fontFamily: Fonts.display },
+  modalText: { color: Colors.textSecondary, fontSize: 14, lineHeight: 22, fontFamily: Fonts.body, marginTop: 14 },
   modalActions: { flexDirection: 'row', gap: 12, marginTop: 24 },
   modalSecondary: {
     flex: 1,
@@ -1320,25 +1333,25 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#334155',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: Colors.cardBorder,
+    backgroundColor: 'rgba(247, 243, 238, 0.05)',
   },
-  modalSecondaryText: { color: '#E2E8F0', fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  modalSecondaryText: { color: Colors.textSecondary, fontSize: 14, fontFamily: Fonts.heading },
   modalPrimary: {
     flex: 1,
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
-    backgroundColor: '#18D2EF',
+    backgroundColor: Colors.gold,
   },
-  modalPrimaryText: { color: '#021417', fontSize: 14, fontFamily: 'Inter_700Bold' },
+  modalPrimaryText: { color: Colors.obsidian, fontSize: 14, fontFamily: Fonts.heading },
 
   /* Receipt / Invoice Container */
   checkoutReceipt: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    backgroundColor: 'rgba(13, 43, 69, 0.4)',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: 'rgba(181, 101, 29, 0.15)',
     padding: 16,
     marginTop: 18,
     gap: 12,
@@ -1355,52 +1368,52 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   receiptLabel: {
-    color: '#94A3B8',
+    color: Colors.textSecondary,
     fontSize: 13,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   receiptValue: {
-    color: '#FFFFFF',
+    color: Colors.text,
     fontSize: 13,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.dataBold,
   },
   strikethrough: {
     textDecorationLine: 'line-through',
-    color: '#64748B',
+    color: Colors.textMuted,
   },
   receiptDivider: {
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: Colors.divider,
     marginVertical: 4,
   },
   receiptLabelTotal: {
-    color: '#FFFFFF',
+    color: Colors.text,
     fontSize: 14,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   receiptValueTotal: {
-    color: '#18D2EF',
+    color: Colors.gold,
     fontSize: 18,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
   },
   modalInfoSubtext: {
-    color: '#64748B',
+    color: Colors.textMuted,
     fontSize: 11,
     lineHeight: 16,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     marginTop: 10,
     textAlign: 'center',
   },
   modalFeaturesContainer: {
     marginTop: 16,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.05)',
+    borderTopColor: 'rgba(247, 243, 238, 0.08)',
     paddingTop: 14,
   },
   modalFeaturesTitle: {
-    color: '#E2E8F0',
+    color: Colors.textSecondary,
     fontSize: 12,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.heading,
     marginBottom: 8,
   },
   modalFeatureRow: {
@@ -1410,15 +1423,15 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   modalFeatureText: {
-    color: '#94A3B8',
+    color: Colors.textSecondary,
     fontSize: 12,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     flex: 1,
   },
   modalFeaturesMore: {
-    color: '#64748B',
+    color: Colors.textMuted,
     fontSize: 11,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.body,
     marginLeft: 20,
     marginTop: 2,
   },
@@ -1439,29 +1452,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   entrySilverOutline: {
-    borderColor: '#94A3B8',
-    backgroundColor: 'rgba(148, 163, 184, 0.08)',
+    borderColor: Colors.copper,
+    backgroundColor: 'rgba(181, 101, 29, 0.08)',
   },
   entryGoldOutline: {
-    borderColor: '#F59E0B',
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-    shadowColor: '#F59E0B',
+    borderColor: Colors.gold,
+    backgroundColor: 'rgba(201, 148, 58, 0.1)',
+    shadowColor: Colors.navy,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.35,
-    shadowRadius: 18,
-    elevation: 8,
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 3,
   },
   entrySilverText: {
-    color: '#CBD5E1',
+    color: Colors.copper,
     fontSize: 18,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0,
   },
   entryGoldText: {
-    color: '#F59E0B',
+    color: Colors.gold,
     fontSize: 22,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
     letterSpacing: 0,
   },
 });
-

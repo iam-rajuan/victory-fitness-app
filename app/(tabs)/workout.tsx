@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../../constants/Colors';
+import { Fonts } from '../../constants/Typography';
 import { fetchCurrentUser, recordAnalyticsEvent, fetchWorkoutLogs, seedTestWorkoutLogs, WorkoutLogItem } from '../../lib/api';
 import { canAccessFeature } from '../../lib/access';
 import VictoryHeader from '../../components/VictoryHeader';
@@ -42,6 +43,24 @@ const FALLBACK_WORKOUT_IMAGE = 'https://images.unsplash.com/photo-1517836357463-
 function safeImageUri(value: string | null | undefined) {
   const normalized = String(value || '').trim();
   return normalized || FALLBACK_WORKOUT_IMAGE;
+}
+
+function formatWorkoutLogDisplayTitle(title?: string, workoutId?: string): string {
+  const raw = (title || '').trim();
+  if (/[0-9a-fA-F]{24}/.test(raw)) {
+    const remainder = raw.replace(/[0-9a-fA-F]{24}/g, '').replace(/^[-_ ]+|[-_ ]+$/g, '');
+    if (remainder) {
+      const cleanRemainder = remainder.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+      return `Strength Session - ${cleanRemainder}`;
+    }
+    return 'Strength Workout Session';
+  }
+  if (!raw || raw.toLowerCase() === 'workout session') {
+    const cleanId = (workoutId || '').replace(/^[0-9a-fA-F]{24}[-_]?/, '');
+    const cleanName = cleanId.replace(/[-_]/g, ' ').trim().replace(/\b\w/g, (c) => c.toUpperCase());
+    return cleanName || 'Strength Workout Session';
+  }
+  return raw;
 }
 
 function getCategoryIcon(name: string): keyof typeof Ionicons.glyphMap {
@@ -919,10 +938,10 @@ export default function WorkoutScreen() {
                   disabled={seedingLogs}
                 >
                   {seedingLogs ? (
-                    <ActivityIndicator size="small" color="#06B6D4" />
+                    <ActivityIndicator size="small" color={Colors.gold} />
                   ) : (
                     <>
-                      <Ionicons name="add-circle-outline" size={14} color="#06B6D4" />
+                      <Ionicons name="add-circle-outline" size={14} color={Colors.gold} />
                       <Text style={styles.seedBtnText}>{t('Seed 50+ Logs')}</Text>
                     </>
                   )}
@@ -931,7 +950,7 @@ export default function WorkoutScreen() {
 
               {historyLoading ? (
                 <View style={styles.historyLoadingBox}>
-                  <ActivityIndicator size="small" color="#06B6D4" />
+                  <ActivityIndicator size="small" color={Colors.gold} />
                   <Text style={styles.historyLoadingText}>{t('Loading workout history...')}</Text>
                 </View>
               ) : historyLogs.length > 0 ? (
@@ -950,11 +969,11 @@ export default function WorkoutScreen() {
                     return (
                       <View key={log.id} style={styles.historyItemRow}>
                         <View style={styles.historyIconWrap}>
-                          <Ionicons name="barbell-outline" size={18} color="#06B6D4" />
+                          <Ionicons name="barbell-outline" size={18} color={Colors.gold} />
                         </View>
                         <View style={styles.historyItemMain}>
                           <Text style={styles.historyItemTitle} numberOfLines={1}>
-                            {log.title}
+                            {formatWorkoutLogDisplayTitle(log.title, log.workout_id)}
                           </Text>
                           <Text style={styles.historyItemDate}>{logDate}</Text>
                         </View>
@@ -1046,7 +1065,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: '#fff',
     fontSize: 15,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     outlineStyle: 'none' as never,
   },
   searchActions: {
@@ -1069,7 +1088,7 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#FCA5A5',
     fontSize: 13,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.bodyMedium,
     lineHeight: 19,
   },
   loadingWrap: {
@@ -1081,7 +1100,7 @@ const styles = StyleSheet.create({
   loadingText: {
     color: Colors.textMuted,
     fontSize: 14,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.bodyMedium,
   },
   heroCard: {
     marginHorizontal: 16,
@@ -1125,7 +1144,7 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 10,
     letterSpacing: 1,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   heroDurationContainer: {
     flexDirection: 'row',
@@ -1138,12 +1157,12 @@ const styles = StyleSheet.create({
   heroDurationText: {
     color: '#fff',
     fontSize: 11,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
   },
   heroTitle: {
     color: '#fff',
     fontSize: 24,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
     lineHeight: 30,
     marginBottom: 10,
   },
@@ -1159,7 +1178,7 @@ const styles = StyleSheet.create({
   heroMeta: {
     color: 'rgba(255,255,255,0.7)',
     fontSize: 13,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.bodyMedium,
   },
   heroStartButton: {
     flexDirection: 'row',
@@ -1173,7 +1192,7 @@ const styles = StyleSheet.create({
   heroStartButtonText: {
     color: '#000',
     fontSize: 12,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   heroStartIcon: {
     marginLeft: 2,
@@ -1190,14 +1209,14 @@ const styles = StyleSheet.create({
   emptyHeroTitle: {
     color: '#fff',
     fontSize: 20,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
     marginBottom: 8,
   },
   emptyHeroText: {
     color: Colors.textMuted,
     fontSize: 14,
     lineHeight: 20,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
   },
   categoriesContainer: {
     marginBottom: 24,
@@ -1212,7 +1231,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     color: Colors.primary,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 1.5,
   },
   categoriesScroll: {
@@ -1239,7 +1258,7 @@ const styles = StyleSheet.create({
   categoryPillText: {
     color: Colors.textMuted,
     fontSize: 13,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.5,
   },
   categoryPillTextSelected: {
@@ -1251,7 +1270,7 @@ const styles = StyleSheet.create({
   sectionTitleMain: {
     fontSize: 16,
     color: '#fff',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 1,
     marginBottom: 14,
   },
@@ -1289,7 +1308,7 @@ const styles = StyleSheet.create({
   popularLevelBadgeText: {
     color: '#fff',
     fontSize: 10,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.8,
   },
   popularContentVertical: {
@@ -1298,7 +1317,7 @@ const styles = StyleSheet.create({
   popularTitleVertical: {
     color: '#fff',
     fontSize: 18,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
     marginBottom: 8,
     lineHeight: 24,
   },
@@ -1310,7 +1329,7 @@ const styles = StyleSheet.create({
   popularMetaDuration: {
     color: 'rgba(255,255,255,0.5)',
     fontSize: 12,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.dataBold,
   },
   popularMetaDivider: {
     color: Colors.primary,
@@ -1319,7 +1338,7 @@ const styles = StyleSheet.create({
   popularMetaTag: {
     color: 'rgba(255,255,255,0.5)',
     fontSize: 11,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.5,
   },
   inlineEmptyState: {
@@ -1336,7 +1355,7 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     fontSize: 14,
     lineHeight: 20,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     textAlign: 'center',
   },
   savedPlansSection: {
@@ -1347,7 +1366,7 @@ const styles = StyleSheet.create({
   sectionTitleSavedPlan: {
     fontSize: 16,
     color: '#fff',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 1,
     marginBottom: 6,
   },
@@ -1367,7 +1386,7 @@ const styles = StyleSheet.create({
   savedPlanEyebrow: {
     color: Colors.primary,
     fontSize: 11,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 1.1,
   },
   savedPlanRemoveBtn: {
@@ -1381,13 +1400,13 @@ const styles = StyleSheet.create({
   savedPlanTitle: {
     color: '#fff',
     fontSize: 20,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
     marginBottom: 6,
   },
   savedPlanDescription: {
     color: 'rgba(255,255,255,0.6)',
     fontSize: 13,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: Fonts.body,
     lineHeight: 18,
     marginBottom: 14,
   },
@@ -1400,12 +1419,12 @@ const styles = StyleSheet.create({
   savedPlanProgressText: {
     color: 'rgba(255,255,255,0.8)',
     fontSize: 12,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.bodyMedium,
   },
   savedPlanProgressPercent: {
     color: Colors.primary,
     fontSize: 13,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
   },
   savedPlanProgressBarContainer: {
     height: 6,
@@ -1442,13 +1461,13 @@ const styles = StyleSheet.create({
   pinnedBadgeText: {
     color: '#EAB308',
     fontSize: 11,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.8,
   },
   pinnedDayTag: {
     color: '#06B6D4',
     fontSize: 12,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   pinnedReplanBtn: {
     flexDirection: 'row',
@@ -1460,9 +1479,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   pinnedReplanText: {
-    color: '#06B6D4',
+    color: Colors.gold,
     fontSize: 11,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.heading,
   },
   pinnedCard: {
     backgroundColor: '#161922',
@@ -1484,14 +1503,14 @@ const styles = StyleSheet.create({
   pinnedCardCategory: {
     color: '#06B6D4',
     fontSize: 10,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 1.2,
     marginBottom: 4,
   },
   pinnedCardTitle: {
     color: '#fff',
     fontSize: 18,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
     lineHeight: 24,
   },
   pinnedDurationWrap: {
@@ -1506,7 +1525,7 @@ const styles = StyleSheet.create({
   pinnedDurationText: {
     color: '#06B6D4',
     fontSize: 11,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
   },
   pinnedMetricsRow: {
     flexDirection: 'row',
@@ -1524,14 +1543,14 @@ const styles = StyleSheet.create({
   pinnedMetricLabel: {
     color: 'rgba(255,255,255,0.4)',
     fontSize: 9,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.8,
     marginBottom: 2,
   },
   pinnedMetricVal: {
     color: '#fff',
     fontSize: 12,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.dataBold,
   },
   pinnedMetricDivider: {
     width: 1,
@@ -1562,7 +1581,7 @@ const styles = StyleSheet.create({
   pinnedActionBtnText: {
     color: '#000',
     fontSize: 13,
-    fontFamily: 'Inter_800ExtraBold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.6,
   },
   pinnedEmptyCard: {
@@ -1581,7 +1600,7 @@ const styles = StyleSheet.create({
   pinnedEmptyTitle: {
     color: '#fff',
     fontSize: 15,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
   },
   pinnedEmptyText: {
     color: '#9CA3AF',
@@ -1601,7 +1620,7 @@ const styles = StyleSheet.create({
   pinnedCreateBtnText: {
     color: '#000',
     fontSize: 11,
-    fontFamily: 'Inter_800ExtraBold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.8,
   },
   historySection: {
@@ -1618,13 +1637,13 @@ const styles = StyleSheet.create({
   sectionTitleHistory: {
     color: '#fff',
     fontSize: 14,
-    fontFamily: 'Inter_800ExtraBold',
+    fontFamily: Fonts.heading,
     letterSpacing: 1.2,
   },
   historySubtitle: {
     color: '#9CA3AF',
     fontSize: 11,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.body,
     marginTop: 2,
   },
   seedBtn: {
@@ -1634,14 +1653,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: 'rgba(6,182,212,0.1)',
+    backgroundColor: 'rgba(201, 148, 58, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(6,182,212,0.25)',
+    borderColor: 'rgba(201, 148, 58, 0.3)',
   },
   seedBtnText: {
-    color: '#06B6D4',
+    color: Colors.gold,
     fontSize: 11,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   historyLoadingBox: {
     alignItems: 'center',
@@ -1653,10 +1672,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   historyListBox: {
-    backgroundColor: '#161922',
+    backgroundColor: Colors.surfaceCard,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: 'rgba(181, 101, 29, 0.25)',
     overflow: 'hidden',
   },
   historyItemRow: {
@@ -1672,7 +1691,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: 'rgba(6,182,212,0.1)',
+    backgroundColor: 'rgba(201, 148, 58, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1682,7 +1701,7 @@ const styles = StyleSheet.create({
   historyItemTitle: {
     color: '#fff',
     fontSize: 13,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.heading,
   },
   historyItemDate: {
     color: '#9CA3AF',
@@ -1696,7 +1715,7 @@ const styles = StyleSheet.create({
   historyDurationText: {
     color: '#E5E7EB',
     fontSize: 12,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.data,
   },
   historyBadgeCompleted: {
     backgroundColor: 'rgba(34,197,94,0.12)',
@@ -1705,9 +1724,9 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   historyBadgeText: {
-    color: '#22C55E',
+    color: Colors.victoryGreen,
     fontSize: 9,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   paginationRow: {
     flexDirection: 'row',
@@ -1732,7 +1751,7 @@ const styles = StyleSheet.create({
   pageBtnText: {
     color: '#fff',
     fontSize: 12,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.heading,
   },
   pageBtnTextDisabled: {
     color: '#4B5563',
@@ -1740,7 +1759,7 @@ const styles = StyleSheet.create({
   pageInfoText: {
     color: '#9CA3AF',
     fontSize: 12,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.data,
   },
   historyEmptyBox: {
     backgroundColor: '#161922',
@@ -1754,7 +1773,7 @@ const styles = StyleSheet.create({
   historyEmptyText: {
     color: '#fff',
     fontSize: 13,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.bodyMedium,
   },
   historyEmptySubtext: {
     color: '#9CA3AF',

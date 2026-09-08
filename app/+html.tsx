@@ -35,6 +35,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
         <link rel="icon" href="/favicon.ico?v=5" sizes="any" />
         <link rel="icon" type="image/png" href="/favicon.png?v=5" sizes="64x64" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
+        <link rel="stylesheet" href="/fonts/fonts.css" />
         {isProduction && hasFirebaseWebPushConfig ? (
           <>
             <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js" />
@@ -56,7 +57,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
         <style
           id="expo-reset"
           dangerouslySetInnerHTML={{
-            __html: '#root,body,html{height:100%}body{overflow:hidden;background:#070B14}#root{display:flex}',
+            __html: '#root,body,html{height:100%}body{overflow:hidden;background:#0D0D0D}#root{display:flex}',
           }}
         />
         {isProduction ? (
