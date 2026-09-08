@@ -90,7 +90,7 @@ function resolveApiUrl(url: string): string {
 }
 
 export const API_URL = resolveApiUrl(CONFIGURED_API_URL);
-const REQUEST_TIMEOUT_MS = 8_000;
+const REQUEST_TIMEOUT_MS = 20_000;
 const IS_BROWSER_AUTH = Platform.OS === 'web';
 const APP_REQUEST_CREDENTIALS: RequestCredentials = IS_BROWSER_AUTH ? 'include' : 'omit';
 const APP_CLIENT_HEADER_NAME = 'X-Victory-Client';
@@ -1287,6 +1287,7 @@ export async function uploadCurrentUserProfileImage(payload: {
   const response = await apiRequest<{ image_url: string }>('/me/profile-image', {
     method: 'POST',
     body: payload,
+    timeoutMs: 60_000,
   });
   if (authUser) {
     authUser = {

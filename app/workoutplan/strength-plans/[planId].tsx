@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../constants/Colors';
+import { Fonts } from '../../../constants/Typography';
 import { fetchStrengthWorkoutPlans, StrengthPlanResponse } from '../../../lib/workout-plans';
 import { useModuleAccessGuard } from '../../../lib/useModuleAccessGuard';
 import { useLanguage } from '../../../lib/i18n';
@@ -70,7 +71,7 @@ export default function StrengthPlanDetailScreen() {
           title: t('CUSTOM STRENGTH PLAN'),
           headerTransparent: true,
           headerTintColor: '#fff',
-          headerTitleStyle: { fontFamily: 'Inter_700Bold', fontSize: 13, letterSpacing: 2 } as any,
+          headerTitleStyle: { fontFamily: Fonts.heading, fontSize: 13, letterSpacing: 2, color: Colors.ivory } as any,
           headerLeft: () => (
             <TouchableOpacity onPress={() => router.back()} style={{ marginLeft: 16 }}>
               <Ionicons name="chevron-back" size={24} color="#fff" />
@@ -81,7 +82,7 @@ export default function StrengthPlanDetailScreen() {
 
       {loading ? (
         <View style={styles.loadingState}>
-          <ActivityIndicator size="large" color={Colors.accentBlue} />
+          <ActivityIndicator size="large" color={Colors.gold} />
           <Text style={styles.loadingStateText}>{t('Loading your custom strength plan...')}</Text>
         </View>
       ) : !plan || !selectedPlanDay ? (
@@ -151,19 +152,19 @@ export default function StrengthPlanDetailScreen() {
 
                 <View style={styles.exerciseMetrics}>
                   <View style={styles.metricItem}>
-                    <Ionicons name="layers-outline" size={16} color={Colors.accentBlue} />
+                    <Ionicons name="layers-outline" size={14} color={Colors.gold} />
                     <Text style={styles.metricValue}>{ex.sets} {t('Sets')}</Text>
                   </View>
                   <View style={styles.metricItem}>
-                    <Ionicons name="repeat-outline" size={16} color={Colors.accentBlue} />
+                    <Ionicons name="repeat-outline" size={14} color={Colors.gold} />
                     <Text style={styles.metricValue}>{ex.reps} {t('Reps')}</Text>
                   </View>
                   <View style={styles.metricItem}>
-                    <Ionicons name="fitness-outline" size={16} color={Colors.accentBlue} />
+                    <Ionicons name="fitness-outline" size={14} color={Colors.gold} />
                     <Text style={styles.metricValue}>{ex.weight}</Text>
                   </View>
                   <View style={styles.metricItem}>
-                    <Ionicons name="timer-outline" size={16} color={Colors.accentBlue} />
+                    <Ionicons name="timer-outline" size={14} color={Colors.gold} />
                     <Text style={styles.metricValue}>{ex.rest} {t('Rest')}</Text>
                   </View>
                 </View>
@@ -179,19 +180,19 @@ export default function StrengthPlanDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F0F0F',
+    backgroundColor: Colors.obsidian,
   },
   loadingState: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 14,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
   },
   loadingStateText: {
-    color: 'rgba(255,255,255,0.6)',
+    color: Colors.ivory,
     fontSize: 15,
-    fontFamily: 'Inter_600SemiBold',
+    fontFamily: Fonts.body,
     textAlign: 'center',
   },
   emptyState: {
@@ -199,168 +200,182 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 16,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
   },
   emptyStateTitle: {
-    color: '#fff',
-    fontSize: 22,
-    fontFamily: 'Inter_700Bold',
+    color: Colors.ivory,
+    fontSize: 20,
+    fontFamily: Fonts.display,
     textAlign: 'center',
   },
   emptyStateButton: {
-    backgroundColor: Colors.accentBlue,
-    borderRadius: 16,
+    backgroundColor: Colors.gold,
+    borderRadius: 14,
     paddingHorizontal: 22,
     paddingVertical: 14,
   },
   emptyStateButtonText: {
-    color: '#000',
-    fontSize: 15,
-    fontFamily: 'Inter_700Bold',
+    color: Colors.obsidian,
+    fontSize: 14,
+    fontFamily: Fonts.heading,
   },
   scrollContent: {
-    paddingTop: 110,
+    paddingTop: 100,
     paddingBottom: 120,
   },
   topSection: {
-    paddingHorizontal: 24,
-    marginBottom: 24,
+    paddingHorizontal: 14,
+    marginBottom: 20,
   },
   welcomeText: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
+    color: Colors.copper,
+    fontSize: 13,
+    fontFamily: Fonts.heading,
     letterSpacing: 1,
     marginBottom: 4,
   },
   dateText: {
-    color: '#fff',
-    fontSize: 24,
-    fontFamily: 'Inter_800ExtraBold',
-    fontWeight: '800',
+    color: Colors.ivory,
+    fontSize: 22,
+    fontFamily: Fonts.display,
   },
   daySelectorContainer: {
-    paddingHorizontal: 16,
-    marginBottom: 32,
+    paddingHorizontal: 14,
+    marginBottom: 20,
   },
   daySelector: {
     flexDirection: 'row',
-    backgroundColor: '#161616',
-    borderRadius: 20,
-    padding: 6,
+    backgroundColor: 'rgba(13, 43, 69, 0.45)',
+    borderRadius: 16,
+    padding: 4,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(181, 101, 29, 0.2)',
+    gap: 4,
   },
   dayBtn: {
     flex: 1,
-    height: 54,
+    height: 44,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 14,
+    borderRadius: 12,
   },
   dayBtnActive: {
-    backgroundColor: 'rgba(6,182,212,0.1)',
+    backgroundColor: Colors.gold,
   },
   dayText: {
-    color: 'rgba(255,255,255,0.3)',
+    color: 'rgba(247, 243, 238, 0.55)',
     fontSize: 12,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   dayTextActive: {
-    color: Colors.accentBlue,
+    color: Colors.obsidian,
+    fontFamily: Fonts.heading,
   },
   activeDot: {
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: Colors.accentBlue,
-    marginTop: 4,
+    backgroundColor: Colors.obsidian,
+    marginTop: 2,
   },
   statsRow: {
     flexDirection: 'row',
-    backgroundColor: '#161616',
-    marginHorizontal: 24,
-    borderRadius: 24,
-    padding: 20,
+    backgroundColor: 'rgba(13, 43, 69, 0.45)',
+    marginHorizontal: 14,
+    borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(181, 101, 29, 0.2)',
     justifyContent: 'space-around',
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 24,
   },
   statBox: {
     alignItems: 'center',
+    flex: 1,
   },
   statLabel: {
-    color: 'rgba(255,255,255,0.3)',
+    color: Colors.copper,
     fontSize: 10,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 1,
     marginBottom: 4,
   },
   statValue: {
-    color: '#fff',
-    fontSize: 16,
-    fontFamily: 'Inter_800ExtraBold',
+    color: Colors.ivory,
+    fontSize: 15,
+    fontFamily: Fonts.dataBold,
   },
   statDivider: {
     width: 1,
-    height: 30,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    height: 24,
+    backgroundColor: 'rgba(181, 101, 29, 0.2)',
   },
   sectionHeader: {
-    color: 'rgba(255,255,255,0.2)',
-    fontSize: 12,
-    fontFamily: 'Inter_700Bold',
-    letterSpacing: 2,
-    paddingHorizontal: 24,
-    marginBottom: 20,
+    color: 'rgba(247, 243, 238, 0.55)',
+    fontSize: 11,
+    fontFamily: Fonts.heading,
+    letterSpacing: 1.5,
+    paddingHorizontal: 14,
+    marginBottom: 12,
   },
   exerciseList: {
-    paddingHorizontal: 24,
-    gap: 16,
+    paddingHorizontal: 14,
+    gap: 12,
   },
   exerciseCard: {
-    backgroundColor: '#161616',
-    borderRadius: 24,
-    padding: 22,
+    backgroundColor: Colors.surfaceCard,
+    borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(181, 101, 29, 0.22)',
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 2,
   },
   exerciseHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 18,
+    marginBottom: 14,
   },
   exerciseType: {
-    color: Colors.accentBlue,
-    fontSize: 10,
-    fontFamily: 'Inter_700Bold',
-    letterSpacing: 1.5,
-    marginBottom: 6,
+    color: Colors.copper,
+    fontSize: 9,
+    fontFamily: Fonts.heading,
+    letterSpacing: 1.2,
+    marginBottom: 4,
   },
   exerciseName: {
-    color: '#fff',
-    fontSize: 18,
-    fontFamily: 'Inter_700Bold',
-    lineHeight: 24,
+    color: Colors.ivory,
+    fontSize: 16,
+    fontFamily: Fonts.display,
+    lineHeight: 22,
   },
   infoIcon: {
     padding: 4,
   },
   exerciseMetrics: {
-    gap: 12,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
   metricItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 5,
+    backgroundColor: 'rgba(201, 148, 58, 0.08)',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(201, 148, 58, 0.2)',
   },
   metricValue: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
+    color: Colors.ivory,
+    fontSize: 12,
+    fontFamily: Fonts.data,
   },
 });

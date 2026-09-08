@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
+import { Fonts } from '../../constants/Typography';
 import {
   deleteLatestStrengthWorkoutPlan,
   deleteStrengthWorkoutPlan,
@@ -572,7 +573,7 @@ export default function StrengthPlanDashboard() {
           title: t('CUSTOM STRENGTH PLAN'),
           headerTransparent: true,
           headerTintColor: '#fff',
-          headerTitleStyle: { fontFamily: 'Inter_700Bold', fontSize: 13, letterSpacing: 2 } as any,
+          headerTitleStyle: { fontFamily: Fonts.heading, fontSize: 13, letterSpacing: 2, color: Colors.ivory } as any,
           headerLeft: () => (
             <TouchableOpacity onPress={() => goBackOrReplace(router, '/workoutplan')} style={{ marginLeft: 16 }}>
               <Ionicons name="close" size={24} color="#fff" />
@@ -583,7 +584,7 @@ export default function StrengthPlanDashboard() {
 
       {loading ? (
         <View style={styles.loadingState}>
-          <ActivityIndicator size="large" color={Colors.accentBlue} />
+          <ActivityIndicator size="large" color={Colors.gold} />
           <Text style={styles.loadingStateText}>{t('Loading your custom strength plans...')}</Text>
         </View>
       ) : plans.length === 0 ? (
@@ -598,7 +599,8 @@ export default function StrengthPlanDashboard() {
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.headerRow}>
             <Text style={styles.sectionTitle}>{t('YOUR CUSTOM PLANS')}</Text>
-            <TouchableOpacity style={styles.generateBtn} onPress={() => router.push('/workoutplan/strength-wizard')}>
+            <TouchableOpacity style={styles.generateBtn} activeOpacity={0.8} onPress={() => router.push('/workoutplan/strength-wizard')}>
+              <Ionicons name="sparkles" size={13} color={Colors.obsidian} style={{ marginRight: 5 }} />
               <Text style={styles.generateBtnText}>{t('GENERATE NEW')}</Text>
             </TouchableOpacity>
           </View>
@@ -676,7 +678,7 @@ export default function StrengthPlanDashboard() {
                         <Ionicons
                           name={isExpanded ? 'chevron-up' : 'chevron-down'}
                           size={20}
-                          color="rgba(255,255,255,0.4)"
+                          color={Colors.copper}
                         />
                       </TouchableOpacity>
                     </View>
@@ -688,7 +690,7 @@ export default function StrengthPlanDashboard() {
                       onPress={() => void handleShowFullPlanBadge(plan)}
                       disabled={cardAction !== ''}
                     >
-                      <Ionicons name="ribbon-outline" size={17} color="#001311" />
+                      <Ionicons name="ribbon-outline" size={17} color={Colors.obsidian} />
                       <Text style={styles.planBadgeButtonText}>VIEW COMPLETION BADGE</Text>
                     </TouchableOpacity>
                   )}
@@ -793,12 +795,12 @@ export default function StrengthPlanDashboard() {
                                           onPress={() => handleSectionToggle(plan, selectedPlanDay.day, section.id, !sectionCompleted)}
                                         >
                                           {sectionBusy ? (
-                                            <ActivityIndicator size="small" color="#000" />
+                                            <ActivityIndicator size="small" color={Colors.obsidian} />
                                           ) : (
                                             <Ionicons
                                               name={sectionCompleted ? 'checkmark' : 'checkmark-outline'}
                                               size={18}
-                                              color={sectionCompleted ? '#000' : Colors.accentBlue}
+                                              color={sectionCompleted ? '#fff' : Colors.gold}
                                             />
                                           )}
                                         </TouchableOpacity>
@@ -830,12 +832,12 @@ export default function StrengthPlanDashboard() {
                                                   onPress={() => handleExerciseToggle(plan, selectedPlanDay.day, ex.id, !exerciseCompleted)}
                                                 >
                                                   {exerciseBusy ? (
-                                                    <ActivityIndicator size="small" color="#000" />
+                                                    <ActivityIndicator size="small" color={Colors.obsidian} />
                                                   ) : (
                                                     <Ionicons
                                                       name={exerciseCompleted ? 'checkmark' : 'checkmark-outline'}
                                                       size={18}
-                                                      color={exerciseCompleted ? '#000' : Colors.accentBlue}
+                                                      color={exerciseCompleted ? '#fff' : Colors.gold}
                                                     />
                                                   )}
                                                 </TouchableOpacity>
@@ -843,15 +845,15 @@ export default function StrengthPlanDashboard() {
 
                                               <View style={styles.exerciseMetrics}>
                                                 <View style={styles.metricItem}>
-                                                  <Ionicons name="layers-outline" size={16} color={Colors.accentBlue} />
+                                                  <Ionicons name="layers-outline" size={13} color={Colors.gold} />
                                                   <Text style={styles.metricValue}>{ex.sets} {t('Sets')}</Text>
                                                 </View>
                                                 <View style={styles.metricItem}>
-                                                  <Ionicons name="repeat-outline" size={16} color={Colors.accentBlue} />
+                                                  <Ionicons name="repeat-outline" size={13} color={Colors.gold} />
                                                   <Text style={styles.metricValue}>{ex.reps} {t('Reps')}</Text>
                                                 </View>
                                                 <View style={styles.metricItem}>
-                                                  <Ionicons name="fitness-outline" size={16} color={Colors.accentBlue} />
+                                                  <Ionicons name="fitness-outline" size={13} color={Colors.gold} />
                                                   <Text style={styles.metricValue}>{ex.weight}</Text>
                                                 </View>
                                                 <TouchableOpacity
@@ -862,8 +864,8 @@ export default function StrengthPlanDashboard() {
                                                     setActiveRestExercise(ex.name);
                                                   }}
                                                 >
-                                                  <Ionicons name="timer-outline" size={16} color={Colors.accentBlue} />
-                                                  <Text style={[styles.metricValue, { color: Colors.accentBlue }]}>{ex.rest} {t('Rest')}</Text>
+                                                  <Ionicons name="timer-outline" size={13} color={Colors.gold} />
+                                                  <Text style={[styles.metricValue, { color: Colors.gold }]}>{ex.rest} {t('Rest')}</Text>
                                                 </TouchableOpacity>
                                               </View>
                                             </View>
@@ -885,7 +887,7 @@ export default function StrengthPlanDashboard() {
                             onPress={() => handleCompleteWorkout(plan, selectedPlanDay.day)}
                           >
                             {startButtonBusy ? (
-                              <ActivityIndicator size="small" color="#000" />
+                              <ActivityIndicator size="small" color={Colors.obsidian} />
                             ) : (
                               <>
                                <Ionicons name="checkmark-circle" size={20} color="#000" />
@@ -989,12 +991,12 @@ export default function StrengthPlanDashboard() {
                                           onPress={() => handleSectionToggle(plan, selectedPlanDay.day, section.id, !sectionCompleted)}
                                         >
                                           {sectionBusy ? (
-                                            <ActivityIndicator size="small" color={sectionCompleted ? '#001311' : Colors.accentBlue} />
+                                            <ActivityIndicator size="small" color={sectionCompleted ? '#fff' : Colors.gold} />
                                           ) : (
                                             <Ionicons
                                               name={sectionCompleted ? 'checkmark-circle' : 'checkmark-circle-outline'}
                                               size={22}
-                                              color={sectionCompleted ? '#001311' : Colors.accentBlue}
+                                              color={sectionCompleted ? '#fff' : Colors.gold}
                                             />
                                           )}
                                         </TouchableOpacity>
@@ -1026,12 +1028,12 @@ export default function StrengthPlanDashboard() {
                                                   onPress={() => handleExerciseToggle(plan, selectedPlanDay.day, ex.id, !exerciseCompleted)}
                                                 >
                                                   {exerciseBusy ? (
-                                                    <ActivityIndicator size="small" color={exerciseCompleted ? '#001311' : Colors.accentBlue} />
+                                                    <ActivityIndicator size="small" color={exerciseCompleted ? '#fff' : Colors.gold} />
                                                   ) : (
                                                     <Ionicons
                                                       name={exerciseCompleted ? 'checkmark-circle' : 'checkmark-circle-outline'}
                                                       size={22}
-                                                      color={exerciseCompleted ? '#001311' : Colors.accentBlue}
+                                                      color={exerciseCompleted ? '#fff' : Colors.gold}
                                                     />
                                                   )}
                                                 </TouchableOpacity>
@@ -1039,15 +1041,15 @@ export default function StrengthPlanDashboard() {
 
                                               <View style={styles.exerciseMetrics}>
                                                 <View style={styles.metricItem}>
-                                                  <Ionicons name="layers-outline" size={16} color={Colors.accentBlue} />
+                                                  <Ionicons name="layers-outline" size={13} color={Colors.gold} />
                                                   <Text style={styles.metricValue}>{ex.sets} {t('Sets')}</Text>
                                                 </View>
                                                 <View style={styles.metricItem}>
-                                                  <Ionicons name="repeat-outline" size={16} color={Colors.accentBlue} />
+                                                  <Ionicons name="repeat-outline" size={13} color={Colors.gold} />
                                                   <Text style={styles.metricValue}>{ex.reps} {t('Reps')}</Text>
                                                 </View>
                                                 <View style={styles.metricItem}>
-                                                  <Ionicons name="fitness-outline" size={16} color={Colors.accentBlue} />
+                                                  <Ionicons name="fitness-outline" size={13} color={Colors.gold} />
                                                   <Text style={styles.metricValue}>{ex.weight}</Text>
                                                 </View>
                                                 <TouchableOpacity
@@ -1058,8 +1060,8 @@ export default function StrengthPlanDashboard() {
                                                     setActiveRestExercise(ex.name);
                                                   }}
                                                 >
-                                                  <Ionicons name="timer-outline" size={16} color={Colors.accentBlue} />
-                                                  <Text style={[styles.metricValue, { color: Colors.accentBlue }]}>{ex.rest} {t('Rest')}</Text>
+                                                  <Ionicons name="timer-outline" size={13} color={Colors.gold} />
+                                                  <Text style={[styles.metricValue, { color: Colors.gold }]}>{ex.rest} {t('Rest')}</Text>
                                                 </TouchableOpacity>
                                               </View>
                                             </View>
@@ -1090,9 +1092,9 @@ export default function StrengthPlanDashboard() {
                             }}
                           >
                             {startButtonBusy ? (
-                              <ActivityIndicator size="small" color="#000" />
+                              <ActivityIndicator size="small" color={Colors.obsidian} />
                             ) : (
-                              <Ionicons name={workoutCompleted ? 'trophy-outline' : 'play'} size={18} color="#000" />
+                              <Ionicons name={workoutCompleted ? 'trophy-outline' : 'play'} size={18} color={workoutCompleted ? '#fff' : Colors.obsidian} />
                             )}
                             <Text style={styles.startWorkoutBtnText} numberOfLines={1} ellipsizeMode="tail">
                               {startButtonLabel}
@@ -1254,71 +1256,85 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_700Bold',
   },
   scrollContent: {
-    paddingTop: 110,
-    paddingHorizontal: 24,
-    paddingBottom: 120,
+    paddingTop: 100,
+    paddingHorizontal: 12,
+    paddingBottom: 130,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: 12,
-    marginBottom: 18,
+    marginBottom: 16,
+    paddingHorizontal: 4,
   },
   sectionTitle: {
-    color: Colors.accentBlue,
+    color: Colors.copper,
     fontSize: 12,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 1.5,
   },
   generateBtn: {
-    backgroundColor: Colors.accentBlue,
+    backgroundColor: Colors.gold,
     borderRadius: 12,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 9,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
   generateBtnText: {
-    color: '#000',
+    color: Colors.obsidian,
     fontSize: 11,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.8,
   },
   planList: {
-    gap: 12,
+    gap: 14,
   },
   planCard: {
-    backgroundColor: '#161616',
+    backgroundColor: Colors.surfaceCard,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(181, 101, 29, 0.25)',
     marginBottom: 4,
     overflow: 'hidden',
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 2,
   },
   planCardExpanded: {
-    borderColor: 'rgba(6,182,212,0.2)',
+    borderColor: 'rgba(201, 148, 58, 0.35)',
   },
   planHeader: {
-    padding: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
   },
   planBadgeButton: {
-    marginHorizontal: 16,
+    marginHorizontal: 12,
     marginBottom: 12,
     minHeight: 44,
     borderRadius: 12,
-    backgroundColor: Colors.accentBlue,
+    backgroundColor: Colors.gold,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
   planBadgeButtonText: {
-    color: '#001311',
+    color: Colors.obsidian,
     fontSize: 11,
-    fontFamily: 'Inter_800ExtraBold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.8,
   },
   planMain: {
@@ -1326,10 +1342,10 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   planSummary: {
-    color: '#fff',
-    fontSize: 14,
-    lineHeight: 20,
-    fontFamily: 'Inter_600SemiBold',
+    color: Colors.ivory,
+    fontSize: 15,
+    lineHeight: 22,
+    fontFamily: Fonts.heading,
   },
   planActions: {
     flexDirection: 'row',
@@ -1339,94 +1355,103 @@ const styles = StyleSheet.create({
   deleteBtnIcon: {
     padding: 8,
     borderRadius: 10,
-    backgroundColor: 'rgba(239,68,68,0.1)',
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
   },
   disabledBtn: {
     opacity: 0.5,
   },
   planDetails: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
+    paddingHorizontal: 8,
+    paddingBottom: 18,
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    marginBottom: 16,
+    backgroundColor: 'rgba(181, 101, 29, 0.2)',
+    marginBottom: 14,
+    marginHorizontal: 4,
   },
   daySelectorContainer: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   daySelectorScroll: {
-    paddingBottom: 4,
+    paddingBottom: 2,
   },
   daySelector: {
     flexDirection: 'row',
-    backgroundColor: '#202020',
-    borderRadius: 16,
+    backgroundColor: 'rgba(13, 43, 69, 0.5)',
+    borderRadius: 14,
     padding: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(181, 101, 29, 0.2)',
+    gap: 4,
   },
   dayBtn: {
     paddingHorizontal: 16,
-    height: 44,
+    height: 38,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 12,
-    minWidth: 60,
+    borderRadius: 10,
+    minWidth: 54,
   },
   dayBtnActive: {
-    backgroundColor: 'rgba(6,182,212,0.15)',
+    backgroundColor: Colors.gold,
   },
   dayText: {
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(247, 243, 238, 0.55)',
     fontSize: 12,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   dayTextActive: {
-    color: Colors.accentBlue,
+    color: Colors.obsidian,
+    fontFamily: Fonts.heading,
   },
   activeDot: {
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: Colors.accentBlue,
+    backgroundColor: Colors.obsidian,
     marginTop: 2,
   },
   statsRow: {
     flexDirection: 'row',
-    backgroundColor: '#202020',
-    borderRadius: 18,
-    padding: 16,
+    backgroundColor: 'rgba(13, 43, 69, 0.45)',
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
     justifyContent: 'space-around',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(181, 101, 29, 0.2)',
   },
   statBox: {
     alignItems: 'center',
+    flex: 1,
   },
   statLabel: {
-    color: 'rgba(255,255,255,0.4)',
+    color: Colors.copper,
     fontSize: 9,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 1,
     marginBottom: 4,
   },
   statValue: {
-    color: '#fff',
-    fontSize: 15,
-    fontFamily: 'Inter_800ExtraBold',
+    color: Colors.ivory,
+    fontSize: 14,
+    fontFamily: Fonts.dataBold,
   },
   statDivider: {
     width: 1,
     height: 24,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(181, 101, 29, 0.2)',
   },
   progressSummaryCard: {
-    backgroundColor: '#202020',
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 18,
+    backgroundColor: 'rgba(13, 43, 69, 0.35)',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(181, 101, 29, 0.2)',
   },
   progressSummaryHeader: {
     flexDirection: 'row',
@@ -1436,58 +1461,60 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   progressSummaryTitle: {
-    color: 'rgba(255,255,255,0.42)',
+    color: Colors.copper,
     fontSize: 10,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 1.2,
   },
   progressSummaryBadge: {
-    color: Colors.accentBlue,
+    color: Colors.gold,
     fontSize: 10,
-    fontFamily: 'Inter_700Bold',
-    letterSpacing: 1,
+    fontFamily: Fonts.heading,
+    letterSpacing: 0.8,
   },
   progressSummaryBadgeCompleted: {
-    color: '#34D399',
+    color: Colors.victoryGreen,
   },
   progressSummaryText: {
-    color: '#fff',
-    fontSize: 14,
-    lineHeight: 20,
-    fontFamily: 'Inter_600SemiBold',
+    color: Colors.ivory,
+    fontSize: 13,
+    lineHeight: 19,
+    fontFamily: Fonts.data,
   },
   sectionHeader: {
-    color: 'rgba(255,255,255,0.3)',
+    color: 'rgba(247, 243, 238, 0.55)',
     fontSize: 11,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 1.5,
-    marginBottom: 12,
+    marginBottom: 10,
+    paddingHorizontal: 4,
   },
   exerciseList: {
-    gap: 12,
-    marginBottom: 20,
+    gap: 10,
+    marginBottom: 16,
   },
   exerciseCard: {
-    backgroundColor: '#202020',
+    backgroundColor: 'rgba(13, 43, 69, 0.35)',
     borderRadius: 16,
-    padding: 16,
+    padding: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.02)',
+    borderColor: 'rgba(181, 101, 29, 0.2)',
   },
   exerciseCardCompleted: {
-    borderColor: 'rgba(6,182,212,0.15)',
+    borderColor: 'rgba(26, 122, 74, 0.4)',
+    backgroundColor: 'rgba(26, 122, 74, 0.05)',
   },
   exerciseHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   sectionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
   sectionTitleWrap: {
     flex: 1,
@@ -1498,65 +1525,79 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sectionMetaText: {
-    color: 'rgba(255,255,255,0.48)',
+    color: 'rgba(247, 243, 238, 0.65)',
     fontSize: 12,
-    fontFamily: 'Inter_500Medium',
-    marginTop: 6,
+    fontFamily: Fonts.data,
+    marginTop: 4,
   },
   exerciseType: {
-    color: Colors.accentBlue,
+    color: Colors.copper,
     fontSize: 9,
-    fontFamily: 'Inter_800ExtraBold',
+    fontFamily: Fonts.heading,
     letterSpacing: 1,
     marginBottom: 2,
   },
   exerciseName: {
-    color: '#fff',
+    color: Colors.ivory,
     fontSize: 16,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.display,
   },
   exerciseCheckButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(6,182,212,0.08)',
+    backgroundColor: 'rgba(201, 148, 58, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(201, 148, 58, 0.25)',
   },
   exerciseCheckButtonCompleted: {
-    backgroundColor: Colors.accentBlue,
+    backgroundColor: Colors.victoryGreen,
+    borderColor: Colors.victoryGreen,
   },
   sectionExercises: {
-    gap: 10,
-    marginTop: 14,
+    gap: 8,
+    marginTop: 10,
   },
   exerciseSubCard: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 14,
-    padding: 14,
+    backgroundColor: 'rgba(13, 13, 13, 0.65)',
+    borderRadius: 12,
+    padding: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(181, 101, 29, 0.18)',
   },
   exerciseSubCardCompleted: {
-    borderColor: 'rgba(6,182,212,0.15)',
+    borderColor: 'rgba(26, 122, 74, 0.35)',
+    backgroundColor: 'rgba(26, 122, 74, 0.08)',
   },
   exerciseMetrics: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 16,
+    gap: 6,
   },
   metricItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
+    backgroundColor: 'rgba(201, 148, 58, 0.08)',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(201, 148, 58, 0.2)',
+  },
+  metricItemRest: {
+    backgroundColor: 'rgba(201, 148, 58, 0.14)',
+    borderColor: 'rgba(201, 148, 58, 0.35)',
   },
   metricValue: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 13,
-    fontFamily: 'Inter_600SemiBold',
+    color: Colors.ivory,
+    fontSize: 12,
+    fontFamily: Fonts.data,
   },
   startWorkoutBtn: {
-    backgroundColor: Colors.accentBlue,
+    backgroundColor: Colors.gold,
     borderRadius: 14,
     minHeight: 52,
     paddingHorizontal: 16,
@@ -1566,18 +1607,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     marginTop: 8,
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 2,
   },
   startWorkoutBtnCompleted: {
-    backgroundColor: '#34D399',
+    backgroundColor: Colors.victoryGreen,
   },
   startWorkoutBtnText: {
-    color: '#000',
+    color: Colors.obsidian,
     fontSize: 13,
-    fontWeight: '700',
-    fontFamily: Platform.OS === 'web' ? 'Inter, system-ui, -apple-system, sans-serif' : 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.5,
     textAlign: 'center',
     flexShrink: 1,
+  },
+  startWorkoutBtnTextCompleted: {
+    color: '#FFFFFF',
   },
   redoWorkoutBtn: {
     flexDirection: 'row',
@@ -1588,15 +1636,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginTop: 10,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(13, 43, 69, 0.35)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(181, 101, 29, 0.25)',
   },
   redoWorkoutBtnText: {
-    color: '#E0E7FF',
+    color: Colors.ivory,
     fontSize: 13,
-    fontWeight: '600',
-    fontFamily: Platform.OS === 'web' ? 'Inter, system-ui, -apple-system, sans-serif' : 'Inter_600SemiBold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.3,
   },
 
@@ -1615,17 +1662,16 @@ const styles = StyleSheet.create({
     paddingRight: 16,
   },
   activeSessionSubtitle: {
-    color: Colors.accentBlue,
+    color: Colors.copper,
     fontSize: 11,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 1.5,
     marginBottom: 4,
   },
   activeSessionTitle: {
-    color: '#fff',
+    color: Colors.ivory,
     fontSize: 22,
-    fontFamily: 'Inter_800ExtraBold',
-    fontWeight: '800',
+    fontFamily: Fonts.display,
     lineHeight: 28,
   },
   activeSessionRight: {
@@ -1638,56 +1684,56 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   activeSessionElapsedLabel: {
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(247, 243, 238, 0.5)',
     fontSize: 9,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 1,
   },
   activeSessionElapsedTimer: {
-    color: Colors.accentBlue,
+    color: Colors.gold,
     fontSize: 18,
-    fontFamily: 'Inter_800ExtraBold',
-    fontWeight: '800',
+    fontFamily: Fonts.dataBold,
   },
   activeSessionProgressBarContainer: {
     height: 4,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 2,
     overflow: 'hidden',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   activeSessionProgressBar: {
     height: '100%',
-    backgroundColor: Colors.accentBlue,
+    backgroundColor: Colors.gold,
     borderRadius: 2,
   },
   activeSectionCard: {
-    backgroundColor: '#161618',
-    borderRadius: 18,
-    padding: 16,
+    backgroundColor: 'rgba(13, 43, 69, 0.35)',
+    borderRadius: 16,
+    padding: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-    marginBottom: 12,
+    borderColor: 'rgba(181, 101, 29, 0.2)',
+    marginBottom: 10,
   },
   activeSectionCardCompleted: {
-    borderColor: 'rgba(6,182,212,0.2)',
+    borderColor: 'rgba(26, 122, 74, 0.4)',
+    backgroundColor: 'rgba(26, 122, 74, 0.05)',
   },
   activeSectionType: {
-    color: Colors.accentBlue,
+    color: Colors.copper,
     fontSize: 9,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 1.2,
     marginBottom: 2,
   },
   activeSectionName: {
-    color: '#fff',
-    fontSize: 18,
-    fontFamily: 'Inter_700Bold',
+    color: Colors.ivory,
+    fontSize: 17,
+    fontFamily: Fonts.display,
   },
   activeSectionMetaText: {
-    color: 'rgba(255,255,255,0.45)',
+    color: 'rgba(247, 243, 238, 0.65)',
     fontSize: 12,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: Fonts.data,
     marginTop: 4,
   },
   activeCheckButton: {
@@ -1696,38 +1742,39 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(6,182,212,0.08)',
+    backgroundColor: 'rgba(201, 148, 58, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(6,182,212,0.2)',
+    borderColor: 'rgba(201, 148, 58, 0.25)',
   },
   activeCheckButtonCompleted: {
-    backgroundColor: Colors.accentBlue,
-    borderColor: Colors.accentBlue,
+    backgroundColor: Colors.victoryGreen,
+    borderColor: Colors.victoryGreen,
   },
   activeExerciseSubCard: {
-    backgroundColor: '#1E1E22',
-    borderRadius: 14,
-    padding: 14,
+    backgroundColor: 'rgba(13, 13, 13, 0.65)',
+    borderRadius: 12,
+    padding: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(181, 101, 29, 0.18)',
   },
   activeExerciseSubCardCompleted: {
-    borderColor: 'rgba(6,182,212,0.15)',
+    borderColor: 'rgba(26, 122, 74, 0.35)',
+    backgroundColor: 'rgba(26, 122, 74, 0.08)',
   },
   activeExerciseTag: {
-    color: Colors.accentBlue,
-    fontSize: 8,
-    fontFamily: 'Inter_700Bold',
+    color: Colors.gold,
+    fontSize: 9,
+    fontFamily: Fonts.dataBold,
     letterSpacing: 1,
     marginBottom: 2,
   },
   activeExerciseName: {
-    color: '#fff',
+    color: Colors.ivory,
     fontSize: 15,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   completeSessionBtn: {
-    backgroundColor: Colors.accentBlue,
+    backgroundColor: Colors.gold,
     borderRadius: 14,
     minHeight: 52,
     paddingHorizontal: 16,
@@ -1736,19 +1783,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
-    marginTop: 16,
+    marginTop: 14,
   },
   completeSessionBtnText: {
-    color: '#000',
+    color: Colors.obsidian,
     fontSize: 13,
-    fontWeight: '700',
-    fontFamily: Platform.OS === 'web' ? 'Inter, system-ui, -apple-system, sans-serif' : 'Inter_700Bold',
+    fontFamily: Fonts.heading,
     letterSpacing: 0.5,
     textAlign: 'center',
   },
   confirmModalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    backgroundColor: 'rgba(13, 13, 13, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
@@ -1756,15 +1802,15 @@ const styles = StyleSheet.create({
   confirmModalBox: {
     width: '100%',
     maxWidth: 360,
-    backgroundColor: '#181822',
+    backgroundColor: Colors.surfaceCard,
     borderRadius: 22,
     padding: 24,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    shadowColor: '#000',
+    borderColor: 'rgba(181, 101, 29, 0.25)',
+    shadowColor: Colors.navy,
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.4,
     shadowRadius: 20,
     elevation: 10,
   },
@@ -1772,23 +1818,22 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 27,
-    backgroundColor: 'rgba(239,68,68,0.15)',
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
   },
   confirmModalTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    fontFamily: 'Inter_700Bold',
+    color: Colors.ivory,
+    fontFamily: Fonts.display,
     marginBottom: 8,
     textAlign: 'center',
   },
   confirmModalText: {
     fontSize: 13,
-    color: '#94A3B8',
-    fontFamily: 'Inter_400Regular',
+    color: 'rgba(247, 243, 238, 0.7)',
+    fontFamily: Fonts.body,
     textAlign: 'center',
     lineHeight: 18,
     marginBottom: 20,
@@ -1802,15 +1847,14 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 44,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(247, 243, 238, 0.08)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   confirmModalCancelText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#E2E8F0',
-    fontFamily: 'Inter_600SemiBold',
+    color: Colors.ivory,
+    fontFamily: Fonts.heading,
   },
   confirmModalDeleteBtn: {
     flex: 1,
@@ -1822,17 +1866,16 @@ const styles = StyleSheet.create({
   },
   confirmModalDeleteText: {
     fontSize: 14,
-    fontWeight: '700',
     color: '#FFFFFF',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: Fonts.heading,
   },
   workoutUnlockBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: 'rgba(6,182,212,0.12)',
+    backgroundColor: 'rgba(13, 43, 69, 0.5)',
     borderWidth: 1,
-    borderColor: 'rgba(6,182,212,0.32)',
+    borderColor: 'rgba(181, 101, 29, 0.3)',
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -1842,19 +1885,19 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: 'rgba(6,182,212,0.2)',
+    backgroundColor: 'rgba(201, 148, 58, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   workoutUnlockBannerText: {
     flex: 1,
     fontSize: 13,
-    color: '#E0F2FE',
-    fontFamily: 'Inter_500Medium',
+    color: Colors.ivory,
+    fontFamily: Fonts.body,
     lineHeight: 18,
   },
   workoutUnlockHighlight: {
-    color: '#06B6D4',
-    fontFamily: 'Inter_700Bold',
+    color: Colors.gold,
+    fontFamily: Fonts.heading,
   },
 });
