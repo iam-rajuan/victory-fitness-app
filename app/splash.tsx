@@ -53,7 +53,7 @@ export default function SplashScreen() {
         return;
       }
 
-      await clearAuthTokens();
+      await clearAuthTokens({ preserveBrowserRefreshFailure: Platform.OS === 'web' });
       timer = setTimeout(() => {
         replaceRoute(router, '/onboarding');
       }, 800);

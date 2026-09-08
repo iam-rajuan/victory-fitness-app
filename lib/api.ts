@@ -63,6 +63,7 @@ function getDefaultApiUrl(): string {
 }
 
 const RAW_API_URL = String(process.env?.EXPO_PUBLIC_API_URL ?? '').trim() || getDefaultApiUrl();
+export const CONFIGURED_API_URL = RAW_API_URL.replace(/\/+$/, '');
 
 function resolveApiUrl(url: string): string {
   const normalizedUrl = String(url || '').trim().replace(/\/+$/, '');
@@ -88,7 +89,7 @@ function resolveApiUrl(url: string): string {
   return normalizedUrl;
 }
 
-export const API_URL = resolveApiUrl(RAW_API_URL);
+export const API_URL = resolveApiUrl(CONFIGURED_API_URL);
 const REQUEST_TIMEOUT_MS = 8_000;
 const IS_BROWSER_AUTH = Platform.OS === 'web';
 const APP_REQUEST_CREDENTIALS: RequestCredentials = IS_BROWSER_AUTH ? 'include' : 'omit';
@@ -932,6 +933,11 @@ export async function fetchCurrentUser(options?: { forceRefresh?: boolean }) {
   const now = Date.now();
   if (!options?.forceRefresh && authUser && currentUserFetchedAt && now - currentUserFetchedAt < CURRENT_USER_CACHE_TTL_MS) {
     return authUser;
+  }
+
+  const tokens = await getValidAuthTokens();
+  if (!tokens?.access_token) {
+    throw new ApiError(401, 'Authentication required');
   }
 
   if (options?.forceRefresh) {

@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 
 import { Colors } from '../constants/Colors';
 import { GOOGLE_AUTH_STORAGE_KEY } from '../lib/firebaseGoogleAuth';
-import { API_URL, clearAuthTokens, setAuthTokens, type AuthResponse } from '../lib/api';
+import { API_URL, CONFIGURED_API_URL, clearAuthTokens, setAuthTokens, type AuthResponse } from '../lib/api';
 import { getPostAuthRoute, isAdminRestrictedFromApp } from '../lib/access';
 import { markBiometricSessionUnlocked } from '../lib/biometricUnlock';
 import { replaceRoute } from '../lib/navigation';
@@ -51,6 +51,31 @@ export default function GoogleAuthCompleteScreen() {
     return new URLSearchParams(window.location.search || '').get('flow_id') || '';
   }, []);
 
+  const resultApiOrigin = useMemo(() => {
+    const fallbackOrigin = (() => {
+      try {
+        return new URL(CONFIGURED_API_URL || API_URL).origin;
+      } catch {
+        return API_URL;
+      }
+    })();
+
+    if (typeof window === 'undefined') {
+      return fallbackOrigin;
+    }
+
+    const value = new URLSearchParams(window.location.search || '').get('result_origin') || '';
+    try {
+      const parsed = new URL(value);
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+        return parsed.origin;
+      }
+    } catch {
+      // Older callbacks do not include a result origin and use the configured API.
+    }
+    return fallbackOrigin;
+  }, []);
+
   useEffect(() => {
     if (typeof window === 'undefined') {
       return;
@@ -64,7 +89,7 @@ export default function GoogleAuthCompleteScreen() {
       const finishFromBackend = async () => {
         attempts += 1;
         try {
-          const response = await fetch(`${API_URL}/auth/google/result?flow_id=${encodeURIComponent(flowId)}`, {
+          const response = await fetch(`${resultApiOrigin}/auth/google/result?flow_id=${encodeURIComponent(flowId)}`, {
             method: 'GET',
             credentials: 'omit',
             headers: { Accept: 'application/json' },
@@ -150,7 +175,7 @@ export default function GoogleAuthCompleteScreen() {
     } catch {
       setMessage('Google sign-in response was invalid. You can close this window.');
     }
-  }, [flowId, payload, router]);
+  }, [flowId, payload, resultApiOrigin, router]);
 
   return (
     <View style={styles.container}>
