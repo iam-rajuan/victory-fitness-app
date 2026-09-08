@@ -167,13 +167,13 @@ export default function AccountabilityPartnerCard({ onStatusChange }: Accountabi
           <View style={styles.iconCircle}>
             <Ionicons name="people" size={16} color="#00F0D0" />
           </View>
-          <View>
-            <Text style={styles.cardTitle}>{t('ACCOUNTABILITY PARTNER')}</Text>
-            <Text style={styles.cardSubtitle}>{t('Section 20.1 • Mutual Consistency')}</Text>
+          <View style={styles.headerTitles}>
+            <Text style={styles.cardTitle} numberOfLines={1} ellipsizeMode="tail">{t('ACCOUNTABILITY DUO')}</Text>
+            <Text style={styles.cardSubtitle} numberOfLines={1} ellipsizeMode="tail">{t('Mutual Daily Consistency')}</Text>
           </View>
         </View>
         {isPaired && (
-          <TouchableOpacity onPress={handleUnpair} disabled={unpairing} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <TouchableOpacity onPress={handleUnpair} disabled={unpairing} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} style={{ flexShrink: 0 }}>
             {unpairing ? (
               <ActivityIndicator size="small" color="#EF4444" />
             ) : (
@@ -293,7 +293,7 @@ export default function AccountabilityPartnerCard({ onStatusChange }: Accountabi
       {!isPaired && !isPending ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyPrompt}>
-            {t('Train alongside someone. When paired, you can see each other’s daily training status (green tick / grey circle) and send an 8pm nudge if they haven’t trained.')}
+            {t('Train alongside a workout partner. Sync daily workouts, track consistency in real time, and send gentle 8pm nudges to keep your streaks alive.')}
           </Text>
 
           <View style={styles.emptyActionsRow}>
@@ -421,12 +421,14 @@ export default function AccountabilityPartnerCard({ onStatusChange }: Accountabi
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.surface,
-    borderRadius: 20,
+    backgroundColor: '#121422',
+    marginHorizontal: 16,
+    borderRadius: 22,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    padding: 16,
+    borderColor: 'rgba(0, 240, 208, 0.16)',
+    padding: 18,
     marginBottom: 16,
+    overflow: 'hidden',
   },
   loadingWrap: {
     flexDirection: 'row',
@@ -449,6 +451,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    flex: 1,
+    minWidth: 0,
+    marginRight: 8,
+  },
+  headerTitles: {
+    flex: 1,
+    minWidth: 0,
   },
   iconCircle: {
     width: 32,

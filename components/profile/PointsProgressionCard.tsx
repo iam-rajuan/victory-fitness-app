@@ -70,11 +70,15 @@ export default function PointsProgressionCard({ onRefreshNeeded }: PointsProgres
       <View style={styles.cardHeader}>
         <View style={styles.headerLeft}>
           <View style={styles.ptsIconCircle}>
-            <Ionicons name="flash" size={16} color="#F59E0B" />
+            <Ionicons name="flash" size={15} color="#F59E0B" />
           </View>
-          <View>
-            <Text style={styles.cardTitle}>{t('POINTS & TIER PROGRESSION')}</Text>
-            <Text style={styles.cardSubtitle}>{t('Level up through workouts, nutrition & habits')}</Text>
+          <View style={styles.headerTitles}>
+            <Text style={styles.cardTitle} numberOfLines={1} ellipsizeMode="tail">
+              {t('POINTS & TIERS')}
+            </Text>
+            <Text style={styles.cardSubtitle} numberOfLines={1} ellipsizeMode="tail">
+              {t('Level up through workouts & habits')}
+            </Text>
           </View>
         </View>
         <View style={styles.ptsTotalBadge}>
@@ -196,12 +200,14 @@ export default function PointsProgressionCard({ onRefreshNeeded }: PointsProgres
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.surface,
-    borderRadius: 20,
+    backgroundColor: '#121422',
+    marginHorizontal: 16,
+    borderRadius: 22,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    padding: 16,
+    borderColor: 'rgba(245, 158, 11, 0.16)',
+    padding: 18,
     marginBottom: 16,
+    overflow: 'hidden',
   },
   loadingWrap: {
     flexDirection: 'row',
@@ -224,6 +230,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    flex: 1,
+    minWidth: 0,
+    marginRight: 10,
+  },
+  headerTitles: {
+    flex: 1,
+    minWidth: 0,
   },
   ptsIconCircle: {
     width: 32,
@@ -232,10 +245,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(245, 158, 11, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   cardTitle: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
     letterSpacing: 0.5,
@@ -250,12 +264,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(245, 158, 11, 0.35)',
     borderRadius: 12,
-    paddingHorizontal: 10,
+    paddingHorizontal: 9,
     paddingVertical: 4,
+    flexShrink: 0,
   },
   ptsTotalBadgeText: {
     color: '#F59E0B',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
   },

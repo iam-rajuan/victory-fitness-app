@@ -9,9 +9,15 @@ import { useLanguage } from '../lib/i18n';
 
 interface VictoryHeaderProps {
   showGreeting?: boolean;
+  showSettings?: boolean;
+  onSettingsPress?: () => void;
 }
 
-export default function VictoryHeader({ showGreeting = false }: VictoryHeaderProps) {
+export default function VictoryHeader({
+  showGreeting = false,
+  showSettings = false,
+  onSettingsPress,
+}: VictoryHeaderProps) {
   const router = useRouter();
   const { t } = useLanguage();
   const { width } = useWindowDimensions();
@@ -116,8 +122,22 @@ export default function VictoryHeader({ showGreeting = false }: VictoryHeaderPro
           ) : null}
         </View>
 
-        {/* Right: Notifications */}
-        <View style={[styles.rightBlock, { width: sideBlockWidth }]}>
+        {/* Right: Notifications & Settings */}
+        <View style={[styles.rightBlock, { width: showSettings ? sideBlockWidth * 1.35 : sideBlockWidth, flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 8 }]}>
+          {showSettings && (
+            <TouchableOpacity
+              style={[
+                styles.notificationButton,
+                { width: buttonSize, height: buttonSize, borderRadius: buttonSize / 2 },
+              ]}
+              onPress={onSettingsPress || (() => router.push('/profile/settings'))}
+              accessibilityRole="button"
+              accessibilityLabel={t('Open settings')}
+              hitSlop={10}
+            >
+              <Ionicons name="settings-outline" size={isCompactWidth ? 18 : 20} color="#fff" />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             style={[
               styles.notificationButton,
