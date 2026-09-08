@@ -28,6 +28,7 @@ export default function ProfileSettingsScreen() {
   const [saving, setSaving] = useState(false);
   const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
   const [errorDialog, setErrorDialog] = useState<{ title: string; message: string } | null>(null);
+  const [canEditGoldHabits, setCanEditGoldHabits] = useState(false);
 
   // Section 20.3: Identity Statement
   const [identityStatement, setIdentityStatement] = useState('');
@@ -59,6 +60,12 @@ export default function ProfileSettingsScreen() {
         );
         setWorkoutUnlockLabel(user.workout_unlock_label ?? '');
         setMotivationStatement(user.motivation_statement ?? '');
+        const tier = String(user.subscription_tier || '').toUpperCase().replace(/\s+/g, '_');
+        const trialTier = String(user.trial_tier_granted || user.gold_trial?.tier_granted || '').toUpperCase();
+        setCanEditGoldHabits(
+          ['GOLD', 'GOLD_BETA', 'PLATINUM', 'INNER_CIRCLE'].includes(tier) ||
+          (Boolean(user.gold_trial?.active) && trialTier === 'GOLD')
+        );
       } catch (err) {
         if (!cancelled) {
           setErrorDialog(formatAppError(err, t('Unable to load settings.')));
@@ -83,10 +90,12 @@ export default function ProfileSettingsScreen() {
 
     try {
       await updateCurrentUserProfile({
-        identity_statement: identityStatement, // Stored verbatim — not modified, not auto-corrected
-        training_trigger_context: trainingTriggerContext.trim(),
-        training_trigger_action: trainingTriggerAction.trim() || 'open the app and start my workout',
-        workout_unlock_label: workoutUnlockLabel.trim(),
+        ...(canEditGoldHabits ? {
+          identity_statement: identityStatement, // Stored verbatim — not modified, not auto-corrected
+          training_trigger_context: trainingTriggerContext.trim(),
+          training_trigger_action: trainingTriggerAction.trim() || 'open the app and start my workout',
+          workout_unlock_label: workoutUnlockLabel.trim(),
+        } : {}),
         motivation_statement: motivationStatement.trim(),
       });
       setSaveSuccessMessage(t('Settings updated successfully.'));
@@ -163,11 +172,23 @@ export default function ProfileSettingsScreen() {
           {/* Section 20.3: Identity Statement */}
           <View style={styles.card}>
             <View style={styles.cardBadgeRow}>
-              <View style={styles.tierBadge}>
-                <Ionicons name="sparkles" size={12} color="#F59E0B" />
-                <Text style={styles.tierBadgeText}>GOLD</Text>
+              <View style={styles.badgeLeftGroup}>
+                <View style={styles.tierBadge}>
+                  <Ionicons name="sparkles" size={12} color="#F59E0B" />
+                  <Text style={styles.tierBadgeText}>GOLD</Text>
+                </View>
+                <Text style={styles.sectionCode}>Section 20.3</Text>
               </View>
-              <Text style={styles.sectionCode}>Section 20.3</Text>
+              {identityStatement.trim() ? (
+                <TouchableOpacity
+                  style={styles.clearBtn}
+                  onPress={() => setIdentityStatement('')}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="trash-outline" size={13} color="#EF4444" />
+                  <Text style={styles.clearBtnText}>{t('Clear')}</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
 
             <Text style={styles.cardHeadline}>Who are you becoming?</Text>
@@ -175,6 +196,7 @@ export default function ProfileSettingsScreen() {
               Write in your own words a short statement describing who you are becoming.
               Written in present tense. Stored verbatim. Shapes your AI Coach&apos;s tone.
             </Text>
+            {!canEditGoldHabits ? <Text style={styles.lockedHint}>{t('Gold membership is required for this setting.')}</Text> : null}
 
             <TextInput
               style={styles.textArea}
@@ -187,6 +209,7 @@ export default function ProfileSettingsScreen() {
               autoCapitalize="none"
               textAlignVertical="top"
               maxLength={280}
+              editable={canEditGoldHabits}
             />
 
             <View style={styles.examplesContainer}>
@@ -218,17 +241,33 @@ export default function ProfileSettingsScreen() {
           {/* Section 20.5: If-Then Trigger Builder */}
           <View style={styles.card}>
             <View style={styles.cardBadgeRow}>
-              <View style={styles.tierBadge}>
-                <Ionicons name="sparkles" size={12} color="#F59E0B" />
-                <Text style={styles.tierBadgeText}>GOLD</Text>
+              <View style={styles.badgeLeftGroup}>
+                <View style={styles.tierBadge}>
+                  <Ionicons name="sparkles" size={12} color="#F59E0B" />
+                  <Text style={styles.tierBadgeText}>GOLD</Text>
+                </View>
+                <Text style={styles.sectionCode}>Section 20.5</Text>
               </View>
-              <Text style={styles.sectionCode}>Section 20.5</Text>
+              {trainingTriggerContext.trim() || trainingTriggerAction.trim() !== 'open the app and start my workout' ? (
+                <TouchableOpacity
+                  style={styles.clearBtn}
+                  onPress={() => {
+                    setTrainingTriggerContext('');
+                    setTrainingTriggerAction('open the app and start my workout');
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="trash-outline" size={13} color="#EF4444" />
+                  <Text style={styles.clearBtnText}>{t('Reset')}</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
 
             <Text style={styles.cardHeadline}>My Training Trigger</Text>
             <Text style={styles.cardSubtext}>
               Link your workout to something that already happens in your daily routine to replace generic reminders with a personally-anchored cue.
             </Text>
+            {!canEditGoldHabits ? <Text style={styles.lockedHint}>{t('Gold membership is required for this setting.')}</Text> : null}
 
             <Text style={styles.inputPrompt}>1. &ldquo;After I...&rdquo;</Text>
             <TextInput
@@ -238,6 +277,7 @@ export default function ProfileSettingsScreen() {
               placeholder="e.g. put the kids to bed / close my laptop"
               placeholderTextColor="rgba(255, 255, 255, 0.4)"
               maxLength={140}
+              editable={canEditGoldHabits}
             />
 
             <Text style={styles.inputPrompt}>2. &ldquo;I will immediately...&rdquo;</Text>
@@ -248,6 +288,7 @@ export default function ProfileSettingsScreen() {
               placeholder="open the app and start my workout"
               placeholderTextColor="rgba(255, 255, 255, 0.4)"
               maxLength={140}
+              editable={canEditGoldHabits}
             />
 
             {/* Live Notification Preview */}
@@ -268,17 +309,30 @@ export default function ProfileSettingsScreen() {
           {/* Section 20.4: Workout Unlock */}
           <View style={styles.card}>
             <View style={styles.cardBadgeRow}>
-              <View style={[styles.tierBadge, { backgroundColor: 'rgba(6, 182, 212, 0.2)' }]}>
-                <Ionicons name="key" size={12} color="#06B6D4" />
-                <Text style={[styles.tierBadgeText, { color: '#06B6D4' }]}>HABIT</Text>
+              <View style={styles.badgeLeftGroup}>
+                <View style={[styles.tierBadge, { backgroundColor: 'rgba(6, 182, 212, 0.2)' }]}>
+                  <Ionicons name="key" size={12} color="#06B6D4" />
+                  <Text style={[styles.tierBadgeText, { color: '#06B6D4' }]}>HABIT</Text>
+                </View>
+                <Text style={styles.sectionCode}>Section 20.4</Text>
               </View>
-              <Text style={styles.sectionCode}>Section 20.4</Text>
+              {workoutUnlockLabel.trim() ? (
+                <TouchableOpacity
+                  style={styles.clearBtn}
+                  onPress={() => setWorkoutUnlockLabel('')}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="trash-outline" size={13} color="#EF4444" />
+                  <Text style={styles.clearBtnText}>{t('Clear')}</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
 
             <Text style={styles.cardHeadline}>My Workout Unlock</Text>
             <Text style={styles.cardSubtext}>
               A ritual, reward, or sensory anchor you unlock only while training.
             </Text>
+            {!canEditGoldHabits ? <Text style={styles.lockedHint}>{t('Gold membership is required for this setting.')}</Text> : null}
 
             <TextInput
               style={styles.textInput}
@@ -287,6 +341,7 @@ export default function ProfileSettingsScreen() {
               placeholder="e.g. Favorite Podcast, Fresh Espresso, Cold Shower"
               placeholderTextColor="rgba(255, 255, 255, 0.4)"
               maxLength={100}
+              editable={canEditGoldHabits}
             />
             <Text style={styles.subtextSmall}>
               Coach Victor will naturally ask: &ldquo;Are you making use of {workoutUnlockLabel.trim() || '[label]'} during sessions?&rdquo;
@@ -413,6 +468,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
+  badgeLeftGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  clearBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.25)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  clearBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#EF4444',
+    fontFamily: 'Inter_600SemiBold',
+  },
   tierBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -444,6 +521,12 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.65)',
     lineHeight: 18,
     marginBottom: 14,
+  },
+  lockedHint: {
+    color: '#F59E0B',
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 12,
   },
   subtextSmall: {
     fontSize: 12,

@@ -428,6 +428,7 @@ const TRANSLATIONS: Partial<Record<LanguageCode, Record<string, string>>> = {
     'Write one sentence about the identity you are building. This is optional and can be edited later.':
       'Write one sentence about the identity you are building. This is optional and can be edited later.',
     'I am someone who...': 'I am someone who...',
+    'Gold membership is required for this setting.': 'Gold membership is required for this setting.',
     'Example: I am becoming someone who keeps promises to myself.':
       'Example: I am becoming someone who keeps promises to myself.',
     'Gold coaching can use this as a positive anchor in reminders and check-ins.':
@@ -1521,6 +1522,7 @@ const TRANSLATIONS: Partial<Record<LanguageCode, Record<string, string>>> = {
     'Write one sentence about the identity you are building. This is optional and can be edited later.':
       'Schreibe einen Satz über die Identität, die du aufbaust. Das ist optional und kann später bearbeitet werden.',
     'I am someone who...': 'Ich bin jemand, der...',
+    'Gold membership is required for this setting.': 'Für diese Einstellung ist eine Gold-Mitgliedschaft erforderlich.',
     'Example: I am becoming someone who keeps promises to myself.':
       'Beispiel: Ich werde jemand, der Versprechen an sich selbst hält.',
     'Gold coaching can use this as a positive anchor in reminders and check-ins.':
@@ -2515,6 +2517,7 @@ const TRANSLATIONS: Partial<Record<LanguageCode, Record<string, string>>> = {
     'Write one sentence about the identity you are building. This is optional and can be edited later.':
       'আপনি যে পরিচয় গড়ছেন তা নিয়ে একটি বাক্য লিখুন। এটি ঐচ্ছিক এবং পরে পরিবর্তন করা যাবে।',
     'I am someone who...': 'আমি এমন একজন যে...',
+    'Gold membership is required for this setting.': 'এই সেটিংসের জন্য Gold সদস্যতা প্রয়োজন।',
     'Example: I am becoming someone who keeps promises to myself.':
       'উদাহরণ: আমি এমন একজন হচ্ছি যে নিজের প্রতিশ্রুতি রাখে।',
     'Gold coaching can use this as a positive anchor in reminders and check-ins.':

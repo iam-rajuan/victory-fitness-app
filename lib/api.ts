@@ -2004,3 +2004,187 @@ export type AuthResponse = {
     };
   };
 };
+
+// ============================================================
+// Section 20.1: Accountability Partner Pairing
+// ============================================================
+export interface AccountabilityPartnerResponse {
+  pair_id?: string | null;
+  status: 'active' | 'pending' | 'none';
+  invite_code?: string | null;
+  is_sender?: boolean;
+  partner?: {
+    id: string;
+    name: string;
+    email: string;
+    profileImage?: string | null;
+    streak_days?: number;
+    points?: number;
+    trained_today: boolean;
+    last_trained_at?: string | null;
+  } | null;
+  can_nudge?: boolean;
+}
+
+export async function fetchAccountabilityPartner(): Promise<AccountabilityPartnerResponse> {
+  return apiRequest<AccountabilityPartnerResponse>('/me/accountability-partner');
+}
+
+export async function createAccountabilityInvite(email?: string): Promise<{ pair_id: string; invite_code: string; message: string }> {
+  return apiRequest<{ pair_id: string; invite_code: string; message: string }>('/accountability-pairs/invite', {
+    method: 'POST',
+    body: { email },
+  });
+}
+
+export async function acceptAccountabilityInvite(inviteCodeOrPairId: string): Promise<{ success: boolean; message: string; pair_id: string }> {
+  return apiRequest<{ success: boolean; message: string; pair_id: string }>('/accountability-pairs/accept', {
+    method: 'POST',
+    body: { invite_code: inviteCodeOrPairId, pair_id: inviteCodeOrPairId },
+  });
+}
+
+export async function nudgeAccountabilityPartner(pairId: string): Promise<{ success: boolean; message: string }> {
+  return apiRequest<{ success: boolean; message: string }>(`/accountability-pairs/${encodeURIComponent(pairId)}/nudge`, {
+    method: 'POST',
+  });
+}
+
+export async function unpairAccountabilityPartner(pairId: string): Promise<{ success: boolean; message: string }> {
+  return apiRequest<{ success: boolean; message: string }>(`/accountability-pairs/${encodeURIComponent(pairId)}`, {
+    method: 'DELETE',
+  });
+}
+
+// ============================================================
+// Subscription Management & Section 17.1 Profile Upgrade Offer
+// ============================================================
+export interface SubscriptionStatusResponse {
+  subscription: {
+    tier: string;
+    status: string;
+    plan_id: string;
+    plan_title: string;
+    billing_cycle: string;
+    price: number;
+    currency: string;
+    current_period_end?: string | null;
+    is_cancelled: boolean;
+    paused_until?: string | null;
+    has_active_access: boolean;
+  };
+  upgrade_offer?: {
+    offer_id: string;
+    title: string;
+    message: string;
+    target_tier: string;
+    discount_text?: string;
+  } | null;
+}
+
+export async function fetchMySubscription(): Promise<SubscriptionStatusResponse> {
+  return apiRequest<SubscriptionStatusResponse>('/me/subscription');
+}
+
+export async function cancelMySubscription(reason?: string): Promise<{ success: boolean; message: string; status: string; current_period_end: string }> {
+  return apiRequest<{ success: boolean; message: string; status: string; current_period_end: string }>('/me/subscription/cancel', {
+    method: 'POST',
+    body: { reason },
+  });
+}
+
+export async function pauseMySubscription(pauseDays = 30): Promise<{ success: boolean; message: string; status: string; paused_until: string }> {
+  return apiRequest<{ success: boolean; message: string; status: string; paused_until: string }>('/me/subscription/pause', {
+    method: 'POST',
+    body: { pause_days: pauseDays },
+  });
+}
+
+export async function resumeMySubscription(): Promise<{ success: boolean; message: string; status: string }> {
+  return apiRequest<{ success: boolean; message: string; status: string }>('/me/subscription/resume', {
+    method: 'POST',
+  });
+}
+
+export async function changeMySubscriptionPlan(planId: string, billingCycle = 'yearly'): Promise<{ success: boolean; message: string; tier: string }> {
+  return apiRequest<{ success: boolean; message: string; tier: string }>('/me/subscription/change-plan', {
+    method: 'POST',
+    body: { plan_id: planId, billing_cycle: billingCycle },
+  });
+}
+
+export async function fetchProfileUpgradeOffer(): Promise<{
+  eligible: boolean;
+  offer_id?: string;
+  title?: string;
+  message?: string;
+  target_tier?: string;
+  streak_count?: number;
+  discount_text?: string;
+}> {
+  return apiRequest('/me/subscription/upgrade-offer');
+}
+
+export async function createCompletionCardRecord(payload: {
+  workout_id: string;
+  shared_to_whatsapp?: boolean;
+  image_url?: string;
+  upsell_shown?: boolean;
+  upsell_clicked?: boolean;
+}): Promise<{
+  id?: string;
+  sharedToWhatsapp?: boolean;
+  upsell?: {
+    eligible?: boolean;
+    reason?: string;
+    source?: string;
+    title?: string;
+    message?: string;
+  };
+}> {
+  return apiRequest('/completion-cards', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+export async function updateCompletionCardUpsellState(
+  cardId: string,
+  payload: { upsell_shown?: boolean; upsell_clicked?: boolean },
+): Promise<{ updated: boolean }> {
+  return apiRequest(`/completion-cards/${encodeURIComponent(cardId)}/upsell`, {
+    method: 'PATCH',
+    body: payload,
+  });
+}
+
+// ============================================================
+// Points & Tier Progression Breakdown
+// ============================================================
+export interface PointsBreakdownResponse {
+  total_points: number;
+  current_tier: string;
+  next_tier: string;
+  points_to_next_tier: number;
+  rank_progress_fraction: number;
+  seven_day_breakdown: Array<{
+    date: string;
+    day_name: string;
+    workouts: number;
+    nutrition: number;
+    habits: number;
+    streaks: number;
+    total: number;
+  }>;
+  category_totals_7d: {
+    workouts: number;
+    nutrition: number;
+    habits: number;
+    streaks: number;
+    total: number;
+  };
+}
+
+export async function fetchMyPointsBreakdown(): Promise<PointsBreakdownResponse> {
+  return apiRequest<PointsBreakdownResponse>('/me/points/breakdown');
+}

@@ -19,7 +19,12 @@ import { Colors } from '../../constants/Colors';
 import { BrandConfetti } from '../confetti/BrandConfetti';
 import { useLanguage } from '../../lib/i18n';
 import { submitStrengthWorkoutFeedback, StrengthFeedbackResponse } from '../../lib/workout-plans';
-import { fetchCurrentUser, recordAnalyticsEvent } from '../../lib/api';
+import {
+  createCompletionCardRecord,
+  fetchCurrentUser,
+  recordAnalyticsEvent,
+  updateCompletionCardUpsellState,
+} from '../../lib/api';
 
 const UPGRADE_RATE_LIMIT_MS = 48 * 60 * 60 * 1000; // 48 hours
 const UPGRADE_LAST_SHOWN_KEY = '@victory_upgrade_offer_shown';
@@ -115,13 +120,27 @@ export default function WorkoutCompletionModal({
 
   const activeFeedback = aiCoachFeedback || getImmediateCoachFeedback(difficulty, energy, painFlag, sweetSpotFlag, t);
 
-  // Upgrade Offer State (Section 17.1)
   const [upgradeOffer, setUpgradeOffer] = useState<{ title: string; message: string } | null>(null);
   const [upgradeDismissed, setUpgradeDismissed] = useState(false);
+  const [userIdentityStatement, setUserIdentityStatement] = useState<string | null>(null);
+  const [completionCardRecordId, setCompletionCardRecordId] = useState<string | null>(null);
 
-  // Check Section 17.1 upgrade offer eligibility
+  // Check Section 17.1 upgrade offer eligibility & Section 20.3 Identity statement
   useEffect(() => {
     if (!visible) return;
+    setUpgradeOffer(null);
+    setUpgradeDismissed(false);
+    setCompletionCardRecordId(null);
+
+    void fetchCurrentUser()
+      .then((user) => {
+        if (user?.identity_statement && user.identity_statement.trim()) {
+          setUserIdentityStatement(user.identity_statement.trim());
+        } else {
+          setUserIdentityStatement(null);
+        }
+      })
+      .catch(() => undefined);
 
     const checkUpgradeEligibility = async () => {
       // 1. Never on first-ever workout
@@ -139,22 +158,30 @@ export default function WorkoutCompletionModal({
           return;
         }
 
-        // 2. Max once per 48 hours
-        const lastShown = await AsyncStorage.getItem(UPGRADE_LAST_SHOWN_KEY);
-        if (lastShown) {
-          const elapsed = Date.now() - parseInt(lastShown, 10);
-          if (elapsed < UPGRADE_RATE_LIMIT_MS) {
-            setUpgradeOffer(null);
-            return;
-          }
+        const cardRecord = await createCompletionCardRecord({
+          workout_id: `${planId || 'strength'}:${dayLabel || 'workout'}`,
+          shared_to_whatsapp: false,
+          image_url: '',
+          upsell_shown: false,
+          upsell_clicked: false,
+        });
+        if (cardRecord.id) {
+          setCompletionCardRecordId(cardRecord.id);
+        }
+        if (!cardRecord.upsell?.eligible) {
+          setUpgradeOffer(null);
+          return;
         }
 
         // Prompt content: 'You just finished workout #{streak_count}. Unlock unlimited AI coaching to keep this going.'
         const streakCount = Math.max(Number(user?.workouts_completed || user?.streak_days || totalCompletedWorkouts || 1), 1);
-        const title = t('Keep this streak moving');
-        const message = `${t('You just finished workout #')}${streakCount}. ${t('Unlock unlimited AI coaching to keep this going.')}`;
+        const title = cardRecord.upsell.title || t('Keep this streak moving');
+        const message = cardRecord.upsell.message || `${t('You just finished workout #')}${streakCount}. ${t('Unlock unlimited AI coaching to keep this going.')}`;
 
         setUpgradeOffer({ title, message });
+        if (cardRecord.id) {
+          void updateCompletionCardUpsellState(cardRecord.id, { upsell_shown: true }).catch(() => undefined);
+        }
         await AsyncStorage.setItem(UPGRADE_LAST_SHOWN_KEY, String(Date.now()));
 
         // Section 17.1: Reuses upgrade_screen_viewed analytics event with source: 'completion_card'
@@ -170,9 +197,12 @@ export default function WorkoutCompletionModal({
     };
 
     void checkUpgradeEligibility();
-  }, [visible, totalCompletedWorkouts, dayLabel, t]);
+  }, [visible, totalCompletedWorkouts, dayLabel, planId, t]);
 
   const handleUpgradeClick = () => {
+    if (completionCardRecordId) {
+      void updateCompletionCardUpsellState(completionCardRecordId, { upsell_clicked: true }).catch(() => undefined);
+    }
     // Section 17.1: Reuses upgrade_prompt_clicked analytics event with source: 'completion_card'
     void recordAnalyticsEvent('upgrade_prompt_clicked', {
       source: 'completion_card',
@@ -526,6 +556,15 @@ export default function WorkoutCompletionModal({
                 </Text>
               </View>
             </View>
+
+            {/* Section 20.3: Single quiet line below AI performance feedback */}
+            {userIdentityStatement ? (
+              <View style={styles.identityStatementQuietWrap}>
+                <Text style={styles.identityStatementQuietText}>
+                  &ldquo;{userIdentityStatement}&rdquo;
+                </Text>
+              </View>
+            ) : null}
 
             <TouchableOpacity style={styles.doneBtn} onPress={handleDone}>
               <Text style={styles.doneBtnText}>{t('Done')}</Text>
@@ -961,5 +1000,19 @@ const styles = StyleSheet.create({
   },
   disabledBtn: {
     opacity: 0.6,
+  },
+  identityStatementQuietWrap: {
+    marginTop: 16,
+    marginBottom: 8,
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  identityStatementQuietText: {
+    fontSize: 14,
+    fontStyle: 'italic',
+    color: 'rgba(255, 255, 255, 0.48)',
+    textAlign: 'center',
+    lineHeight: 20,
+    letterSpacing: 0.2,
   },
 });

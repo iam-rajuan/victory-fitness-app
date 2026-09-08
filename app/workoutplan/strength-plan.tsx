@@ -86,6 +86,7 @@ export default function StrengthPlanDashboard() {
   const [activeSessionDay, setActiveSessionDay] = useState<string | null>(null);
   const [completedSessionSeconds, setCompletedSessionSeconds] = useState<number | null>(null);
   const [currentUserName, setCurrentUserName] = useState('Victory Member');
+  const [workoutUnlockLabel, setWorkoutUnlockLabel] = useState<string | null>(null);
   const [completionCard, setCompletionCard] = useState<CompletionCard | null>(null);
   const [cardAction, setCardAction] = useState<'download' | 'share' | 'preview' | ''>('');
   const [planToDelete, setPlanToDelete] = useState<StrengthPlanResponse | null>(null);
@@ -139,7 +140,14 @@ export default function StrengthPlanDashboard() {
     };
 
     void loadPlans();
-    void fetchCurrentUser().then((user) => setCurrentUserName(user.name || 'Victory Member')).catch(() => undefined);
+    void fetchCurrentUser().then((user) => {
+      setCurrentUserName(user.name || 'Victory Member');
+      if (user.workout_unlock_label && user.workout_unlock_label.trim()) {
+        setWorkoutUnlockLabel(user.workout_unlock_label.trim());
+      } else {
+        setWorkoutUnlockLabel(null);
+      }
+    }).catch(() => undefined);
 
     return () => {
       cancelled = true;
@@ -717,6 +725,20 @@ export default function StrengthPlanDashboard() {
                               </Text>
                             </View>
                           </View>
+
+                          {/* Section 20.4: Persistent Workout Unlock Banner */}
+                          {workoutUnlockLabel ? (
+                            <View style={styles.workoutUnlockBanner}>
+                              <View style={styles.workoutUnlockIconWrap}>
+                                <Ionicons name="key" size={15} color="#06B6D4" />
+                              </View>
+                              <Text style={styles.workoutUnlockBannerText}>
+                                {t('Your unlock is ready — ')}
+                                <Text style={styles.workoutUnlockHighlight}>{workoutUnlockLabel}</Text>
+                                {t(' is yours for this workout.')}
+                              </Text>
+                            </View>
+                          ) : null}
 
                           {/* Progress Bar */}
                           <View style={styles.activeSessionProgressBarContainer}>
@@ -1791,6 +1813,37 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#FFFFFF',
+    fontFamily: 'Inter_700Bold',
+  },
+  workoutUnlockBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(6,182,212,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(6,182,212,0.32)',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  workoutUnlockIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(6,182,212,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  workoutUnlockBannerText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#E0F2FE',
+    fontFamily: 'Inter_500Medium',
+    lineHeight: 18,
+  },
+  workoutUnlockHighlight: {
+    color: '#06B6D4',
     fontFamily: 'Inter_700Bold',
   },
 });

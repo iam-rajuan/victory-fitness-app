@@ -23,6 +23,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import VictoryHeader from '../../components/VictoryHeader';
 import AccessRestrictionModal from '../../components/AccessRestrictionModal';
+import AccountabilityPartnerCard from '../../components/profile/AccountabilityPartnerCard';
+import PointsProgressionCard from '../../components/profile/PointsProgressionCard';
+import SubscriptionManagementModal from '../../components/profile/SubscriptionManagementModal';
 import { BodyMetrics, fetchCurrentUser, fetchCurrentUserBodyMetrics, getAuthUser, logout, updateCurrentUserBodyMetrics, updateCurrentUserProfile } from '../../lib/api';
 import { canAccessFeature, canAccessPlanRoute } from '../../lib/access';
 import { SUPPORTED_LANGUAGES, LanguageCode, useLanguage } from '../../lib/i18n';
@@ -62,6 +65,7 @@ const MENU_SECTIONS = [
   {
     title: 'Account',
       items: [
+        { icon: 'card-outline', label: 'Manage Subscription', tint: '#F59E0B', action: 'manage_subscription' },
         { icon: 'person-outline', label: 'Edit Profile', tint: '#4F8EF7', route: '/profile/edit' },
         { icon: 'document-text-outline', label: 'Application', tint: '#EAB308', route: '/profile/application' },
         { icon: 'lock-closed-outline', label: 'Privacy Policy', tint: '#A855F7', route: '/profile/privacy' },
@@ -228,6 +232,7 @@ export default function ProfileScreen() {
   const [showGenderModal, setShowGenderModal] = React.useState(false);
   const [refreshing, setRefreshing] = React.useState(false);
   const [restrictedSection, setRestrictedSection] = React.useState('');
+  const [showSubscriptionModal, setShowSubscriptionModal] = React.useState(false);
 
   const bodyMetricsSummary = React.useMemo(() => {
     const parts = [
@@ -594,6 +599,12 @@ export default function ProfileScreen() {
           ))}
         </View>
 
+        {/* ── Section 20.1: Accountability Partner ── */}
+        <AccountabilityPartnerCard onStatusChange={() => void loadProfileData(false, true)} />
+
+        {/* ── Feature 5: Points & Tier Progression ── */}
+        <PointsProgressionCard onRefreshNeeded={() => void loadProfileData(false, true)} />
+
         {/* ── Body Metrics ── */}
 
 
@@ -673,12 +684,12 @@ export default function ProfileScreen() {
               <Ionicons name="lock-closed" size={16} color="rgba(255,255,255,0.5)" />
             </TouchableOpacity>
           )}
-          <TouchableOpacity style={[styles.coachCard, styles.planCard]} activeOpacity={0.86} onPress={() => router.push('/plan')}>
+          <TouchableOpacity style={[styles.coachCard, styles.planCard]} activeOpacity={0.86} onPress={() => setShowSubscriptionModal(true)}>
             <View style={[styles.coachIconWrap, { backgroundColor: Colors.accentGold }]}>
               <Ionicons name="card-outline" size={22} color="#fff" />
             </View>
             <View style={{ flex: 1, paddingRight: 10 }}>
-              <Text style={styles.coachName}>{t('Update Plan').toUpperCase()}</Text>
+              <Text style={styles.coachName}>{t('Membership & Subscription').toUpperCase()}</Text>
               <Text style={styles.coachStatus}>{t('Current plan: {plan}', { plan: currentPlanLabel })}</Text>
             </View>
             <View style={[styles.planBadge, currentPlanBadgeStyle]}>
@@ -699,6 +710,10 @@ export default function ProfileScreen() {
                     style={[styles.menuRow, (item as any).restricted && styles.lockedRow]}
                     activeOpacity={0.7}
                     onPress={() => {
+                      if ((item as any).action === 'manage_subscription') {
+                        setShowSubscriptionModal(true);
+                        return;
+                      }
                       if ((item as any).action === 'body_metrics') {
                         openMetricsModal();
                         return;
@@ -797,6 +812,12 @@ export default function ProfileScreen() {
           setRestrictedSection('');
           replaceRoute(router, '/(tabs)');
         }}
+      />
+
+      <SubscriptionManagementModal
+        visible={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        onSubscriptionUpdated={() => void loadProfileData(false, true)}
       />
 
       <Modal visible={showMetricsModal} transparent animationType="fade" onRequestClose={() => setShowMetricsModal(false)}>
