@@ -84,7 +84,7 @@ export default function SubscriptionManagementModal({
     }).catch(() => undefined);
 
     onClose();
-    router.push('/plan');
+    router.push('/plan?entry=profile_upgrade');
   };
 
   const handleConfirmCancel = () => {

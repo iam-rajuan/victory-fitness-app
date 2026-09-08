@@ -207,8 +207,9 @@ export default function PlanSelectionScreen() {
   const [hasInitialScrolled, setHasInitialScrolled] = useState(false);
   const entry = String(params.entry ?? '').trim().toLowerCase();
   const isOnboardingEntry = entry === 'onboarding';
+  const isProfileEntry = entry === 'profile' || entry === 'profile_upgrade' || entry === 'subscription_management';
   const requiresPlanSelection = isOnboardingEntry || currentTier === 'NONE';
-  const fallbackRoute = requiresPlanSelection ? '/onboarding' : '/(tabs)';
+  const fallbackRoute = requiresPlanSelection ? '/onboarding' : isProfileEntry ? '/profile' : '/(tabs)';
 
   const loadSubscriptionState = useCallback(async (showLoading = true) => {
     if (showLoading) {
@@ -412,12 +413,20 @@ export default function PlanSelectionScreen() {
   };
 
   const handleHeaderBack = useCallback(() => {
+    if (!requiresPlanSelection && router.canGoBack()) {
+      router.back();
+      return;
+    }
     replaceRoute(router, fallbackRoute);
-  }, [fallbackRoute, router]);
+  }, [fallbackRoute, requiresPlanSelection, router]);
 
   const handleHeaderClose = useCallback(() => {
+    if (!requiresPlanSelection && router.canGoBack()) {
+      router.back();
+      return;
+    }
     replaceRoute(router, fallbackRoute);
-  }, [fallbackRoute, router]);
+  }, [fallbackRoute, requiresPlanSelection, router]);
 
   if (loading) {
     return (

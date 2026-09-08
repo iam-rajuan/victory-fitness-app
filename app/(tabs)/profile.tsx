@@ -806,7 +806,7 @@ export default function ProfileScreen() {
         onClose={() => setRestrictedSection('')}
         onUpdatePlan={() => {
           setRestrictedSection('');
-          router.push('/plan');
+          router.push('/plan?entry=profile');
         }}
         onBackHome={() => {
           setRestrictedSection('');
