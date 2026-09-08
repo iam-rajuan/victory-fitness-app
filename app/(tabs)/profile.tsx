@@ -872,8 +872,8 @@ export default function ProfileScreen() {
               <View style={[styles.menuIconWrap, { backgroundColor: 'rgba(0, 240, 208, 0.15)' }]}>
                 <Ionicons name="people" size={18} color="#00F0D0" />
               </View>
-              <View style={{ flex: 1, paddingRight: 12 }}>
-                <Text style={styles.menuLabel}>{t('Share Activity with Network')}</Text>
+              <View style={styles.privacyTextContainer}>
+                <Text style={styles.privacyTitle}>{t('Share Activity with Network')}</Text>
                 <Text style={styles.privacySubLabel}>
                   {t('Allow workout activity to contribute to the community trainee count.')}
                 </Text>
@@ -1794,14 +1794,26 @@ const styles = StyleSheet.create({
   privacyRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 14,
     paddingVertical: 14,
     paddingHorizontal: 16,
+  },
+  privacyTextContainer: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  privacyTitle: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontFamily: 'Inter_600SemiBold',
+    fontWeight: '600',
   },
   privacySubLabel: {
     color: 'rgba(255, 255, 255, 0.45)',
     fontSize: 11,
     marginTop: 2,
-    lineHeight: 15,
+    lineHeight: 16,
+    fontFamily: 'Inter_400Regular',
   },
 
   /* ── 9. Log Out & Footer ── */
