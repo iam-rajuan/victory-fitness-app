@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { fetchHomepageQuote } from '../../lib/api';
 import { useLanguage } from '../../lib/i18n';
+import { Colors } from '../../constants/Colors';
 
 // Curated pool of version release quotes.
 // Guarantees each app release version has an inspiring, deterministic quote
@@ -92,18 +93,18 @@ export default function GreetingCard() {
 
 const styles = StyleSheet.create({
   quoteSection: {
-    backgroundColor: '#111122',
+    backgroundColor: Colors.navy,
     borderRadius: 20,
     paddingHorizontal: 20,
     paddingVertical: 18,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-    shadowColor: '#000',
+    borderColor: 'rgba(181, 101, 29, 0.35)',
+    shadowColor: Colors.navy,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.3,
     shadowRadius: 10,
-    elevation: 2,
+    elevation: 3,
     position: 'relative',
     overflow: 'hidden',
   },
@@ -116,13 +117,13 @@ const styles = StyleSheet.create({
   quoteTitle: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#00F0D0',
+    color: Colors.gold,
     letterSpacing: 1.5,
     fontFamily: 'Inter_700Bold',
   },
   quoteIcon: {
     fontSize: 36,
-    color: 'rgba(0, 240, 208, 0.15)',
+    color: 'rgba(201, 148, 58, 0.22)',
     fontFamily: 'Inter_700Bold',
     height: 30,
     lineHeight: 36,
@@ -133,14 +134,14 @@ const styles = StyleSheet.create({
   quoteText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#E5E7EB',
+    color: Colors.ivory,
     lineHeight: 22,
     fontFamily: 'Inter_600SemiBold',
     marginBottom: 8,
   },
   quoteAuthor: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: Colors.copper,
     textAlign: 'right',
     fontFamily: 'Inter_400Regular',
     fontStyle: 'italic',

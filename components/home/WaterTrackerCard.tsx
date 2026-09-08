@@ -116,7 +116,7 @@ export function WaterTrackerCard() {
       <View style={styles.headerRow}>
         <View style={styles.titleWithIcon}>
           <View style={styles.iconCircle}>
-            <Ionicons name="water" size={18} color="#00F0D0" />
+            <Ionicons name="water" size={18} color={Colors.victoryGreen} />
           </View>
           <View>
             <Text style={styles.cardTitle}>{t('Hydration Tracker')}</Text>
@@ -127,7 +127,7 @@ export function WaterTrackerCard() {
         </View>
         {isGoalReached && (
           <View style={styles.badgeContainer}>
-            <Ionicons name="checkmark-circle" size={14} color="#00F0D0" />
+            <Ionicons name="checkmark-circle" size={14} color={Colors.victoryGreen} />
             <Text style={styles.badgeText}>{t('Target Met')}</Text>
           </View>
         )}
@@ -192,14 +192,14 @@ export function WaterTrackerCard() {
             <Ionicons
               name={remindersEnabled ? 'notifications' : 'notifications-off-outline'}
               size={15}
-              color={remindersEnabled ? '#00F0D0' : Colors.textMuted}
+              color={remindersEnabled ? Colors.victoryGreen : Colors.textMuted}
             />
             <Text style={styles.reminderText}>{t('Push reminders at set times')}</Text>
             <Switch
               value={remindersEnabled}
               onValueChange={toggleReminders}
-              trackColor={{ false: '#262D42', true: '#00F0D0' }}
-              thumbColor={remindersEnabled ? '#FFFFFF' : '#8E9BAE'}
+              trackColor={{ false: '#262D42', true: Colors.victoryGreen }}
+              thumbColor={remindersEnabled ? Colors.ivory : '#8E9BAE'}
               style={{ transform: [{ scaleX: 0.75 }, { scaleY: 0.75 }], marginLeft: 'auto' }}
             />
           </View>
@@ -220,17 +220,17 @@ export function WaterTrackerCard() {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#111122',
+    backgroundColor: Colors.surfaceCard,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(0, 240, 208, 0.15)',
+    borderColor: 'rgba(181, 101, 29, 0.25)',
     padding: 16,
     marginBottom: 16,
     ...Platform.select({
       ios: {
-        shadowColor: '#00F0D0',
+        shadowColor: Colors.navy,
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
+        shadowOpacity: 0.15,
         shadowRadius: 10,
       },
       android: {
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: 'rgba(0, 240, 208, 0.12)',
+    backgroundColor: 'rgba(26, 122, 74, 0.16)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -272,15 +272,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(0, 240, 208, 0.12)',
+    backgroundColor: 'rgba(26, 122, 74, 0.15)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(0, 240, 208, 0.3)',
+    borderColor: Colors.victoryGreen,
   },
   badgeText: {
-    color: '#00F0D0',
+    color: Colors.victoryGreen,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -299,8 +299,8 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     borderWidth: 1.5,
-    borderColor: 'rgba(0, 240, 208, 0.6)',
-    backgroundColor: 'rgba(0, 240, 208, 0.1)',
+    borderColor: 'rgba(26, 122, 74, 0.6)',
+    backgroundColor: 'rgba(26, 122, 74, 0.15)',
   },
   glassInner: {
     width: 52,
@@ -310,14 +310,14 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 16,
     borderWidth: 1.5,
     borderTopWidth: 0,
-    borderColor: 'rgba(0, 240, 208, 0.4)',
+    borderColor: 'rgba(26, 122, 74, 0.4)',
     overflow: 'hidden',
     justifyContent: 'flex-end',
     position: 'relative',
   },
   liquidFill: {
     width: '100%',
-    backgroundColor: '#00D8C0',
+    backgroundColor: Colors.victoryGreen,
     opacity: 0.88,
     position: 'relative',
   },
@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 4,
-    backgroundColor: '#6EE7B7',
+    backgroundColor: '#2CD483',
     opacity: 0.9,
   },
   glassMarkings: {
@@ -361,17 +361,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#00F0D0',
+    backgroundColor: Colors.gold,
     paddingHorizontal: 16,
     paddingVertical: 9,
     borderRadius: 12,
-    shadowColor: '#00F0D0',
+    shadowColor: Colors.gold,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
   },
   addCupBtnText: {
-    color: '#050814',
+    color: Colors.obsidian,
     fontSize: 13,
     fontWeight: '800',
     letterSpacing: 0.3,
@@ -406,15 +406,15 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   timeSlotBadge: {
-    backgroundColor: 'rgba(0, 240, 208, 0.08)',
+    backgroundColor: 'rgba(26, 122, 74, 0.15)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 240, 208, 0.2)',
+    borderColor: 'rgba(26, 122, 74, 0.35)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
   },
   timeSlotText: {
-    color: '#00F0D0',
+    color: Colors.victoryGreen,
     fontSize: 9,
     fontFamily: 'Inter_600SemiBold',
   },

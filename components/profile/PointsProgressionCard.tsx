@@ -70,7 +70,7 @@ export default function PointsProgressionCard({ onRefreshNeeded }: PointsProgres
       <View style={styles.cardHeader}>
         <View style={styles.headerLeft}>
           <View style={styles.ptsIconCircle}>
-            <Ionicons name="flash" size={15} color="#F59E0B" />
+            <Ionicons name="flash" size={15} color={Colors.gold} />
           </View>
           <View style={styles.headerTitles}>
             <Text style={styles.cardTitle} numberOfLines={1} ellipsizeMode="tail">
@@ -109,34 +109,34 @@ export default function PointsProgressionCard({ onRefreshNeeded }: PointsProgres
       <View style={styles.breakdownSection}>
         <Text style={styles.breakdownTitle}>{t('7-DAY ACTIVITY BREAKDOWN')}</Text>
         <View style={styles.categoryPillsGrid}>
-          <View style={[styles.categoryPill, { borderColor: 'rgba(6, 182, 212, 0.35)', backgroundColor: 'rgba(6, 182, 212, 0.1)' }]}>
+          <View style={[styles.categoryPill, { borderColor: 'rgba(26, 122, 74, 0.40)', backgroundColor: 'rgba(26, 122, 74, 0.12)' }]}>
             <Text style={styles.categoryPillEmoji}>🏋️</Text>
             <Text style={styles.categoryPillLabel}>{t('Workouts')}</Text>
-            <Text style={[styles.categoryPillValue, { color: '#06B6D4' }]}>
+            <Text style={[styles.categoryPillValue, { color: Colors.victoryGreen }]}>
               +{breakdown.category_totals_7d.workouts}
             </Text>
           </View>
 
-          <View style={[styles.categoryPill, { borderColor: 'rgba(249, 115, 22, 0.35)', backgroundColor: 'rgba(249, 115, 22, 0.1)' }]}>
+          <View style={[styles.categoryPill, { borderColor: 'rgba(181, 101, 29, 0.40)', backgroundColor: 'rgba(181, 101, 29, 0.12)' }]}>
             <Text style={styles.categoryPillEmoji}>🥗</Text>
             <Text style={styles.categoryPillLabel}>{t('Nutrition')}</Text>
-            <Text style={[styles.categoryPillValue, { color: '#F97316' }]}>
+            <Text style={[styles.categoryPillValue, { color: Colors.copper }]}>
               +{breakdown.category_totals_7d.nutrition}
             </Text>
           </View>
 
-          <View style={[styles.categoryPill, { borderColor: 'rgba(168, 85, 247, 0.35)', backgroundColor: 'rgba(168, 85, 247, 0.1)' }]}>
+          <View style={[styles.categoryPill, { borderColor: 'rgba(13, 43, 69, 0.60)', backgroundColor: 'rgba(13, 43, 69, 0.35)' }]}>
             <Text style={styles.categoryPillEmoji}>🎯</Text>
             <Text style={styles.categoryPillLabel}>{t('Habits')}</Text>
-            <Text style={[styles.categoryPillValue, { color: '#A855F7' }]}>
+            <Text style={[styles.categoryPillValue, { color: Colors.gold }]}>
               +{breakdown.category_totals_7d.habits}
             </Text>
           </View>
 
-          <View style={[styles.categoryPill, { borderColor: 'rgba(234, 179, 8, 0.35)', backgroundColor: 'rgba(234, 179, 8, 0.1)' }]}>
+          <View style={[styles.categoryPill, { borderColor: 'rgba(201, 148, 58, 0.40)', backgroundColor: 'rgba(201, 148, 58, 0.12)' }]}>
             <Text style={styles.categoryPillEmoji}>🔥</Text>
             <Text style={styles.categoryPillLabel}>{t('Streaks')}</Text>
-            <Text style={[styles.categoryPillValue, { color: '#EAB308' }]}>
+            <Text style={[styles.categoryPillValue, { color: Colors.gold }]}>
               +{breakdown.category_totals_7d.streaks}
             </Text>
           </View>
@@ -200,11 +200,11 @@ export default function PointsProgressionCard({ onRefreshNeeded }: PointsProgres
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#121422',
+    backgroundColor: Colors.surfaceCard,
     marginHorizontal: 16,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.16)',
+    borderColor: 'rgba(181, 101, 29, 0.25)',
     padding: 18,
     marginBottom: 16,
     overflow: 'hidden',
@@ -242,34 +242,34 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    backgroundColor: 'rgba(201, 148, 58, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
   cardTitle: {
-    color: '#fff',
+    color: Colors.ivory,
     fontSize: 13,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
     letterSpacing: 0.5,
   },
   cardSubtitle: {
-    color: 'rgba(255, 255, 255, 0.45)',
+    color: Colors.textSecondary,
     fontSize: 11,
     fontFamily: 'Inter_400Regular',
   },
   ptsTotalBadge: {
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    backgroundColor: 'rgba(201, 148, 58, 0.15)',
     borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.35)',
+    borderColor: 'rgba(201, 148, 58, 0.35)',
     borderRadius: 12,
     paddingHorizontal: 9,
     paddingVertical: 4,
     flexShrink: 0,
   },
   ptsTotalBadgeText: {
-    color: '#F59E0B',
+    color: Colors.gold,
     fontSize: 11,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
@@ -279,6 +279,8 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 12,
     marginBottom: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(181, 101, 29, 0.20)',
   },
   tierLabelsRow: {
     flexDirection: 'row',
@@ -287,20 +289,22 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   tierBadgeWrap: {
-    backgroundColor: 'rgba(6, 182, 212, 0.18)',
+    backgroundColor: 'rgba(201, 148, 58, 0.18)',
+    borderWidth: 1,
+    borderColor: Colors.copper,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
   tierLabelCurrent: {
-    color: '#06B6D4',
+    color: Colors.gold,
     fontSize: 12,
     fontWeight: '800',
     fontFamily: 'Inter_700Bold',
     letterSpacing: 0.5,
   },
   tierLabelNext: {
-    color: 'rgba(255, 255, 255, 0.65)',
+    color: Colors.textSecondary,
     fontSize: 11,
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
@@ -313,7 +317,7 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: '#06B6D4',
+    backgroundColor: Colors.gold,
     borderRadius: 4,
   },
   tierFooterRow: {
@@ -394,7 +398,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   chartDayColSelected: {
-    backgroundColor: 'rgba(6, 182, 212, 0.12)',
+    backgroundColor: 'rgba(201, 148, 58, 0.16)',
   },
   chartColPts: {
     color: 'rgba(255, 255, 255, 0.4)',
@@ -403,7 +407,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   chartColPtsSelected: {
-    color: '#06B6D4',
+    color: Colors.gold,
     fontWeight: '700',
   },
   chartBarTrack: {
@@ -420,7 +424,7 @@ const styles = StyleSheet.create({
     borderRadius: 7,
   },
   chartBarFillSelected: {
-    backgroundColor: '#06B6D4',
+    backgroundColor: Colors.gold,
   },
   chartColDayName: {
     color: 'rgba(255, 255, 255, 0.5)',
@@ -429,7 +433,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   chartColDayNameSelected: {
-    color: '#06B6D4',
+    color: Colors.gold,
     fontWeight: '700',
   },
   selectedDayDetailBox: {
@@ -444,13 +448,13 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   detailDateText: {
-    color: '#fff',
+    color: Colors.ivory,
     fontSize: 12,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
   },
   detailTotalText: {
-    color: '#F59E0B',
+    color: Colors.gold,
     fontSize: 11,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',

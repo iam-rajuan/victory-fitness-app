@@ -139,7 +139,7 @@ export function WeeklyActivityChart({ weeklyData }: WeeklyActivityChartProps) {
       <View style={styles.headerRow}>
         <View style={styles.titleWithIcon}>
           <View style={styles.iconCircle}>
-            <Ionicons name="bar-chart" size={18} color="#A855F7" />
+            <Ionicons name="bar-chart" size={18} color={Colors.gold} />
           </View>
           <View>
             <Text style={styles.cardTitle}>{t('Weekly Activity')}</Text>
@@ -193,7 +193,7 @@ export function WeeklyActivityChart({ weeklyData }: WeeklyActivityChartProps) {
 
               {item.completed && (
                 <View style={styles.checkDot}>
-                  <Ionicons name="checkmark" size={10} color="#00F0D0" />
+                  <Ionicons name="checkmark" size={10} color={Colors.victoryGreen} />
                 </View>
               )}
             </View>
@@ -206,17 +206,17 @@ export function WeeklyActivityChart({ weeklyData }: WeeklyActivityChartProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#111122',
+    backgroundColor: Colors.surfaceCard,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(168, 85, 247, 0.2)',
+    borderColor: 'rgba(181, 101, 29, 0.25)',
     padding: 16,
     marginBottom: 16,
     ...Platform.select({
       ios: {
-        shadowColor: '#A855F7',
+        shadowColor: Colors.navy,
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.08,
+        shadowOpacity: 0.15,
         shadowRadius: 10,
       },
       android: {
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: 'rgba(168, 85, 247, 0.15)',
+    backgroundColor: 'rgba(201, 148, 58, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -255,15 +255,15 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   targetBadge: {
-    backgroundColor: 'rgba(168, 85, 247, 0.12)',
+    backgroundColor: 'rgba(181, 101, 29, 0.15)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(168, 85, 247, 0.3)',
+    borderColor: 'rgba(181, 101, 29, 0.35)',
   },
   targetBadgeText: {
-    color: '#C084FC',
+    color: Colors.copper,
     fontSize: 11,
     fontWeight: '700',
   },
@@ -290,12 +290,12 @@ const styles = StyleSheet.create({
   },
   barFill: {
     width: '100%',
-    backgroundColor: '#A855F7',
+    backgroundColor: Colors.copper,
     borderRadius: 7,
   },
   barFillToday: {
-    backgroundColor: '#00F0D0',
-    shadowColor: '#00F0D0',
+    backgroundColor: Colors.gold,
+    shadowColor: Colors.gold,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
     shadowRadius: 6,
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dayLabelTodayContainer: {
-    backgroundColor: '#00F0D0',
+    backgroundColor: Colors.gold,
   },
   dayLabelText: {
     color: Colors.textMuted,
@@ -320,11 +320,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   dayLabelTodayText: {
-    color: '#050814',
+    color: Colors.obsidian,
     fontWeight: '800',
   },
   dayLabelCompletedText: {
-    color: Colors.text,
+    color: Colors.victoryGreen,
   },
   checkDot: {
     marginTop: 2,

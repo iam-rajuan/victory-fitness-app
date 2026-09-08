@@ -2253,7 +2253,7 @@ export default function ChallengesScreen() {
                       <Text style={styles.workoutShareTrophyText}>{t('WORKOUT COMPLETED')}</Text>
                     </View>
                     <View style={styles.workoutShareRewardPill}>
-                      <Ionicons name="sparkles" size={12} color="#00F0D0" />
+                      <Ionicons name="sparkles" size={12} color={Colors.gold} />
                       <Text style={styles.workoutShareRewardText}>+30 PTS REWARD</Text>
                     </View>
                   </View>
@@ -2282,7 +2282,7 @@ export default function ChallengesScreen() {
                       style={styles.workoutShareCardImage}
                     />
                     <View style={styles.workoutShareCardOverlayBadge}>
-                      <Ionicons name="ribbon" size={13} color="#00F0D0" />
+                      <Ionicons name="ribbon" size={13} color={Colors.gold} />
                       <Text style={styles.workoutShareCardOverlayText}>{t('Accomplishment Card')}</Text>
                     </View>
                   </View>
@@ -2352,7 +2352,7 @@ export default function ChallengesScreen() {
                           <Ionicons
                             name={communityMedia.type === 'video' ? 'videocam' : 'image'}
                             size={13}
-                            color="#00F0D0"
+                            color={Colors.gold}
                           />
                         </View>
                         <Text style={styles.composerAttachmentBadgeText}>
@@ -2394,7 +2394,7 @@ export default function ChallengesScreen() {
                       )}
                       {communityPosting ? (
                         <View style={styles.composerMediaUploadOverlay}>
-                          <ActivityIndicator size="small" color="#00F0D0" />
+                          <ActivityIndicator size="small" color={Colors.gold} />
                           <Text style={styles.composerMediaUploadOverlayText}>
                             {communityMedia.type === 'video' ? t('Uploading video...') : t('Uploading photo...')}
                           </Text>
@@ -2491,14 +2491,14 @@ export default function ChallengesScreen() {
                     <Ionicons
                       name={communityMedia ? 'images' : 'images-outline'}
                       size={22}
-                      color={communityMedia ? '#00F0D0' : 'rgba(255,255,255,0.6)'}
+                      color={communityMedia ? Colors.gold : 'rgba(247,243,238,0.6)'}
                     />
                     {communityMedia ? <View style={styles.composerActiveDot} /> : null}
                   </TouchableOpacity>
 
                   {communityMedia ? (
                     <View style={styles.composerMediaIndicatorBadge}>
-                      <Ionicons name={communityMedia.type === 'video' ? 'videocam' : 'image'} size={12} color="#00F0D0" />
+                      <Ionicons name={communityMedia.type === 'video' ? 'videocam' : 'image'} size={12} color={Colors.gold} />
                       <Text style={styles.composerMediaIndicatorText} numberOfLines={1}>
                         {communityMedia.type === 'video' ? t('1 video attached') : t('1 photo attached')}
                       </Text>
@@ -2621,7 +2621,7 @@ export default function ChallengesScreen() {
                             {/* Top Header Row */}
                             <View style={styles.challengeInvitePostHeader}>
                               <View style={styles.challengeInvitePostBadge}>
-                                <Ionicons name="flash" size={12} color="#00F0D0" />
+                                <Ionicons name="flash" size={12} color={Colors.gold} />
                                 <Text style={styles.challengeInvitePostBadgeText}>{t('CHALLENGE INVITATION')}</Text>
                               </View>
                               {inviteData.points ? (
@@ -2685,7 +2685,7 @@ export default function ChallengesScreen() {
                                   activeOpacity={0.85}
                                   onPress={() => handleCopyPostInviteLink(post.id, inviteData.inviteUrl)}
                                 >
-                                  <Ionicons name={isCopied ? "checkmark-circle" : "copy-outline"} size={15} color={isCopied ? "#22C55E" : "#00F0D0"} />
+                                  <Ionicons name={isCopied ? "checkmark-circle" : "copy-outline"} size={15} color={isCopied ? Colors.victoryGreen : Colors.gold} />
                                   <Text style={[styles.challengeInviteCopyBtnText, isCopied && styles.challengeInviteCopyBtnTextSuccess]}>
                                     {isCopied ? t('Copied!') : t('Copy Link')}
                                   </Text>
@@ -2717,7 +2717,7 @@ export default function ChallengesScreen() {
                       >
                         <Image source={getImageSource(post.image_url)!} style={styles.postImagePreview} />
                         <View style={styles.cardZoomHintBadge}>
-                          <Ionicons name="expand" size={12} color="#00F0D0" />
+                          <Ionicons name="expand" size={12} color={Colors.gold} />
                           <Text style={styles.cardZoomHintText}>{t('Tap to view card')}</Text>
                         </View>
                         {post.is_pending_upload ? (
@@ -3012,7 +3012,7 @@ export default function ChallengesScreen() {
                   >
                     <Image source={getImageSource(selectedCommunityPost.image_url)!} style={styles.postModalImage} />
                     <View style={styles.cardZoomHintBadge}>
-                      <Ionicons name="expand" size={12} color="#00F0D0" />
+                      <Ionicons name="expand" size={12} color={Colors.gold} />
                       <Text style={styles.cardZoomHintText}>{t('Full screen')}</Text>
                     </View>
                   </TouchableOpacity>
@@ -3051,7 +3051,7 @@ export default function ChallengesScreen() {
             </TouchableOpacity>
 
             <View style={styles.inviteModalIconWrap}>
-              <Ionicons name="gift-outline" size={32} color="#00F0D0" />
+              <Ionicons name="gift-outline" size={32} color={Colors.gold} />
             </View>
 
             <Text style={styles.inviteModalTitle}>{t('Invite Friends')}</Text>
@@ -3086,9 +3086,9 @@ export default function ChallengesScreen() {
                     </Text>
                   </View>
                   <View style={styles.invitePerkRow}>
-                    <Ionicons name="flash" size={16} color="#00F0D0" />
+                    <Ionicons name="flash" size={16} color={Colors.gold} />
                     <Text style={styles.invitePerkText}>
-                      Friend goes <Text style={{ fontWeight: '700', color: '#00F0D0' }}>directly to challenge</Text> preview
+                      Friend goes <Text style={{ fontWeight: '700', color: Colors.gold }}>directly to challenge</Text> preview
                     </Text>
                   </View>
                 </View>
@@ -3137,10 +3137,10 @@ export default function ChallengesScreen() {
               }}
             >
               {sharingToCommunity ? (
-                <ActivityIndicator size="small" color="#00F0D0" />
+                <ActivityIndicator size="small" color={Colors.gold} />
               ) : (
                 <>
-                  <Ionicons name="chatbubbles-outline" size={17} color="#00F0D0" />
+                  <Ionicons name="chatbubbles-outline" size={17} color={Colors.gold} />
                   <Text style={styles.inviteSecondaryCommunityBtnText}>{t('Share to Community Feed')}</Text>
                 </>
               )}
@@ -3583,7 +3583,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   lockedUpgradeBtnText: {
-    color: '#030712',
+    color: Colors.obsidian,
     fontSize: 12,
     fontFamily: 'Inter_700Bold',
   },
@@ -4273,7 +4273,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(0, 240, 208, 0.22)',
     overflow: 'hidden',
-    shadowColor: '#00F0D0',
+    shadowColor: Colors.gold,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -4298,7 +4298,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: 'rgba(0, 240, 208, 0.15)',
+    backgroundColor: 'rgba(201, 148, 58, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -4404,10 +4404,10 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   composerImgBtnActive: {
-    backgroundColor: 'rgba(0, 240, 208, 0.12)',
+    backgroundColor: 'rgba(201, 148, 58, 0.14)',
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(0, 240, 208, 0.3)',
+    borderColor: 'rgba(181, 101, 29, 0.35)',
   },
   composerActiveDot: {
     position: 'absolute',
@@ -4416,21 +4416,21 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#00F0D0',
+    backgroundColor: Colors.gold,
   },
   composerMediaIndicatorBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: 'rgba(0, 240, 208, 0.1)',
+    backgroundColor: 'rgba(201, 148, 58, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 240, 208, 0.25)',
+    borderColor: 'rgba(181, 101, 29, 0.3)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
   },
   composerMediaIndicatorText: {
-    color: '#00F0D0',
+    color: Colors.gold,
     fontSize: 11,
     fontFamily: 'Inter_600SemiBold',
   },
@@ -4452,11 +4452,11 @@ const styles = StyleSheet.create({
   },
   postBtn: {
     marginLeft: 'auto',
-    backgroundColor: '#00F0D0',
+    backgroundColor: Colors.gold,
     paddingHorizontal: 22,
     paddingVertical: 9,
     borderRadius: 12,
-    shadowColor: '#00F0D0',
+    shadowColor: Colors.gold,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 6,
@@ -4471,7 +4471,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   postBtnText: {
-    color: '#030712',
+    color: Colors.obsidian,
     fontSize: 13,
     fontWeight: '800',
     fontFamily: 'Inter_800ExtraBold',
@@ -4481,10 +4481,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#0D1326',
     borderRadius: 20,
     borderWidth: 1.5,
-    borderColor: 'rgba(0, 240, 208, 0.25)',
+    borderColor: 'rgba(181, 101, 29, 0.3)',
     padding: 16,
     marginBottom: 20,
-    shadowColor: '#00F0D0',
+    shadowColor: Colors.gold,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
     shadowRadius: 16,
@@ -4523,15 +4523,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(0, 240, 208, 0.12)',
+    backgroundColor: 'rgba(201, 148, 58, 0.14)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 240, 208, 0.3)',
+    borderColor: 'rgba(181, 101, 29, 0.35)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
   },
   workoutShareRewardText: {
-    color: '#00F0D0',
+    color: Colors.gold,
     fontSize: 10,
     fontFamily: 'Inter_800ExtraBold',
     letterSpacing: 0.4,
@@ -4580,10 +4580,10 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(0, 240, 208, 0.25)',
+    borderColor: 'rgba(181, 101, 29, 0.3)',
   },
   workoutShareCardOverlayText: {
-    color: '#00F0D0',
+    color: Colors.gold,
     fontSize: 11,
     fontFamily: 'Inter_600SemiBold',
   },
@@ -4611,12 +4611,12 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   workoutSharePostBtn: {
-    backgroundColor: '#00F0D0',
+    backgroundColor: Colors.gold,
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#00F0D0',
+    shadowColor: Colors.gold,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
@@ -4637,7 +4637,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   workoutSharePostBtnText: {
-    color: '#030712',
+    color: Colors.obsidian,
     fontSize: 14,
     fontFamily: 'Inter_800ExtraBold',
     letterSpacing: 0.3,
@@ -4649,7 +4649,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   workoutSharePointsBadgeText: {
-    color: '#00F0D0',
+    color: Colors.gold,
     fontSize: 11,
     fontFamily: 'Inter_800ExtraBold',
   },
@@ -5076,10 +5076,10 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(0, 240, 208, 0.3)',
+    borderColor: 'rgba(181, 101, 29, 0.35)',
   },
   cardZoomHintText: {
-    color: '#00F0D0',
+    color: Colors.gold,
     fontSize: 11,
     fontFamily: 'Inter_700Bold',
   },
@@ -5271,12 +5271,12 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: 'rgba(0, 240, 208, 0.12)',
+    backgroundColor: 'rgba(201, 148, 58, 0.14)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(0, 240, 208, 0.25)',
+    borderColor: 'rgba(181, 101, 29, 0.3)',
   },
   inviteModalTitle: {
     color: '#fff',
@@ -5320,13 +5320,13 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   inviteChallengeDurationPill: {
-    backgroundColor: 'rgba(0, 240, 208, 0.15)',
+    backgroundColor: 'rgba(201, 148, 58, 0.15)',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
   },
   inviteChallengeDurationText: {
-    color: '#00F0D0',
+    color: Colors.gold,
     fontSize: 12,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',
@@ -5384,7 +5384,7 @@ const styles = StyleSheet.create({
   },
   invitePrimaryShareBtn: {
     width: '100%',
-    backgroundColor: '#00F0D0',
+    backgroundColor: Colors.gold,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
@@ -5473,10 +5473,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#0E172E',
     borderRadius: 18,
     borderWidth: 1.5,
-    borderColor: 'rgba(0, 240, 208, 0.28)',
+    borderColor: 'rgba(181, 101, 29, 0.3)',
     padding: 16,
     marginBottom: 14,
-    shadowColor: '#00F0D0',
+    shadowColor: Colors.gold,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
@@ -5492,15 +5492,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(0, 240, 208, 0.15)',
+    backgroundColor: 'rgba(201, 148, 58, 0.15)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(0, 240, 208, 0.3)',
+    borderColor: 'rgba(181, 101, 29, 0.35)',
   },
   challengeInvitePostBadgeText: {
-    color: '#00F0D0',
+    color: Colors.gold,
     fontSize: 11,
     fontFamily: 'Inter_800ExtraBold',
     letterSpacing: 0.5,
@@ -5581,11 +5581,11 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_600SemiBold',
   },
   challengeInviteCategoryChip: {
-    backgroundColor: 'rgba(0, 240, 208, 0.08)',
+    backgroundColor: 'rgba(201, 148, 58, 0.1)',
     borderColor: 'rgba(0, 240, 208, 0.2)',
   },
   challengeInviteCategoryChipText: {
-    color: '#00F0D0',
+    color: Colors.gold,
     fontSize: 12,
     fontFamily: 'Inter_700Bold',
   },
@@ -5600,17 +5600,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#00F0D0',
+    backgroundColor: Colors.gold,
     paddingVertical: 10,
     borderRadius: 10,
-    shadowColor: '#00F0D0',
+    shadowColor: Colors.gold,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 6,
     elevation: 3,
   },
   challengeInviteAcceptBtnText: {
-    color: '#030712',
+    color: Colors.obsidian,
     fontSize: 13,
     fontFamily: 'Inter_800ExtraBold',
   },
@@ -5619,9 +5619,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: 'rgba(0, 240, 208, 0.1)',
+    backgroundColor: 'rgba(201, 148, 58, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 240, 208, 0.35)',
+    borderColor: 'rgba(181, 101, 29, 0.35)',
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 10,
@@ -5631,7 +5631,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(34, 197, 94, 0.4)',
   },
   challengeInviteCopyBtnText: {
-    color: '#00F0D0',
+    color: Colors.gold,
     fontSize: 12,
     fontFamily: 'Inter_700Bold',
   },

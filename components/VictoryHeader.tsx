@@ -195,14 +195,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   greetingPrefix: {
-    color: '#9CA3AF',
+    color: Colors.textSecondary,
     fontFamily: 'Inter_400Regular',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   greetingName: {
     fontWeight: '700',
-    color: '#00F0D0',
+    color: Colors.gold,
     fontFamily: 'Inter_700Bold',
   },
   rightBlock: {
@@ -213,9 +213,9 @@ const styles = StyleSheet.create({
   notificationButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(13, 43, 69, 0.45)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(181, 101, 29, 0.3)',
   },
   unreadBadge: {
     position: 'absolute',
@@ -229,10 +229,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#EF4444',
     borderWidth: 1.5,
-    borderColor: '#0D0D16',
+    borderColor: Colors.obsidian,
   },
   unreadBadgeText: {
-    color: '#FFFFFF',
+    color: Colors.ivory,
     fontSize: 8,
     fontFamily: 'Inter_700Bold',
     textAlign: 'center',

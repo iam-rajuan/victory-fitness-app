@@ -67,21 +67,21 @@ const MENU_SECTIONS = [
       items: [
         // Duplicate with MEMBERSHIP STATUS card above - kept in code as comment per design request:
         // { icon: 'card-outline', label: 'Manage Subscription', tint: '#F59E0B', action: 'manage_subscription' },
-        { icon: 'person-outline', label: 'Edit Profile', tint: '#4F8EF7', route: '/profile/edit' },
-        { icon: 'document-text-outline', label: 'Application', tint: '#EAB308', route: '/profile/application' },
-        { icon: 'lock-closed-outline', label: 'Privacy Policy', tint: '#A855F7', route: '/profile/privacy' },
-        { icon: 'language-outline', label: 'Language', tint: '#22C55E', action: 'language' },
-        { icon: 'help-circle-outline', label: 'Help & Support', tint: '#8B5CF6', route: '/profile/support' },
-        { icon: 'notifications-outline', label: 'Trial Notifications', tint: '#00F0D0', route: '/notifications' },
+        { icon: 'person-outline', label: 'Edit Profile', tint: Colors.gold, route: '/profile/edit' },
+        { icon: 'document-text-outline', label: 'Application', tint: Colors.copper, route: '/profile/application' },
+        { icon: 'lock-closed-outline', label: 'Privacy Policy', tint: Colors.copper, route: '/profile/privacy' },
+        { icon: 'language-outline', label: 'Language', tint: Colors.victoryGreen, action: 'language' },
+        { icon: 'help-circle-outline', label: 'Help & Support', tint: Colors.gold, route: '/profile/support' },
+        { icon: 'notifications-outline', label: 'Trial Notifications', tint: Colors.gold, route: '/notifications' },
       ],
   },
   {
     title: 'Fitness',
     items: [
-      { icon: 'analytics-outline', label: 'Body Metrics', tint: '#06B6D4', action: 'body_metrics' },
-      { icon: 'barbell-outline', label: 'Workout', tint: '#06B6D4', route: '/workoutplan' },
-      { icon: 'restaurant-outline', label: 'Nutrition', tint: '#F97316', route: '/mealPlan' },
-      { icon: 'body-outline', label: 'Journal', tint: '#EC4899', route: '/journal' },
+      { icon: 'analytics-outline', label: 'Body Metrics', tint: Colors.victoryGreen, action: 'body_metrics' },
+      { icon: 'barbell-outline', label: 'Workout', tint: Colors.victoryGreen, route: '/workoutplan' },
+      { icon: 'restaurant-outline', label: 'Nutrition', tint: Colors.copper, route: '/mealPlan' },
+      { icon: 'body-outline', label: 'Journal', tint: Colors.gold, route: '/journal' },
     ],
   }
 ];
@@ -539,12 +539,12 @@ export default function ProfileScreen() {
               activeOpacity={0.8}
               onPress={() => setShowSubscriptionModal(true)}
             >
-              <Ionicons name="shield-checkmark" size={12} color="#00F0D0" />
+              <Ionicons name="shield-checkmark" size={12} color={Colors.gold} />
               <Text style={styles.tierPlanPillText}>{currentPlanLabel.toUpperCase()}</Text>
             </TouchableOpacity>
 
             <View style={styles.verifiedBadge}>
-              <Ionicons name="checkmark-circle" size={13} color="#00F0D0" />
+              <Ionicons name="checkmark-circle" size={13} color={Colors.victoryGreen} />
               <Text style={styles.verifiedBadgeText}>
                 {me?.is_admin ? t('ADMIN') : displayVerified.toUpperCase()}
               </Text>
@@ -629,7 +629,7 @@ export default function ProfileScreen() {
         <View style={styles.kpiRow}>
           <View style={styles.kpiCard}>
             <View style={[styles.kpiIconWrap, { backgroundColor: 'rgba(0, 240, 208, 0.12)' }]}>
-              <Ionicons name="barbell-outline" size={18} color="#00F0D0" />
+              <Ionicons name="barbell-outline" size={18} color={Colors.victoryGreen} />
             </View>
             <Text style={styles.kpiValue} numberOfLines={1}>
               {workoutsTotal > 0 ? `${workoutsCompleted}/${workoutsTotal}` : String(workoutsCompleted)}
@@ -677,7 +677,7 @@ export default function ProfileScreen() {
               activeOpacity={0.8}
               onPress={() => router.push('/profile/settings')}
             >
-              <Ionicons name="settings-outline" size={16} color="#00F0D0" />
+              <Ionicons name="settings-outline" size={16} color={Colors.gold} />
             </TouchableOpacity>
           </View>
 
@@ -762,7 +762,7 @@ export default function ProfileScreen() {
               activeOpacity={0.85}
               onPress={() => router.push('/profile/settings')}
             >
-              <Ionicons name="construct-outline" size={15} color="#00F0D0" />
+              <Ionicons name="construct-outline" size={15} color={Colors.gold} />
               <Text style={styles.mindsetPrimaryBtnText}>{t('Manage in Settings')}</Text>
             </TouchableOpacity>
 
@@ -789,7 +789,7 @@ export default function ProfileScreen() {
               onPress={() => router.push('/chat')}
             >
               <View style={[styles.coachIconWrap, { backgroundColor: 'rgba(0, 240, 208, 0.14)', borderColor: 'rgba(0, 240, 208, 0.3)' }]}>
-                <Ionicons name="chatbubble-ellipses" size={22} color="#00F0D0" />
+                <Ionicons name="chatbubble-ellipses" size={22} color={Colors.gold} />
               </View>
               <View style={styles.coachInfo}>
                 <Text style={styles.coachName}>COACH VICTOR</Text>
@@ -800,7 +800,7 @@ export default function ProfileScreen() {
               </View>
               <View style={styles.coachActionPill}>
                 <Text style={styles.coachActionText}>{t('Chat')}</Text>
-                <Ionicons name="chevron-forward" size={14} color="#00F0D0" />
+                <Ionicons name="chevron-forward" size={14} color={Colors.gold} />
               </View>
             </TouchableOpacity>
           ) : (
@@ -902,7 +902,7 @@ export default function ProfileScreen() {
           <View style={styles.menuCard}>
             <View style={styles.privacyRow}>
               <View style={[styles.menuIconWrap, { backgroundColor: 'rgba(0, 240, 208, 0.15)' }]}>
-                <Ionicons name="people" size={18} color="#00F0D0" />
+                <Ionicons name="people" size={18} color={Colors.gold} />
               </View>
               <View style={styles.privacyTextContainer}>
                 <Text style={styles.privacyTitle}>{t('Share Activity with Network')}</Text>
@@ -920,7 +920,7 @@ export default function ProfileScreen() {
                     Alert.alert(t('Error'), t('Failed to update privacy setting'));
                   }
                 }}
-                trackColor={{ false: '#262D42', true: '#00F0D0' }}
+                trackColor={{ false: 'rgba(247, 243, 238, 0.15)', true: Colors.gold }}
                 thumbColor={me?.share_activity_with_network !== false ? '#FFFFFF' : '#8E9BAE'}
               />
             </View>
@@ -1265,7 +1265,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   tierPlanPillText: {
-    color: '#00F0D0',
+    color: Colors.gold,
     fontSize: 11,
     fontFamily: 'Inter_700Bold',
     letterSpacing: 0.5,
@@ -1282,7 +1282,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0, 240, 208, 0.25)',
   },
   verifiedBadgeText: {
-    color: '#00F0D0',
+    color: Colors.victoryGreen,
     fontSize: 10,
     fontFamily: 'Inter_700Bold',
     letterSpacing: 0.6,
@@ -1312,7 +1312,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0, 240, 208, 0.45)',
   },
   avatarFallbackText: {
-    color: '#00F0D0',
+    color: Colors.gold,
     fontFamily: 'Inter_700Bold',
     fontSize: 26,
     letterSpacing: 1,
@@ -1324,7 +1324,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#00F0D0',
+    backgroundColor: Colors.gold,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
@@ -1368,7 +1368,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0, 240, 208, 0.28)',
   },
   rankBadgeText: {
-    color: '#00F0D0',
+    color: Colors.gold,
     fontSize: 11,
     fontFamily: 'Inter_700Bold',
     letterSpacing: 0.4,
@@ -1414,7 +1414,7 @@ const styles = StyleSheet.create({
   },
   rankProgressLabelLeft: {
     fontSize: 10,
-    color: '#00F0D0',
+    color: Colors.gold,
     fontFamily: 'Inter_700Bold',
     letterSpacing: 0.6,
   },
@@ -1433,7 +1433,7 @@ const styles = StyleSheet.create({
   rankBarFill: {
     height: '100%',
     borderRadius: 4,
-    backgroundColor: '#00F0D0',
+    backgroundColor: Colors.gold,
   },
 
   /* ── 2. Performance 3-Metric KPI Bento Strip ── */
@@ -1564,7 +1564,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   quotePillText: {
-    color: '#00F0D0',
+    color: Colors.gold,
     fontSize: 9,
     fontFamily: 'Inter_700Bold',
     letterSpacing: 0.5,
@@ -1693,7 +1693,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0, 240, 208, 0.25)',
   },
   mindsetPrimaryBtnText: {
-    color: '#00F0D0',
+    color: Colors.gold,
     fontSize: 12,
     fontFamily: 'Inter_700Bold',
   },
@@ -1769,7 +1769,7 @@ const styles = StyleSheet.create({
   },
   coachStatus: {
     fontSize: 11,
-    color: '#00F0D0',
+    color: Colors.gold,
     fontFamily: 'Inter_500Medium',
   },
   coachLockedStatus: {
@@ -1790,7 +1790,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0, 240, 208, 0.25)',
   },
   coachActionText: {
-    color: '#00F0D0',
+    color: Colors.gold,
     fontSize: 12,
     fontFamily: 'Inter_700Bold',
   },
@@ -2028,7 +2028,7 @@ const styles = StyleSheet.create({
   },
   metricsSaveBtn: {
     flex: 1,
-    backgroundColor: '#00F0D0',
+    backgroundColor: Colors.gold,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
@@ -2130,7 +2130,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_600SemiBold',
   },
   genderModalOptionTextActive: {
-    color: '#00F0D0',
+    color: Colors.gold,
   },
   profileLanguageList: {
     maxHeight: 360,
@@ -2153,7 +2153,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   profileLanguageOptionActive: {
-    borderColor: '#00F0D0',
+    borderColor: Colors.gold,
     backgroundColor: 'rgba(0, 240, 208, 0.13)',
   },
   profileLanguageOptionText: {
@@ -2164,7 +2164,7 @@ const styles = StyleSheet.create({
     width: 38,
   },
   profileLanguageOptionTextActive: {
-    color: '#00F0D0',
+    color: Colors.gold,
   },
   profileLanguageOptionCopy: {
     flex: 1,

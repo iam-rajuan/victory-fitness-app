@@ -205,7 +205,7 @@ export default function WorkoutSection({
                     onPress={() => router.push('/workoutplan/strength-plan')}
                   >
                     <Text style={styles.actionBtnText}>{completedDays === 0 ? t('START PLAN') : t('RESUME WORKOUT')}</Text>
-                    <Ionicons name="arrow-forward" size={14} color="#000" style={styles.actionBtnIcon} />
+                    <Ionicons name="arrow-forward" size={14} color={Colors.obsidian} style={styles.actionBtnIcon} />
                   </TouchableOpacity>
                 </View>
               );
@@ -242,7 +242,7 @@ export default function WorkoutSection({
                     onPress={() => router.push('/workoutplan/video-plan')}
                   >
                     <Text style={styles.actionBtnText}>{t('RESUME VIDEO PLAN')}</Text>
-                    <Ionicons name="arrow-forward" size={14} color="#000" style={styles.actionBtnIcon} />
+                    <Ionicons name="arrow-forward" size={14} color={Colors.obsidian} style={styles.actionBtnIcon} />
                   </TouchableOpacity>
                 </View>
               );
@@ -261,11 +261,11 @@ export default function WorkoutSection({
                 disabled={isStartingPlan}
               >
                 {isStartingPlan ? (
-                  <ActivityIndicator size="small" color="#000" />
+                  <ActivityIndicator size="small" color={Colors.obsidian} />
                 ) : (
                   <>
-                    <Ionicons name="play" size={16} color="#000" style={{ marginRight: 6 }} />
-                    <Text style={[styles.workoutBtnPrimaryText, { color: '#000', fontWeight: '800' }]}>{t('START PLAN')}</Text>
+                    <Ionicons name="play" size={16} color={Colors.obsidian} style={{ marginRight: 6 }} />
+                    <Text style={[styles.workoutBtnPrimaryText, { color: Colors.obsidian, fontWeight: '800' }]}>{t('START PLAN')}</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -324,11 +324,11 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   planCard: {
-    backgroundColor: '#121212',
+    backgroundColor: Colors.surfaceCard,
     borderRadius: 20,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: 'rgba(181, 101, 29, 0.25)',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -337,19 +337,19 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   cardEyebrow: {
-    color: Colors.primary,
+    color: Colors.gold,
     fontSize: 11,
     fontFamily: 'Inter_700Bold',
     letterSpacing: 1.1,
   },
   planTitle: {
-    color: '#fff',
+    color: Colors.ivory,
     fontSize: 20,
     fontFamily: 'Inter_700Bold',
     marginBottom: 6,
   },
   planDescription: {
-    color: 'rgba(255,255,255,0.6)',
+    color: Colors.textSecondary,
     fontSize: 13,
     fontFamily: 'Inter_400Regular',
     lineHeight: 18,
@@ -362,12 +362,12 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   progressText: {
-    color: 'rgba(255,255,255,0.8)',
+    color: Colors.textSecondary,
     fontSize: 12,
     fontFamily: 'Inter_600SemiBold',
   },
   progressPercent: {
-    color: Colors.primary,
+    color: Colors.gold,
     fontSize: 13,
     fontFamily: 'Inter_700Bold',
   },
@@ -380,20 +380,20 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: '100%',
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.gold,
     borderRadius: 3,
   },
   actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.gold,
     borderRadius: 14,
     paddingVertical: 12,
     gap: 6,
   },
   actionBtnText: {
-    color: '#000',
+    color: Colors.obsidian,
     fontSize: 13,
     fontFamily: 'Inter_700Bold',
   },
@@ -401,17 +401,17 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
   workoutCardFallback: {
-    backgroundColor: '#121212',
+    backgroundColor: Colors.surfaceCard,
     borderRadius: 20,
     padding: 24,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: 'rgba(181, 101, 29, 0.25)',
   },
   workoutHeading: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#fff',
+    color: Colors.ivory,
     textAlign: 'center',
     marginBottom: 8,
     fontFamily: 'Inter_700Bold',
@@ -431,13 +431,13 @@ const styles = StyleSheet.create({
   },
   workoutBtnPrimary: {
     width: '100%',
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.gold,
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
   },
   workoutBtnPrimaryText: {
-    color: '#000',
+    color: Colors.obsidian,
     fontWeight: '700',
     fontSize: 13,
     letterSpacing: 0.5,
@@ -445,15 +445,15 @@ const styles = StyleSheet.create({
   },
   workoutBtnOutline: {
     width: '100%',
-    backgroundColor: '#1E1E1E',
+    backgroundColor: Colors.navy,
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(181, 101, 29, 0.35)',
   },
   workoutBtnOutlineText: {
-    color: '#fff',
+    color: Colors.ivory,
     fontWeight: '700',
     fontSize: 13,
     letterSpacing: 0.5,

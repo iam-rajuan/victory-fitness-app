@@ -443,7 +443,7 @@ export default function ChallengeDetailScreen() {
             showsVerticalScrollIndicator={false}
           >
             <TouchableOpacity style={styles.backRow} activeOpacity={0.8} onPress={() => goBackOrReplace(router, '/challenge')}>
-              <Ionicons name="arrow-back" size={18} color="#00F0D0" />
+              <Ionicons name="arrow-back" size={18} color={Colors.gold} />
               <Text style={styles.backText}>{t('Back to Challenges')}</Text>
             </TouchableOpacity>
 
@@ -629,7 +629,7 @@ export default function ChallengeDetailScreen() {
                         activeOpacity={0.88}
                         onPress={() => void handleInviteFromDetail()}
                       >
-                        <Ionicons name="person-add-outline" size={16} color="#00F0D0" />
+                        <Ionicons name="person-add-outline" size={16} color={Colors.gold} />
                         <Text style={styles.inviteFriendDetailBtnText}>
                           {inviteCopied ? t('Invite Link Copied!') : t('Invite Friends (+100 Pts)')}
                         </Text>
@@ -640,7 +640,7 @@ export default function ChallengeDetailScreen() {
 
                 <View style={styles.participantsCard}>
                   <View style={styles.sectionHeader}>
-                    <Ionicons name="people-outline" size={24} color="#00F0D0" />
+                    <Ionicons name="people-outline" size={24} color={Colors.gold} />
                     <Text style={styles.sectionTitle}>{t('Fellow Challengers')} ({detail.participant_count})</Text>
                   </View>
                   {detail.participants.length > 0 ? (
@@ -800,7 +800,7 @@ const styles = StyleSheet.create({
   headerTitle: { color: '#FFF', fontSize: 22, fontFamily: 'Inter_700Bold' },
   scrollContent: { padding: 20, paddingBottom: 32 },
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 18 },
-  backText: { color: '#00F0D0', fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  backText: { color: Colors.gold, fontSize: 14, fontFamily: 'Inter_600SemiBold' },
   heroCard: {
     backgroundColor: '#13132A',
     borderRadius: 24,
@@ -990,12 +990,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0, 240, 208, 0.1)',
+    backgroundColor: 'rgba(201, 148, 58, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 240, 208, 0.25)',
+    borderColor: 'rgba(181, 101, 29, 0.35)',
   },
   trackerPillText: {
-    color: '#00F0D0',
+    color: Colors.gold,
     fontSize: 13,
     fontFamily: 'Inter_700Bold',
   },
@@ -1162,16 +1162,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: 'rgba(0, 240, 208, 0.12)',
+    backgroundColor: 'rgba(201, 148, 58, 0.14)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 240, 208, 0.35)',
+    borderColor: 'rgba(181, 101, 29, 0.35)',
     borderRadius: 14,
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginTop: 10,
   },
   inviteFriendDetailBtnText: {
-    color: '#00F0D0',
+    color: Colors.gold,
     fontSize: 14,
     fontWeight: '700',
     fontFamily: 'Inter_700Bold',

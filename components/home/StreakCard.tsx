@@ -74,11 +74,11 @@ export default function StreakCard({ onPressStartWorkout }: StreakCardProps) {
           <Animated.View style={[styles.fireCircle, { opacity: flameOpacity }, streakDays === 0 && styles.fireCircleInactive]}>
             <Text style={styles.fireEmoji}>🔥</Text>
           </Animated.View>
-          <View style={{ marginLeft: 12 }}>
-            <Text style={styles.streakSub}>{t('TRAINING STREAK')}</Text>
+          <View style={styles.streakTextCol}>
+            <Text style={styles.streakSub} numberOfLines={1}>{t('TRAINING STREAK')}</Text>
             <View style={styles.daysRow}>
-              <Text style={styles.streakVal}>{streakDays} {streakDays === 1 ? t('Day') : t('Days')}</Text>
-              <Text style={[styles.activeTag, streakDays === 0 && styles.inactiveTag]}>
+              <Text style={styles.streakVal} numberOfLines={1}>{streakDays} {streakDays === 1 ? t('Day') : t('Days')}</Text>
+              <Text style={[styles.activeTag, streakDays === 0 && styles.inactiveTag]} numberOfLines={1}>
                 • {streakDays > 0 ? t('Active') : t('Inactive')}
               </Text>
             </View>
@@ -87,8 +87,15 @@ export default function StreakCard({ onPressStartWorkout }: StreakCardProps) {
 
         {isAtRisk ? (
           <View style={styles.atRiskBadge}>
-            <Ionicons name="time-outline" size={12} color="#FDE047" />
-            <Text style={styles.atRiskText}>{t('24H WINDOW ACTIVE')}</Text>
+            <Ionicons name="time-outline" size={11} color={Colors.copper} />
+            <Text
+              style={styles.atRiskText}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+            >
+              {t('24H WINDOW ACTIVE')}
+            </Text>
           </View>
         ) : null}
       </View>
@@ -123,7 +130,7 @@ export default function StreakCard({ onPressStartWorkout }: StreakCardProps) {
           }}
         >
           <Text style={styles.actionBtnText}>{t('Log Workout')}</Text>
-          <Ionicons name="arrow-forward" size={13} color="#000" />
+          <Ionicons name="arrow-forward" size={13} color={Colors.obsidian} />
         </TouchableOpacity>
       </View>
     </View>
@@ -132,65 +139,78 @@ export default function StreakCard({ onPressStartWorkout }: StreakCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#161928',
+    backgroundColor: Colors.surfaceCard,
     borderRadius: 22,
-    padding: 18,
+    padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(249, 115, 22, 0.28)',
+    borderColor: 'rgba(181, 101, 29, 0.25)',
     marginBottom: 20,
-    shadowColor: '#F97316',
+    shadowColor: Colors.navy,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 10,
     elevation: 3,
+    overflow: 'hidden',
   },
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
     marginBottom: 16,
+    width: '100%',
   },
   streakHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    minWidth: 0,
+    marginRight: 6,
   },
   fireCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(249, 115, 22, 0.18)',
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(201, 148, 58, 0.16)',
     borderWidth: 1.5,
-    borderColor: 'rgba(249, 115, 22, 0.45)',
+    borderColor: 'rgba(201, 148, 58, 0.45)',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   fireEmoji: {
-    fontSize: 22,
+    fontSize: 20,
+  },
+  streakTextCol: {
+    marginLeft: 10,
+    flex: 1,
+    minWidth: 0,
   },
   streakSub: {
-    color: '#F97316',
-    fontSize: 11,
+    color: Colors.gold,
+    fontSize: 10.5,
     fontFamily: 'Inter_700Bold',
-    letterSpacing: 1.2,
+    letterSpacing: 1.1,
   },
   daysRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
     marginTop: 2,
+    flexWrap: 'nowrap',
   },
   streakVal: {
-    color: '#FFF',
-    fontSize: 20,
+    color: Colors.ivory,
+    fontSize: 18,
     fontFamily: 'Inter_700Bold',
   },
   activeTag: {
-    color: Colors.primary,
-    fontSize: 12,
+    color: Colors.victoryGreen,
+    fontSize: 11.5,
     fontFamily: 'Inter_600SemiBold',
   },
   inactiveTag: {
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: Colors.textMuted,
   },
   fireCircleInactive: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
@@ -200,18 +220,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(234, 179, 8, 0.15)',
+    backgroundColor: 'rgba(181, 101, 29, 0.16)',
     borderWidth: 1,
-    borderColor: 'rgba(234, 179, 8, 0.35)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    borderColor: 'rgba(181, 101, 29, 0.38)',
+    paddingHorizontal: 8,
+    paddingVertical: 4.5,
     borderRadius: 12,
+    flexShrink: 0,
   },
   atRiskText: {
-    color: '#FDE047',
-    fontSize: 10,
+    color: Colors.copper,
+    fontSize: 9.5,
     fontFamily: 'Inter_700Bold',
-    letterSpacing: 0.8,
+    letterSpacing: 0.4,
   },
   milestoneSection: {
     marginBottom: 14,
@@ -228,7 +249,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   milestonePercent: {
-    color: '#F97316',
+    color: Colors.gold,
     fontSize: 12,
     fontFamily: 'Inter_700Bold',
   },
@@ -240,7 +261,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#F97316',
+    backgroundColor: Colors.gold,
     borderRadius: 4,
   },
   footerRow: {
@@ -263,13 +284,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.gold,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
   },
   actionBtnText: {
-    color: '#000',
+    color: Colors.obsidian,
     fontSize: 12,
     fontFamily: 'Inter_700Bold',
   },

@@ -13,7 +13,7 @@ interface ConfettiPiece {
   animOpacity: Animated.Value;
 }
 
-const BRAND_COLORS = ['#00F0D0', '#FFD700', '#A855F7', '#38BDF8', '#FFFFFF'];
+const BRAND_COLORS = ['#0D2B45', '#C9943A', '#B5651D', '#1A7A4A', '#F7F3EE', '#0D0D0D'];
 const PARTICLE_COUNT = 40;
 
 interface BrandConfettiProps {

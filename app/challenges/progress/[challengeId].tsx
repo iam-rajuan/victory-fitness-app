@@ -429,7 +429,7 @@ function buildChallengePostcardSvg(
     <rect x="84" y="1000" width="342" height="150" rx="24" fill="#111113" stroke="rgba(255, 255, 255, 0.06)" stroke-width="2" />
     <text x="255" y="1040" text-anchor="middle" font-size="18" font-family="Arial, sans-serif" font-weight="700" fill="rgba(255, 255, 255, 0.4)" letter-spacing="1.5">STREAK</text>
     <text x="255" y="1105" text-anchor="middle" font-size="34" font-family="Arial, sans-serif" font-weight="900" fill="#ffffff">
-      <tspan fill="#00F0D0">${streakCount}</tspan> 🔥
+      <tspan fill="${Colors.gold}">${streakCount}</tspan> 🔥
     </text>
 
     <!-- Right Tile (INTENSITÄT) -->
@@ -1025,7 +1025,7 @@ export default function ChallengeProgressScreen() {
               <View style={styles.newPostcardMetricTile}>
                 <Text style={styles.newPostcardMetricLabel}>{t('WORKOUT_CARD_STREAK').toUpperCase()}</Text>
                 <Text style={styles.newPostcardMetricValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
-                  <Text style={{ color: '#00F0D0' }}>{celebrationStreakCount}</Text> 🔥
+                  <Text style={{ color: Colors.gold }}>{celebrationStreakCount}</Text> 🔥
                 </Text>
               </View>
               <View style={styles.newPostcardMetricTile}>
@@ -2221,19 +2221,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#00F0D0',
+    backgroundColor: Colors.gold,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 14,
     marginTop: 16,
-    shadowColor: '#00F0D0',
+    shadowColor: Colors.gold,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 4,
   },
   shareCommunityBtnText: {
-    color: '#050814',
+    color: Colors.obsidian,
     fontFamily: 'Inter_700Bold',
     fontSize: 13,
     letterSpacing: 0.6,

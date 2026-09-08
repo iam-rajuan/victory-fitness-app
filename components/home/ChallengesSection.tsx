@@ -114,7 +114,7 @@ function ChallengeCard({
       {state === 'ACTIVE' ? (
         <View style={styles.urgencyNudgeBadge}>
           <Ionicons name="flash" size={13} color="#FFD700" />
-          <Text style={styles.urgencyNudgeText}>{t('⚡ Finish today or lose points')}</Text>
+          <Text style={styles.urgencyNudgeText}>{t(' Finish today or lose points')}</Text>
         </View>
       ) : null}
 

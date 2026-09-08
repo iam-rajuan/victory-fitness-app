@@ -180,7 +180,7 @@ export default function ProteinRingCard({ onPressLogMeal }: ProteinRingCardProps
     <View style={styles.card}>
       <View style={styles.headerRow}>
         <View style={styles.headerTitleRow}>
-          <Text style={styles.eyebrow}>📊 {t('NUTRITION TARGETS')}</Text>
+          <Text style={styles.eyebrow}>{t('NUTRITION TARGETS')}</Text>
           <Text style={styles.title}>{t('Daily Nutrition Ring')}</Text>
         </View>
         <TouchableOpacity
@@ -204,21 +204,21 @@ export default function ProteinRingCard({ onPressLogMeal }: ProteinRingCardProps
         <View style={styles.ringContainer}>
           {Platform.OS === 'web' ? (
             <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: 'rotate(-90deg)' }}>
-              {/* Outer Track (Calories) */}
+              {/* Outer Track (Calories - Copper) */}
               <circle
                 cx={size / 2}
                 cy={size / 2}
                 r={outerRadius}
-                stroke="rgba(0, 240, 208, 0.15)"
+                stroke="rgba(181, 101, 29, 0.20)"
                 strokeWidth={strokeWidth}
                 fill="none"
               />
-              {/* Outer Progress (Calories) */}
+              {/* Outer Progress (Calories - Copper) */}
               <circle
                 cx={size / 2}
                 cy={size / 2}
                 r={outerRadius}
-                stroke={Colors.primary}
+                stroke={Colors.copper}
                 strokeWidth={strokeWidth}
                 strokeDasharray={outerCircumference}
                 strokeDashoffset={outerOffset}
@@ -231,16 +231,16 @@ export default function ProteinRingCard({ onPressLogMeal }: ProteinRingCardProps
                 cx={size / 2}
                 cy={size / 2}
                 r={innerRadius}
-                stroke="rgba(255, 215, 0, 0.18)"
+                stroke="rgba(201, 148, 58, 0.20)"
                 strokeWidth={strokeWidth}
                 fill="none"
               />
-              {/* Inner Progress (Protein - Gold) */}
+              {/* Inner Progress (Protein - Gold or Victory Green when achieved) */}
               <circle
                 cx={size / 2}
                 cy={size / 2}
                 r={innerRadius}
-                stroke="#FFD700"
+                stroke={proteinRatio >= 1 ? Colors.victoryGreen : Colors.gold}
                 strokeWidth={strokeWidth}
                 strokeDasharray={innerCircumference}
                 strokeDashoffset={innerOffset}
@@ -250,15 +250,17 @@ export default function ProteinRingCard({ onPressLogMeal }: ProteinRingCardProps
             </svg>
           ) : (
             <View style={styles.nativeRingFallback}>
-              <View style={[styles.nativeOuterRing, { borderColor: Colors.primary }]}>
-                <View style={[styles.nativeInnerRing, { borderColor: '#FFD700' }]} />
+              <View style={[styles.nativeOuterRing, { borderColor: Colors.copper }]}>
+                <View style={[styles.nativeInnerRing, { borderColor: proteinRatio >= 1 ? Colors.victoryGreen : Colors.gold }]} />
               </View>
             </View>
           )}
 
           {/* Center readout: Protein always first! */}
           <View style={styles.ringCenter}>
-            <Text style={styles.ringCenterProteinVal}>{proteinConsumed}g</Text>
+            <Text style={[styles.ringCenterProteinVal, proteinRatio >= 1 && { color: Colors.victoryGreen }]}>
+              {proteinConsumed}g
+            </Text>
             <Text style={styles.ringCenterProteinLabel}>{t('PROTEIN')}</Text>
             <Text style={styles.ringCenterCaloriesSub}>{caloriesConsumed} kcal</Text>
           </View>
@@ -399,15 +401,15 @@ export default function ProteinRingCard({ onPressLogMeal }: ProteinRingCardProps
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#121224',
+    backgroundColor: Colors.surfaceCard,
     borderRadius: 22,
     padding: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255, 215, 0, 0.25)',
+    borderColor: 'rgba(181, 101, 29, 0.25)',
     marginBottom: 20,
-    shadowColor: '#000',
+    shadowColor: Colors.navy,
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.25,
     shadowRadius: 12,
     elevation: 4,
   },
@@ -421,7 +423,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   eyebrow: {
-    color: '#FFD700',
+    color: Colors.gold,
     fontSize: 11,
     fontFamily: 'Inter_700Bold',
     letterSpacing: 1.2,
@@ -429,7 +431,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   title: {
-    color: '#fff',
+    color: Colors.ivory,
     fontSize: 18,
     fontFamily: 'Inter_700Bold',
     letterSpacing: 0.2,
@@ -437,14 +439,14 @@ const styles = StyleSheet.create({
   logBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.gold,
     paddingVertical: 7,
     paddingHorizontal: 12,
     borderRadius: 20,
     gap: 4,
   },
   logBtnText: {
-    color: '#000',
+    color: Colors.obsidian,
     fontSize: 12,
     fontFamily: 'Inter_700Bold',
   },
@@ -487,13 +489,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   ringCenterProteinVal: {
-    color: '#FFD700',
+    color: Colors.gold,
     fontSize: 22,
     fontFamily: 'Inter_700Bold',
     lineHeight: 26,
   },
   ringCenterProteinLabel: {
-    color: 'rgba(255,255,255,0.7)',
+    color: Colors.textSecondary,
     fontSize: 9,
     fontFamily: 'Inter_700Bold',
     letterSpacing: 1,
@@ -501,7 +503,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   ringCenterCaloriesSub: {
-    color: 'rgba(255,255,255,0.55)',
+    color: Colors.textMuted,
     fontSize: 11,
     fontFamily: 'Inter_500Medium',
   },
@@ -510,16 +512,16 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   statBoxGold: {
-    backgroundColor: 'rgba(255, 215, 0, 0.05)',
+    backgroundColor: 'rgba(201, 148, 58, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 215, 0, 0.25)',
+    borderColor: 'rgba(201, 148, 58, 0.35)',
     borderRadius: 14,
     padding: 10,
   },
   statBoxCyan: {
-    backgroundColor: 'rgba(0, 240, 208, 0.05)',
+    backgroundColor: 'rgba(181, 101, 29, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 240, 208, 0.22)',
+    borderColor: 'rgba(181, 101, 29, 0.30)',
     borderRadius: 14,
     padding: 10,
   },
@@ -532,24 +534,24 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#FFD700',
+    backgroundColor: Colors.gold,
     marginRight: 6,
   },
   cyanDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.copper,
     marginRight: 6,
   },
   statTitleGold: {
-    color: '#FFD700',
+    color: Colors.gold,
     fontSize: 10,
     fontFamily: 'Inter_700Bold',
     letterSpacing: 0.8,
   },
   statTitleCyan: {
-    color: Colors.primary,
+    color: Colors.copper,
     fontSize: 10,
     fontFamily: 'Inter_700Bold',
     letterSpacing: 0.8,
@@ -560,51 +562,51 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   statValGold: {
-    color: '#fff',
+    color: Colors.ivory,
     fontSize: 18,
     fontFamily: 'Inter_700Bold',
     marginRight: 4,
   },
   statTargetGold: {
-    color: 'rgba(255,255,255,0.6)',
+    color: Colors.textSecondary,
     fontSize: 12,
     fontFamily: 'Inter_500Medium',
   },
   statValCyan: {
-    color: '#fff',
+    color: Colors.ivory,
     fontSize: 18,
     fontFamily: 'Inter_700Bold',
     marginRight: 4,
   },
   statTargetCyan: {
-    color: 'rgba(255,255,255,0.6)',
+    color: Colors.textSecondary,
     fontSize: 12,
     fontFamily: 'Inter_500Medium',
   },
   progressBarBg: {
     height: 5,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 3,
     overflow: 'hidden',
     marginBottom: 4,
   },
   progressBarFillGold: {
     height: '100%',
-    backgroundColor: '#FFD700',
+    backgroundColor: Colors.gold,
     borderRadius: 3,
   },
   progressBarFillCyan: {
     height: '100%',
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.copper,
     borderRadius: 3,
   },
   statPercentGold: {
-    color: '#FFD700',
+    color: Colors.gold,
     fontSize: 10,
     fontFamily: 'Inter_600SemiBold',
   },
   statPercentCyan: {
-    color: Colors.primary,
+    color: Colors.copper,
     fontSize: 10,
     fontFamily: 'Inter_600SemiBold',
   },
@@ -615,19 +617,19 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalSheet: {
-    backgroundColor: '#161626',
+    backgroundColor: '#0D1B2A',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 22,
     paddingBottom: Platform.OS === 'ios' ? 40 : 26,
     borderWidth: 1,
-    borderColor: 'rgba(255, 215, 0, 0.2)',
+    borderColor: 'rgba(181, 101, 29, 0.35)',
   },
   modalHandle: {
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(247, 243, 238, 0.25)',
     alignSelf: 'center',
     marginBottom: 16,
   },
@@ -638,13 +640,13 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   modalEyebrow: {
-    color: '#FFD700',
+    color: Colors.gold,
     fontSize: 11,
     fontFamily: 'Inter_700Bold',
     letterSpacing: 1.2,
   },
   modalTitle: {
-    color: '#fff',
+    color: Colors.ivory,
     fontSize: 20,
     fontFamily: 'Inter_700Bold',
     marginTop: 2,
@@ -658,7 +660,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   modalSubtitle: {
-    color: 'rgba(255,255,255,0.6)',
+    color: Colors.textSecondary,
     fontSize: 12,
     fontFamily: 'Inter_400Regular',
     lineHeight: 18,
@@ -672,15 +674,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#1C1C30',
+    backgroundColor: '#111F30',
     borderRadius: 14,
     padding: 12,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
   },
   mealItemCardCompleted: {
-    borderColor: 'rgba(34, 197, 94, 0.35)',
-    backgroundColor: 'rgba(34, 197, 94, 0.06)',
+    borderColor: 'rgba(26, 122, 74, 0.50)',
+    backgroundColor: 'rgba(26, 122, 74, 0.12)',
   },
   mealItemInfo: {
     flex: 1,
@@ -696,29 +698,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   mealItemLabel: {
-    color: 'rgba(255,255,255,0.85)',
+    color: Colors.ivory,
     fontSize: 12,
     fontFamily: 'Inter_700Bold',
   },
   mealItemDoneBadge: {
-    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    backgroundColor: 'rgba(26, 122, 74, 0.25)',
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 6,
   },
   mealItemDoneText: {
-    color: '#22C55E',
+    color: Colors.victoryGreen,
     fontSize: 9,
     fontFamily: 'Inter_700Bold',
   },
   mealItemName: {
-    color: '#fff',
+    color: Colors.ivory,
     fontSize: 13,
     fontFamily: 'Inter_500Medium',
     marginBottom: 2,
   },
   mealItemMacros: {
-    color: 'rgba(255,255,255,0.55)',
+    color: Colors.textMuted,
     fontSize: 11,
     fontFamily: 'Inter_400Regular',
   },
@@ -731,33 +733,33 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   mealActionButtonPending: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.gold,
   },
   mealActionButtonCompleted: {
-    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    backgroundColor: 'rgba(26, 122, 74, 0.20)',
     borderWidth: 1,
-    borderColor: '#22C55E',
+    borderColor: Colors.victoryGreen,
   },
   mealActionButtonTextPending: {
-    color: '#000',
+    color: Colors.obsidian,
     fontSize: 12,
     fontFamily: 'Inter_700Bold',
   },
   mealActionButtonTextCompleted: {
-    color: '#22C55E',
+    color: Colors.victoryGreen,
     fontSize: 12,
     fontFamily: 'Inter_700Bold',
   },
   fullPlanBtn: {
-    backgroundColor: 'rgba(168, 85, 247, 0.12)',
+    backgroundColor: 'rgba(181, 101, 29, 0.15)',
     borderWidth: 1,
-    borderColor: 'rgba(168, 85, 247, 0.3)',
+    borderColor: 'rgba(181, 101, 29, 0.35)',
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
   },
   fullPlanBtnText: {
-    color: '#C084FC',
+    color: Colors.gold,
     fontSize: 13,
     fontFamily: 'Inter_700Bold',
   },

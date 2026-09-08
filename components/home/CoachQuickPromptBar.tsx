@@ -55,7 +55,7 @@ export default function CoachQuickPromptBar({
     <View style={styles.card}>
       <View style={styles.headerRow}>
         <View style={styles.coachAvatar}>
-          <Ionicons name="sparkles" size={16} color="#00F0D0" />
+          <Ionicons name="sparkles" size={16} color={Colors.gold} />
         </View>
         <View style={{ flex: 1, marginLeft: 10 }}>
           <Text style={styles.headerTitle}>{t('COACH VICTOR')}</Text>
@@ -80,7 +80,7 @@ export default function CoachQuickPromptBar({
           disabled={!prompt.trim()}
           activeOpacity={0.8}
         >
-          <Ionicons name="arrow-up" size={18} color={prompt.trim() ? '#000' : 'rgba(255,255,255,0.4)'} />
+          <Ionicons name="arrow-up" size={18} color={prompt.trim() ? Colors.obsidian : 'rgba(255,255,255,0.4)'} />
         </TouchableOpacity>
       </View>
 
@@ -100,7 +100,7 @@ export default function CoachQuickPromptBar({
             <Ionicons
               name={idx === rotatingIndex ? "sparkles" : "chatbubble-ellipses-outline"}
               size={13}
-              color={idx === rotatingIndex ? '#050814' : Colors.primary}
+              color={idx === rotatingIndex ? Colors.obsidian : Colors.gold}
               style={{ marginRight: 5 }}
             />
             <Text style={[styles.chipText, idx === rotatingIndex && styles.chipTextActive]}>{t(chip)}</Text>
@@ -113,15 +113,15 @@ export default function CoachQuickPromptBar({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#111528',
+    backgroundColor: Colors.surfaceCard,
     borderRadius: 22,
     padding: 18,
     borderWidth: 1,
-    borderColor: 'rgba(0, 240, 208, 0.22)',
+    borderColor: 'rgba(181, 101, 29, 0.28)',
     marginBottom: 20,
-    shadowColor: '#00F0D0',
+    shadowColor: Colors.navy,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.16,
     shadowRadius: 10,
     elevation: 3,
   },
@@ -134,14 +134,14 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(0, 240, 208, 0.15)',
+    backgroundColor: 'rgba(201, 148, 58, 0.16)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 240, 208, 0.35)',
+    borderColor: 'rgba(201, 148, 58, 0.40)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
-    color: '#00F0D0',
+    color: Colors.gold,
     fontSize: 12,
     fontFamily: 'Inter_700Bold',
     letterSpacing: 1.2,
@@ -158,14 +158,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.06)',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: 'rgba(181, 101, 29, 0.30)',
     paddingHorizontal: 14,
     paddingVertical: 4,
     marginBottom: 12,
   },
   input: {
     flex: 1,
-    color: '#FFF',
+    color: Colors.ivory,
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
     paddingVertical: 10,
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.gold,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8,
@@ -191,25 +191,25 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 240, 208, 0.08)',
+    backgroundColor: 'rgba(13, 43, 69, 0.45)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 240, 208, 0.22)',
+    borderColor: 'rgba(181, 101, 29, 0.35)',
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
   chipText: {
-    color: '#E2E8F0',
+    color: Colors.ivory,
     fontSize: 12,
     fontFamily: 'Inter_500Medium',
   },
   chipActive: {
-    backgroundColor: '#00F0D0',
-    borderColor: '#00F0D0',
+    backgroundColor: Colors.gold,
+    borderColor: Colors.gold,
     transform: [{ scale: 1.02 }],
   },
   chipTextActive: {
-    color: '#050814',
+    color: Colors.obsidian,
     fontFamily: 'Inter_700Bold',
   },
 });
