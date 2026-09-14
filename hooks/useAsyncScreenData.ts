@@ -20,7 +20,9 @@ export function useAsyncScreenData<T>({
   cacheKey,
   persistCachedData = true,
 }: UseAsyncScreenDataOptions<T>) {
-  const cachedSnapshot = cacheKey ? getCachedResourceSnapshot<T>(cacheKey) : undefined;
+  const initialDataRef = useRef(initialData);
+  const initialCachedSnapshotRef = useRef<T | undefined>(cacheKey ? getCachedResourceSnapshot<T>(cacheKey) : undefined);
+  const cachedSnapshot = initialCachedSnapshotRef.current;
   const [data, setData] = useState<T>(cachedSnapshot ?? initialData);
   const [loading, setLoading] = useState(!skipInitialLoad && !cachedSnapshot);
   const [refreshing, setRefreshing] = useState(false);
@@ -44,7 +46,7 @@ export function useAsyncScreenData<T>({
   const run = useCallback(
     async (isRefresh = false, silent = false) => {
       if (!mountedRef.current) {
-        return initialData;
+        return initialDataRef.current;
       }
 
       if (!silent && isRefresh && hasLoadedRef.current) {
@@ -84,7 +86,7 @@ export function useAsyncScreenData<T>({
         }
       }
     },
-    [cacheKey, initialData, persistCachedData]
+    [cacheKey, persistCachedData]
   );
 
   useEffect(() => {
@@ -112,7 +114,7 @@ export function useAsyncScreenData<T>({
         }
       }
 
-      void run(false, Boolean(cachedSnapshot) || hasHydratedCache).catch(() => {
+      void run(false, Boolean(initialCachedSnapshotRef.current) || hasHydratedCache).catch(() => {
         // The hook already stores the error in state; swallow the effect-level rejection.
       });
     })();
@@ -120,7 +122,7 @@ export function useAsyncScreenData<T>({
     return () => {
       cancelled = true;
     };
-  }, [cacheKey, cachedSnapshot, run, skipInitialLoad]);
+  }, [cacheKey, run, skipInitialLoad]);
 
   return {
     data,
