@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Stack, usePathname, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, AppState, Text, TouchableOpacity, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, AppState, Platform, Text, TouchableOpacity, View, StyleSheet } from 'react-native';
 import { useFonts } from 'expo-font';
 import { Colors } from '../constants/Colors';
 import { Fonts } from '../constants/Typography';
@@ -72,6 +72,10 @@ export default function RootLayout() {
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (state) => {
+      if (Platform.OS === 'web') {
+        return;
+      }
+
       if (state === 'background' || state === 'inactive') {
         markBiometricSessionLocked();
         return;
