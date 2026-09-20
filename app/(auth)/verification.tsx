@@ -1,32 +1,42 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Animated,
-  Dimensions,
-  Image,
-  ImageBackground,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { AuthButton } from '../../components/AuthButton';
-import { ErrorPopupModal } from '../../components/ErrorPopupModal';
-import { Colors } from '../../constants/Colors';
-import { apiRequest, AuthResponse, setAuthTokens } from '../../lib/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { StatusBar } from 'expo-status-bar';
+
+import { ErrorPopupModal } from '../../components/ErrorPopupModal';
+import { apiRequest, AuthResponse, setAuthTokens } from '../../lib/api';
 import { getPostAuthRoute } from '../../lib/access';
 import { markBiometricSessionUnlocked, maybeOfferBiometricUnlock } from '../../lib/biometricUnlock';
 import { formatAppError } from '../../lib/error';
 import { replaceRoute } from '../../lib/navigation';
 
-const { height } = Dimensions.get('window');
-const RESEND_COOLDOWN_SECONDS = 10 * 60;
+// Claude Design Reference Palette
+const OBSIDIAN = '#0D0D0D';
+const NAVY = '#0D2B45';
+const GOLD = '#C9943A';
+const COPPER = '#B5651D';
+const IVORY = '#F7F3EE';
+
+const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
+const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
+const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+
+const RESEND_COOLDOWN_SECONDS = 120; // 2 minutes cooldown
 
 function formatCountdown(totalSeconds: number) {
   const minutes = Math.floor(totalSeconds / 60);
@@ -36,19 +46,24 @@ function formatCountdown(totalSeconds: number) {
 
 export default function VerificationScreen() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
+
   const params = useLocalSearchParams<{ email?: string; challenge_id?: string }>();
-  const email = params.email ?? '';
+  const email = (params.email ?? '').trim().toLowerCase();
+
   const codeInputRef = useRef<TextInput>(null);
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
   const [isFocused, setIsFocused] = useState(true);
   const [resendSeconds, setResendSeconds] = useState(RESEND_COOLDOWN_SECONDS);
   const [errorDialog, setErrorDialog] = useState<{ title: string; message: string } | null>(null);
 
   const cursorOpacity = useRef(new Animated.Value(1)).current;
 
-  // Smooth blinking cursor animation for active OTP box
+  // Blinking gold cursor animation
   useEffect(() => {
     const blink = Animated.loop(
       Animated.sequence([
@@ -68,20 +83,16 @@ export default function VerificationScreen() {
     return () => blink.stop();
   }, [cursorOpacity]);
 
+  // Resend countdown timer
   useEffect(() => {
-    if (resendSeconds === 0) {
-      return;
-    }
-
+    if (resendSeconds === 0) return;
     const timer = setInterval(() => {
-      setResendSeconds((current) => Math.max(current - 1, 0));
+      setResendSeconds((curr) => Math.max(curr - 1, 0));
     }, 1000);
-
     return () => clearInterval(timer);
   }, [resendSeconds]);
 
   const handleCodeChange = (val: string) => {
-    // Strictly numbers only. Strip any letters/strings typed by user.
     const cleanDigits = val.replace(/\D/g, '').slice(0, 4);
     setCode(cleanDigits);
   };
@@ -89,8 +100,8 @@ export default function VerificationScreen() {
   const handleVerify = async () => {
     if (!email || !/^\d{4}$/.test(code)) {
       setErrorDialog({
-        title: 'Verification Error',
-        message: 'Enter the 4 digit verification code from your email.',
+        title: 'Verification Code Required',
+        message: 'Please enter the 4-digit code sent to your email.',
       });
       return;
     }
@@ -104,6 +115,7 @@ export default function VerificationScreen() {
       await setAuthTokens(auth);
       markBiometricSessionUnlocked();
       void maybeOfferBiometricUnlock(auth.user);
+
       const pendingChallengeId = params.challenge_id || (await AsyncStorage.getItem('@pending_challenge_id'));
       if (pendingChallengeId) {
         await AsyncStorage.removeItem('@pending_challenge_id');
@@ -122,7 +134,7 @@ export default function VerificationScreen() {
     if (!email) {
       setErrorDialog({
         title: 'Missing Email',
-        message: 'Go back and register again to resend the code.',
+        message: 'Please return to registration and enter your email again.',
       });
       return;
     }
@@ -130,12 +142,15 @@ export default function VerificationScreen() {
     if (resendSeconds > 0 || resending) return;
 
     setResending(true);
+    setResendSuccess(false);
     try {
       await apiRequest('/auth/resend-verification', {
         method: 'POST',
         body: { email },
       });
       setResendSeconds(RESEND_COOLDOWN_SECONDS);
+      setResendSuccess(true);
+      setTimeout(() => setResendSuccess(false), 4000);
     } catch (error) {
       setErrorDialog(formatAppError(error));
     } finally {
@@ -144,48 +159,49 @@ export default function VerificationScreen() {
   };
 
   return (
-    <ImageBackground
-      source={require('../../assets/w4.jpg')}
-      style={styles.background}
-      resizeMode="cover"
-    >
-      <View style={styles.overlay}>
-        <ErrorPopupModal
-          visible={Boolean(errorDialog)}
-          title={errorDialog?.title ?? 'Error'}
-          message={errorDialog?.message ?? ''}
-          onClose={() => setErrorDialog(null)}
-        />
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardView}
+    <View style={styles.root}>
+      <StatusBar style="light" />
+      <ErrorPopupModal
+        visible={Boolean(errorDialog)}
+        title={errorDialog?.title ?? 'Error'}
+        message={errorDialog?.message ?? ''}
+        onClose={() => setErrorDialog(null)}
+      />
+
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.keyboardView}
+      >
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, isDesktop && styles.desktopScrollContent]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            {/* Logo */}
-            <View style={styles.brandingContainer}>
-              <Image
-                source={require('../../assets/logo_dark.png')}
-                style={styles.brandLogo}
-                resizeMode="contain"
-              />
+          <View style={[styles.container, isDesktop && styles.desktopContainer]}>
+            {/* Top Navigation */}
+            <View style={styles.topNav}>
+              <Pressable
+                onPress={() => router.canGoBack() ? router.back() : replaceRoute(router, '/register')}
+                hitSlop={12}
+                style={styles.backButton}
+              >
+                <Text style={styles.backArrow}>←</Text>
+              </Pressable>
             </View>
 
-            {/* Lock Icon Badge Card */}
-            <View style={styles.iconWrap}>
-              <View style={styles.iconBadge}>
-                <Ionicons name="lock-closed-sharp" size={32} color={Colors.primary} />
-              </View>
-            </View>
+            {/* Kicker & Headers */}
+            <Text style={styles.kicker}>SECURITY CHECK</Text>
+            <h1 style={{ margin: 0 } as any}>
+              <Text style={styles.heading}>Check your email</Text>
+            </h1>
+            <Text style={styles.subheading}>
+              We sent a 4-digit verification code to{' '}
+              <Text style={styles.emailHighlight}>{email || 'your email'}</Text>. Enter it below to confirm your
+              account and continue.
+            </Text>
 
-            <Text style={styles.heading}>Verify Email</Text>
-            <Text style={styles.subheading}>Enter the 4-digit code sent to your email</Text>
-
-            {/* Form Card */}
-            <View style={styles.formCard}>
+            {/* OTP Form Card */}
+            <View style={styles.navyCard}>
               <TouchableOpacity
                 activeOpacity={0.9}
                 onPress={() => codeInputRef.current?.focus()}
@@ -214,6 +230,7 @@ export default function VerificationScreen() {
                 })}
               </TouchableOpacity>
 
+              {/* Hidden Native Input */}
               <TextInput
                 ref={codeInputRef}
                 value={code}
@@ -229,42 +246,75 @@ export default function VerificationScreen() {
                 autoFocus
               />
 
+              {/* Countdown / Resend status */}
               <View style={styles.resendRow}>
-                <Text style={styles.resendLabel}>Resend code in</Text>
-                <Text style={styles.resendTimer}>
-                  {resendSeconds === 0 ? 'Now' : formatCountdown(resendSeconds)}
-                </Text>
+                {resendSeconds > 0 ? (
+                  <>
+                    <Text style={styles.resendText}>Resend code in </Text>
+                    <Text style={styles.resendTimer}>{formatCountdown(resendSeconds)}</Text>
+                  </>
+                ) : (
+                  <TouchableOpacity onPress={handleResend} disabled={resending} activeOpacity={0.7}>
+                    <Text style={styles.resendLink}>
+                      {resending ? 'Sending new code...' : "Didn't receive code? Resend now"}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
 
-              <AuthButton title="Confirm" onPress={handleVerify} loading={loading} disabled={loading || code.length < 4} />
+              {resendSuccess && (
+                <Text style={styles.resendSuccessNote}>A new code has been sent to your email.</Text>
+              )}
 
-              <TouchableOpacity
-                style={styles.resendButton}
-                onPress={handleResend}
-                disabled={resendSeconds > 0 || resending}
-                activeOpacity={0.8}
+              {/* Confirm & Continue CTA */}
+              <Pressable
+                style={[styles.ctaButton, (loading || code.length < 4) && styles.ctaButtonDisabled]}
+                onPress={handleVerify}
+                disabled={loading || code.length < 4}
               >
-                <Text style={[styles.resendButtonText, resendSeconds > 0 && styles.resendButtonTextDisabled]}>
-                  {resending ? 'Sending code...' : "I didn't receive a code"}
-                </Text>
-              </TouchableOpacity>
+                {loading ? (
+                  <ActivityIndicator color={OBSIDIAN} size="small" />
+                ) : (
+                  <Text style={styles.ctaButtonText}>Confirm and continue</Text>
+                )}
+              </Pressable>
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </View>
-    </ImageBackground>
+
+            {/* Assistance & Privacy Guarantee */}
+            <View style={styles.footerGuarantees}>
+              <View style={styles.guaranteeRow}>
+                <View style={styles.greenDot} />
+                <Text style={styles.guaranteeText}>
+                  Codes expire in 10 minutes. Check your spam folder if it doesn't appear.
+                </Text>
+              </View>
+              <View style={styles.guaranteeRow}>
+                <View style={styles.greenDot} />
+                <Text style={styles.guaranteeText}>
+                  Your data stays in the EU and is never shared with third parties.
+                </Text>
+              </View>
+            </View>
+
+            {/* Wrong Email Link */}
+            <TouchableOpacity
+              onPress={() => replaceRoute(router, '/register')}
+              style={styles.wrongEmailBtn}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.wrongEmailText}>Wrong email address? Register again</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  background: {
+  root: {
     flex: 1,
-    width: '100%',
-    height: '100%',
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(7, 10, 15, 0.78)',
+    backgroundColor: OBSIDIAN,
   },
   keyboardView: {
     flex: 1,
@@ -272,113 +322,108 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: height * 0.1,
-    paddingBottom: 36,
+    paddingTop: 40,
+    paddingBottom: 48,
     alignItems: 'center',
   },
-  iconWrap: {
-    alignItems: 'center',
-    marginBottom: 24,
+  desktopScrollContent: {
+    paddingTop: 70,
   },
-  brandingContainer: {
-    alignItems: 'center',
+  container: {
+    width: '100%',
+    maxWidth: 480,
+  },
+  desktopContainer: {
+    maxWidth: 480,
+  },
+  topNav: {
     marginBottom: 20,
   },
-  brandLogo: {
-    width: 240,
-    height: 80,
+  backButton: {
+    alignSelf: 'flex-start',
+    paddingVertical: 4,
+    paddingRight: 16,
   },
-  iconBadge: {
-    width: 86,
-    height: 86,
-    borderRadius: 24,
-    backgroundColor: 'rgba(18, 22, 34, 0.9)',
-    borderWidth: 1.5,
-    borderColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
+  backArrow: {
+    fontFamily: DMSANS,
+    fontSize: 22,
+    color: 'rgba(247,243,238,0.6)',
+    fontWeight: '700',
+  },
+  kicker: {
+    fontFamily: DMSANS,
+    fontSize: 10.5,
+    fontWeight: '600',
+    letterSpacing: 1.6,
+    color: COPPER,
+    marginBottom: 8,
   },
   heading: {
-    fontSize: 30,
-    fontWeight: '800',
-    color: Colors.text,
-    marginBottom: 8,
-    textAlign: 'center',
-    fontFamily: 'Inter_700Bold',
+    fontFamily: CLASH,
+    fontSize: 32,
+    lineHeight: 36,
+    fontWeight: '700',
+    color: IVORY,
+    marginBottom: 10,
+    letterSpacing: -0.3,
   },
   subheading: {
-    fontSize: 15,
-    color: Colors.textSecondary,
-    marginBottom: 32,
-    textAlign: 'center',
-    fontFamily: 'Inter_400Regular',
+    fontFamily: INTER,
+    fontSize: 14.5,
+    lineHeight: 23,
+    color: 'rgba(247,243,238,0.65)',
+    marginBottom: 26,
   },
-  formCard: {
-    width: '100%',
-    maxWidth: 400,
-    backgroundColor: 'rgba(18, 22, 34, 0.82)',
-    borderRadius: 24,
+  emailHighlight: {
+    color: IVORY,
+    fontWeight: '600',
+  },
+  navyCard: {
+    backgroundColor: NAVY,
+    borderRadius: 18,
     padding: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.35,
-    shadowRadius: 20,
-    elevation: 10,
+    borderColor: 'rgba(247,243,238,0.12)',
     alignItems: 'center',
   },
   otpRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    gap: 12,
     width: '100%',
-    maxWidth: 320,
     marginBottom: 20,
+    marginTop: 4,
   },
   otpCell: {
-    width: 64,
+    width: 62,
     height: 64,
-    borderRadius: 18,
-    backgroundColor: 'rgba(26, 26, 46, 0.8)',
+    borderRadius: 14,
+    backgroundColor: 'rgba(247,243,238,0.05)',
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.14)',
-    justifyContent: 'center',
+    borderColor: 'rgba(247,243,238,0.16)',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   otpCellFilled: {
-    borderColor: Colors.primary,
-    backgroundColor: 'rgba(0, 240, 208, 0.08)',
+    borderColor: GOLD,
+    backgroundColor: 'rgba(201,148,58,0.06)',
   },
   otpCellActive: {
-    borderColor: Colors.primary,
-    backgroundColor: 'rgba(0, 240, 208, 0.15)',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 4,
+    borderWidth: 2,
+    borderColor: GOLD,
+    backgroundColor: 'rgba(201,148,58,0.1)',
+  },
+  otpDigit: {
+    fontFamily: MONO,
+    fontSize: 26,
+    fontWeight: '700',
+    color: IVORY,
   },
   cursorBar: {
     width: 2.5,
     height: 26,
-    backgroundColor: Colors.primary,
+    backgroundColor: GOLD,
     borderRadius: 2,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  otpDigit: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: Colors.text,
-    fontFamily: 'Inter_700Bold',
   },
   hiddenInput: {
     position: 'absolute',
@@ -389,30 +434,88 @@ const styles = StyleSheet.create({
   resendRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    justifyContent: 'center',
+    marginBottom: 16,
   },
-  resendLabel: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    fontFamily: 'Inter_400Regular',
-    marginRight: 8,
+  resendText: {
+    fontFamily: INTER,
+    fontSize: 13,
+    color: 'rgba(247,243,238,0.55)',
   },
   resendTimer: {
-    fontSize: 14,
-    color: Colors.primary,
+    fontFamily: MONO,
+    fontSize: 13,
     fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
+    color: GOLD,
   },
-  resendButton: {
-    marginTop: 16,
-    alignItems: 'center',
-  },
-  resendButtonText: {
+  resendLink: {
+    fontFamily: DMSANS,
     fontSize: 13.5,
-    color: Colors.textSecondary,
-    fontFamily: 'Inter_400Regular',
+    fontWeight: '600',
+    color: GOLD,
   },
-  resendButtonTextDisabled: {
-    opacity: 0.55,
+  resendSuccessNote: {
+    fontFamily: INTER,
+    fontSize: 12,
+    color: '#1A7A4A',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  ctaButton: {
+    width: '100%',
+    height: 54,
+    borderRadius: 14,
+    backgroundColor: GOLD,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
+  },
+  ctaButtonDisabled: {
+    opacity: 0.45,
+  },
+  ctaButtonText: {
+    fontFamily: DMSANS,
+    fontSize: 16.5,
+    fontWeight: '700',
+    color: OBSIDIAN,
+  },
+  footerGuarantees: {
+    marginTop: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(247,243,238,0.12)',
+    borderRadius: 14,
+    padding: 16,
+    gap: 10,
+  },
+  guaranteeRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 11,
+  },
+  greenDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 99,
+    backgroundColor: '#1A7A4A',
+    marginTop: 6,
+    flexShrink: 0,
+  },
+  guaranteeText: {
+    flex: 1,
+    fontFamily: INTER,
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: 'rgba(247,243,238,0.7)',
+  },
+  wrongEmailBtn: {
+    marginTop: 20,
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  wrongEmailText: {
+    fontFamily: DMSANS,
+    fontSize: 14,
+    fontWeight: '500',
+    color: 'rgba(247,243,238,0.5)',
   },
 });
