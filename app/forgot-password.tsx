@@ -1,40 +1,66 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Image, ImageBackground, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { AuthButton } from '../components/AuthButton';
-import { AuthInput } from '../components/AuthInput';
 import { ErrorPopupModal } from '../components/ErrorPopupModal';
 import { Colors } from '../constants/Colors';
+import { Fonts } from '../constants/Typography';
 import { apiRequest } from '../lib/api';
 import { formatAppError } from '../lib/error';
-import { replaceRoute } from '../lib/navigation';
+import { pushRoute, replaceRoute } from '../lib/navigation';
+
+const VF_LOGO = require('../assets/images/onboarding/vf-logo-white.png');
 
 type Step = 'email' | 'code' | 'password';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [resetToken, setResetToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errorDialog, setErrorDialog] = useState<{ title: string; message: string } | null>(null);
 
-  const showError = (error: unknown, fallback?: string) => setErrorDialog(formatAppError(error, fallback));
+  const showError = (error: unknown, fallback?: string) =>
+    setErrorDialog(formatAppError(error, fallback));
 
   const requestCode = async () => {
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail) {
-      setErrorDialog({ title: 'Email required', message: 'Enter the email address used for your Victory Fitness account.' });
+      setErrorDialog({
+        title: 'Email required',
+        message: 'Enter the email address used for your Victory Fitness account.',
+      });
       return;
     }
     setLoading(true);
     try {
-      await apiRequest('/auth/forgot-password', { method: 'POST', body: { email: normalizedEmail } });
+      await apiRequest('/auth/forgot-password', {
+        method: 'POST',
+        body: { email: normalizedEmail },
+      });
       setEmail(normalizedEmail);
       setStep('code');
     } catch (error) {
@@ -46,13 +72,22 @@ export default function ForgotPasswordScreen() {
 
   const verifyCode = async () => {
     const cleanCode = code.trim();
-    if (!/^\d{4}$/.test(cleanCode)) {
-      setErrorDialog({ title: 'Invalid code', message: 'Enter the 4-digit code from your email.' });
+    if (!cleanCode || cleanCode.length < 4) {
+      setErrorDialog({
+        title: 'Invalid code',
+        message: 'Enter the 4-digit code from your email.',
+      });
       return;
     }
     setLoading(true);
     try {
-      const response = await apiRequest<{ reset_token: string }>('/auth/verify-reset-code', { method: 'POST', body: { email, code: cleanCode } });
+      const response = await apiRequest<{ reset_token: string }>(
+        '/auth/verify-reset-code',
+        {
+          method: 'POST',
+          body: { email, code: cleanCode },
+        }
+      );
       setResetToken(response.reset_token);
       setStep('password');
     } catch (error) {
@@ -64,16 +99,25 @@ export default function ForgotPasswordScreen() {
 
   const resetPassword = async () => {
     if (newPassword.length < 8) {
-      setErrorDialog({ title: 'Password too short', message: 'Your new password must be at least 8 characters.' });
+      setErrorDialog({
+        title: 'Password too short',
+        message: 'Your new password must be at least 8 characters.',
+      });
       return;
     }
     if (newPassword !== confirmPassword) {
-      setErrorDialog({ title: 'Passwords do not match', message: 'Enter the same new password in both fields.' });
+      setErrorDialog({
+        title: 'Passwords do not match',
+        message: 'Enter the same new password in both fields.',
+      });
       return;
     }
     setLoading(true);
     try {
-      await apiRequest('/auth/reset-password', { method: 'POST', body: { reset_token: resetToken, new_password: newPassword } });
+      await apiRequest('/auth/reset-password', {
+        method: 'POST',
+        body: { reset_token: resetToken, new_password: newPassword },
+      });
       setSuccess(true);
     } catch (error) {
       showError(error, 'Unable to reset your password right now.');
@@ -82,125 +126,434 @@ export default function ForgotPasswordScreen() {
     }
   };
 
-  const title = success ? 'PASSWORD UPDATED' : step === 'email' ? 'RESET PASSWORD' : step === 'code' ? 'CHECK YOUR EMAIL' : 'CREATE A NEW PASSWORD';
-  const subtitle = success ? 'Your password has been updated. You can now sign in with your new password.' : step === 'email' ? 'Enter your account email and we will send you a reset code.' : step === 'code' ? `Enter the 4-digit code sent to ${email}.` : 'Choose a secure password with at least 8 characters.';
+  const isWide = Platform.OS === 'web' && width > 768;
+
+  const kicker = success
+    ? 'SUCCESS'
+    : step === 'email'
+    ? 'ACCOUNT RECOVERY'
+    : step === 'code'
+    ? 'VERIFICATION'
+    : 'NEW CREDENTIALS';
+
+  const heading = success
+    ? 'Password updated'
+    : step === 'email'
+    ? 'Forgot your password?'
+    : step === 'code'
+    ? 'Check your email'
+    : 'Set new password';
+
+  const subtitle = success
+    ? 'Your password has been updated. You can now sign in with your new password.'
+    : step === 'email'
+    ? 'Enter your email address and we will send you a code to reset your password.'
+    : step === 'code'
+    ? `We sent a code to ${email}. Enter it below to proceed.`
+    : 'Choose a secure password with at least 8 characters.';
 
   return (
-    <ImageBackground source={require('../assets/w4.jpg')} style={styles.background} resizeMode="cover">
-      <View style={styles.overlay}>
-        <ErrorPopupModal visible={Boolean(errorDialog)} title={errorDialog?.title ?? 'Error'} message={errorDialog?.message ?? ''} onClose={() => setErrorDialog(null)} />
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboardView}>
-          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-            <View style={styles.brandingContainer}>
-              <Image
-                source={require('../assets/logo_dark.png')}
-                style={styles.brandLogo}
-                resizeMode="contain"
-              />
-            </View>
+    <View style={styles.root}>
+      <ErrorPopupModal
+        visible={Boolean(errorDialog)}
+        title={errorDialog?.title ?? 'Error'}
+        message={errorDialog?.message ?? ''}
+        onClose={() => setErrorDialog(null)}
+      />
 
-            <View style={styles.formCard}>
-              <Text style={styles.title}>{title}</Text>
-              <Text style={styles.subtitle}>{subtitle}</Text>
-              {!success && step === 'email' ? (
-                <AuthInput
-                  placeholder="Email"
-                  value={email}
-                  onChangeText={setEmail}
-                  allowedType="both"
-                  keyboardType="email-address"
-                  autoComplete="email"
-                  autoCapitalize="none"
-                  icon="mail-outline"
-                />
-              ) : null}
-              {!success && step === 'code' ? (
-                <AuthInput
-                  placeholder="4-digit reset code"
-                  value={code}
-                  onChangeText={setCode}
-                  allowedType="number"
-                  keyboardType="number-pad"
-                  maxLength={4}
-                  icon="key-outline"
-                />
-              ) : null}
-              {!success && step === 'password' ? (
-                <>
-                  <AuthInput
-                    placeholder="New password"
-                    value={newPassword}
-                    onChangeText={setNewPassword}
-                    allowedType="both"
-                    secureTextEntry
-                    autoComplete="new-password"
-                    icon="lock-closed-outline"
-                  />
-                  <AuthInput
-                    placeholder="Confirm new password"
-                    value={confirmPassword}
-                    onChangeText={setConfirmPassword}
-                    allowedType="both"
-                    secureTextEntry
-                    autoComplete="new-password"
-                    icon="lock-closed-outline"
-                  />
-                </>
-              ) : null}
-              {!success ? (
-                <AuthButton
-                  title={step === 'email' ? 'Send Reset Code' : step === 'code' ? 'Verify Code' : 'Update Password'}
-                  onPress={step === 'email' ? requestCode : step === 'code' ? verifyCode : resetPassword}
-                  disabled={loading}
-                  loading={loading}
-                />
-              ) : (
-                <AuthButton title="Back to Login" onPress={() => replaceRoute(router, '/login')} />
-              )}
-              {!success && step === 'code' ? (
-                <TouchableOpacity style={styles.secondaryAction} onPress={requestCode} disabled={loading}>
-                  <Text style={styles.secondaryText}>Resend code</Text>
-                </TouchableOpacity>
-              ) : null}
-              {!success ? (
-                <TouchableOpacity style={styles.secondaryAction} onPress={() => (step === 'email' ? router.back() : setStep(step === 'password' ? 'code' : 'email'))} disabled={loading}>
-                  <Text style={styles.secondaryText}>Back</Text>
-                </TouchableOpacity>
-              ) : null}
-              {loading ? <ActivityIndicator style={styles.loader} color={Colors.primary} /> : null}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.keyboardView}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Header with Logo */}
+          <View style={styles.headerContainer}>
+            <TouchableOpacity
+              onPress={() => pushRoute(router, '/login')}
+              activeOpacity={0.8}
+            >
+              <Image source={VF_LOGO} style={styles.logo} resizeMode="contain" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Form Container */}
+          <View style={styles.container}>
+            {/* Top Back Arrow when in step 'code' or 'password' */}
+            {!success && step !== 'email' ? (
+              <Pressable
+                onPress={() => setStep(step === 'password' ? 'code' : 'email')}
+                style={styles.backButton}
+                accessibilityRole="button"
+                accessibilityLabel="Back"
+              >
+                <Text style={styles.backText}>←</Text>
+              </Pressable>
+            ) : null}
+
+            {/* Kicker & Heading */}
+            <Text style={styles.kicker}>{kicker}</Text>
+            <Text style={styles.heading}>{heading}</Text>
+            <Text style={styles.subheading}>{subtitle}</Text>
+
+            {/* Navy Card for Inputs */}
+            {!success ? (
+              <View style={styles.formCard}>
+                {step === 'email' ? (
+                  <View style={styles.fieldRow}>
+                    <Text style={styles.fieldLabel}>EMAIL</Text>
+                    <TextInput
+                      style={[styles.textInput, styles.monoInput]}
+                      value={email}
+                      onChangeText={setEmail}
+                      placeholder="you@email.com"
+                      placeholderTextColor="#9C968E"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                  </View>
+                ) : null}
+
+                {step === 'code' ? (
+                  <View style={styles.fieldRow}>
+                    <Text style={styles.fieldLabel}>RESET CODE</Text>
+                    <TextInput
+                      style={[styles.textInput, styles.codeMonoInput]}
+                      value={code}
+                      onChangeText={setCode}
+                      placeholder="••••"
+                      placeholderTextColor="#9C968E"
+                      keyboardType="number-pad"
+                      maxLength={6}
+                      autoCapitalize="none"
+                    />
+                  </View>
+                ) : null}
+
+                {step === 'password' ? (
+                  <>
+                    <View style={[styles.fieldRow, styles.fieldRowBorder]}>
+                      <Text style={styles.fieldLabel}>NEW PASSWORD</Text>
+                      <View style={styles.passwordRow}>
+                        <TextInput
+                          style={[styles.textInput, styles.monoInput, { flex: 1 }]}
+                          value={newPassword}
+                          onChangeText={setNewPassword}
+                          placeholder="at least 8 characters"
+                          placeholderTextColor="#9C968E"
+                          secureTextEntry={!showPassword}
+                          autoCapitalize="none"
+                        />
+                        <TouchableOpacity
+                          onPress={() => setShowPassword((prev) => !prev)}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Text style={styles.passwordToggleText}>
+                            {showPassword ? 'Hide' : 'Show'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    <View style={styles.fieldRow}>
+                      <Text style={styles.fieldLabel}>CONFIRM NEW PASSWORD</Text>
+                      <View style={styles.passwordRow}>
+                        <TextInput
+                          style={[styles.textInput, styles.monoInput, { flex: 1 }]}
+                          value={confirmPassword}
+                          onChangeText={setConfirmPassword}
+                          placeholder="re-type password"
+                          placeholderTextColor="#9C968E"
+                          secureTextEntry={!showConfirmPassword}
+                          autoCapitalize="none"
+                        />
+                        <TouchableOpacity
+                          onPress={() => setShowConfirmPassword((prev) => !prev)}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Text style={styles.passwordToggleText}>
+                            {showConfirmPassword ? 'Hide' : 'Show'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </>
+                ) : null}
+              </View>
+            ) : null}
+
+            {/* Primary Action Button */}
+            {!success ? (
+              <TouchableOpacity
+                style={styles.ctaButton}
+                onPress={
+                  step === 'email'
+                    ? requestCode
+                    : step === 'code'
+                    ? verifyCode
+                    : resetPassword
+                }
+                activeOpacity={0.88}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator size="small" color="#0D0D0D" />
+                ) : (
+                  <Text style={styles.ctaButtonText}>
+                    {step === 'email'
+                      ? 'Send code'
+                      : step === 'code'
+                      ? 'Verify code'
+                      : 'Update password'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={styles.ctaButton}
+                onPress={() => replaceRoute(router, '/login')}
+                activeOpacity={0.88}
+              >
+                <Text style={styles.ctaButtonText}>Back to Sign in</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Resend Code Action */}
+            {!success && step === 'code' ? (
+              <TouchableOpacity
+                style={styles.resendRow}
+                onPress={requestCode}
+                disabled={loading}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.resendPrompt}>Didn't receive the code? </Text>
+                <Text style={styles.resendHighlight}>Resend code</Text>
+              </TouchableOpacity>
+            ) : null}
+
+            {/* Back to Sign in link */}
+            <View style={styles.backRow}>
+              <TouchableOpacity
+                onPress={() => pushRoute(router, '/login')}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.backLinkText}>← Back to Sign in</Text>
+              </TouchableOpacity>
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </View>
-    </ImageBackground>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  background: { flex: 1, width: '100%', height: '100%' },
-  overlay: { flex: 1, backgroundColor: 'rgba(7, 10, 15, 0.78)' },
-  keyboardView: { flex: 1 },
-  content: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  brandingContainer: { alignItems: 'center', marginBottom: 28 },
-  brandLogo: { width: 190, height: 64 },
-  formCard: {
-    width: '100%',
-    maxWidth: 420,
-    backgroundColor: 'rgba(18, 22, 34, 0.82)',
-    borderRadius: 24,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.35,
-    shadowRadius: 20,
-    elevation: 10,
-    alignItems: 'center',
+  root: {
+    flex: 1,
+    backgroundColor: '#0D0D0D',
   },
-  title: { color: Colors.primary, fontSize: 24, textAlign: 'center', letterSpacing: 1.5, fontFamily: 'Inter_700Bold', marginBottom: 6 },
-  subtitle: { color: Colors.textSecondary, fontSize: 14, lineHeight: 20, textAlign: 'center', marginTop: 4, marginBottom: 24, maxWidth: 360, fontFamily: 'Inter_400Regular' },
-  secondaryAction: { padding: 12, marginTop: 4 },
-  secondaryText: { color: Colors.textMuted, fontSize: 14, fontFamily: 'Inter_600SemiBold' },
-  loader: { marginTop: 8 },
+  keyboardView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    backgroundColor: '#0D0D0D',
+    paddingBottom: 40,
+  },
+
+  // Header
+  headerContainer: {
+    maxWidth: 1120,
+    width: '100%',
+    alignSelf: 'center',
+    paddingHorizontal: 28,
+    paddingTop: Platform.OS === 'web' ? 24 : 54,
+    paddingBottom: 8,
+  },
+  logo: {
+    height: 38,
+    width: 140,
+    cursor: Platform.OS === 'web' ? 'pointer' : undefined,
+  },
+
+  // Centered Container
+  container: {
+    width: '100%',
+    maxWidth: 480,
+    alignSelf: 'center',
+    paddingHorizontal: 26,
+    paddingTop: 36,
+  },
+
+  // Back Button ←
+  backButton: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    marginBottom: 8,
+    cursor: Platform.OS === 'web' ? 'pointer' : undefined,
+  },
+  backText: {
+    fontFamily: Fonts.heading,
+    fontSize: 18,
+    fontWeight: '700',
+    color: 'rgba(247,243,238,0.55)',
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'DM Sans', sans-serif" } as any) : {}),
+  },
+
+  // Typography
+  kicker: {
+    fontFamily: Fonts.heading,
+    fontSize: 11,
+    letterSpacing: 1.7, // .17em
+    fontWeight: '500',
+    color: '#C9943A',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'DM Sans', sans-serif" } as any) : {}),
+  },
+  heading: {
+    fontFamily: Fonts.display,
+    fontSize: 36,
+    lineHeight: 40,
+    fontWeight: '600',
+    color: '#F7F3EE',
+    letterSpacing: -0.8,
+    marginBottom: 12,
+    marginVertical: 0,
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'Clash Display', 'DM Sans', sans-serif" } as any) : {}),
+  },
+  subheading: {
+    fontFamily: Fonts.body,
+    fontSize: 15,
+    lineHeight: 24,
+    fontWeight: '400',
+    color: '#D6D0C8',
+    marginBottom: 24,
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'Inter', sans-serif", textWrap: 'pretty' } as any) : {}),
+  },
+
+  // Form Card
+  formCard: {
+    backgroundColor: '#0D2B45',
+    borderRadius: 14,
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  fieldRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 15,
+  },
+  fieldRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(247,243,238,0.12)',
+  },
+  fieldLabel: {
+    fontFamily: Fonts.heading,
+    fontSize: 10,
+    letterSpacing: 1.3,
+    fontWeight: '500',
+    color: '#B8B2AA',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'DM Sans', sans-serif" } as any) : {}),
+  },
+  textInput: {
+    fontFamily: Fonts.body,
+    fontSize: 15.5,
+    fontWeight: '500',
+    color: '#F7F3EE',
+    padding: 0,
+    margin: 0,
+    ...(Platform.OS === 'web'
+      ? ({
+          fontFamily: "'DM Sans', sans-serif",
+          outlineStyle: 'none',
+        } as any)
+      : {}),
+  },
+  monoInput: {
+    fontFamily: Fonts.data,
+    fontSize: 15,
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'JetBrains Mono', monospace" } as any) : {}),
+  },
+  codeMonoInput: {
+    fontFamily: Fonts.dataBold,
+    fontSize: 22,
+    letterSpacing: 8,
+    fontWeight: '700',
+    color: '#C9943A',
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'JetBrains Mono', monospace" } as any) : {}),
+  },
+  passwordRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  passwordToggleText: {
+    fontFamily: Fonts.heading,
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#C9943A',
+    cursor: Platform.OS === 'web' ? 'pointer' : undefined,
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'DM Sans', sans-serif" } as any) : {}),
+  },
+
+  // CTA Button
+  ctaButton: {
+    height: 54,
+    borderRadius: 14,
+    backgroundColor: '#C9943A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: Platform.OS === 'web' ? 'pointer' : undefined,
+  },
+  ctaButtonText: {
+    fontFamily: Fonts.heading,
+    fontSize: 16.5,
+    fontWeight: '700',
+    color: '#0D0D0D',
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'DM Sans', sans-serif" } as any) : {}),
+  },
+
+  // Resend code
+  resendRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 18,
+  },
+  resendPrompt: {
+    fontFamily: Fonts.body,
+    fontSize: 13.5,
+    color: '#B8B2AA',
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'Inter', sans-serif" } as any) : {}),
+  },
+  resendHighlight: {
+    fontFamily: Fonts.heading,
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#C9943A',
+    cursor: Platform.OS === 'web' ? 'pointer' : undefined,
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'DM Sans', sans-serif" } as any) : {}),
+  },
+
+  // Back to Sign In Link
+  backRow: {
+    alignItems: 'center',
+    marginTop: 22,
+    marginBottom: 10,
+  },
+  backLinkText: {
+    fontFamily: Fonts.heading,
+    fontSize: 13.5,
+    fontWeight: '600',
+    color: '#C9943A',
+    cursor: Platform.OS === 'web' ? 'pointer' : undefined,
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'DM Sans', sans-serif" } as any) : {}),
+  },
 });

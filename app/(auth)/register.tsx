@@ -1,29 +1,25 @@
 import React, { useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
-  View,
-  Text,
+  Dimensions,
   Image,
-  StyleSheet,
-  ImageBackground,
-  ScrollView,
   KeyboardAvoidingView,
   Platform,
-  TouchableOpacity,
   Pressable,
-  Dimensions,
-  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../../constants/Colors';
 import { Fonts } from '../../constants/Typography';
-import { AuthInput } from '../../components/AuthInput';
-import { AuthButton } from '../../components/AuthButton';
 import { ErrorPopupModal } from '../../components/ErrorPopupModal';
-import { GoogleSignInButton } from '../../components/GoogleSignInButton';
-import { InternationalPhoneField } from '../../components/InternationalPhoneField';
 import { apiRequest, AuthResponse, clearAuthTokens, setAuthTokens } from '../../lib/api';
 import { getPostAuthRoute, isAdminRestrictedFromApp } from '../../lib/access';
 import { markBiometricSessionUnlocked, maybeOfferBiometricUnlock } from '../../lib/biometricUnlock';
@@ -31,13 +27,50 @@ import { formatAppError } from '../../lib/error';
 import { signInWithFirebaseGoogle, signInWithGoogleBrowserOAuth, useGoogleIdTokenAuth } from '../../lib/firebaseGoogleAuth';
 import { useLanguage } from '../../lib/i18n';
 import { detectCountryFromDeviceLocale } from '../../lib/localeCountry';
-import { replaceRoute } from '../../lib/navigation';
+import { pushRoute, replaceRoute } from '../../lib/navigation';
 import { isE164PhoneNumber } from '../../lib/phone';
 
-const { height } = Dimensions.get('window');
+type RegionKey = 'de' | 'gh' | 'in' | 'uk' | 'us';
+
+const REGIONS: Record<
+  RegionKey,
+  { dial: string; sample: string; n: string; note: string }
+> = {
+  de: {
+    dial: '+49',
+    sample: '171 555 0148',
+    n: 'Germany',
+    note: 'Sets your currency, your payment options and the clock your reminders run on. You can change it later.',
+  },
+  gh: {
+    dial: '+233',
+    sample: '24 000 0000',
+    n: 'Ghana',
+    note: 'Prices in cedis, charged locally — no foreign-card fee. Mobile Money first.',
+  },
+  in: {
+    dial: '+91',
+    sample: '98 0000 0000',
+    n: 'India',
+    note: 'The app stays in English in India — only prices and payment become local.',
+  },
+  uk: {
+    dial: '+44',
+    sample: '7700 900148',
+    n: 'United Kingdom',
+    note: 'Prices in pounds. Cancel any time from your profile.',
+  },
+  us: {
+    dial: '+1',
+    sample: '(415) 555-0148',
+    n: 'United States',
+    note: 'Prices in dollars. Sales tax added at checkout where it applies.',
+  },
+};
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
   const params = useLocalSearchParams<{
     source?: string;
     inviter_id?: string;
@@ -46,22 +79,33 @@ export default function RegisterScreen() {
     referral_code?: string;
   }>();
   const source = params.source;
-  const { useDefaultLanguage, syncLanguageWithCurrentUser, t } = useLanguage();
+  const { useDefaultLanguage, syncLanguageWithCurrentUser } = useLanguage();
+
   const [name, setName] = useState('');
   const [surname, setSurname] = useState('');
   const [email, setEmail] = useState('');
-  const [mobile, setMobile] = useState('');
+  const [rawPhone, setRawPhone] = useState('');
   const [password, setPassword] = useState('');
-  const [marketingConsent, setMarketingConsent] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [marketingConsent, setMarketingConsent] = useState(true);
+
+  // Region selection
+  const detectedLocale = useMemo(() => detectCountryFromDeviceLocale(), []);
+  const initialRegionKey: RegionKey = useMemo(() => {
+    const code = (detectedLocale?.country.code || 'DE').toLowerCase();
+    if (code in REGIONS) return code as RegionKey;
+    if (code === 'gb') return 'uk';
+    return 'de';
+  }, [detectedLocale]);
+
+  const [selectedRegion, setSelectedRegion] = useState<RegionKey>(initialRegionKey);
+  const currentRegion = REGIONS[selectedRegion];
+
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [errorDialog, setErrorDialog] = useState<{ title: string; message: string } | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const { isConfigured: isGoogleConfigured, request: googleRequest, promptAsync } = useGoogleIdTokenAuth();
-  const defaultPhoneCountryCode = useMemo(
-    () => detectCountryFromDeviceLocale()?.country.dialCode || '+233',
-    []
-  );
 
   React.useEffect(() => {
     useDefaultLanguage();
@@ -69,27 +113,35 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     const normalizedEmail = email.trim().toLowerCase();
-    const normalizedMobile = mobile.trim();
+    const cleanPhone = rawPhone.trim().replace(/[\s()-]+/g, '');
+    const fullMobile = cleanPhone.startsWith('+')
+      ? cleanPhone
+      : `${currentRegion.dial}${cleanPhone.replace(/^0+/, '')}`;
+
     const errors: Record<string, string> = {};
 
-    if (!name.trim()) errors.name = 'Please enter your name.';
+    if (!name.trim()) errors.name = 'Please enter your first name.';
     if (!surname.trim()) errors.surname = 'Please enter your surname.';
     if (!normalizedEmail) errors.email = 'Please enter your email.';
-    if (!normalizedMobile) {
+    if (!cleanPhone) {
       errors.mobile = 'Please enter your mobile number.';
-    } else if (!isE164PhoneNumber(normalizedMobile)) {
-      errors.mobile = 'Use international format like +233XXXXXXXXX.';
+    } else if (!isE164PhoneNumber(fullMobile)) {
+      errors.mobile = `Invalid format for ${currentRegion.dial}. E.g. ${currentRegion.sample}`;
     }
-    if (!password) errors.password = 'Please enter your password.';
-    if (!marketingConsent) errors.marketingConsent = 'You must check the agreement box to register.';
+    if (!password || password.length < 8) {
+      errors.password = 'Password must be at least 8 characters.';
+    }
+    if (!marketingConsent) {
+      errors.marketingConsent = 'You must agree to continue.';
+    }
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       setErrorDialog({
-        title: 'Agreement & Information Required',
-        message: !marketingConsent && Object.keys(errors).length === 1
-          ? 'Please check the box to agree to terms before registering.'
-          : 'Please complete all required fields and agree to the terms to continue.',
+        title: 'Information Required',
+        message: errors.marketingConsent && Object.keys(errors).length === 1
+          ? 'Please agree to terms before continuing.'
+          : Object.values(errors)[0] || 'Please complete all fields.',
       });
       return;
     }
@@ -106,7 +158,7 @@ export default function RegisterScreen() {
           name: name.trim(),
           surname: surname.trim(),
           email: normalizedEmail,
-          mobile: normalizedMobile,
+          mobile: fullMobile,
           password,
           marketing_consent: marketingConsent,
           signup_source: String(source || (params.challenge_id ? 'challenge_invite' : 'organic')).trim().slice(0, 120) || 'organic',
@@ -149,11 +201,14 @@ export default function RegisterScreen() {
       Alert.alert(
         auth.returning_user.title,
         auth.returning_user.message,
-        [{ text: 'Choose your subscription', onPress: () => replaceRoute(router, '/plan') }, { text: 'Continue', style: 'cancel', onPress: () => replaceRoute(router, getPostAuthRoute(auth.user)) }],
+        [
+          { text: 'Choose your subscription', onPress: () => replaceRoute(router, '/plan') },
+          { text: 'Continue', style: 'cancel', onPress: () => replaceRoute(router, getPostAuthRoute(auth.user)) },
+        ]
       );
       return;
     }
-    const pendingChallengeId = params.challenge_id || await AsyncStorage.getItem('@pending_challenge_id');
+    const pendingChallengeId = params.challenge_id || (await AsyncStorage.getItem('@pending_challenge_id'));
     if (pendingChallengeId) {
       await AsyncStorage.removeItem('@pending_challenge_id');
       replaceRoute(router, `/challenges/${pendingChallengeId}` as any);
@@ -207,427 +262,659 @@ export default function RegisterScreen() {
     }
   };
 
+  const isDesktop = Platform.OS === 'web' && width > 480;
+
   return (
-    <ImageBackground
-      source={require('../../assets/w4.jpg')}
-      style={styles.background}
-      resizeMode="cover"
-    >
-      <View style={styles.overlay}>
-        <ErrorPopupModal
-          visible={Boolean(errorDialog)}
-          title={errorDialog?.title ?? 'Error'}
-          message={errorDialog?.message ?? ''}
-          onClose={() => setErrorDialog(null)}
-        />
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardView}
+    <View style={styles.root}>
+      <ErrorPopupModal
+        visible={Boolean(errorDialog)}
+        title={errorDialog?.title ?? 'Error'}
+        message={errorDialog?.message ?? ''}
+        onClose={() => setErrorDialog(null)}
+      />
+
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.keyboardView}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            {/* Branding Header */}
-            <View style={styles.brandingContainer}>
-              <Image
-                source={require('../../assets/logo_dark.png')}
-                style={styles.brandLogo}
-                resizeMode="contain"
-              />
-            </View>
+          <View style={[styles.deviceFrame, isDesktop && styles.deviceFrameDesktop]}>
+            {/* Back button ← */}
+            <Pressable
+              onPress={() => router.canGoBack() ? router.back() : replaceRoute(router, '/welcome')}
+              style={styles.backButton}
+              accessibilityRole="button"
+              accessibilityLabel="Back"
+            >
+              <Text style={styles.backText}>←</Text>
+            </Pressable>
 
-            {/* Heading */}
-            <Text style={styles.heading}>CREATE ACCOUNT</Text>
-            <Text style={styles.subheading}>Start your fitness journey</Text>
+            {/* Title & Subtitle */}
+            <Text style={styles.title}>One account, no forms</Text>
+            <Text style={styles.subtitle}>
+              Nothing is charged yet. You can see your whole plan before you decide anything.
+            </Text>
 
+            {/* Challenge Invite Banner if present */}
             {params.challenge_id ? (
-              <View style={styles.challengeInviteBanner}>
-                <View style={styles.challengeInviteBadge}>
-                  <Ionicons name="trophy" size={14} color={Colors.obsidian} />
-                  <Text style={styles.challengeInviteBadgeText}>CHALLENGE INVITE</Text>
-                </View>
-                <Text style={styles.challengeInviteBannerTitle}>You've been invited to join a Challenge!</Text>
-                <Text style={styles.challengeInviteBannerText}>
-                  Sign up now to view the challenge preview and start training with your friends.
+              <View style={styles.challengeBanner}>
+                <Text style={styles.challengeKicker}>CHALLENGE INVITE</Text>
+                <Text style={styles.challengeTitle}>You've been invited to join a Challenge!</Text>
+                <Text style={styles.challengeDesc}>
+                  Create your account to accept the invite and preview the training schedule.
                 </Text>
               </View>
             ) : null}
 
-            {/* Glassmorphic Form Card */}
-            <View style={styles.formCard}>
-              <AuthInput
-                placeholder="Name"
-                value={name}
-                onChangeText={(val) => {
-                  setName(val);
-                  if (fieldErrors.name) setFieldErrors((prev) => ({ ...prev, name: '' }));
-                }}
-                allowedType="string"
-                autoCapitalize="words"
-                autoComplete="name"
-                icon="person-outline"
-                error={fieldErrors.name}
-              />
-              <AuthInput
-                placeholder="Surname"
-                value={surname}
-                onChangeText={(val) => {
-                  setSurname(val);
-                  if (fieldErrors.surname) setFieldErrors((prev) => ({ ...prev, surname: '' }));
-                }}
-                allowedType="string"
-                autoCapitalize="words"
-                autoComplete="name-family"
-                icon="person-outline"
-                error={fieldErrors.surname}
-              />
-              <AuthInput
-                placeholder="Email"
-                value={email}
-                onChangeText={(val) => {
-                  setEmail(val);
-                  if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: '' }));
-                }}
-                allowedType="both"
-                keyboardType="email-address"
-                autoComplete="email"
-                icon="mail-outline"
-                error={fieldErrors.email}
-              />
-              <InternationalPhoneField
-                label="Mobile Number"
-                value={mobile}
-                onChangeText={(val) => {
-                  setMobile(val);
-                  if (fieldErrors.mobile) setFieldErrors((prev) => ({ ...prev, mobile: '' }));
-                }}
-                placeholder="24 123 4567"
-                helperText="Choose your country code first, then enter the rest of your phone number."
-                error={fieldErrors.mobile}
-                defaultCountryCode={defaultPhoneCountryCode}
-              />
-              <AuthInput
-                placeholder="Password"
-                value={password}
-                onChangeText={(val) => {
-                  setPassword(val);
-                  if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: '' }));
-                }}
-                allowedType="both"
-                secureTextEntry
-                autoComplete="password-new"
-                icon="lock-closed-outline"
-                error={fieldErrors.password}
-              />
+            {/* Continue with Google */}
+            <TouchableOpacity
+              style={styles.googleButton}
+              onPress={handleGoogleRegister}
+              activeOpacity={0.82}
+              disabled={loading || googleLoading}
+            >
+              {googleLoading ? (
+                <ActivityIndicator size="small" color="#C9943A" />
+              ) : (
+                <>
+                  <Text style={styles.googleIcon}>G</Text>
+                  <Text style={styles.googleButtonText}>Continue with Google</Text>
+                </>
+              )}
+            </TouchableOpacity>
 
-              {/* Marketing Consent Option */}
-              <View style={styles.consentWrapper}>
-                <Pressable
-                  style={styles.consentRow}
-                  onPress={() => {
-                    setMarketingConsent((value) => {
-                      const next = !value;
-                      if (next && fieldErrors.marketingConsent) {
-                        setFieldErrors((prev) => ({ ...prev, marketingConsent: '' }));
-                      }
-                      return next;
-                    });
-                  }}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: marketingConsent }}
-                >
-                  <View
-                    style={[
-                      styles.checkbox,
-                      marketingConsent && styles.checkboxChecked,
-                      Boolean(fieldErrors.marketingConsent) && styles.checkboxError,
-                    ]}
-                  >
-                    {marketingConsent ? (
-                      <Ionicons name="checkmark-sharp" size={14} color="#051614" />
-                    ) : null}
-                  </View>
-                  <Text style={[styles.consentText, Boolean(fieldErrors.marketingConsent) && styles.consentTextError]}>
-                    I agree to receive occasional email or SMS messages about my trial, useful tips, and future offers. I can opt out anytime.
-                  </Text>
-                </Pressable>
-
-                {fieldErrors.marketingConsent ? (
-                  <View style={styles.consentErrorRow}>
-                    <Ionicons name="alert-circle-outline" size={14} color="#EF4444" style={styles.errorIcon} />
-                    <Text style={styles.consentErrorText}>{fieldErrors.marketingConsent}</Text>
-                  </View>
-                ) : null}
-              </View>
-
-              <AuthButton title="Register" onPress={handleRegister} disabled={loading} loading={loading} />
-              <View style={styles.dividerRow}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>or</Text>
-                <View style={styles.dividerLine} />
-              </View>
-              <GoogleSignInButton
-                label="Continue with Google"
-                onPress={handleGoogleRegister}
-                disabled={loading}
-                loading={googleLoading}
-              />
+            {/* Divider: OR SIGN UP WITH EMAIL */}
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>OR SIGN UP WITH EMAIL</Text>
+              <View style={styles.dividerLine} />
             </View>
 
-            {/* Login Link */}
-            <View style={styles.linkContainer}>
-              <Text style={styles.linkText}>Already have an account? </Text>
+            {/* Navy Form Card */}
+            <View style={styles.formCard}>
+              {/* First Name */}
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>FIRST NAME</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={name}
+                  onChangeText={(val) => {
+                    setName(val);
+                    if (fieldErrors.name) setFieldErrors((prev) => ({ ...prev, name: '' }));
+                  }}
+                  placeholder="Your first name"
+                  placeholderTextColor="rgba(247,243,238,.35)"
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                />
+                {fieldErrors.name ? <Text style={styles.fieldErrorText}>{fieldErrors.name}</Text> : null}
+              </View>
+
+              {/* Surname */}
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>SURNAME</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={surname}
+                  onChangeText={(val) => {
+                    setSurname(val);
+                    if (fieldErrors.surname) setFieldErrors((prev) => ({ ...prev, surname: '' }));
+                  }}
+                  placeholder="Your surname"
+                  placeholderTextColor="rgba(247,243,238,.35)"
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                />
+                {fieldErrors.surname ? <Text style={styles.fieldErrorText}>{fieldErrors.surname}</Text> : null}
+              </View>
+
+              {/* Email */}
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>EMAIL</Text>
+                <TextInput
+                  style={[styles.textInput, styles.monoInput]}
+                  value={email}
+                  onChangeText={(val) => {
+                    setEmail(val);
+                    if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: '' }));
+                  }}
+                  placeholder="you@email.com"
+                  placeholderTextColor="rgba(247,243,238,.35)"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                {fieldErrors.email ? <Text style={styles.fieldErrorText}>{fieldErrors.email}</Text> : null}
+              </View>
+
+              {/* Mobile Number */}
+              <View style={styles.fieldRow}>
+                <Text style={styles.fieldLabel}>MOBILE NUMBER</Text>
+                <View style={styles.phoneInputRow}>
+                  <View style={styles.phoneDialBadge}>
+                    <Text style={styles.phoneDialText}>{currentRegion.dial}</Text>
+                  </View>
+                  <TextInput
+                    style={[styles.textInput, styles.monoInput, { flex: 1 }]}
+                    value={rawPhone}
+                    onChangeText={(val) => {
+                      setRawPhone(val);
+                      if (fieldErrors.mobile) setFieldErrors((prev) => ({ ...prev, mobile: '' }));
+                    }}
+                    placeholder={currentRegion.sample}
+                    placeholderTextColor="rgba(247,243,238,.35)"
+                    keyboardType="phone-pad"
+                  />
+                </View>
+                {fieldErrors.mobile ? <Text style={styles.fieldErrorText}>{fieldErrors.mobile}</Text> : null}
+              </View>
+
+              {/* Password */}
+              <View style={[styles.fieldRow, { borderBottomWidth: 0 }]}>
+                <Text style={styles.fieldLabel}>PASSWORD</Text>
+                <View style={styles.passwordRow}>
+                  <TextInput
+                    style={[styles.textInput, styles.monoInput, { flex: 1 }]}
+                    value={password}
+                    onChangeText={(val) => {
+                      setPassword(val);
+                      if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: '' }));
+                    }}
+                    placeholder="at least 8 characters"
+                    placeholderTextColor="rgba(247,243,238,.35)"
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowPassword((prev) => !prev)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={styles.passwordToggleText}>{showPassword ? 'Hide' : 'Show'}</Text>
+                  </TouchableOpacity>
+                </View>
+                {fieldErrors.password ? <Text style={styles.fieldErrorText}>{fieldErrors.password}</Text> : null}
+              </View>
+            </View>
+
+            {/* Region Selector Card: WHERE ARE YOU? */}
+            <View style={styles.regionCard}>
+              <View style={styles.regionHeader}>
+                <Text style={styles.regionKicker}>WHERE ARE YOU?</Text>
+                <Text style={styles.regionDetected}>
+                  DETECTED · {currentRegion.n.toUpperCase()}
+                </Text>
+              </View>
+              <View style={styles.chipsContainer}>
+                {(Object.keys(REGIONS) as RegionKey[]).map((k) => {
+                  const active = k === selectedRegion;
+                  return (
+                    <Pressable
+                      key={k}
+                      onPress={() => setSelectedRegion(k)}
+                      style={[
+                        styles.chip,
+                        active ? styles.chipActive : styles.chipInactive,
+                      ]}
+                      accessibilityRole="button"
+                    >
+                      <Text
+                        style={[
+                          styles.chipText,
+                          active ? styles.chipTextActive : styles.chipTextInactive,
+                        ]}
+                      >
+                        {REGIONS[k].n}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <Text style={styles.regionNote}>{currentRegion.note}</Text>
+            </View>
+
+            {/* Marketing & Terms Consent Checkbox */}
+            <Pressable
+              style={styles.consentRow}
+              onPress={() => setMarketingConsent((prev) => !prev)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: marketingConsent }}
+            >
+              <View style={[styles.checkbox, marketingConsent && styles.checkboxChecked]}>
+                {marketingConsent ? <Text style={styles.checkmark}>✓</Text> : null}
+              </View>
+              <Text style={styles.consentText}>
+                I agree to receive occasional updates about my plan, training tips, and offers. I can opt out anytime.
+              </Text>
+            </Pressable>
+
+            {/* Primary Continue CTA */}
+            <TouchableOpacity
+              style={styles.ctaButton}
+              onPress={handleRegister}
+              activeOpacity={0.88}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator size="small" color="#0D0D0D" />
+              ) : (
+                <Text style={styles.ctaButtonText}>Continue</Text>
+              )}
+            </TouchableOpacity>
+
+            {/* Privacy Footnote */}
+            <Text style={styles.footnote}>
+              Your data stays in the EU. We never sell it, and you can export or delete everything from your profile in two taps.
+            </Text>
+
+            {/* Already have an account? Sign in */}
+            <View style={styles.signinRow}>
+              <Text style={styles.signinPrompt}>Already have an account? </Text>
               <TouchableOpacity
-                onPress={() => {
-                  void clearAuthTokens();
-                  router.push('/login');
-                }}
+                onPress={() => pushRoute(router, '/login')}
                 activeOpacity={0.7}
               >
-                <Text style={styles.linkHighlight}>Log In</Text>
+                <Text style={styles.signinHighlight}>Sign in</Text>
               </TouchableOpacity>
             </View>
-
-            {/* Footer */}
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>Information for Developers</Text>
-              <Text style={styles.footerContact}>
-                Problems? Contact support: office@victorakko.com
-              </Text>
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-
-        {(loading || googleLoading) && (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color={Colors.primary} />
           </View>
-        )}
-      </View>
-    </ImageBackground>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  background: {
+  root: {
     flex: 1,
-    width: '100%',
-    height: '100%',
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(7, 10, 15, 0.78)',
-  },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(7, 10, 15, 0.85)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    pointerEvents: 'auto',
+    backgroundColor: '#0D0D0D',
   },
   keyboardView: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: height * 0.06,
-    paddingBottom: 36,
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    backgroundColor: '#0D0D0D',
   },
-  brandingContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
+  deviceFrame: {
+    width: '100%',
+    maxWidth: 480,
+    paddingHorizontal: 26,
+    paddingTop: Platform.OS === 'web' ? 36 : 54,
+    paddingBottom: 40,
+    backgroundColor: '#0D0D0D',
   },
-  brandLogo: {
-    width: 240,
-    height: 80,
+  deviceFrameDesktop: {
+    maxWidth: 520,
+    paddingHorizontal: 32,
+    paddingTop: 40,
   },
-  heading: {
-    fontSize: 30,
-    color: Colors.primary,
-    letterSpacing: 2,
-    marginBottom: 6,
-    textAlign: 'center',
+
+  // Back Button ←
+  backButton: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    marginBottom: 4,
+    cursor: Platform.OS === 'web' ? 'pointer' : undefined,
+  },
+  backText: {
+    fontFamily: Fonts.heading,
+    fontSize: 18,
+    fontWeight: '700',
+    color: 'rgba(247,243,238,0.55)',
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'DM Sans', sans-serif" } as any) : {}),
+  },
+
+  // Header
+  title: {
     fontFamily: Fonts.display,
+    fontSize: 32,
+    lineHeight: 35.2, // 32px * 1.1
+    fontWeight: '600',
+    color: '#F7F3EE',
+    letterSpacing: -0.5,
+    marginTop: 14,
+    marginBottom: 10,
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'Clash Display', 'DM Sans', sans-serif" } as any) : {}),
   },
-  subheading: {
-    fontSize: 15,
-    color: Colors.textSecondary,
-    marginBottom: 24,
-    textAlign: 'center',
+  subtitle: {
     fontFamily: Fonts.body,
+    fontSize: 14.5,
+    lineHeight: 23.2, // 14.5px * 1.6
+    fontWeight: '400',
+    color: 'rgba(247,243,238,0.6)',
+    marginBottom: 24,
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'Inter', sans-serif", textWrap: 'pretty' } as any) : {}),
   },
-  formCard: {
-    width: '100%',
-    maxWidth: 420,
-    backgroundColor: 'rgba(19, 31, 46, 0.88)',
-    borderRadius: 24,
-    padding: 22,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-    shadowColor: Colors.navy,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 4,
-    alignItems: 'center',
+
+  // Challenge Banner
+  challengeBanner: {
+    backgroundColor: '#0D2B45',
+    borderRadius: 14,
+    borderLeftWidth: 3,
+    borderLeftColor: '#C9943A',
+    padding: 14,
+    marginBottom: 16,
   },
-  consentWrapper: {
-    width: '100%',
-    marginTop: 4,
-    marginBottom: 20,
+  challengeKicker: {
+    fontSize: 10,
+    letterSpacing: 1.3,
+    fontFamily: Fonts.heading,
+    fontWeight: '700',
+    color: '#C9943A',
+    marginBottom: 4,
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'DM Sans', sans-serif" } as any) : {}),
   },
-  dividerRow: {
-    width: '100%',
+  challengeTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#F7F3EE',
+    marginBottom: 4,
+  },
+  challengeDesc: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: 'rgba(247,243,238,0.7)',
+  },
+
+  // Google Button
+  googleButton: {
+    height: 54,
+    borderRadius: 14,
+    backgroundColor: '#0D2B45',
+    borderWidth: 1.5,
+    borderColor: 'rgba(201,148,58,0.55)',
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 18,
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 10,
+    cursor: Platform.OS === 'web' ? 'pointer' : undefined,
+  },
+  googleIcon: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#C9943A',
+    fontFamily: Fonts.heading,
+  },
+  googleButtonText: {
+    fontFamily: Fonts.heading,
+    fontSize: 15.5,
+    fontWeight: '700',
+    color: '#F7F3EE',
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'DM Sans', sans-serif" } as any) : {}),
+  },
+
+  // Divider
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginVertical: 14,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    backgroundColor: 'rgba(247,243,238,0.14)',
   },
   dividerText: {
-    color: Colors.textMuted,
-    fontSize: 13,
-    marginHorizontal: 12,
-    fontFamily: 'Inter_500Medium',
-    textTransform: 'uppercase',
+    fontFamily: Fonts.heading,
+    fontSize: 10,
+    letterSpacing: 1.3,
+    fontWeight: '500',
+    color: 'rgba(247,243,238,0.4)',
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'DM Sans', sans-serif" } as any) : {}),
   },
+
+  // Form Card
+  formCard: {
+    backgroundColor: '#0D2B45',
+    borderRadius: 14,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  fieldRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(247,243,238,0.1)',
+  },
+  fieldLabel: {
+    fontFamily: Fonts.heading,
+    fontSize: 10,
+    letterSpacing: 1.3,
+    fontWeight: '500',
+    color: 'rgba(247,243,238,0.45)',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'DM Sans', sans-serif" } as any) : {}),
+  },
+  textInput: {
+    fontFamily: Fonts.body,
+    fontSize: 15.5,
+    fontWeight: '500',
+    color: '#F7F3EE',
+    padding: 0,
+    margin: 0,
+    ...(Platform.OS === 'web'
+      ? ({
+          fontFamily: "'DM Sans', sans-serif",
+          outlineStyle: 'none',
+        } as any)
+      : {}),
+  },
+  monoInput: {
+    fontFamily: Fonts.data,
+    fontSize: 15,
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'JetBrains Mono', monospace" } as any) : {}),
+  },
+  phoneInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  phoneDialBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: 'rgba(201,148,58,0.14)',
+  },
+  phoneDialText: {
+    fontFamily: Fonts.dataBold,
+    fontSize: 13,
+    color: '#C9943A',
+    fontWeight: '700',
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'JetBrains Mono', monospace" } as any) : {}),
+  },
+  passwordRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+  },
+  passwordToggleText: {
+    fontFamily: Fonts.heading,
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#C9943A',
+    cursor: Platform.OS === 'web' ? 'pointer' : undefined,
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'DM Sans', sans-serif" } as any) : {}),
+  },
+  fieldErrorText: {
+    fontSize: 11,
+    color: '#EF4444',
+    marginTop: 4,
+    fontFamily: Fonts.body,
+  },
+
+  // Region Selector Card
+  regionCard: {
+    backgroundColor: '#0D2B45',
+    borderRadius: 14,
+    padding: 15,
+    borderLeftWidth: 3,
+    borderLeftColor: '#B5651D',
+    marginBottom: 14,
+  },
+  regionHeader: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 10,
+  },
+  regionKicker: {
+    fontFamily: Fonts.heading,
+    fontSize: 10,
+    letterSpacing: 1.3,
+    fontWeight: '500',
+    color: '#C9943A',
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'DM Sans', sans-serif" } as any) : {}),
+  },
+  regionDetected: {
+    fontFamily: Fonts.data,
+    fontSize: 10,
+    fontWeight: '500',
+    color: 'rgba(247,243,238,0.5)',
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'JetBrains Mono', monospace" } as any) : {}),
+  },
+  chipsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 7,
+  },
+  chip: {
+    borderRadius: 99,
+    cursor: Platform.OS === 'web' ? 'pointer' : undefined,
+  },
+  chipActive: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    backgroundColor: '#C9943A',
+  },
+  chipInactive: {
+    paddingVertical: 7,
+    paddingHorizontal: 13,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: 'rgba(247,243,238,0.24)',
+  },
+  chipText: {
+    fontFamily: Fonts.heading,
+    fontSize: 12.5,
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'DM Sans', sans-serif" } as any) : {}),
+  },
+  chipTextActive: {
+    color: '#0D0D0D',
+    fontWeight: '700',
+  },
+  chipTextInactive: {
+    color: 'rgba(247,243,238,0.72)',
+    fontWeight: '500',
+  },
+  regionNote: {
+    marginVertical: 0,
+    marginTop: 11,
+    fontFamily: Fonts.body,
+    fontSize: 12,
+    lineHeight: 18,
+    color: 'rgba(247,243,238,0.6)',
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'Inter', sans-serif" } as any) : {}),
+  },
+
+  // Consent Row
   consentRow: {
-    width: '100%',
     flexDirection: 'row',
     alignItems: 'flex-start',
-    paddingRight: 4,
+    gap: 10,
+    marginVertical: 6,
+    cursor: Platform.OS === 'web' ? 'pointer' : undefined,
   },
   checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
+    width: 18,
+    height: 18,
+    borderRadius: 5,
     borderWidth: 1.5,
-    borderColor: Colors.inputBorder,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    marginRight: 12,
-    marginTop: 1,
+    borderColor: 'rgba(247,243,238,0.3)',
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 2,
   },
   checkboxChecked: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 6,
-    elevation: 3,
+    backgroundColor: '#C9943A',
+    borderColor: '#C9943A',
   },
-  checkboxError: {
-    borderColor: '#EF4444',
-    borderWidth: 2,
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    shadowColor: '#EF4444',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
-    elevation: 4,
+  checkmark: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0D0D0D',
   },
   consentText: {
     flex: 1,
-    color: Colors.textSecondary,
-    fontSize: 12.5,
-    lineHeight: 18,
-    fontFamily: 'Inter_400Regular',
-  },
-  consentTextError: {
-    color: '#F87171',
-  },
-  consentErrorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 6,
-    paddingLeft: 34,
-  },
-  errorIcon: {
-    marginRight: 4,
-  },
-  consentErrorText: {
+    fontFamily: Fonts.body,
     fontSize: 12,
-    color: '#EF4444',
-    fontFamily: 'Inter_600SemiBold',
+    lineHeight: 18,
+    color: 'rgba(247,243,238,0.65)',
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'Inter', sans-serif" } as any) : {}),
   },
-  linkContainer: {
+
+  // CTA Button
+  ctaButton: {
+    width: '100%',
+    height: 54,
+    borderRadius: 14,
+    backgroundColor: '#C9943A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 18,
+    cursor: Platform.OS === 'web' ? 'pointer' : undefined,
+  },
+  ctaButtonText: {
+    fontFamily: Fonts.heading,
+    fontSize: 16.5,
+    fontWeight: '700',
+    color: '#0D0D0D',
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'DM Sans', sans-serif" } as any) : {}),
+  },
+
+  // Footnote
+  footnote: {
+    marginTop: 16,
+    fontFamily: Fonts.body,
+    fontSize: 11.5,
+    lineHeight: 18.4, // 11.5px * 1.6
+    color: 'rgba(247,243,238,0.42)',
+    textAlign: 'left',
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'Inter', sans-serif" } as any) : {}),
+  },
+
+  // Sign In Row
+  signinRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 22,
-    marginBottom: 16,
-  },
-  linkText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    fontFamily: 'Inter_400Regular',
-  },
-  linkHighlight: {
-    fontSize: 14,
-    color: Colors.primary,
-    fontWeight: '700',
-    fontFamily: 'Inter_700Bold',
-  },
-  footer: {
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: 20,
+    marginBottom: 10,
   },
-  footerText: {
-    fontSize: 12,
-    color: Colors.primary,
-    marginBottom: 4,
-    fontFamily: 'Inter_400Regular',
-  },
-  footerContact: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    fontFamily: 'Inter_400Regular',
-  },
-  challengeInviteBanner: {
-    backgroundColor: 'rgba(201, 148, 58, 0.12)',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(201, 148, 58, 0.35)',
-    padding: 16,
-    marginBottom: 20,
-    alignItems: 'center',
-  },
-  challengeInviteBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: Colors.gold,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  challengeInviteBadgeText: {
-    color: Colors.obsidian,
-    fontSize: 11,
-    fontFamily: Fonts.heading,
-    letterSpacing: 0.5,
-  },
-  challengeInviteBannerTitle: {
-    color: Colors.text,
-    fontSize: 16,
-    fontFamily: Fonts.display,
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  challengeInviteBannerText: {
-    color: Colors.textSecondary,
-    fontSize: 13,
+  signinPrompt: {
     fontFamily: Fonts.body,
-    textAlign: 'center',
-    lineHeight: 18,
+    fontSize: 13.5,
+    color: 'rgba(247,243,238,0.5)',
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'Inter', sans-serif" } as any) : {}),
+  },
+  signinHighlight: {
+    fontFamily: Fonts.heading,
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#C9943A',
+    cursor: Platform.OS === 'web' ? 'pointer' : undefined,
+    ...(Platform.OS === 'web' ? ({ fontFamily: "'DM Sans', sans-serif" } as any) : {}),
   },
 });

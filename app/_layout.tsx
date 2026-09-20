@@ -248,11 +248,11 @@ export default function RootLayout() {
             void appendRunLog({
               level: 'warning',
               title: 'Route blocked',
-              message: `Blocked unauthenticated access to ${pathname}; redirecting to /login.`,
+              message: `Blocked unauthenticated access to ${pathname}; redirecting to /welcome.`,
               route: pathname,
               context: 'RootLayout',
             });
-            replaceRoute(router, '/login');
+            replaceRoute(router, '/welcome');
           }
           setCheckingAccess(false);
           return;

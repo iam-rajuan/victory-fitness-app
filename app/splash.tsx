@@ -1,12 +1,11 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Platform, Image } from 'react-native';
+import { View, StyleSheet, Animated, Platform, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { clearAuthTokens, fetchCurrentUser, getValidAuthTokens } from '../lib/api';
 import { getPostAuthRoute, isAdminRestrictedFromApp } from '../lib/access';
 import { replaceRoute } from '../lib/navigation';
 import { Colors } from '../constants/Colors';
-import { Fonts } from '../constants/Typography';
 
 export default function SplashScreen() {
   const router = useRouter();
@@ -55,7 +54,7 @@ export default function SplashScreen() {
 
       await clearAuthTokens({ preserveBrowserRefreshFailure: Platform.OS === 'web' });
       timer = setTimeout(() => {
-        replaceRoute(router, '/onboarding');
+        replaceRoute(router, '/welcome');
       }, 800);
     };
 
@@ -90,29 +89,11 @@ const styles = StyleSheet.create({
   logoContainer: {
     alignItems: 'center',
   },
-  brandTitle: {
-    fontSize: 32,
-    color: Colors.text,
-    letterSpacing: 10,
-    fontFamily: Fonts.display,
-  },
-  brandSubtitle: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    letterSpacing: 8,
-    marginTop: 8,
-    fontFamily: Fonts.heading,
-  },
   pulseDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: Colors.gold,
-    marginTop: 30,
-    shadowColor: Colors.gold,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
+    backgroundColor: Colors.primary,
+    marginTop: 20,
   },
 });
-

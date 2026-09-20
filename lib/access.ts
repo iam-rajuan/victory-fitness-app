@@ -153,7 +153,7 @@ export const PLAN_CARDS: AppPlanCard[] = [
   },
 ];
 
-const ALLOWED_PUBLIC_PATHS = ['/login', '/register', '/verification', '/forgot-password', '/onboarding', '/splash', '/google-auth-complete'];
+const ALLOWED_PUBLIC_PATHS = ['/', '/welcome', '/login', '/register', '/verification', '/forgot-password', '/onboarding', '/splash', '/google-auth-complete'];
 const ALLOWED_AUTHENTICATED_PATHS = ['/journal'] as const;
 const PLAN_PATH = '/plan';
 
@@ -315,7 +315,12 @@ function hasCompletedSetup(
 }
 
 export function isPublicRoute(pathname: string): boolean {
-  return ALLOWED_PUBLIC_PATHS.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+  return ALLOWED_PUBLIC_PATHS.some((route) => {
+    if (route === '/') {
+      return pathname === '/' || pathname === '';
+    }
+    return pathname === route || pathname.startsWith(`${route}/`);
+  });
 }
 
 export function isAdminRestrictedFromApp(user?: Pick<AuthUser, 'is_admin'> | null): boolean {
@@ -366,7 +371,7 @@ export function isRouteAllowedForPlan(
   > | null,
 ): boolean {
   if (user && !hasCompletedSetup(user)) {
-    return pathname === '/onboarding' || pathname === '/login' || pathname === '/register' || pathname === '/verification' || pathname === '/forgot-password';
+    return pathname === '/welcome' || pathname === '/onboarding' || pathname === '/login' || pathname === '/register' || pathname === '/verification' || pathname === '/forgot-password';
   }
 
   if (isPublicRoute(pathname) || isPlanSelectionRoute(pathname)) {
