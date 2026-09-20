@@ -187,7 +187,7 @@ export function isGoldTrialActive(
   return false;
 }
 
-export function isSubscriptionActive(user?: Pick<AuthUser, 'is_admin' | 'subscription_tier' | 'subscription_status' | 'subscription_purchase_source' | 'gold_trial' | 'trial_tier_granted'> | null): boolean {
+export function isSubscriptionActive(user?: Pick<AuthUser, 'is_admin' | 'subscription_tier' | 'subscription_status' | 'subscription_purchase_source' | 'gold_trial' | 'trial_tier_granted' | 'onboarding_completed'> | null): boolean {
   if (!user) {
     return false;
   }
@@ -200,7 +200,15 @@ export function isSubscriptionActive(user?: Pick<AuthUser, 'is_admin' | 'subscri
     return true;
   }
 
-  return normalizeSubscriptionTier(user.subscription_tier) !== 'NONE' && String(user.subscription_status ?? '').toUpperCase() === 'ACTIVE';
+  if (normalizeSubscriptionTier(user.subscription_tier) !== 'NONE' && String(user.subscription_status ?? '').toUpperCase() === 'ACTIVE') {
+    return true;
+  }
+
+  if (Boolean(user.onboarding_completed)) {
+    return true;
+  }
+
+  return false;
 }
 
 export function getSubscriptionCard(tier: SubscriptionTier) {
@@ -259,7 +267,7 @@ export function getPlanPrice(card: AppPlanCard, cycle: BillingCycle): string {
   return card.yearlyPrice;
 }
 
-export function getAllowedTabNames(user?: Pick<AuthUser, 'is_admin' | 'subscription_tier' | 'subscription_status' | 'subscription_access' | 'subscription' | 'subscription_purchase_source' | 'gold_trial' | 'trial_tier_granted'> | null): string[] {
+export function getAllowedTabNames(user?: Pick<AuthUser, 'is_admin' | 'subscription_tier' | 'subscription_status' | 'subscription_access' | 'subscription' | 'subscription_purchase_source' | 'gold_trial' | 'trial_tier_granted' | 'onboarding_completed'> | null): string[] {
   if (!isSubscriptionActive(user)) {
     return [];
   }
@@ -277,7 +285,16 @@ export function getAllowedTabNames(user?: Pick<AuthUser, 'is_admin' | 'subscript
     return [...GOLD_AND_ABOVE_TAB_ACCESS];
   }
 
-  return getSubscriptionCard(normalizeSubscriptionTier(user?.subscription_tier)).tabAccess;
+  const tier = normalizeSubscriptionTier(user?.subscription_tier);
+  if (tier !== 'NONE') {
+    return getSubscriptionCard(tier).tabAccess;
+  }
+
+  if (Boolean(user?.onboarding_completed)) {
+    return [...ALL_TAB_ACCESS];
+  }
+
+  return getSubscriptionCard(tier).tabAccess;
 }
 
 export function isPlanSelectionRoute(pathname: string): boolean {

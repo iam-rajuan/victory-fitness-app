@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -59,12 +59,9 @@ export default function OnboardingScreen() {
           // Only redirect if onboarding is completed, subscription is active,
           // AND user does not have an active onboarding session in progress
           const hasActiveSession = Boolean(params.step || savedStep);
-          if (!hasActiveSession && user.onboarding_completed && isSubscriptionActive(user)) {
-            const target = getPostAuthRoute(user);
-            if (target !== '/onboarding') {
-              replaceRoute(router, target);
-              return;
-            }
+          if (!hasActiveSession && user.onboarding_completed) {
+            replaceRoute(router, '/(tabs)');
+            return;
           }
           if (!cancelled) {
             setAuthenticatedUser(user);
@@ -101,7 +98,20 @@ export default function OnboardingScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar style="light" />
-      <ClaudeOnboardingFlow user={authenticatedUser} initialStep={resolvedStep} />
+      <ClaudeOnboardingFlow
+        user={authenticatedUser}
+        initialStep={resolvedStep}
+        onComplete={() => {
+          replaceRoute(router, '/(tabs)');
+          if (Platform.OS === 'web' && typeof window !== 'undefined') {
+            setTimeout(() => {
+              if (window.location.pathname.includes('/onboarding')) {
+                window.location.href = '/';
+              }
+            }, 300);
+          }
+        }}
+      />
     </SafeAreaView>
   );
 }

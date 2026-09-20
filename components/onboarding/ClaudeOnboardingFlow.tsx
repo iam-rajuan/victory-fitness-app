@@ -28,6 +28,7 @@ import {
   fetchCurrentUserOnboarding,
   fetchSubscriptionPlans,
   startGoldTrial,
+  startPhaseOneBetaSubscription,
   updateCurrentUserBodyMetrics,
   updateCurrentUserOnboarding,
   updateCurrentUserProfile,
@@ -249,7 +250,7 @@ export default function ClaudeOnboardingFlow({
 
   const [pct, setPct] = useState<number>(0);
   const [prices, setPrices] = useState<[string, number, number, string, string][]>(DEFAULT_PRICES);
-  const [identity, setIdentity] = useState<string>('I am someone who trains even when it is hard');
+  const [identity, setIdentity] = useState<string>('');
   const [tier, setTier] = useState<number>(1); // Default Gold
   const [cycle, setCycle] = useState<'year' | 'month'>('year');
   const [region, setRegion] = useState<string>('de');
@@ -401,7 +402,12 @@ export default function ClaudeOnboardingFlow({
           if (!isNaN(parsedAge) && parsedAge >= 14 && parsedAge <= 100) setAge(parsedAge);
 
           const realIdentity = realOnboarding.identityStatement || activeUser?.identity_statement;
-          if (realIdentity && typeof realIdentity === 'string' && realIdentity.trim()) {
+          if (
+            realIdentity &&
+            typeof realIdentity === 'string' &&
+            realIdentity.trim() &&
+            realIdentity.trim() !== 'I am someone who trains even when it is hard'
+          ) {
             setIdentity(realIdentity.trim());
           }
 
@@ -442,7 +448,13 @@ export default function ClaudeOnboardingFlow({
             ) {
               setExpandedMetric(parsed.expandedMetric);
             }
-            if (typeof parsed.identity === 'string' && parsed.identity.trim()) setIdentity(parsed.identity);
+            if (
+              typeof parsed.identity === 'string' &&
+              parsed.identity.trim() &&
+              parsed.identity.trim() !== 'I am someone who trains even when it is hard'
+            ) {
+              setIdentity(parsed.identity.trim());
+            }
             if (typeof parsed.tier === 'number') setTier(parsed.tier);
             if (parsed.cycle === 'year' || parsed.cycle === 'month') setCycle(parsed.cycle);
             if (typeof parsed.region === 'string') setRegion(parsed.region);
@@ -766,7 +778,7 @@ export default function ClaudeOnboardingFlow({
         country: currentRegion.n,
         countryCode,
         motivationStatement: GOALS[goal][0],
-        identityStatement: identity.trim(),
+        identityStatement: identity.trim() || 'I am someone who trains even when it is hard',
         personalProfile: {
           age: String(age),
           gender: 'Prefer not to say',
@@ -795,7 +807,7 @@ export default function ClaudeOnboardingFlow({
       await updateCurrentUserProfile({
         daily_protein_target: protein,
         motivation_statement: GOALS[goal][0],
-        identity_statement: identity.trim(),
+        identity_statement: identity.trim() || 'I am someone who trains even when it is hard',
         country: currentRegion.n,
         country_code: countryCode,
         training_trigger_action: `${days} sessions of ${mins} minutes`,
@@ -811,6 +823,32 @@ export default function ClaudeOnboardingFlow({
       }).catch(() => {});
     } catch {
       // Keep going even if offline or session expires
+    }
+  };
+
+  // Activate trial or subscription with fallback for Phase 1 Beta
+  const activateTrialOrSubscription = async () => {
+    const tierName = String(curTier[0]).toUpperCase();
+    try {
+      if (tierName === 'GOLD') {
+        try {
+          await startGoldTrial();
+        } catch {
+          await startPhaseOneBetaSubscription();
+        }
+      } else {
+        try {
+          await updateCurrentUserSubscription({
+            subscription_tier: tierName,
+            billing_cycle: cycle === 'year' ? 'yearly' : 'monthly',
+            confirm_payment: true,
+          });
+        } catch {
+          await startPhaseOneBetaSubscription();
+        }
+      }
+    } catch {
+      await startPhaseOneBetaSubscription().catch(() => {});
     }
   };
 
@@ -833,15 +871,7 @@ export default function ClaudeOnboardingFlow({
       // Complete Payment / Start trial
       setSubmitting(true);
       try {
-        if (String(curTier[0]).toUpperCase() === 'GOLD') {
-          await startGoldTrial().catch(() => {});
-        } else {
-          await updateCurrentUserSubscription({
-            subscription_tier: String(curTier[0]).toUpperCase(),
-            billing_cycle: cycle === 'year' ? 'yearly' : 'monthly',
-            confirm_payment: true,
-          }).catch(() => {});
-        }
+        await activateTrialOrSubscription();
         await persistOnboardingAnswers(false);
       } finally {
         setSubmitting(false);
@@ -851,23 +881,39 @@ export default function ClaudeOnboardingFlow({
     }
 
     if (step === 11) {
-      // Ready -> finish onboarding
+      // Ready -> finish onboarding and save all data to user profile
       setSubmitting(true);
       try {
+        await activateTrialOrSubscription();
         await persistOnboardingAnswers(true);
+
         const updated = await fetchCurrentUser({ forceRefresh: true }).catch(() => null);
         if (updated) {
           setCurrentUser(updated);
         }
         await AsyncStorage.removeItem(ONBOARDING_STEP_KEY).catch(() => {});
         await AsyncStorage.removeItem(ONBOARDING_ANSWERS_KEY).catch(() => {});
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          try {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('step');
+            window.history.replaceState(null, '', url.pathname);
+          } catch {}
+        }
       } finally {
         setSubmitting(false);
         if (onComplete) {
           onComplete();
         } else {
-          const target = currentUser ? getPostAuthRoute(currentUser) : '/(tabs)';
-          replaceRoute(router, target);
+          // Redirect directly to Home
+          replaceRoute(router, '/(tabs)');
+          if (Platform.OS === 'web' && typeof window !== 'undefined') {
+            setTimeout(() => {
+              if (window.location.pathname.includes('/onboarding')) {
+                window.location.href = '/';
+              }
+            }, 300);
+          }
         }
       }
       return;
@@ -1443,8 +1489,8 @@ export default function ClaudeOnboardingFlow({
                     value={identity}
                     onChangeText={setIdentity}
                     style={styles.identityInput}
-                    placeholder="I am someone who..."
-                    placeholderTextColor="rgba(247,243,238,0.4)"
+                    placeholder="I am someone who trains even when it is hard"
+                    placeholderTextColor="rgba(247,243,238,0.32)"
                     multiline
                   />
                   <View style={styles.identityGoldUnderline} />
