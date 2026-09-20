@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
   sectionKicker: {
     fontFamily: DMSANS,
     fontSize: 10.5,
-    fontWeight: '600',
+    fontWeight: '500',
     letterSpacing: 1.5,
     color: 'rgba(247, 243, 238, 0.42)',
     marginBottom: 10,
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
   },
   arrowChevron: {
     fontFamily: DMSANS,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
     color: GOLD,
   },

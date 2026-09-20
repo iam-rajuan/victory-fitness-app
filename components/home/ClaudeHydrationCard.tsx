@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
   sectionKicker: {
     fontFamily: DMSANS,
     fontSize: 10.5,
-    fontWeight: '600',
+    fontWeight: '500',
     letterSpacing: 1.5,
     color: 'rgba(247, 243, 238, 0.42)',
     marginBottom: 10,
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
   },
   minusBtnText: {
     fontFamily: DMSANS,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: BLUE_GRAY,
   },

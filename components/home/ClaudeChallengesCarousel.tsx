@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   sectionKicker: {
     fontFamily: DMSANS,
     fontSize: 10.5,
-    fontWeight: '600',
+    fontWeight: '500',
     letterSpacing: 1.5,
     color: 'rgba(247, 243, 238, 0.42)',
   },
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
   },
   arrowBtn: {
     fontFamily: DMSANS,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: GOLD,
     paddingHorizontal: 2,
@@ -175,13 +175,13 @@ const styles = StyleSheet.create({
   },
   challengeName: {
     fontFamily: CLASH,
-    fontSize: 19,
+    fontSize: 18,
     fontWeight: '600',
     color: IVORY,
   },
   rankBadge: {
     fontFamily: MONO,
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700',
     color: GOLD,
   },
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
   noteText: {
     fontFamily: INTER,
     fontSize: 13,
-    lineHeight: 19,
+    lineHeight: 19.5,
     fontWeight: '500',
     color: GOLD,
     marginTop: 11,

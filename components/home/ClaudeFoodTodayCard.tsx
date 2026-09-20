@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   sectionKicker: {
     fontFamily: DMSANS,
     fontSize: 10.5,
-    fontWeight: '600',
+    fontWeight: '500',
     letterSpacing: 1.5,
     color: 'rgba(247, 243, 238, 0.42)',
   },
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
   mealSub: {
     fontFamily: INTER,
     fontSize: 11.5,
-    color: 'rgba(247, 243, 238, 0.55)',
+    color: 'rgba(247, 243, 238, 0.5)',
     marginTop: 2,
   },
   logBtn: {
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
   },
   weekPlanArrow: {
     fontFamily: DMSANS,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: GOLD,
   },

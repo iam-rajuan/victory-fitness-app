@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
   planLabel: {
     fontFamily: DMSANS,
     fontSize: 10.5,
-    fontWeight: '600',
+    fontWeight: '500',
     letterSpacing: 1.5,
     color: 'rgba(247, 243, 238, 0.42)',
   },
@@ -147,23 +147,23 @@ const styles = StyleSheet.create({
   dayKicker: {
     fontFamily: DMSANS,
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '500',
     letterSpacing: 1.4,
     color: GOLD,
     marginBottom: 6,
   },
   title: {
     fontFamily: CLASH,
-    fontSize: 31,
-    lineHeight: 35,
+    fontSize: 32,
+    lineHeight: 34,
     fontWeight: '600',
     color: IVORY,
-    marginBottom: 16,
+    marginBottom: 14,
     letterSpacing: -0.3,
   },
   statsRow: {
     flexDirection: 'row',
-    gap: 24,
+    gap: 22,
     marginBottom: 20,
   },
   statCol: {
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
   statLabel: {
     fontFamily: DMSANS,
     fontSize: 10.5,
-    fontWeight: '600',
+    fontWeight: '500',
     letterSpacing: 0.6,
     color: 'rgba(247, 243, 238, 0.55)',
   },
@@ -199,13 +199,13 @@ const styles = StyleSheet.create({
   },
   altLinkWrap: {
     alignItems: 'center',
-    marginTop: 13,
+    marginTop: 12,
     paddingVertical: 4,
   },
   altLinkText: {
     fontFamily: DMSANS,
     fontSize: 13.5,
     fontWeight: '500',
-    color: 'rgba(247, 243, 238, 0.65)',
+    color: 'rgba(247, 243, 238, 0.6)',
   },
 });

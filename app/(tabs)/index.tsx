@@ -19,7 +19,7 @@ import {
   fetchCurrentUserBodyMetrics,
   updateCurrentUserBodyMetrics,
 } from '../../lib/api';
-import { isGoldTrialActive, normalizeSubscriptionTier } from '../../lib/access';
+import { normalizeSubscriptionTier } from '../../lib/access';
 import { useModuleAccessGuard } from '../../lib/useModuleAccessGuard';
 import { useLanguage } from '../../lib/i18n';
 import { pushRoute, replaceRoute } from '../../lib/navigation';
@@ -184,20 +184,6 @@ export default function HomeScreen() {
     return rawTier;
   }, [currentUser?.subscription_tier]);
 
-  const isTrial = useMemo(() => {
-    if (!currentUser) return false;
-    const isGoldTrial = isGoldTrialActive(currentUser);
-    const isBeta = currentUser.subscription_purchase_source === 'beta_trial' || currentUser.subscription_tier === 'GOLD_BETA';
-    return isGoldTrial || isBeta;
-  }, [currentUser]);
-
-  const trialTierName = useMemo(() => {
-    if (currentUser?.subscription_tier === 'GOLD_BETA') return 'Gold Beta';
-    if (tier === 'SILVER') return 'Silver';
-    if (tier === 'PLATINUM') return 'Platinum';
-    return 'Gold';
-  }, [currentUser?.subscription_tier, tier]);
-
   const streakDays = currentUser?.streak_days || 12;
   const targetWaterLiters = useMemo(() => {
     const w = Number(currentWeight) || 70;
@@ -226,15 +212,10 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* 1. Header: Date, Hello Greeting, Streak Pill & Trial Banner */}
+        {/* 1. Header: Date, Hello Greeting, Streak Pill */}
         <ClaudeHomeHeader
           name={currentUser?.name || currentUser?.email || ''}
           streakDays={streakDays}
-          isTrial={isTrial}
-          trialDay={1}
-          totalTrialDays={currentUser?.subscription_tier === 'GOLD_BETA' ? 21 : 5}
-          trialTierName={trialTierName}
-          onPressTrial={() => pushRoute(router, '/plan')}
         />
 
         {/* 2. Daily Inspiration (Silver: Victor Akko quote / Gold+: Identity statement) */}

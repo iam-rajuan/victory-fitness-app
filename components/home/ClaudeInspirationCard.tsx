@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
   kicker: {
     fontFamily: DMSANS,
     fontSize: 10.5,
-    fontWeight: '600',
+    fontWeight: '500',
     letterSpacing: 1.5,
     color: 'rgba(247, 243, 238, 0.42)',
     marginBottom: 10,
@@ -72,8 +72,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontFamily: DMSANS,
     fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 1.2,
+    fontWeight: '500',
+    letterSpacing: 1.0,
     color: COPPER,
   },
 });
