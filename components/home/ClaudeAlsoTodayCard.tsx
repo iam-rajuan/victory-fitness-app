@@ -44,7 +44,7 @@ export default function ClaudeAlsoTodayCard({
         {/* Row 1: Accountability Duo */}
         <Pressable
           style={[styles.itemRow, styles.itemRowBorder]}
-          onPress={() => pushRoute(router, '/challenge')}
+          onPress={() => pushRoute(router, '/duo')}
         >
           {partnerName ? (
             <View style={[styles.dot, partnerTrainedToday ? styles.dotGreen : styles.dotGoldRing]} />

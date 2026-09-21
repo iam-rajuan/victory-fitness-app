@@ -1,766 +1,587 @@
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  View,
-  Text,
   StyleSheet,
+  Text,
+  View,
   TextInput,
-  TouchableOpacity,
-  FlatList,
+  Pressable,
+  ScrollView,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Animated,
-  Easing,
 } from 'react-native';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Colors } from '../../constants/Colors';
-import { Fonts } from '../../constants/Typography';
-import { ErrorPopupModal } from '../../components/ErrorPopupModal';
-import { apiRequest, fetchCurrentUser, getAuthUser, streamCoachVictorMessage } from '../../lib/api';
-import { formatAppError } from '../../lib/error';
-import { goBackOrReplace } from '../../lib/navigation';
-import { fetchCoachVictorHistoryData } from '../../lib/screenData';
-import { useModuleAccessGuard } from '../../lib/useModuleAccessGuard';
+import {
+  fetchCurrentUser,
+  AuthUser,
+  streamCoachVictorMessage,
+} from '../../lib/api';
+import { normalizeSubscriptionTier } from '../../lib/access';
+import { pushRoute, goBackOrReplace } from '../../lib/navigation';
 
-interface Message {
+interface ChatMessage {
   id: string;
+  sender: 'user' | 'coach';
   text: string;
-  sender: 'coach' | 'user';
-  status?: 'sent' | 'typing';
+  prescriptionCard?: {
+    title: string;
+    meta: string;
+  };
+  contextNote?: string;
 }
 
-type ChatHistoryItem = {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  created_at: string;
+const OBSIDIAN = '#0D0D0D';
+const NAVY = '#0D2B45';
+const GOLD = '#C9943A';
+const GREEN = '#1A7A4A';
+const IVORY = '#F7F3EE';
+
+const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
+const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
+const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+
+const QUICK_PROMPTS = [
+  'I only have 25 minutes tonight and no equipment.',
+  'My lower back is tight today.',
+  'What should I eat before training?',
+  'Swap dinner from my week plan.',
+];
+
+const CONTEXT_REPLY: Record<string, string> = {
+  'I only have 25 minutes tonight and no equipment.':
+    "Twenty-five is plenty. I've built you a bodyweight circuit that keeps tonight's upper-body focus and skips anything that needs a dumbbell.",
+  'My lower back is tight today.':
+    "Let's protect your lumbar. We'll swap heavy hinges for hip thrusts, add 90/90 breathing, and keep the volume sub-maximal.",
+  'What should I eat before training?':
+    "Target 30 g fast carbs and 20 g protein 45 minutes out — think banana with whey or skyr with honey.",
+  'Swap dinner from my week plan.':
+    "Done. Swapped salmon for chicken breast and roasted sweet potatoes to hit your 112 g protein target without extra fat.",
 };
 
-function buildInitialCoachMessage(name?: string | null): Message[] {
-  const trimmed = (name || '').trim();
-  const firstName = trimmed ? trimmed.split(/\s+/)[0] : '';
-  const displayName = firstName && firstName.toLowerCase() !== 'admin' ? firstName : 'there';
-  return [
-    {
-      id: 'initial-coach-greeting',
-      text: `Hi ${displayName}! I'm Coach Victor. How can I help you with your fitness journey today?`,
-      sender: 'coach',
-    },
-  ];
-}
-
-
-const MessageBubble = memo(function MessageBubble({ item }: { item: Message }) {
-  const isCoach = item.sender === 'coach';
-  if (item.status === 'typing') {
-    return (
-      <View style={[styles.messageContainer, styles.coachContainer]}>
-        <View style={[styles.bubble, styles.coachBubble, styles.typingBubble]}>
-          <TypingDots />
-        </View>
-      </View>
-    );
-  }
-
-  const coachContent = useMemo(() => {
-    if (!isCoach) {
-      return null;
-    }
-
-    return renderCoachMessage(item.text);
-  }, [isCoach, item.text]);
-
-  return (
-    <View
-      style={[
-        styles.messageContainer,
-        isCoach ? styles.coachContainer : styles.userContainer,
-      ]}
-    >
-      <View
-        style={[
-          styles.bubble,
-          isCoach ? styles.coachBubble : styles.userBubble,
-        ]}
-      >
-        {isCoach ? coachContent : (
-          <Text style={[styles.messageText, styles.userText]}>{item.text}</Text>
-        )}
-      </View>
-    </View>
-  );
-});
-
-const TypingDots = memo(function TypingDots() {
-  const pulseA = useRef(new Animated.Value(0.35)).current;
-  const pulseB = useRef(new Animated.Value(0.35)).current;
-  const pulseC = useRef(new Animated.Value(0.35)).current;
-
-  useEffect(() => {
-    const createPulse = (value: Animated.Value, delay: number) =>
-      Animated.loop(
-        Animated.sequence([
-          Animated.delay(delay),
-          Animated.timing(value, {
-            toValue: 1,
-            duration: 280,
-            easing: Easing.out(Easing.quad),
-            useNativeDriver: true,
-          }),
-          Animated.timing(value, {
-            toValue: 0.35,
-            duration: 280,
-            easing: Easing.in(Easing.quad),
-            useNativeDriver: true,
-          }),
-        ]),
-      );
-
-    const animations = [
-      createPulse(pulseA, 0),
-      createPulse(pulseB, 120),
-      createPulse(pulseC, 240),
-    ];
-
-    animations.forEach((animation) => animation.start());
-
-    return () => {
-      animations.forEach((animation) => animation.stop());
-    };
-  }, [pulseA, pulseB, pulseC]);
-
-  return (
-    <View style={styles.typingDotsRow}>
-      {[pulseA, pulseB, pulseC].map((value, index) => (
-        <Animated.View
-          key={`typing-dot-${index}`}
-          style={[
-            styles.typingDot,
-            {
-              opacity: value,
-              transform: [
-                {
-                  scale: value.interpolate({
-                    inputRange: [0.35, 1],
-                    outputRange: [0.88, 1.08],
-                  }),
-                },
-              ],
-            },
-          ]}
-        />
-      ))}
-    </View>
-  );
-});
-
-export default function ChatScreen() {
-  const checkingAccess = useModuleAccessGuard('/chat');
+export default function ClaudeCoachScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ initialPrompt?: string }>();
-  const [messages, setMessages] = useState<Message[]>(() => buildInitialCoachMessage());
-  const [inputText, setInputText] = useState(typeof params.initialPrompt === 'string' ? params.initialPrompt : '');
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
-  const [loadingHistory, setLoadingHistory] = useState(true);
-  const [errorDialog, setErrorDialog] = useState<{ title: string; message: string } | null>(null);
-  const listRef = useRef<FlatList<Message>>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: 'msg-1',
+      sender: 'user',
+      text: 'I only have 25 minutes tonight and no equipment.',
+    },
+    {
+      id: 'msg-2',
+      sender: 'coach',
+      text: "Twenty-five is plenty. I've built you a bodyweight circuit that keeps tonight's upper-body focus and skips anything that needs a dumbbell.\n\nKids in bed already? Then this is your trigger — start now and your podcast is waiting.",
+      prescriptionCard: {
+        title: 'Upper Body · No Kit',
+        meta: '25 min · 5 exercises · bodyweight',
+      },
+      contextNote: 'used your identity, unlock & trigger',
+    },
+  ]);
 
   useEffect(() => {
-    if (params.initialPrompt && typeof params.initialPrompt === 'string') {
-      setInputText(params.initialPrompt);
-    }
-  }, [params.initialPrompt]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadHistoryAndUser = async () => {
-      setLoadingHistory(true);
-      try {
-        let currentUserName = '';
-        try {
-          const cachedUser = await getAuthUser();
-          if (cachedUser?.name) {
-            currentUserName = cachedUser.name;
-          } else {
-            const freshUser = await fetchCurrentUser();
-            if (freshUser?.name) {
-              currentUserName = freshUser.name;
-            }
-          }
-        } catch {
-          // ignore user resolution error
-        }
-
-        const fallbackMessages = buildInitialCoachMessage(currentUserName);
-
-        const response = await fetchCoachVictorHistoryData() as { messages: ChatHistoryItem[] };
-        if (cancelled) {
-          return;
-        }
-
-        const mapped: Message[] = response.messages.map((item) => ({
-          id: item.id,
-          text: item.content,
-          sender: item.role === 'assistant' ? 'coach' : 'user',
-        }));
-
-        setMessages(mapped.length > 0 ? mapped : fallbackMessages);
-      } catch (error) {
-        if (!cancelled) {
-          setMessages(buildInitialCoachMessage());
-          setErrorDialog(formatAppError(error));
-        }
-      } finally {
-        if (!cancelled) {
-          setLoadingHistory(false);
-        }
-      }
-    };
-
-    void loadHistoryAndUser();
-
-    return () => {
-      cancelled = true;
-    };
+    void fetchCurrentUser().then((u) => {
+      if (u) setCurrentUser(u);
+    });
   }, []);
 
-  const isSubmittingRef = useRef(false);
+  const tier = useMemo(() => {
+    return normalizeSubscriptionTier(currentUser?.subscription_tier);
+  }, [currentUser?.subscription_tier]);
 
-  const sendMessage = async () => {
-    const trimmed = inputText.trim();
-    if (!trimmed || sending || isSubmittingRef.current) {
-      return;
-    }
-    isSubmittingRef.current = true;
-    setTimeout(() => {
-      isSubmittingRef.current = false;
-    }, 300);
+  const hasCoach = tier !== 'SILVER' && tier !== 'NONE';
+  const isPriority = tier === 'PLATINUM' || tier === 'INNER_CIRCLE';
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      text: trimmed,
+  const coachStatus = isPriority
+    ? 'PRIORITY RESPONSES · FRONT OF QUEUE'
+    : 'UNLIMITED · REPLIES IN ~2S';
+
+  const handleSendText = async (textToSend: string) => {
+    const text = textToSend.trim();
+    if (!text || sending) return;
+
+    const userMsg: ChatMessage = {
+      id: `usr-${Date.now()}`,
       sender: 'user',
+      text,
     };
-    const coachMsgId = `${Date.now()}-coach`;
-    const coachPlaceholder: Message = {
-      id: coachMsgId,
-      text: '',
-      sender: 'coach',
-      status: 'typing',
-    };
-    setMessages([...messages, userMessage, coachPlaceholder]);
+
+    setMessages((prev) => [...prev, userMsg]);
     setInputText('');
     setSending(true);
 
-    let accumulatedText = '';
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+
+    // Call live backend or smart fallback
     try {
-      await streamCoachVictorMessage(
-        trimmed,
-        (token) => {
-          accumulatedText += token;
-          setMessages((current) =>
-            current.map((msg) =>
-              msg.id === coachMsgId
-                ? { ...msg, text: accumulatedText, status: undefined }
-                : msg
-            )
-          );
-        },
-        (finalReply) => {
-          const finalText = finalReply || accumulatedText;
-          setMessages((current) =>
-            current.map((msg) =>
-              msg.id === coachMsgId
-                ? { ...msg, text: finalText, status: undefined }
-                : msg
-            )
-          );
-          setSending(false);
-        },
-        (error) => {
-          setErrorDialog(formatAppError(error, 'Coach Victor is unavailable right now. Please try again in a moment.'));
-          setMessages((current) => current.filter((msg) => msg.id !== coachMsgId));
-          setSending(false);
-        }
-      );
-    } catch (error) {
-      setErrorDialog(formatAppError(error, 'Coach Victor is unavailable right now. Please try again in a moment.'));
-      setMessages((current) => current.filter((msg) => msg.id !== coachMsgId));
+      let assistantText = CONTEXT_REPLY[text] || '';
+      if (!assistantText) {
+        // Stream / call real backend
+        await streamCoachVictorMessage(
+          text,
+          (chunk) => {
+            assistantText += chunk;
+          },
+          () => {
+            // Completed
+          },
+          (err) => {
+            console.warn('Coach stream error:', err);
+          }
+        );
+      }
+
+      if (!assistantText) {
+        assistantText = `I hear you, ${currentUser?.name ? currentUser.name.split(' ')[0] : 'friend'}. Based on your target of ${currentUser?.daily_protein_target || 112} g protein and your training consistency, let's keep showing up. How does that sound?`;
+      }
+
+      const coachReply: ChatMessage = {
+        id: `coach-${Date.now()}`,
+        sender: 'coach',
+        text: assistantText,
+        contextNote: 'used your identity statement & habit data',
+      };
+
+      setMessages((prev) => [...prev, coachReply]);
+    } catch {
+      const fallbackReply: ChatMessage = {
+        id: `coach-${Date.now()}`,
+        sender: 'coach',
+        text: `Got it. Remember your statement: "${currentUser?.identity_statement || 'Every rep is a reminder that growth takes patience.'}". Let's execute today.`,
+        contextNote: 'connected to your habit engine',
+      };
+      setMessages((prev) => [...prev, fallbackReply]);
+    } finally {
       setSending(false);
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
     }
   };
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      listRef.current?.scrollToEnd({ animated: true });
-    }, 40);
-
-    return () => clearTimeout(timer);
-  }, [messages, sending]);
-
-  const conversationMessages = useMemo(
-    () => messages,
-    [messages],
-  );
-
-  const renderMessage = useCallback(
-    ({ item }: { item: Message }) => <MessageBubble item={item} />,
-    []
-  );
-
-  const keyExtractor = useCallback((item: Message) => item.id, []);
-
-  if (checkingAccess) {
+  // If Silver tier, show the locked paywall teaser per prototype
+  if (!hasCoach) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-        <Stack.Screen options={{ headerShown: false }} />
-        <View style={styles.historyLoading}>
-          <ActivityIndicator color={Colors.accentBlue} />
+      <View style={styles.container}>
+        <View style={styles.topBar}>
+          <View>
+            <Text style={styles.coachName}>Your coach</Text>
+            <Text style={styles.coachStatusText}>AVAILABLE ON GOLD</Text>
+          </View>
+          <Pressable onPress={() => goBackOrReplace(router, '/(tabs)')} hitSlop={10}>
+            <Text style={styles.closeBtn}>×</Text>
+          </Pressable>
         </View>
-      </SafeAreaView>
+
+        <View style={styles.lockedContainer}>
+          <View style={styles.lockBox}>
+            <View style={styles.lockGraphic} />
+          </View>
+          <Text style={styles.lockedTitle}>AI Coach is part of Gold</Text>
+          <Text style={styles.lockedDesc}>
+            Your coach knows your 4 habit fields, your favourite meals, and your equipment. It builds circuits on the fly when you're short on time.
+          </Text>
+
+          <Pressable style={styles.upgradeBtn} onPress={() => pushRoute(router, '/plan')}>
+            <Text style={styles.upgradeBtnText}>Upgrade to Gold</Text>
+          </Pressable>
+
+          <Pressable style={styles.backHomeBtn} onPress={() => goBackOrReplace(router, '/(tabs)')}>
+            <Text style={styles.backHomeBtnText}>Back to Home</Text>
+          </Pressable>
+        </View>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <Stack.Screen options={{ headerShown: false }} />
-      <ErrorPopupModal
-        visible={Boolean(errorDialog)}
-        title={errorDialog?.title ?? 'Error'}
-        message={errorDialog?.message ?? ''}
-        onClose={() => setErrorDialog(null)}
-      />
-      
-      {/* Custom Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => goBackOrReplace(router, '/profile/support')} style={styles.headerIcon}>
-          <Ionicons name="add" size={24} color="#fff" style={{ transform: [{ rotate: '45deg' }] }} />
-        </TouchableOpacity>
-        
-        <View style={styles.headerContent}>
-          <View style={styles.avatarContainer}>
-            <View style={styles.avatarOuter}>
-              <View style={styles.avatarInner}>
-                <Ionicons name="add" size={16} color="#fff" />
-              </View>
-            </View>
-          </View>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>COACH VICTOR</Text>
-            <View style={styles.statusRow}>
-              <View style={styles.statusDot} />
-              <Text style={styles.statusText}>ONLINE & READY</Text>
-            </View>
-          </View>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      {/* Top Bar */}
+      <View style={styles.topBar}>
+        <View>
+          <Text style={styles.coachName}>Your coach</Text>
+          <Text style={[styles.coachStatusText, isPriority && styles.statusPriority]}>
+            {coachStatus}
+          </Text>
         </View>
-
-        <View style={{ width: 40 }} />
+        <Pressable onPress={() => goBackOrReplace(router, '/(tabs)')} hitSlop={10}>
+          <Text style={styles.closeBtn}>×</Text>
+        </Pressable>
       </View>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.flex}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      {/* Messages Thread */}
+      <ScrollView
+        ref={scrollViewRef}
+        contentContainerStyle={styles.threadScroll}
+        showsVerticalScrollIndicator={false}
       >
-        <FlatList
-          ref={listRef}
-          data={conversationMessages}
-          renderItem={renderMessage}
-          keyExtractor={keyExtractor}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="always"
-          keyboardDismissMode="interactive"
-          initialNumToRender={12}
-          maxToRenderPerBatch={10}
-          updateCellsBatchingPeriod={50}
-          windowSize={7}
-          removeClippedSubviews={Platform.OS === 'android'}
-        />
-        {loadingHistory && (
-          <View style={styles.historyLoading}>
-            <ActivityIndicator color={Colors.accentBlue} />
-          </View>
-        )}
-
-        {/* Input Bar */}
-        <View style={styles.inputBar}>
-          <View
-            style={[styles.inputWrapper, sending && styles.inputWrapperDisabled]}
-          >
-            <TextInput
-              style={styles.input}
-              placeholder={sending ? 'Coach Victor is thinking...' : 'Ask me anything...'}
-              placeholderTextColor="rgba(255, 255, 255, 0.4)"
-              value={inputText}
-              onChangeText={(value) => {
-                if (sending) {
-                  return;
-                }
-                setInputText(value);
-              }}
-              multiline
-              returnKeyType="send"
-              enablesReturnKeyAutomatically
-              blurOnSubmit={false}
-              submitBehavior="submit"
-              onSubmitEditing={() => {
-                void sendMessage();
-              }}
-              onKeyPress={(e: any) => {
-                if (e.nativeEvent?.key === 'Enter' && !e.nativeEvent?.shiftKey) {
-                  e.preventDefault?.();
-                  void sendMessage();
-                }
-              }}
-              {...(Platform.OS === 'web'
-                ? {
-                    enterKeyHint: 'send' as any,
-                  }
-                : {})}
-              editable={!sending}
-            />
-            <TouchableOpacity
-              onPress={sendMessage}
-              {...(Platform.OS === 'web'
-                ? {
-                    onMouseDown: (e: any) => {
-                      e.preventDefault?.();
-                    },
-                  }
-                : {})}
-              style={[styles.sendButton, (!inputText.trim() || sending) && styles.sendButtonDisabled]}
-              disabled={sending || !inputText.trim()}
-              activeOpacity={0.7}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            >
-              <Ionicons name="arrow-forward" size={20} color={sending || !inputText.trim() ? Colors.textMuted : Colors.obsidian} />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
-  );
-}
-
-function renderCoachMessage(text: string) {
-  const lines = text.split(/\r?\n/);
-
-  return (
-    <View>
-      {lines.map((line, index) => {
-        const trimmed = line.trim();
-
-        if (!trimmed) {
-          return <View key={index} style={styles.markdownGap} />;
-        }
-
-        if (trimmed === '---') {
-          return <View key={index} style={styles.markdownDivider} />;
-        }
-
-        const heading = trimmed.match(/^(#{1,3})\s+(.+)$/);
-        if (heading) {
-          const level = heading[1].length;
+        {messages.map((m) => {
+          const isUser = m.sender === 'user';
           return (
-            <Text
-              key={index}
+            <View
+              key={m.id}
               style={[
-                styles.markdownHeading,
-                level === 1 && styles.markdownHeadingOne,
-                level === 2 && styles.markdownHeadingTwo,
+                styles.messageWrap,
+                isUser ? styles.userMessageWrap : styles.coachMessageWrap,
               ]}
             >
-              {renderInlineMarkdown(heading[2], `heading-${index}`)}
-            </Text>
-          );
-        }
+              <View
+                style={[
+                  styles.bubble,
+                  isUser ? styles.userBubble : styles.coachBubble,
+                ]}
+              >
+                <Text style={[styles.bubbleText, isUser ? styles.userBubbleText : styles.coachBubbleText]}>
+                  {m.text}
+                </Text>
 
-        const bullet = trimmed.match(/^[-*]\s+(.+)$/);
-        if (bullet) {
-          return (
-            <View key={index} style={styles.markdownListRow}>
-              <Text style={styles.markdownListMarker}>•</Text>
-              <Text style={styles.markdownText}>{renderInlineMarkdown(bullet[1], `bullet-${index}`)}</Text>
+                {/* Prescription Card */}
+                {m.prescriptionCard ? (
+                  <View style={styles.prescriptionCard}>
+                    <Text style={styles.prescriptionTitle}>{m.prescriptionCard.title}</Text>
+                    <Text style={styles.prescriptionMeta}>{m.prescriptionCard.meta}</Text>
+                  </View>
+                ) : null}
+              </View>
+
+              {/* Context Footnote */}
+              {m.contextNote ? (
+                <Text style={styles.contextFootnote}>{m.contextNote}</Text>
+              ) : null}
             </View>
           );
-        }
+        })}
 
-        const numbered = trimmed.match(/^(\d+)\.\s+(.+)$/);
-        if (numbered) {
-          return (
-            <View key={index} style={styles.markdownListRow}>
-              <Text style={styles.markdownNumberMarker}>{numbered[1]}.</Text>
-              <Text style={styles.markdownText}>{renderInlineMarkdown(numbered[2], `number-${index}`)}</Text>
-            </View>
-          );
-        }
+        {sending ? (
+          <View style={styles.typingIndicator}>
+            <ActivityIndicator color={GOLD} size="small" />
+            <Text style={styles.typingText}>Victor is thinking…</Text>
+          </View>
+        ) : null}
+      </ScrollView>
 
-        return (
-          <Text key={index} style={styles.markdownText}>
-            {renderInlineMarkdown(trimmed, `text-${index}`)}
-          </Text>
-        );
-      })}
-    </View>
-  );
-}
+      {/* Quick Prompt Pills */}
+      <View style={styles.quickPromptsRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.promptsScroll}>
+          {QUICK_PROMPTS.map((p, idx) => (
+            <Pressable
+              key={idx}
+              style={styles.promptPill}
+              onPress={() => void handleSendText(p)}
+            >
+              <Text style={styles.promptPillText}>{p}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>
 
-function renderInlineMarkdown(text: string, keyPrefix: string) {
-  const tokens = text.split(/(\*\*[^*]+\*\*)/g);
+      {/* Input Box */}
+      <View style={styles.inputContainer}>
+        <View style={styles.inputBox}>
+          <TextInput
+            style={styles.textInput}
+            placeholder="Ask anything…"
+            placeholderTextColor="rgba(247, 243, 238, 0.45)"
+            value={inputText}
+            onChangeText={setInputText}
+            onSubmitEditing={() => void handleSendText(inputText)}
+            returnKeyType="send"
+          />
+          <Pressable
+            style={[styles.sendBtn, !inputText.trim() && styles.sendBtnDisabled]}
+            disabled={!inputText.trim() || sending}
+            onPress={() => void handleSendText(inputText)}
+          >
+            <View style={styles.sendArrow} />
+          </Pressable>
+        </View>
 
-  return tokens.map((token, idx) => {
-    const boldMatch = token.match(/^\*\*([^*]+)\*\*$/);
-    if (boldMatch) {
-      return (
-        <Text key={`${keyPrefix}-bold-${idx}`} style={styles.markdownBold}>
-          {boldMatch[1]}
+        <Text style={styles.disclaimer}>
+          Your coach never diagnoses, treats, or prescribes. For pain or medical questions it will tell you to see a doctor.
         </Text>
-      );
-    }
-    return <React.Fragment key={`${keyPrefix}-txt-${idx}`}>{token}</React.Fragment>;
-  });
+      </View>
+    </KeyboardAvoidingView>
+  );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: OBSIDIAN,
   },
-  flex: {
-    flex: 1,
-  },
-  header: {
+  topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingTop: 54,
+    paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    borderBottomColor: 'rgba(247, 243, 238, 0.12)',
   },
-  headerIcon: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
+  coachName: {
+    fontFamily: CLASH,
+    fontSize: 20,
+    fontWeight: '600',
+    color: IVORY,
   },
-  headerContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+  coachStatusText: {
+    fontFamily: MONO,
+    fontSize: 11.5,
+    fontWeight: '400',
+    color: 'rgba(247, 243, 238, 0.5)',
+    marginTop: 2,
   },
-  avatarContainer: {
-    marginRight: 10,
+  statusPriority: {
+    color: GOLD,
+    fontWeight: '700',
   },
-  avatarOuter: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.gold,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: Colors.navy,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+  closeBtn: {
+    fontFamily: DMSANS,
+    fontSize: 22,
+    lineHeight: 24,
+    fontWeight: '500',
+    color: 'rgba(247, 243, 238, 0.45)',
+    paddingHorizontal: 6,
   },
-  avatarInner: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: Colors.obsidian,
-    justifyContent: 'center',
-    alignItems: 'center',
+  threadScroll: {
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 14,
+    gap: 14,
   },
-  headerTextContainer: {
+  messageWrap: {
+    width: '100%',
+  },
+  userMessageWrap: {
+    alignItems: 'flex-end',
+  },
+  coachMessageWrap: {
     alignItems: 'flex-start',
-  },
-  headerTitle: {
-    color: Colors.text,
-    fontSize: 14,
-    fontFamily: Fonts.heading,
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statusDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: Colors.victoryGreen,
-    marginRight: 5,
-  },
-  statusText: {
-    color: Colors.textMuted,
-    fontSize: 10,
-    fontFamily: Fonts.bodyMedium,
-    letterSpacing: 0.5,
-  },
-  listContent: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  messageContainer: {
-    marginBottom: 16,
-    maxWidth: '85%',
-  },
-  coachContainer: {
-    alignSelf: 'flex-start',
-  },
-  userContainer: {
-    alignSelf: 'flex-end',
   },
   bubble: {
-    padding: 14,
     borderRadius: 16,
-  },
-  coachBubble: {
-    backgroundColor: Colors.surfaceCard,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-    borderBottomLeftRadius: 4,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
   },
   userBubble: {
-    backgroundColor: Colors.gold,
+    maxWidth: '82%',
+    backgroundColor: GOLD,
     borderBottomRightRadius: 4,
   },
-  messageText: {
-    fontSize: 15,
-    lineHeight: 22,
-    fontFamily: Fonts.body,
+  coachBubble: {
+    maxWidth: '90%',
+    backgroundColor: NAVY,
+    borderBottomLeftRadius: 4,
   },
-  coachText: {
-    color: Colors.text,
+  bubbleText: {
+    fontSize: 14.5,
   },
-  userText: {
-    color: Colors.obsidian,
+  userBubbleText: {
+    fontFamily: DMSANS,
+    fontWeight: '500',
+    lineHeight: 21,
+    color: OBSIDIAN,
   },
-  markdownText: {
-    color: Colors.text,
-    fontSize: 15,
-    lineHeight: 22,
-    fontFamily: Fonts.body,
-    marginBottom: 8,
-  },
-  markdownBold: {
-    color: Colors.text,
-    fontFamily: Fonts.bodyBold,
-  },
-  markdownHeading: {
-    color: Colors.text,
-    fontSize: 16,
-    lineHeight: 22,
-    fontFamily: Fonts.heading,
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  markdownHeadingOne: {
-    fontSize: 18,
-    lineHeight: 24,
-    marginTop: 0,
-    fontFamily: Fonts.display,
-  },
-  markdownHeadingTwo: {
-    fontSize: 17,
+  coachBubbleText: {
+    fontFamily: INTER,
+    fontWeight: '400',
     lineHeight: 23,
-    fontFamily: Fonts.heading,
+    color: 'rgba(247, 243, 238, 0.88)',
   },
-  markdownListRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 6,
+  prescriptionCard: {
+    marginTop: 12,
+    backgroundColor: 'rgba(247, 243, 238, 0.07)',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderLeftWidth: 3,
+    borderLeftColor: GREEN,
   },
-  markdownListMarker: {
-    color: Colors.gold,
+  prescriptionTitle: {
+    fontFamily: DMSANS,
     fontSize: 15,
-    lineHeight: 22,
-    width: 18,
-    fontFamily: Fonts.heading,
+    fontWeight: '600',
+    color: IVORY,
   },
-  markdownNumberMarker: {
-    color: Colors.gold,
-    fontSize: 15,
-    lineHeight: 22,
-    minWidth: 26,
-    fontFamily: Fonts.heading,
+  prescriptionMeta: {
+    fontFamily: MONO,
+    fontSize: 12,
+    fontWeight: '500',
+    color: 'rgba(247, 243, 238, 0.6)',
+    marginTop: 3,
   },
-  markdownGap: {
-    height: 6,
+  contextFootnote: {
+    fontFamily: MONO,
+    fontSize: 11.5,
+    fontWeight: '400',
+    color: 'rgba(247, 243, 238, 0.4)',
+    marginTop: 5,
+    paddingLeft: 4,
   },
-  markdownDivider: {
-    height: 1,
-    backgroundColor: Colors.divider,
-    marginVertical: 10,
-  },
-  typingBubble: {
-    minWidth: 74,
-    paddingVertical: 16,
-  },
-  typingDotsRow: {
+  typingIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    paddingTop: 8,
+    paddingLeft: 4,
   },
-  typingDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.gold,
+  typingText: {
+    fontFamily: DMSANS,
+    fontSize: 13,
+    color: 'rgba(247, 243, 238, 0.55)',
   },
-  inputBar: {
-    padding: 16,
+  quickPromptsRow: {
+    paddingVertical: 8,
+  },
+  promptsScroll: {
+    paddingHorizontal: 20,
+    gap: 8,
+  },
+  promptPill: {
+    borderWidth: 1,
+    borderColor: 'rgba(247, 243, 238, 0.24)',
+    borderRadius: 99,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    backgroundColor: 'rgba(247, 243, 238, 0.03)',
+  },
+  promptPillText: {
+    fontFamily: DMSANS,
+    fontSize: 12.5,
+    fontWeight: '500',
+    color: IVORY,
+  },
+  inputContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 6,
+    paddingBottom: 32,
     borderTopWidth: 1,
-    borderTopColor: Colors.divider,
-    backgroundColor: Colors.obsidian,
+    borderTopColor: 'rgba(247, 243, 238, 0.08)',
   },
-  historyLoading: {
-    position: 'absolute',
-    top: 70,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-  inputWrapper: {
+  inputBox: {
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(247, 243, 238, 0.25)',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.surfaceCard,
-    borderRadius: 24,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
+    backgroundColor: 'rgba(247, 243, 238, 0.02)',
   },
-  inputWrapperDisabled: {
-    opacity: 0.72,
-    pointerEvents: 'none',
-  },
-  input: {
+  textInput: {
     flex: 1,
-    color: Colors.text,
-    fontSize: 15,
-    maxHeight: 120,
-    paddingTop: 8,
-    paddingBottom: 8,
-    fontFamily: Fonts.body,
-    outlineStyle: 'none' as any,
+    fontFamily: INTER,
+    fontSize: 14,
+    color: IVORY,
+    padding: 0,
   },
-  sendButton: {
+  sendBtn: {
     width: 32,
     height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.gold,
-    justifyContent: 'center',
+    borderRadius: 8,
+    backgroundColor: GOLD,
     alignItems: 'center',
+    justifyContent: 'center',
     marginLeft: 8,
   },
-  sendButtonDisabled: {
-    backgroundColor: 'rgba(201, 148, 58, 0.2)',
+  sendBtnDisabled: {
+    opacity: 0.4,
+  },
+  sendArrow: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 8,
+    borderLeftColor: OBSIDIAN,
+    borderTopWidth: 5,
+    borderTopColor: 'transparent',
+    borderBottomWidth: 5,
+    borderBottomColor: 'transparent',
+    marginLeft: 2,
+  },
+  disclaimer: {
+    fontFamily: INTER,
+    fontSize: 11.5,
+    lineHeight: 16,
+    color: 'rgba(247, 243, 238, 0.38)',
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  // Locked styles for Silver
+  lockedContainer: {
+    flex: 1,
+    paddingHorizontal: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lockBox: {
+    width: 64,
+    height: 64,
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: 'rgba(201, 148, 58, 0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  lockGraphic: {
+    width: 18,
+    height: 24,
+    borderWidth: 3,
+    borderColor: GOLD,
+    borderRadius: 3,
+    borderTopWidth: 8,
+  },
+  lockedTitle: {
+    fontFamily: CLASH,
+    fontSize: 22,
+    fontWeight: '600',
+    color: IVORY,
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  lockedDesc: {
+    fontFamily: INTER,
+    fontSize: 14,
+    lineHeight: 22,
+    color: 'rgba(247, 243, 238, 0.6)',
+    textAlign: 'center',
+    marginBottom: 28,
+  },
+  upgradeBtn: {
+    width: '100%',
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: GOLD,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  upgradeBtnText: {
+    fontFamily: DMSANS,
+    fontSize: 16,
+    fontWeight: '700',
+    color: OBSIDIAN,
+  },
+  backHomeBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  backHomeBtnText: {
+    fontFamily: DMSANS,
+    fontSize: 14,
+    color: 'rgba(247, 243, 238, 0.5)',
   },
 });

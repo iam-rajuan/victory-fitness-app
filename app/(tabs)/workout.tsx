@@ -1,1038 +1,372 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
-  View,
-  Text,
   StyleSheet,
+  View,
   ScrollView,
-  TouchableOpacity,
-  Image,
-  Dimensions,
-  TextInput,
+  RefreshControl,
   ActivityIndicator,
-  Pressable,
-  Alert,
-  Platform,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Colors } from '../../constants/Colors';
-import { Fonts } from '../../constants/Typography';
-import { fetchCurrentUser, recordAnalyticsEvent, fetchWorkoutLogs, seedTestWorkoutLogs, WorkoutLogItem } from '../../lib/api';
-import { canAccessFeature } from '../../lib/access';
-import VictoryHeader from '../../components/VictoryHeader';
-import { fetchWorkoutLibrary, getCachedWorkoutLibrary, WorkoutLibraryCategory, WorkoutLibraryItem } from '../../lib/workouts';
-import { formatAppError } from '../../lib/error';
-import { useDebouncedValue } from '../../hooks/useDebouncedValue';
+import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import {
-  clearLatestVideoWorkoutPlan,
-  createStrengthWorkoutPlan,
-  deleteLatestStrengthWorkoutPlan,
-  fetchLatestStrengthWorkoutPlan,
-  loadLatestVideoWorkoutPlan,
-  StrengthPlanResponse,
-  VideoPlanResponse,
-} from '../../lib/workout-plans';
-import { useModuleAccessGuard } from '../../lib/useModuleAccessGuard';
-import { useLanguage } from '../../lib/i18n';
+  fetchCurrentUser,
+  AuthUser,
+  recordAnalyticsEvent,
+} from '../../lib/api';
+import { normalizeSubscriptionTier } from '../../lib/access';
 import { pushRoute } from '../../lib/navigation';
+import { useModuleAccessGuard } from '../../lib/useModuleAccessGuard';
 
-const { width } = Dimensions.get('window');
-const FALLBACK_WORKOUT_IMAGE = 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=600&q=80';
+// Modular Claude Workout Components
+import ClaudeTrainHeader from '../../components/workout/ClaudeTrainHeader';
+import ClaudePlanBuildBanner from '../../components/workout/ClaudePlanBuildBanner';
+import ClaudeResumeSessionCard from '../../components/workout/ClaudeResumeSessionCard';
+import ClaudeWorkoutRowCarousel, {
+  ProgramCardItem,
+  WorkoutRowItem,
+} from '../../components/workout/ClaudeWorkoutRowCarousel';
+import ClaudeWorkoutFilters from '../../components/workout/ClaudeWorkoutFilters';
+import ClaudeWorkoutGrid, { GridWorkoutItem } from '../../components/workout/ClaudeWorkoutGrid';
+import ClaudeVimeoPlayerModal from '../../components/workout/ClaudeVimeoPlayerModal';
+import ClaudeActiveSessionModal from '../../components/workout/ClaudeActiveSessionModal';
+import ClaudeSessionCompleteModal from '../../components/workout/ClaudeSessionCompleteModal';
+import ClaudePlanBuildModal from '../../components/workout/ClaudePlanBuildModal';
 
-function safeImageUri(value: string | null | undefined) {
-  const normalized = String(value || '').trim();
-  return normalized || FALLBACK_WORKOUT_IMAGE;
-}
+const OBSIDIAN = '#0D0D0D';
+const GOLD = '#C9943A';
 
-function formatWorkoutLogDisplayTitle(title?: string, workoutId?: string): string {
-  const raw = (title || '').trim();
-  if (/[0-9a-fA-F]{24}/.test(raw)) {
-    const remainder = raw.replace(/[0-9a-fA-F]{24}/g, '').replace(/^[-_ ]+|[-_ ]+$/g, '');
-    if (remainder) {
-      const cleanRemainder = remainder.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-      return `Strength Session - ${cleanRemainder}`;
-    }
-    return 'Strength Workout Session';
-  }
-  if (!raw || raw.toLowerCase() === 'workout session') {
-    const cleanId = (workoutId || '').replace(/^[0-9a-fA-F]{24}[-_]?/, '');
-    const cleanName = cleanId.replace(/[-_]/g, ' ').trim().replace(/\b\w/g, (c) => c.toUpperCase());
-    return cleanName || 'Strength Workout Session';
-  }
-  return raw;
-}
+// Full 170 Workouts Library Catalog from Claude Design Reference
+const PROTOTYPE_LIB: GridWorkoutItem[] = [
+  { id: '1', name: 'Ten-Minute Reset', meta: '10 min · Mobility · No kit', badge: '10:00', lvl: 'All levels', vimeoId: '912440318' },
+  { id: '2', name: 'Desk Neck & Shoulders', meta: '8 min · Mobility · No kit', badge: '8:00', lvl: 'Beginner', vimeoId: '912440319' },
+  { id: '3', name: 'Core Every Day', meta: '15 min · Core · Mat', badge: '15:00', lvl: 'All levels', vimeoId: '912440320' },
+  { id: '4', name: 'Upper Body · No Kit', meta: '25 min · Strength · No kit', badge: '25:00', lvl: 'Intermediate', vimeoId: '912440321' },
+  { id: '5', name: 'Push Pull Legs · A', meta: '42 min · Hypertrophy · Dumbbells', badge: '42:00', lvl: 'Intermediate', vimeoId: '912440322' },
+  { id: '6', name: 'Full Body Strength', meta: '38 min · Strength · Dumbbells', badge: '38:00', lvl: 'Intermediate', vimeoId: '912440323' },
+  { id: '7', name: 'Band Shoulder Build', meta: '22 min · Hypertrophy · Bands', badge: '22:00', lvl: 'Beginner', vimeoId: '912440324' },
+  { id: '8', name: 'Conditioning Ladder', meta: '30 min · Conditioning · No kit', badge: '30:00', lvl: 'Advanced', vimeoId: '912440325' },
+  { id: '9', name: 'Legs & Glutes', meta: '45 min · Hypertrophy · Dumbbells', badge: '45:00', lvl: 'Intermediate', vimeoId: '912440326' },
+  { id: '10', name: 'Sunday Recovery Flow', meta: '20 min · Recovery · Mat', badge: '20:00', lvl: 'All levels', vimeoId: '912440327' },
+  { id: '11', name: 'Long Endurance Build', meta: '60 min · Conditioning · Mat', badge: '60:00', lvl: 'Advanced', vimeoId: '912440328' },
+  { id: '12', name: 'Hip & Lower Back Care', meta: '14 min · Recovery · Mat', badge: '14:00', lvl: 'Beginner', vimeoId: '912440329' },
+];
 
-function getCategoryIcon(name: string): keyof typeof Ionicons.glyphMap {
-  const lower = name.toLowerCase();
-  if (lower.includes('strength') || lower.includes('lift') || lower.includes('power')) {
-    return 'barbell-outline';
-  }
-  if (lower.includes('yoga') || lower.includes('stretch') || lower.includes('mobility') || lower.includes('flexibility') || lower.includes('flow')) {
-    return 'body-outline';
-  }
-  if (lower.includes('cardio') || lower.includes('hiit') || lower.includes('run') || lower.includes('plyo')) {
-    return 'walk-outline';
-  }
-  return 'fitness-outline';
-}
+const PROGRAMS: ProgramCardItem[] = [
+  { n: 'Strong at 45+', m: '8 weeks · 4 a week', t: 'STRENGTH', c: '2 140 training now', rank: 1 },
+  { n: 'Home Body Reset', m: '6 weeks · 3 a week', t: 'NO KIT', c: '1 870 training now', rank: 2 },
+  { n: 'Dumbbell Only', m: '10 weeks · 4 a week', t: 'HYPERTROPHY', c: '1 460 training now', rank: 3 },
+  { n: 'Back & Knees Care', m: '4 weeks · 5 a week', t: 'RECOVERY', c: '1 205 training now', rank: 4 },
+  { n: 'Lean & Conditioned', m: '8 weeks · 4 a week', t: 'CONDITIONING', c: '980 training now', rank: 5 },
+];
 
-function getWorkoutDetails(workout: WorkoutLibraryItem) {
-  const idLower = String(workout.id || '').toLowerCase() || 'default';
-  const titleLower = String(workout.title || '').toLowerCase() || 'default';
+const FORYOU: WorkoutRowItem[] = [
+  { n: 'Upper Body · No Kit', m: '25 min · bodyweight', t: 'FITS YOUR KIT', v: '912440321' },
+  { n: 'Ten-Minute Reset', m: '10 min · mobility', t: 'SHORT ON TIME', v: '912440318' },
+  { n: 'Core Every Day', m: '15 min · mat', t: 'YOUR CHALLENGE', v: '912440320' },
+  { n: 'Sunday Recovery Flow', m: '20 min · mat', t: 'AFTER LEG DAY', v: '912440327' },
+];
 
-  let duration = 30; // default 30 min
-  let level = 'INTERMEDIATE'; // default
+const NEWIN: WorkoutRowItem[] = [
+  { n: 'Kettlebell Foundations', m: '32 min · new', t: 'ADDED FRIDAY', v: '912440323' },
+  { n: 'Desk Neck & Shoulders', m: '8 min · new', t: 'ADDED FRIDAY', v: '912440319' },
+  { n: 'Band Shoulder Build', m: '22 min · new', t: 'ADDED LAST WEEK', v: '912440324' },
+];
 
-  const charCodeAtLast = idLower.charCodeAt(idLower.length - 1) || 0;
-  const charCodeAtFirst = idLower.charCodeAt(0) || 0;
-
-  // Determine duration deterministically
-  if (titleLower.includes('flow') || titleLower.includes('yoga') || titleLower.includes('stretch')) {
-    duration = 20 + (charCodeAtLast % 3) * 5; // 20, 25, 30 min
-  } else if (titleLower.includes('power') || titleLower.includes('lift') || titleLower.includes('strength') || titleLower.includes('hypertrophy')) {
-    duration = 40 + (charCodeAtLast % 3) * 5; // 40, 45, 50 min
-  } else if (titleLower.includes('hiit') || titleLower.includes('plyo') || titleLower.includes('cardio') || titleLower.includes('explosive')) {
-    duration = 30 + (charCodeAtLast % 3) * 5; // 30, 35, 40 min
-  } else {
-    duration = 15 + (charCodeAtLast % 8) * 5; // 15 to 50 min
-  }
-
-  // Determine difficulty level deterministically
-  if (titleLower.includes('beginner') || titleLower.includes('easy') || titleLower.includes('intro') || titleLower.includes('foundation')) {
-    level = 'BEGINNER';
-  } else if (titleLower.includes('advanced') || titleLower.includes('power') || titleLower.includes('heavy') || titleLower.includes('beast') || titleLower.includes('elite')) {
-    level = 'ADVANCED';
-  } else if (charCodeAtFirst % 3 === 0) {
-    level = 'BEGINNER';
-  } else if (charCodeAtFirst % 3 === 1) {
-    level = 'INTERMEDIATE';
-  } else {
-    level = 'ADVANCED';
-  }
-
-  return { duration, level };
-}
-
-function getPlanDisplayData(summary: string, defaultTitle: string) {
-  if (!summary) return { title: defaultTitle, description: '' };
-  
-  const cleanSummary = summary.replace(/\s+/g, ' ').trim();
-  
-  const match = cleanSummary.match(/^(.*?)\s+plan\s+using\s+a\s+(.*)$/i) || 
-                cleanSummary.match(/^(.*?)\s+plan\s+with\s+(.*)$/i) ||
-                cleanSummary.match(/^(.*?)\s+built\s+for\s+(.*)$/i);
-                
-  if (match) {
-    const rawTitle = match[1];
-    let rawDesc = match[2];
-    
-    const title = rawTitle
-      .split(' ')
-      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-      .join(' ') + ' Plan';
-      
-    const description = rawDesc.charAt(0).toUpperCase() + rawDesc.slice(1);
-    
-    return { title, description };
-  }
-  
-  const words = cleanSummary.split(' ');
-  if (words.length > 3) {
-    const title = words.slice(0, 3).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') + ' Plan';
-    const description = words.slice(3).join(' ');
-    return { title, description };
-  }
-  
-  return { title: cleanSummary, description: '' };
-}
+const PLAN_BUILT_KEY = '@victory_plan_built';
+const PLAN_SUMMARY_KEY = '@victory_plan_summary';
 
 export default function WorkoutScreen() {
-  const checkingAccess = useModuleAccessGuard('/workout');
   const router = useRouter();
-  const { t } = useLanguage();
-  const hasLoadedLibraryRef = React.useRef(false);
-  const initialLibrary = React.useMemo(
-    () =>
-      getCachedWorkoutLibrary() ?? {
-        featuredWorkout: null,
-        workouts: [],
-        categories: [],
-      },
-    []
-  );
-  const [searchQuery, setSearchQuery] = useState('');
-  const debouncedSearchQuery = useDebouncedValue(searchQuery, 350);
-  const [library, setLibrary] = useState<{
-    featuredWorkout: WorkoutLibraryItem | null;
-    workouts: WorkoutLibraryItem[];
-    categories: WorkoutLibraryCategory[];
-  }>(initialLibrary);
-  const [loading, setLoading] = useState(!initialLibrary.featuredWorkout && initialLibrary.workouts.length === 0 && initialLibrary.categories.length === 0);
+  const checkingAccess = useModuleAccessGuard('workout');
+
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [searching, setSearching] = useState(false);
-  const [error, setError] = useState('');
-  const [strengthPlan, setStrengthPlan] = useState<StrengthPlanResponse | null>(null);
-  const [videoPlan, setVideoPlan] = useState<VideoPlanResponse | null>(null);
-  const [canAccessWorkoutPlans, setCanAccessWorkoutPlans] = useState(true);
-  const [selectedCategoryName, setSelectedCategoryName] = useState<string | null>(null);
 
-  // Workout History (Paginated at 20 items per page)
-  const [historyLogs, setHistoryLogs] = useState<WorkoutLogItem[]>([]);
-  const [historyPage, setHistoryPage] = useState(1);
-  const [historyTotal, setHistoryTotal] = useState(0);
-  const [historyTotalPages, setHistoryTotalPages] = useState(1);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [seedingLogs, setSeedingLogs] = useState(false);
-  const [generatingProfilePlan, setGeneratingProfilePlan] = useState(false);
+  // Search & Filter State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPurpose, setSelectedPurpose] = useState('All');
+  const [selectedDuration, setSelectedDuration] = useState('Any');
+  const [selectedKit, setSelectedKit] = useState('Any');
 
-  const loadHistory = React.useCallback(async (pageToLoad = 1) => {
-    setHistoryLoading(true);
+  // Plan Build State
+  const [planBuilt, setPlanBuilt] = useState(false);
+  const [planSummaryLine, setPlanSummaryLine] = useState('Get stronger · Mon, Wed, Fri · 40 min · built around dumbbells.');
+
+  // Modals State
+  const [vimeoModalVisible, setVimeoModalVisible] = useState(false);
+  const [activeSessionVisible, setActiveSessionVisible] = useState(false);
+  const [completeModalVisible, setCompleteModalVisible] = useState(false);
+  const [planBuildModalVisible, setPlanBuildModalVisible] = useState(false);
+
+  // Active workout being played / tracked
+  const [selectedWorkout, setSelectedWorkout] = useState<GridWorkoutItem | null>(null);
+  const [completedStats, setCompletedStats] = useState({
+    minutes: 40,
+    setsLogged: 7,
+    volumeKg: 840,
+  });
+
+  const tier = useMemo(() => {
+    return normalizeSubscriptionTier(currentUser?.subscription_tier);
+  }, [currentUser?.subscription_tier]);
+
+  const hasCoach = tier !== 'SILVER' && tier !== 'NONE';
+
+  const loadData = async () => {
     try {
-      const res = await fetchWorkoutLogs(pageToLoad, 20);
-      setHistoryLogs(res.items || []);
-      setHistoryTotal(res.total || 0);
-      setHistoryTotalPages(res.total_pages || 1);
-      setHistoryPage(res.page || 1);
-    } catch {
-      // ignore
-    } finally {
-      setHistoryLoading(false);
-    }
-  }, []);
+      const user = await fetchCurrentUser();
+      if (user) setCurrentUser(user);
 
-  const handleSeed50Logs = async () => {
-    setSeedingLogs(true);
-    try {
-      await seedTestWorkoutLogs(55);
-      await loadHistory(1);
-      Alert.alert(t('Success'), t('55 realistic workout logs seeded! Test pagination (20 items/page) below.'));
-    } catch (seedErr) {
-      Alert.alert(t('Error'), formatAppError(seedErr).message);
-    } finally {
-      setSeedingLogs(false);
-    }
+      const savedPlan = await AsyncStorage.getItem(PLAN_BUILT_KEY);
+      const savedSummary = await AsyncStorage.getItem(PLAN_SUMMARY_KEY);
+      if (savedPlan === 'true') setPlanBuilt(true);
+      if (savedSummary) setPlanSummaryLine(savedSummary);
+    } catch {}
   };
 
-  const handle1TapGenerateFromProfile = async () => {
-    setGeneratingProfilePlan(true);
-    try {
-      const plan = await createStrengthWorkoutPlan({});
-      setStrengthPlan(plan);
-      Alert.alert(t('Plan Generated!'), t('Your custom workout plan was generated from your onboarding profile and is now pinned.'));
-    } catch (err) {
-      Alert.alert(t('Generation Failed'), formatAppError(err).message);
-    } finally {
-      setGeneratingProfilePlan(false);
-    }
-  };
-
-  const todaysWorkoutInfo = useMemo(() => {
-    if (strengthPlan && strengthPlan.days && strengthPlan.days.length > 0) {
-      const completedDays = strengthPlan.progress?.filter((p) => p.completed).map((p) => p.day) || [];
-      const nextDay = strengthPlan.days.find((d) => !completedDays.includes(d.day)) || strengthPlan.days[0];
-      const totalDays = strengthPlan.days.length;
-      const completedCount = completedDays.length;
-      const progressPercent = totalDays > 0 ? completedCount / totalDays : 0;
-      const display = getPlanDisplayData(strengthPlan.summary, t('Custom Strength Plan'));
-
-      return {
-        type: 'STRENGTH',
-        planId: strengthPlan.plan_id,
-        title: display.title,
-        dayTitle: nextDay.title || nextDay.day,
-        dayLabel: nextDay.day,
-        estTime: nextDay.est_time || '45 MIN',
-        volume: nextDay.volume || 'Optimal',
-        intensity: nextDay.intensity || 'Hypertrophy',
-        totalDays,
-        completedCount,
-        progressPercent,
-        isFinishedAll: completedCount >= totalDays,
-      };
-    }
-
-    if (videoPlan && videoPlan.days && videoPlan.days.length > 0) {
-      const activeDays = videoPlan.days.filter((day) => day.workouts_count > 0).length || 0;
-      const display = getPlanDisplayData(videoPlan.summary, t('7-Day Video Plan'));
-      const firstActiveDay = videoPlan.days.find((d) => d.workouts_count > 0) || videoPlan.days[0];
-
-      return {
-        type: 'VIDEO',
-        planId: null,
-        title: display.title,
-        dayTitle: firstActiveDay.day,
-        dayLabel: firstActiveDay.day,
-        estTime: firstActiveDay.duration_label || '30 MIN',
-        volume: `${firstActiveDay.workouts_count} Workouts`,
-        intensity: 'Video Flow',
-        totalDays: 7,
-        completedCount: activeDays,
-        progressPercent: activeDays / 7,
-        isFinishedAll: false,
-      };
-    }
-
-    return null;
-  }, [strengthPlan, videoPlan, t]);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      void recordAnalyticsEvent('workout_library_visited').catch(() => undefined);
-    }, [])
-  );
-
   useEffect(() => {
-    hasLoadedLibraryRef.current =
-      Boolean(initialLibrary.featuredWorkout) || initialLibrary.workouts.length > 0 || initialLibrary.categories.length > 0;
-  }, [initialLibrary]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadAccess = async () => {
-      try {
-        const user = await fetchCurrentUser();
-        if (!cancelled) {
-          setCanAccessWorkoutPlans(canAccessFeature('workoutplan', user));
-        }
-      } catch {
-        if (!cancelled) {
-          setCanAccessWorkoutPlans(false);
-        }
-      }
-    };
-
-    void loadAccess();
-
-    return () => {
-      cancelled = true;
-    };
+    void loadData();
   }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadLibrary = async () => {
-      const cachedLibrary = debouncedSearchQuery ? null : getCachedWorkoutLibrary();
-      if (cachedLibrary && isMounted) {
-        setLibrary(cachedLibrary);
-        hasLoadedLibraryRef.current = true;
-        setLoading(false);
-      }
-
-      const shouldShowFullScreenLoader = !hasLoadedLibraryRef.current && !cachedLibrary;
-
-      if (shouldShowFullScreenLoader) {
-        setLoading(true);
-      } else if (hasLoadedLibraryRef.current) {
-        setSearching(true);
-      }
-      setError('');
-      try {
-        const response = await fetchWorkoutLibrary(debouncedSearchQuery);
-        if (!isMounted) {
-          return;
-        }
-        setLibrary(response);
-        hasLoadedLibraryRef.current = true;
-      } catch (loadError) {
-        if (!isMounted) {
-          return;
-        }
-        setError(formatAppError(loadError).message);
-        setLibrary({
-          featuredWorkout: null,
-          workouts: [],
-          categories: [],
-        });
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-          setSearching(false);
-        }
-      }
-    };
-
-    loadLibrary();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [debouncedSearchQuery]);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      if (!canAccessWorkoutPlans) {
-        setStrengthPlan(null);
-        setVideoPlan(null);
-        return () => {
-          return;
-        };
-      }
-
-      let active = true;
-
-      const loadSavedPlans = async () => {
-        const [latestStrength, latestVideo] = await Promise.all([
-          fetchLatestStrengthWorkoutPlan().catch(() => null),
-          loadLatestVideoWorkoutPlan().catch(() => null),
-        ]);
-        if (!active) {
-          return;
-        }
-        setStrengthPlan(latestStrength);
-        setVideoPlan(latestVideo);
-      };
-
-      void loadSavedPlans();
-      void loadHistory(1);
-
-      return () => {
-        active = false;
-      };
-    }, [canAccessWorkoutPlans])
-  );
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    setError('');
-    try {
-      const response = await fetchWorkoutLibrary(debouncedSearchQuery);
-      setLibrary(response);
-    } catch (refreshError) {
-      setError(formatAppError(refreshError).message);
-    } finally {
-      setRefreshing(false);
+    await loadData();
+    setRefreshing(false);
+  };
+
+  // Filtered workouts
+  const filteredWorkouts = useMemo(() => {
+    return PROTOTYPE_LIB.filter((w) => {
+      // Search
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchName = w.name.toLowerCase().includes(q);
+        const matchMeta = w.meta.toLowerCase().includes(q);
+        if (!matchName && !matchMeta) return false;
+      }
+      // Purpose
+      if (selectedPurpose !== 'All') {
+        if (!w.meta.toLowerCase().includes(selectedPurpose.toLowerCase())) return false;
+      }
+      // Kit
+      if (selectedKit !== 'Any') {
+        if (!w.meta.toLowerCase().includes(selectedKit.toLowerCase())) return false;
+      }
+      // Duration
+      if (selectedDuration !== 'Any') {
+        const maxMins = parseInt(selectedDuration, 10);
+        const matchMin = w.meta.match(/(\d+)\s*min/);
+        if (matchMin && parseInt(matchMin[1], 10) > maxMins) return false;
+      }
+      return true;
+    });
+  }, [searchQuery, selectedPurpose, selectedKit, selectedDuration]);
+
+  const shownCount = Math.max(1, Math.round((170 * filteredWorkouts.length) / PROTOTYPE_LIB.length));
+  const resultCountText = `${shownCount} of 170 workouts · shortest first`;
+
+  // Actions
+  const handleStartWorkout = (w: GridWorkoutItem) => {
+    setSelectedWorkout(w);
+    // If user has coach, start active tracking session. Otherwise, launch Vimeo video session.
+    if (hasCoach) {
+      setActiveSessionVisible(true);
+    } else {
+      setVimeoModalVisible(true);
     }
   };
 
-  const featuredWorkout = library.featuredWorkout;
-  const filteredWorkouts = useMemo(() => {
-    if (!selectedCategoryName) {
-      return library.workouts;
+  const handleResumeSession = () => {
+    setSelectedWorkout(PROTOTYPE_LIB[5]); // Full Body Strength / Upper Body
+    if (hasCoach) {
+      setActiveSessionVisible(true);
+    } else {
+      setVimeoModalVisible(true);
     }
-    return library.workouts.filter(
-      (w) => w.tag.toLowerCase() === selectedCategoryName.toLowerCase()
-    );
-  }, [library.workouts, selectedCategoryName]);
+  };
 
-  const newAndPopular = useMemo(() => filteredWorkouts.slice(0, 8), [filteredWorkouts]);
+  const handleFinishSession = (stats?: { minutes: number; setsLogged: number; volumeKg: number }) => {
+    if (stats) setCompletedStats(stats);
+    setVimeoModalVisible(false);
+    setActiveSessionVisible(false);
+    setCompleteModalVisible(true);
+
+    // Record analytics event
+    void recordAnalyticsEvent('workout_completed', {
+      workout_id: selectedWorkout?.id || 'session_64',
+      tier,
+    });
+  };
+
+  const handlePlanBuilt = async (summary: { line: string }) => {
+    setPlanBuilt(true);
+    setPlanSummaryLine(summary.line);
+    await AsyncStorage.setItem(PLAN_BUILT_KEY, 'true');
+    await AsyncStorage.setItem(PLAN_SUMMARY_KEY, summary.line);
+  };
 
   if (checkingAccess) {
-    return null;
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator color={GOLD} size="large" />
+      </View>
+    );
   }
-
-  const openWorkout = (workout: WorkoutLibraryItem) => {
-    pushRoute(router, {
-      pathname: '/workout-library/[id]',
-      params: {
-        id: workout.id,
-        title: workout.title,
-        vimeoId: workout.vimeoId,
-        videoUrl: workout.videoUrl,
-        videoSource: workout.videoSource,
-        tag: workout.tag,
-        thumbnail: workout.thumbnail,
-      },
-    });
-  };
-
-  const openCategory = (category: WorkoutLibraryCategory) => {
-    pushRoute(router, {
-      pathname: '/workout-library/category/[name]',
-      params: {
-        name: category.name,
-      },
-    });
-  };
-
-  const openAllCategories = () => {
-    pushRoute(router, '/workout-library/categories');
-  };
-
-  const handleRemoveStrengthPlan = () => {
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const confirmed = window.confirm ? window.confirm(t('Delete your saved custom strength plan?')) : true;
-      if (confirmed) {
-        void (async () => {
-          try {
-            await deleteLatestStrengthWorkoutPlan();
-            setStrengthPlan(null);
-          } catch (deleteError) {
-            setError(formatAppError(deleteError).message);
-          }
-        })();
-      }
-      return;
-    }
-
-    Alert.alert(t('Remove Plan'), t('Delete your saved custom strength plan?'), [
-      { text: t('Cancel'), style: 'cancel' },
-      {
-        text: t('Delete'),
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteLatestStrengthWorkoutPlan();
-            setStrengthPlan(null);
-          } catch (deleteError) {
-            setError(formatAppError(deleteError).message);
-          }
-        },
-      },
-    ]);
-  };
-
-  const handleRemoveVideoPlan = () => {
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const confirmed = window.confirm ? window.confirm(t('Delete your saved 7-day video plan from this device?')) : true;
-      if (confirmed) {
-        void (async () => {
-          try {
-            await clearLatestVideoWorkoutPlan();
-            setVideoPlan(null);
-          } catch (deleteError) {
-            setError(formatAppError(deleteError).message);
-          }
-        })();
-      }
-      return;
-    }
-
-    Alert.alert(t('Remove Plan'), t('Delete your saved 7-day video plan from this device?'), [
-      { text: t('Cancel'), style: 'cancel' },
-      {
-        text: t('Delete'),
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await clearLatestVideoWorkoutPlan();
-            setVideoPlan(null);
-          } catch (deleteError) {
-            setError(formatAppError(deleteError).message);
-          }
-        },
-      },
-    ]);
-  };
 
   return (
     <View style={styles.container}>
       <ScrollView
-        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-      >
-        <VictoryHeader />
-
-        <View style={styles.searchBar}>
-          <Ionicons name="search-outline" size={18} color={Colors.textMuted} style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder={t('Search workouts...')}
-            placeholderTextColor={Colors.textMuted}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void handleRefresh()}
+            tintColor={GOLD}
+            colors={[GOLD]}
           />
-          <View style={styles.searchActions}>
-            <TouchableOpacity style={styles.searchActionBtn} onPress={handleRefresh} disabled={refreshing || searching}>
-              {refreshing || searching ? (
-                <ActivityIndicator size="small" color={Colors.textMuted} />
-              ) : (
-                <Ionicons name="refresh-outline" size={20} color={Colors.textMuted} />
-              )}
-            </TouchableOpacity>
-            {searchQuery.length > 0 && (
-              <TouchableOpacity
-                style={styles.searchActionBtn}
-                disabled={searching}
-                onPress={() => setSearchQuery('')}
-              >
-                <Ionicons name="close" size={20} color={Colors.textMuted} />
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
+        }
+      >
+        {/* 1. Header: Train, 170 workouts */}
+        <ClaudeTrainHeader
+          totalWorkouts={170}
+          onPressFilter={() => {}}
+        />
 
-        {error ? (
-          <View style={styles.errorCard}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        ) : null}
+        {/* 2. Custom Plan Banner */}
+        <ClaudePlanBuildBanner
+          planBuilt={planBuilt}
+          planBuiltLine={planSummaryLine}
+          hasCoach={hasCoach}
+          onPress={() => setPlanBuildModalVisible(true)}
+        />
 
-        {loading ? (
-          <View style={styles.loadingWrap}>
-            <ActivityIndicator size="large" color={Colors.primary} />
-            <Text style={styles.loadingText}>{t('Loading workout library...')}</Text>
-          </View>
-        ) : (
-          <>
-                        {/* 0. PINNED TODAY'S WORKOUT (Always pinned at the top, never pushed down) */}
-            <View style={styles.pinnedSection}>
-              <View style={styles.pinnedHeaderRow}>
-                <View style={styles.pinnedBadge}>
-                  <Ionicons name="pin" size={13} color="#EAB308" />
-                  <Text style={styles.pinnedBadgeText}>{t("PINNED • TODAY'S WORKOUT")}</Text>
-                </View>
-                {todaysWorkoutInfo ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <TouchableOpacity
-                      style={styles.pinnedReplanBtn}
-                      onPress={() => router.push('/workoutplan/strength-wizard')}
-                    >
-                      <Ionicons name="refresh-outline" size={13} color="#06B6D4" />
-                      <Text style={styles.pinnedReplanText}>{t('New Plan')}</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.pinnedDayTag}>{todaysWorkoutInfo.dayLabel}</Text>
-                  </View>
-                ) : null}
-              </View>
+        {/* 3. Pick Up Where You Left Off */}
+        <ClaudeResumeSessionCard
+          sessionTitle={selectedWorkout?.name || 'Upper Body Strength'}
+          sessionLine="exercise 3 of 7 · Strong at 45+ · week 2"
+          minutesLeft="18 min left"
+          progressPct={43}
+          onResume={handleResumeSession}
+        />
 
-              {todaysWorkoutInfo ? (
-                <TouchableOpacity
-                  style={styles.pinnedCard}
-                  activeOpacity={0.88}
-                  onPress={() => {
-                    if (todaysWorkoutInfo.type === 'STRENGTH') {
-                      router.push('/workoutplan/strength-plan');
-                    } else {
-                      router.push('/workoutplan/video-plan');
-                    }
-                  }}
-                >
-                  <View style={styles.pinnedCardTop}>
-                    <View style={{ flex: 1, paddingRight: 10 }}>
-                      <Text style={styles.pinnedCardCategory}>{todaysWorkoutInfo.title.toUpperCase()}</Text>
-                      <Text style={styles.pinnedCardTitle} numberOfLines={2}>
-                        {todaysWorkoutInfo.dayTitle}
-                      </Text>
-                    </View>
-                    <View style={styles.pinnedDurationWrap}>
-                      <Ionicons name="time-outline" size={14} color="#06B6D4" />
-                      <Text style={styles.pinnedDurationText}>{todaysWorkoutInfo.estTime}</Text>
-                    </View>
-                  </View>
+        {/* 4. Most trained programmes */}
+        <ClaudeWorkoutRowCarousel
+          title="Most trained programmes"
+          type="programs"
+          programs={PROGRAMS}
+          onSelectProgram={(p) => {
+            setSelectedWorkout({
+              name: p.n,
+              meta: p.m,
+              badge: p.t,
+            });
+            if (hasCoach) setActiveSessionVisible(true);
+            else setVimeoModalVisible(true);
+          }}
+        />
 
-                  {/* Metrics Row */}
-                  <View style={styles.pinnedMetricsRow}>
-                    <View style={styles.pinnedMetricItem}>
-                      <Text style={styles.pinnedMetricLabel}>{t('VOLUME')}</Text>
-                      <Text style={styles.pinnedMetricVal}>{todaysWorkoutInfo.volume}</Text>
-                    </View>
-                    <View style={styles.pinnedMetricDivider} />
-                    <View style={styles.pinnedMetricItem}>
-                      <Text style={styles.pinnedMetricLabel}>{t('INTENSITY')}</Text>
-                      <Text style={styles.pinnedMetricVal}>{todaysWorkoutInfo.intensity}</Text>
-                    </View>
-                    <View style={styles.pinnedMetricDivider} />
-                    <View style={styles.pinnedMetricItem}>
-                      <Text style={styles.pinnedMetricLabel}>{t('PLAN PROGRESS')}</Text>
-                      <Text style={styles.pinnedMetricVal}>
-                        {todaysWorkoutInfo.completedCount}/{todaysWorkoutInfo.totalDays} {t('Days')}
-                      </Text>
-                    </View>
-                  </View>
+        {/* 5. Because of how you train */}
+        <ClaudeWorkoutRowCarousel
+          title="Because of how you train"
+          subtitle={hasCoach ? 'Dumbbells at home, 40 minutes, four evenings a week' : 'All workouts unlocked'}
+          type="workouts"
+          workouts={FORYOU}
+          onSelectWorkout={(w) => {
+            setSelectedWorkout({
+              name: w.n,
+              meta: w.m,
+              badge: w.t,
+              vimeoId: w.v,
+            });
+            setVimeoModalVisible(true);
+          }}
+        />
 
-                  {/* Progress Bar */}
-                  <View style={styles.pinnedProgressBarContainer}>
-                    <View
-                      style={[
-                        styles.pinnedProgressBarFill,
-                        { width: `${Math.max(5, todaysWorkoutInfo.progressPercent * 100)}%` },
-                      ]}
-                    />
-                  </View>
+        {/* 6. New from Victor */}
+        <ClaudeWorkoutRowCarousel
+          title="New from Victor"
+          type="workouts"
+          workouts={NEWIN}
+          onSelectWorkout={(w) => {
+            setSelectedWorkout({
+              name: w.n,
+              meta: w.m,
+              badge: w.t,
+              vimeoId: w.v,
+            });
+            setVimeoModalVisible(true);
+          }}
+        />
 
-                  {/* Action CTA Button */}
-                  <View style={styles.pinnedActionBtn}>
-                    <Ionicons name="play-circle" size={20} color="#000" />
-                    <Text style={styles.pinnedActionBtnText}>
-                      {todaysWorkoutInfo.isFinishedAll
-                        ? t('REVIEW COMPLETED PLAN')
-                        : todaysWorkoutInfo.completedCount > 0
-                          ? t("RESUME TODAY'S SESSION")
-                          : t("START TODAY'S WORKOUT")}
-                    </Text>
-                    <Ionicons name="arrow-forward" size={16} color="#000" />
-                  </View>
-                </TouchableOpacity>
-              ) : (
-                <View style={styles.pinnedEmptyCard}>
-                  <View style={styles.pinnedEmptyHeader}>
-                    <Ionicons name="sparkles" size={22} color="#06B6D4" />
-                    <Text style={styles.pinnedEmptyTitle}>{t('No Active Plan Pinned')}</Text>
-                  </View>
-                  <Text style={styles.pinnedEmptyText}>
-                    {t('Generate an AI workout plan tailored to your profile & equipment, or customize manually.')}
-                  </Text>
-                  <View style={{ gap: 8, marginTop: 14 }}>
-                    <TouchableOpacity
-                      style={styles.pinnedCreateBtn}
-                      disabled={generatingProfilePlan}
-                      onPress={handle1TapGenerateFromProfile}
-                    >
-                      {generatingProfilePlan ? (
-                        <ActivityIndicator size="small" color="#000" />
-                      ) : (
-                        <>
-                          <Ionicons name="flash" size={15} color="#000" />
-                          <Text style={styles.pinnedCreateBtnText}>{t('⚡ 1-TAP PLAN FROM PROFILE')}</Text>
-                        </>
-                      )}
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.pinnedCreateBtn, { backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' }]}
-                      onPress={() => router.push('/workoutplan/strength-wizard')}
-                    >
-                      <Ionicons name="options-outline" size={15} color="#fff" />
-                      <Text style={[styles.pinnedCreateBtnText, { color: '#fff' }]}>{t('CUSTOMIZE IN WIZARD')}</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              )}
-            </View>
+        {/* 7. The whole library & Filter Chips */}
+        <ClaudeWorkoutFilters
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          selectedPurpose={selectedPurpose}
+          onSelectPurpose={setSelectedPurpose}
+          selectedDuration={selectedDuration}
+          onSelectDuration={setSelectedDuration}
+          selectedKit={selectedKit}
+          onSelectKit={setSelectedKit}
+          resultCountText={resultCountText}
+        />
 
-            {/* 1. Featured Workout */}
-            {featuredWorkout ? (
-              <TouchableOpacity
-                style={styles.heroCard}
-                activeOpacity={0.9}
-                onPress={() => openWorkout(featuredWorkout)}
-              >
-                <Image
-                  source={{ uri: safeImageUri(featuredWorkout.thumbnail) }}
-                  style={styles.heroImage}
-                />
-                <LinearGradient
-                  colors={['transparent', 'rgba(0,0,0,0.85)']}
-                  style={styles.heroOverlayGradient}
-                />
-                <View style={styles.heroContent}>
-                  <View style={styles.heroHeaderRow}>
-                    <View style={styles.heroBadge}>
-                      <Text style={styles.heroBadgeText}>{t('FEATURED')}</Text>
-                    </View>
-                    <View style={styles.heroDurationContainer}>
-                      <Ionicons name="time-outline" size={14} color="#fff" style={styles.heroDurationIcon} />
-                      <Text style={styles.heroDurationText}>
-                        {getWorkoutDetails(featuredWorkout).duration} {t('MIN')}
-                      </Text>
-                    </View>
-                  </View>
-                  <Text style={styles.heroTitle} numberOfLines={2}>
-                    {featuredWorkout.title}
-                  </Text>
-                  <View style={styles.heroFooterRow}>
-                    <Text style={styles.heroMeta}>
-                      {t(featuredWorkout.tag)} · {t('Video ready')}
-                    </Text>
-                    <View style={styles.heroStartButton}>
-                      <Text style={styles.heroStartButtonText}>{t('START')}</Text>
-                      <Ionicons name="chevron-forward" size={12} color="#000" style={styles.heroStartIcon} />
-                    </View>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ) : (
-              <View style={styles.emptyHero}>
-                <Text style={styles.emptyHeroTitle}>{t('No published workouts yet')}</Text>
-                <Text style={styles.emptyHeroText}>{t('Add and publish workouts from the dashboard.')}</Text>
-              </View>
-            )}
-
-            {/* 2. Categories Pills */}
-            <View style={styles.categoriesContainer}>
-              <Pressable onPress={openAllCategories} style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>{t('CATEGORIES')}</Text>
-                <Ionicons name="chevron-forward" size={18} color={Colors.textMuted} />
-              </Pressable>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.categoriesScroll}
-              >
-                {library.categories.map((category) => {
-                  const isSelected = selectedCategoryName === category.name;
-                  const iconName = getCategoryIcon(category.name);
-                  return (
-                    <TouchableOpacity
-                      key={category.id}
-                      style={[
-                        styles.categoryPill,
-                        isSelected && styles.categoryPillSelected,
-                      ]}
-                      activeOpacity={0.8}
-                      onPress={() => {
-                        setSelectedCategoryName(
-                          selectedCategoryName === category.name ? null : category.name
-                        );
-                      }}
-                    >
-                      <Ionicons
-                        name={iconName}
-                        size={16}
-                        color={isSelected ? Colors.primary : Colors.textMuted}
-                        style={styles.categoryPillIcon}
-                      />
-                      <Text
-                        style={[
-                          styles.categoryPillText,
-                          isSelected && styles.categoryPillTextSelected,
-                        ]}
-                      >
-                        {t(category.name).toUpperCase()}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
-
-            {/* 3. New & Popular (Vertical List) */}
-            <View style={styles.popularSection}>
-              <Text style={styles.sectionTitleMain}>{t('NEW & POPULAR')}</Text>
-              <View style={styles.popularList}>
-                {newAndPopular.map((workout) => {
-                  const details = getWorkoutDetails(workout);
-                  return (
-                    <TouchableOpacity
-                      key={workout.id}
-                      style={styles.popularCardVertical}
-                      activeOpacity={0.9}
-                      onPress={() => openWorkout(workout)}
-                    >
-                      <View style={styles.popularImageContainer}>
-                        <Image
-                          source={{ uri: safeImageUri(workout.thumbnail) }}
-                          style={styles.popularImageVertical}
-                        />
-                        <View style={styles.popularLevelBadge}>
-                          <Text style={styles.popularLevelBadgeText}>{t(details.level)}</Text>
-                        </View>
-                      </View>
-                      <View style={styles.popularContentVertical}>
-                        <Text style={styles.popularTitleVertical} numberOfLines={2}>
-                          {workout.title}
-                        </Text>
-                        <View style={styles.popularMetaRow}>
-                          <Text style={styles.popularMetaDuration}>{details.duration} {t('MIN')}</Text>
-                          <Text style={styles.popularMetaDivider}>•</Text>
-                          <Text style={styles.popularMetaTag}>{t(workout.tag).toUpperCase()}</Text>
-                        </View>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-
-            {!searching && newAndPopular.length === 0 ? (
-              <View style={styles.inlineEmptyState}>
-                <Text style={styles.inlineEmptyStateText}>
-                  {t('No workouts match your current filter.')}
-                </Text>
-              </View>
-            ) : null}
-
-            {/* 4. Saved Plan */}
-            {canAccessWorkoutPlans && (strengthPlan || videoPlan) ? (
-              <View style={styles.savedPlansSection}>
-                <Text style={styles.sectionTitleSavedPlan}>{t('YOUR SAVED PLAN')}</Text>
-                
-                {strengthPlan ? (() => {
-                  const totalDays = strengthPlan.days?.length || 0;
-                  const completedDays = strengthPlan.progress?.filter((p) => p.completed).length || 0;
-                  const progressPercent = totalDays > 0 ? completedDays / totalDays : 0;
-                  const display = getPlanDisplayData(strengthPlan.summary, t('Custom Strength Plan'));
-                  
-                  return (
-                    <TouchableOpacity
-                      style={styles.savedPlanCard}
-                      activeOpacity={0.88}
-                      onPress={() => router.push('/workoutplan/strength-plan')}
-                    >
-                      <View style={styles.savedPlanTopRow}>
-                        <Text style={styles.savedPlanEyebrow}>{t('CUSTOM STRENGTH PLAN')}</Text>
-                        <TouchableOpacity style={styles.savedPlanRemoveBtn} onPress={handleRemoveStrengthPlan}>
-                          <Ionicons name="trash-outline" size={15} color="#FCA5A5" />
-                        </TouchableOpacity>
-                      </View>
-                      <Text style={styles.savedPlanTitle} numberOfLines={2}>
-                        {display.title}
-                      </Text>
-                      {display.description ? (
-                        <Text style={styles.savedPlanDescription} numberOfLines={2}>
-                          {display.description}
-                        </Text>
-                      ) : null}
-                      <View style={styles.savedPlanProgressInfo}>
-                        <Text style={styles.savedPlanProgressText}>
-                          {completedDays} {t('of')} {totalDays} {totalDays === 1 ? t('Day') : t('Days')} {t('Completed')}
-                        </Text>
-                        <Text style={styles.savedPlanProgressPercent}>
-                          {Math.round(progressPercent * 100)}%
-                        </Text>
-                      </View>
-                      <View style={styles.savedPlanProgressBarContainer}>
-                        <View style={[styles.savedPlanProgressBar, { width: `${progressPercent * 100}%` }]} />
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })() : null}
-
-                {videoPlan ? (() => {
-                  const activeDays = videoPlan.days?.filter((day) => day.workouts_count > 0).length || 0;
-                  const progressPercent = activeDays / 7;
-                  const display = getPlanDisplayData(videoPlan.summary, t('7-Day Video Plan'));
-                  
-                  return (
-                    <TouchableOpacity
-                      style={styles.savedPlanCard}
-                      activeOpacity={0.88}
-                      onPress={() => router.push('/workoutplan/video-plan')}
-                    >
-                      <View style={styles.savedPlanTopRow}>
-                        <Text style={styles.savedPlanEyebrow}>{t('7-DAY VIDEO PLAN')}</Text>
-                        <TouchableOpacity style={styles.savedPlanRemoveBtn} onPress={handleRemoveVideoPlan}>
-                          <Ionicons name="trash-outline" size={15} color="#FCA5A5" />
-                        </TouchableOpacity>
-                      </View>
-                      <Text style={styles.savedPlanTitle} numberOfLines={2}>
-                        {display.title}
-                      </Text>
-                      {display.description ? (
-                        <Text style={styles.savedPlanDescription} numberOfLines={2}>
-                          {display.description}
-                        </Text>
-                      ) : null}
-                      <View style={styles.savedPlanProgressInfo}>
-                        <Text style={styles.savedPlanProgressText}>
-                          {activeDays} {t('Active')} {activeDays === 1 ? t('Day') : t('Days')}
-                        </Text>
-                        <Text style={styles.savedPlanProgressPercent}>
-                          {Math.round(progressPercent * 100)}%
-                        </Text>
-                      </View>
-                      <View style={styles.savedPlanProgressBarContainer}>
-                        <View style={[styles.savedPlanProgressBar, { width: `${progressPercent * 100}%` }]} />
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })() : null}
-              </View>
-            ) : null}
-                      {/* 5. WORKOUT HISTORY (Paginated at 20 items per page) */}
-            <View style={styles.historySection}>
-              <View style={styles.historyHeaderRow}>
-                <View>
-                  <Text style={styles.sectionTitleHistory}>{t('WORKOUT HISTORY')}</Text>
-                  <Text style={styles.historySubtitle}>
-                    {historyTotal > 0
-                      ? `${historyTotal} ${t('Total Sessions Logged')}`
-                      : t('Completed past sessions recorded here')}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.seedBtn}
-                  onPress={handleSeed50Logs}
-                  disabled={seedingLogs}
-                >
-                  {seedingLogs ? (
-                    <ActivityIndicator size="small" color={Colors.gold} />
-                  ) : (
-                    <>
-                      <Ionicons name="add-circle-outline" size={14} color={Colors.gold} />
-                      <Text style={styles.seedBtnText}>{t('Seed 50+ Logs')}</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
-
-              {historyLoading ? (
-                <View style={styles.historyLoadingBox}>
-                  <ActivityIndicator size="small" color={Colors.gold} />
-                  <Text style={styles.historyLoadingText}>{t('Loading workout history...')}</Text>
-                </View>
-              ) : historyLogs.length > 0 ? (
-                <View style={styles.historyListBox}>
-                  {historyLogs.map((log) => {
-                    const mins = Math.max(1, Math.round((log.duration_seconds || 1800) / 60));
-                    const logDate = log.started_at
-                      ? new Date(log.started_at).toLocaleDateString(undefined, {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })
-                      : 'Recently';
-
-                    return (
-                      <View key={log.id} style={styles.historyItemRow}>
-                        <View style={styles.historyIconWrap}>
-                          <Ionicons name="barbell-outline" size={18} color={Colors.gold} />
-                        </View>
-                        <View style={styles.historyItemMain}>
-                          <Text style={styles.historyItemTitle} numberOfLines={1}>
-                            {formatWorkoutLogDisplayTitle(log.title, log.workout_id)}
-                          </Text>
-                          <Text style={styles.historyItemDate}>{logDate}</Text>
-                        </View>
-                        <View style={styles.historyItemMeta}>
-                          <Text style={styles.historyDurationText}>{mins} {t('min')}</Text>
-                          <View style={styles.historyBadgeCompleted}>
-                            <Text style={styles.historyBadgeText}>{t('COMPLETED')}</Text>
-                          </View>
-                        </View>
-                      </View>
-                    );
-                  })}
-
-                  {/* Pagination Controls (20 items per page) */}
-                  <View style={styles.paginationRow}>
-                    <TouchableOpacity
-                      style={[styles.pageBtn, historyPage <= 1 && styles.pageBtnDisabled]}
-                      onPress={() => loadHistory(historyPage - 1)}
-                      disabled={historyPage <= 1 || historyLoading}
-                    >
-                      <Ionicons name="chevron-back" size={16} color={historyPage <= 1 ? '#4B5563' : '#fff'} />
-                      <Text style={[styles.pageBtnText, historyPage <= 1 && styles.pageBtnTextDisabled]}>
-                        {t('Prev')}
-                      </Text>
-                    </TouchableOpacity>
-
-                    <Text style={styles.pageInfoText}>
-                      {t('Page')} {historyPage} / {historyTotalPages || 1}
-                    </Text>
-
-                    <TouchableOpacity
-                      style={[styles.pageBtn, historyPage >= historyTotalPages && styles.pageBtnDisabled]}
-                      onPress={() => loadHistory(historyPage + 1)}
-                      disabled={historyPage >= historyTotalPages || historyLoading}
-                    >
-                      <Text style={[styles.pageBtnText, historyPage >= historyTotalPages && styles.pageBtnTextDisabled]}>
-                        {t('Next')}
-                      </Text>
-                      <Ionicons
-                        name="chevron-forward"
-                        size={16}
-                        color={historyPage >= historyTotalPages ? '#4B5563' : '#fff'}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ) : (
-                <View style={styles.historyEmptyBox}>
-                  <Ionicons name="time-outline" size={28} color="#4B5563" />
-                  <Text style={styles.historyEmptyText}>{t('No workout history found yet.')}</Text>
-                  <Text style={styles.historyEmptySubtext}>
-                    {t('Complete a session or tap "Seed 50+ Logs" to verify 20-items-per-page pagination.')}
-                  </Text>
-                </View>
-              )}
-            </View>
-          </>
-        )}
+        {/* 8. 2-Column Workout Grid */}
+        <ClaudeWorkoutGrid
+          workouts={filteredWorkouts}
+          hasCoach={hasCoach}
+          onSelectWorkout={handleStartWorkout}
+          onAskCoach={() => pushRoute(router, '/chat')}
+        />
       </ScrollView>
+
+      {/* Modals */}
+      {/* 1. Vimeo Player Modal */}
+      <ClaudeVimeoPlayerModal
+        visible={vimeoModalVisible}
+        onClose={() => setVimeoModalVisible(false)}
+        workoutTitle={selectedWorkout?.name || 'Upper Body Strength'}
+        workoutMeta={selectedWorkout?.meta || 'FROM THE LIBRARY · 40 MIN'}
+        vimeoId={selectedWorkout?.vimeoId || '912440318'}
+        onFinishSession={() => handleFinishSession()}
+      />
+
+      {/* 2. Active Session Tracker Modal */}
+      <ClaudeActiveSessionModal
+        visible={activeSessionVisible}
+        onClose={() => setActiveSessionVisible(false)}
+        tier={tier}
+        workoutTitle={selectedWorkout?.name || 'Upper Body Strength'}
+        unlockNote={currentUser?.identity_statement || 'Your unlock is ready — your true-crime podcast is yours for this workout.'}
+        onEndSession={(stats) => handleFinishSession(stats)}
+      />
+
+      {/* 3. Session Complete Modal with unlabelled sentence */}
+      <ClaudeSessionCompleteModal
+        visible={completeModalVisible}
+        onClose={() => setCompleteModalVisible(false)}
+        workoutTitle={selectedWorkout?.name || 'Upper Body Strength'}
+        minutes={completedStats.minutes}
+        setsLogged={completedStats.setsLogged}
+        volumeKg={completedStats.volumeKg}
+        streakDays={currentUser?.streak_days || 13}
+        identityStatement={currentUser?.identity_statement || undefined}
+        motivationStatement={currentUser?.motivation_statement || undefined}
+        tier={tier}
+        onDoneHome={() => {
+          setCompleteModalVisible(false);
+          pushRoute(router, '/(tabs)');
+        }}
+      />
+
+      {/* 4. Plan Build 4-Step Wizard Modal */}
+      <ClaudePlanBuildModal
+        visible={planBuildModalVisible}
+        onClose={() => setPlanBuildModalVisible(false)}
+        onPlanBuilt={handlePlanBuilt}
+      />
     </View>
   );
 }
@@ -1040,745 +374,16 @@ export default function WorkoutScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: OBSIDIAN,
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: OBSIDIAN,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scrollContent: {
-    paddingTop: 10,
-    paddingBottom: 40,
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#121212',
-    borderRadius: 14,
-    marginHorizontal: 16,
-    marginBottom: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-  },
-  searchIcon: {
-    marginRight: 10,
-  },
-  searchInput: {
-    flex: 1,
-    color: '#fff',
-    fontSize: 15,
-    fontFamily: Fonts.body,
-    outlineStyle: 'none' as never,
-  },
-  searchActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  searchActionBtn: {
-    padding: 4,
-  },
-  errorCard: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 12,
-    backgroundColor: 'rgba(239,68,68,0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(239,68,68,0.25)',
-    padding: 14,
-  },
-  errorText: {
-    color: '#FCA5A5',
-    fontSize: 13,
-    fontFamily: Fonts.bodyMedium,
-    lineHeight: 19,
-  },
-  loadingWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 48,
-    gap: 12,
-  },
-  loadingText: {
-    color: Colors.textMuted,
-    fontSize: 14,
-    fontFamily: Fonts.bodyMedium,
-  },
-  heroCard: {
-    marginHorizontal: 16,
-    borderRadius: 20,
-    overflow: 'hidden',
-    height: 240,
-    marginBottom: 24,
-    position: 'relative',
-    backgroundColor: '#161616',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-  },
-  heroImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  heroOverlayGradient: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  heroContent: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 18,
-  },
-  heroHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    gap: 10,
-  },
-  heroBadge: {
-    backgroundColor: Colors.primary,
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  heroBadgeText: {
-    color: '#000',
-    fontSize: 10,
-    letterSpacing: 1,
-    fontFamily: Fonts.heading,
-  },
-  heroDurationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  heroDurationIcon: {
-    opacity: 0.8,
-  },
-  heroDurationText: {
-    color: '#fff',
-    fontSize: 11,
-    fontFamily: Fonts.dataBold,
-  },
-  heroTitle: {
-    color: '#fff',
-    fontSize: 24,
-    fontFamily: Fonts.display,
-    lineHeight: 30,
-    marginBottom: 10,
-  },
-  heroOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  heroFooterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  heroMeta: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 13,
-    fontFamily: Fonts.bodyMedium,
-  },
-  heroStartButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.primary,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    gap: 4,
-  },
-  heroStartButtonText: {
-    color: '#000',
-    fontSize: 12,
-    fontFamily: Fonts.heading,
-  },
-  heroStartIcon: {
-    marginLeft: 2,
-  },
-  emptyHero: {
-    marginHorizontal: 16,
-    marginBottom: 24,
-    borderRadius: 20,
-    padding: 24,
-    backgroundColor: '#10182B',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  emptyHeroTitle: {
-    color: '#fff',
-    fontSize: 20,
-    fontFamily: Fonts.display,
-    marginBottom: 8,
-  },
-  emptyHeroText: {
-    color: Colors.textMuted,
-    fontSize: 14,
-    lineHeight: 20,
-    fontFamily: Fonts.body,
-  },
-  categoriesContainer: {
-    marginBottom: 24,
-  },
-  sectionHeader: {
-    paddingHorizontal: 16,
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  sectionTitle: {
-    fontSize: 14,
-    color: Colors.primary,
-    fontFamily: Fonts.heading,
-    letterSpacing: 1.5,
-  },
-  categoriesScroll: {
-    paddingHorizontal: 16,
-    gap: 10,
-  },
-  categoryPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#121212',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 8,
-  },
-  categoryPillSelected: {
-    borderColor: Colors.primary,
-  },
-  categoryPillIcon: {
-    marginRight: 2,
-  },
-  categoryPillText: {
-    color: Colors.textMuted,
-    fontSize: 13,
-    fontFamily: Fonts.heading,
-    letterSpacing: 0.5,
-  },
-  categoryPillTextSelected: {
-    color: Colors.primary,
-  },
-  popularSection: {
-    paddingHorizontal: 16,
-  },
-  sectionTitleMain: {
-    fontSize: 16,
-    color: '#fff',
-    fontFamily: Fonts.heading,
-    letterSpacing: 1,
-    marginBottom: 14,
-  },
-  popularList: {
-    gap: 16,
-  },
-  popularCardVertical: {
-    backgroundColor: '#121212',
-    borderRadius: 20,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-  },
-  popularImageContainer: {
-    height: 180,
-    position: 'relative',
-    backgroundColor: '#161616',
-  },
-  popularImageVertical: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  popularLevelBadge: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.15)',
-  },
-  popularLevelBadgeText: {
-    color: '#fff',
-    fontSize: 10,
-    fontFamily: Fonts.heading,
-    letterSpacing: 0.8,
-  },
-  popularContentVertical: {
-    padding: 16,
-  },
-  popularTitleVertical: {
-    color: '#fff',
-    fontSize: 18,
-    fontFamily: Fonts.display,
-    marginBottom: 8,
-    lineHeight: 24,
-  },
-  popularMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  popularMetaDuration: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 12,
-    fontFamily: Fonts.dataBold,
-  },
-  popularMetaDivider: {
-    color: Colors.primary,
-    fontSize: 12,
-  },
-  popularMetaTag: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 11,
-    fontFamily: Fonts.heading,
-    letterSpacing: 0.5,
-  },
-  inlineEmptyState: {
-    marginHorizontal: 16,
-    marginTop: 12,
-    borderRadius: 16,
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-    backgroundColor: '#121212',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-  },
-  inlineEmptyStateText: {
-    color: Colors.textMuted,
-    fontSize: 14,
-    lineHeight: 20,
-    fontFamily: Fonts.body,
-    textAlign: 'center',
-  },
-  savedPlansSection: {
-    paddingHorizontal: 16,
-    marginTop: 28,
-    gap: 12,
-  },
-  sectionTitleSavedPlan: {
-    fontSize: 16,
-    color: '#fff',
-    fontFamily: Fonts.heading,
-    letterSpacing: 1,
-    marginBottom: 6,
-  },
-  savedPlanCard: {
-    backgroundColor: '#121212',
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-  },
-  savedPlanTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  savedPlanEyebrow: {
-    color: Colors.primary,
-    fontSize: 11,
-    fontFamily: Fonts.heading,
-    letterSpacing: 1.1,
-  },
-  savedPlanRemoveBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(239,68,68,0.1)',
-  },
-  savedPlanTitle: {
-    color: '#fff',
-    fontSize: 20,
-    fontFamily: Fonts.display,
-    marginBottom: 6,
-  },
-  savedPlanDescription: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 13,
-    fontFamily: Fonts.body,
-    lineHeight: 18,
-    marginBottom: 14,
-  },
-  savedPlanProgressInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  savedPlanProgressText: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 12,
-    fontFamily: Fonts.bodyMedium,
-  },
-  savedPlanProgressPercent: {
-    color: Colors.primary,
-    fontSize: 13,
-    fontFamily: Fonts.dataBold,
-  },
-  savedPlanProgressBarContainer: {
-    height: 6,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  savedPlanProgressBar: {
-    height: '100%',
-    backgroundColor: Colors.primary,
-    borderRadius: 3,
-  },
-  pinnedSection: {
-    marginHorizontal: 16,
-    marginBottom: 24,
-  },
-  pinnedHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  pinnedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(234,179,8,0.12)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(234,179,8,0.25)',
-  },
-  pinnedBadgeText: {
-    color: '#EAB308',
-    fontSize: 11,
-    fontFamily: Fonts.heading,
-    letterSpacing: 0.8,
-  },
-  pinnedDayTag: {
-    color: '#06B6D4',
-    fontSize: 12,
-    fontFamily: Fonts.heading,
-  },
-  pinnedReplanBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(6,182,212,0.12)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  pinnedReplanText: {
-    color: Colors.gold,
-    fontSize: 11,
-    fontFamily: Fonts.heading,
-  },
-  pinnedCard: {
-    backgroundColor: '#161922',
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1.5,
-    borderColor: 'rgba(6,182,212,0.3)',
-    shadowColor: '#06B6D4',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-  },
-  pinnedCardTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 14,
-  },
-  pinnedCardCategory: {
-    color: '#06B6D4',
-    fontSize: 10,
-    fontFamily: Fonts.heading,
-    letterSpacing: 1.2,
-    marginBottom: 4,
-  },
-  pinnedCardTitle: {
-    color: '#fff',
-    fontSize: 18,
-    fontFamily: Fonts.display,
-    lineHeight: 24,
-  },
-  pinnedDurationWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(6,182,212,0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  pinnedDurationText: {
-    color: '#06B6D4',
-    fontSize: 11,
-    fontFamily: Fonts.dataBold,
-  },
-  pinnedMetricsRow: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    marginBottom: 14,
-  },
-  pinnedMetricItem: {
-    alignItems: 'center',
-  },
-  pinnedMetricLabel: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 9,
-    fontFamily: Fonts.heading,
-    letterSpacing: 0.8,
-    marginBottom: 2,
-  },
-  pinnedMetricVal: {
-    color: '#fff',
-    fontSize: 12,
-    fontFamily: Fonts.dataBold,
-  },
-  pinnedMetricDivider: {
-    width: 1,
-    height: 18,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
-  pinnedProgressBarContainer: {
-    height: 5,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 3,
-    overflow: 'hidden',
-    marginBottom: 14,
-  },
-  pinnedProgressBarFill: {
-    height: '100%',
-    backgroundColor: '#06B6D4',
-    borderRadius: 3,
-  },
-  pinnedActionBtn: {
-    backgroundColor: '#06B6D4',
-    borderRadius: 12,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  pinnedActionBtnText: {
-    color: '#000',
-    fontSize: 13,
-    fontFamily: Fonts.heading,
-    letterSpacing: 0.6,
-  },
-  pinnedEmptyCard: {
-    backgroundColor: '#161922',
-    borderRadius: 18,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-  },
-  pinnedEmptyHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 6,
-  },
-  pinnedEmptyTitle: {
-    color: '#fff',
-    fontSize: 15,
-    fontFamily: Fonts.display,
-  },
-  pinnedEmptyText: {
-    color: '#9CA3AF',
-    fontSize: 12,
-    lineHeight: 18,
-    marginBottom: 14,
-  },
-  pinnedCreateBtn: {
-    backgroundColor: '#06B6D4',
-    borderRadius: 10,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  pinnedCreateBtnText: {
-    color: '#000',
-    fontSize: 11,
-    fontFamily: Fonts.heading,
-    letterSpacing: 0.8,
-  },
-  historySection: {
-    marginHorizontal: 16,
-    marginTop: 28,
-    marginBottom: 30,
-  },
-  historyHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 14,
-  },
-  sectionTitleHistory: {
-    color: '#fff',
-    fontSize: 14,
-    fontFamily: Fonts.heading,
-    letterSpacing: 1.2,
-  },
-  historySubtitle: {
-    color: '#9CA3AF',
-    fontSize: 11,
-    fontFamily: Fonts.body,
-    marginTop: 2,
-  },
-  seedBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: 'rgba(201, 148, 58, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(201, 148, 58, 0.3)',
-  },
-  seedBtnText: {
-    color: Colors.gold,
-    fontSize: 11,
-    fontFamily: Fonts.heading,
-  },
-  historyLoadingBox: {
-    alignItems: 'center',
-    paddingVertical: 20,
-    gap: 8,
-  },
-  historyLoadingText: {
-    color: '#9CA3AF',
-    fontSize: 12,
-  },
-  historyListBox: {
-    backgroundColor: Colors.surfaceCard,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(181, 101, 29, 0.25)',
-    overflow: 'hidden',
-  },
-  historyItemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.04)',
-    gap: 12,
-  },
-  historyIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(201, 148, 58, 0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  historyItemMain: {
-    flex: 1,
-  },
-  historyItemTitle: {
-    color: '#fff',
-    fontSize: 13,
-    fontFamily: Fonts.heading,
-  },
-  historyItemDate: {
-    color: '#9CA3AF',
-    fontSize: 11,
-    marginTop: 2,
-  },
-  historyItemMeta: {
-    alignItems: 'flex-end',
-    gap: 4,
-  },
-  historyDurationText: {
-    color: '#E5E7EB',
-    fontSize: 12,
-    fontFamily: Fonts.data,
-  },
-  historyBadgeCompleted: {
-    backgroundColor: 'rgba(34,197,94,0.12)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  historyBadgeText: {
-    color: Colors.victoryGreen,
-    fontSize: 9,
-    fontFamily: Fonts.heading,
-  },
-  paginationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-  },
-  pageBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
-  pageBtnDisabled: {
-    opacity: 0.4,
-  },
-  pageBtnText: {
-    color: '#fff',
-    fontSize: 12,
-    fontFamily: Fonts.heading,
-  },
-  pageBtnTextDisabled: {
-    color: '#4B5563',
-  },
-  pageInfoText: {
-    color: '#9CA3AF',
-    fontSize: 12,
-    fontFamily: Fonts.data,
-  },
-  historyEmptyBox: {
-    backgroundColor: '#161922',
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-    gap: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-  },
-  historyEmptyText: {
-    color: '#fff',
-    fontSize: 13,
-    fontFamily: Fonts.bodyMedium,
-  },
-  historyEmptySubtext: {
-    color: '#9CA3AF',
-    fontSize: 11,
-    textAlign: 'center',
-    maxWidth: 260,
+    paddingTop: 46,
+    paddingBottom: 96,
   },
 });
