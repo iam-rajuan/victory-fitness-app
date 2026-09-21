@@ -19,10 +19,12 @@ import { fetchCurrentUser, updateCurrentUserProfile } from '../../lib/api';
 import { formatAppError } from '../../lib/error';
 import { goBackOrReplace } from '../../lib/navigation';
 import { useLanguage } from '../../lib/i18n';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function ProfileSettingsScreen() {
   const router = useRouter();
   const { t } = useLanguage();
+  const { theme, setTheme, isDark, colors } = useTheme();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -114,17 +116,17 @@ export default function ProfileSettingsScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
         <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.accentBlue} />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       <Stack.Screen options={{ headerShown: false }} />
       <ErrorPopupModal
         visible={Boolean(errorDialog)}
@@ -134,25 +136,25 @@ export default function ProfileSettingsScreen() {
       />
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { borderBottomColor: colors.divider }]}>
         <TouchableOpacity
           onPress={() => goBackOrReplace(router, '/profile')}
-          style={styles.backButton}
+          style={[styles.backButton, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(13, 43, 69, 0.06)' }]}
           activeOpacity={0.8}
         >
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('Habit & Mindset Settings')}</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('Settings')}</Text>
         <TouchableOpacity
           onPress={handleSaveAll}
-          style={[styles.saveHeaderBtn, saving && styles.saveHeaderBtnDisabled]}
+          style={[styles.saveHeaderBtn, { backgroundColor: colors.primary }, saving && styles.saveHeaderBtnDisabled]}
           disabled={saving}
           activeOpacity={0.85}
         >
           {saving ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <ActivityIndicator size="small" color="#0D0D0D" />
           ) : (
-            <Text style={styles.saveHeaderBtnText}>{t('Save')}</Text>
+            <Text style={[styles.saveHeaderBtnText, { color: '#0D0D0D' }]}>{t('Save')}</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -169,8 +171,80 @@ export default function ProfileSettingsScreen() {
             </View>
           )}
 
+          {/* Section: Appearance & Visual Mode */}
+          <View style={[styles.card, { backgroundColor: colors.surfaceCard, borderColor: colors.cardBorder }]}>
+            <View style={styles.cardBadgeRow}>
+              <View style={styles.badgeLeftGroup}>
+                <View style={[styles.tierBadge, { backgroundColor: colors.primary }]}>
+                  <Ionicons name="color-palette" size={12} color="#0D0D0D" />
+                  <Text style={[styles.tierBadgeText, { color: '#0D0D0D' }]}>{t('APPEARANCE')}</Text>
+                </View>
+                <Text style={[styles.sectionCode, { color: colors.textMuted }]}>{t('Display Theme')}</Text>
+              </View>
+            </View>
+
+            <Text style={[styles.cardHeadline, { color: colors.text }]}>{t('App Visual Mode')}</Text>
+            <Text style={[styles.cardSubtext, { color: colors.textSecondary }]}>
+              {t('Choose between luxury Obsidian dark mode and high-contrast Ivory white mode. Changes apply immediately across all screens.')}
+            </Text>
+
+            <View style={styles.themeSelectorRow}>
+              {/* Dark Mode Option */}
+              <TouchableOpacity
+                style={[
+                  styles.themeOptionCard,
+                  {
+                    backgroundColor: isDark ? 'rgba(201, 148, 58, 0.12)' : 'rgba(13, 43, 69, 0.03)',
+                    borderColor: isDark ? colors.primary : colors.divider,
+                  },
+                ]}
+                onPress={() => setTheme('dark')}
+                activeOpacity={0.85}
+              >
+                <View style={styles.themeOptionHeader}>
+                  <View style={[styles.themeOptionIconWrap, { backgroundColor: '#0D0D0D', borderColor: isDark ? colors.primary : 'rgba(255, 255, 255, 0.2)' }]}>
+                    <Ionicons name="moon" size={18} color="#C9943A" />
+                  </View>
+                  {isDark && (
+                    <View style={[styles.activeCheckmark, { backgroundColor: colors.primary }]}>
+                      <Ionicons name="checkmark" size={12} color="#0D0D0D" />
+                    </View>
+                  )}
+                </View>
+                <Text style={[styles.themeOptionTitle, { color: colors.text }]}>{t('Dark Mode')}</Text>
+                <Text style={[styles.themeOptionDesc, { color: colors.textMuted }]}>{t('Obsidian & Gold')}</Text>
+              </TouchableOpacity>
+
+              {/* Light Mode / White Mode Option */}
+              <TouchableOpacity
+                style={[
+                  styles.themeOptionCard,
+                  {
+                    backgroundColor: !isDark ? 'rgba(201, 148, 58, 0.12)' : 'rgba(255, 255, 255, 0.04)',
+                    borderColor: !isDark ? colors.primary : colors.divider,
+                  },
+                ]}
+                onPress={() => setTheme('light')}
+                activeOpacity={0.85}
+              >
+                <View style={styles.themeOptionHeader}>
+                  <View style={[styles.themeOptionIconWrap, { backgroundColor: '#F7F3EE', borderColor: !isDark ? colors.primary : 'rgba(13, 43, 69, 0.15)' }]}>
+                    <Ionicons name="sunny" size={18} color="#C9943A" />
+                  </View>
+                  {!isDark && (
+                    <View style={[styles.activeCheckmark, { backgroundColor: colors.primary }]}>
+                      <Ionicons name="checkmark" size={12} color="#0D0D0D" />
+                    </View>
+                  )}
+                </View>
+                <Text style={[styles.themeOptionTitle, { color: colors.text }]}>{t('White Mode')}</Text>
+                <Text style={[styles.themeOptionDesc, { color: colors.textMuted }]}>{t('Ivory & Navy')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           {/* Section 20.3: Identity Statement */}
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: colors.surfaceCard, borderColor: colors.cardBorder }]}>
             <View style={styles.cardBadgeRow}>
               <View style={styles.badgeLeftGroup}>
                 <View style={styles.tierBadge}>
@@ -191,19 +265,26 @@ export default function ProfileSettingsScreen() {
               ) : null}
             </View>
 
-            <Text style={styles.cardHeadline}>Who are you becoming?</Text>
-            <Text style={styles.cardSubtext}>
+            <Text style={[styles.cardHeadline, { color: colors.text }]}>Who are you becoming?</Text>
+            <Text style={[styles.cardSubtext, { color: colors.textSecondary }]}>
               Write in your own words a short statement describing who you are becoming.
               Written in present tense. Stored verbatim. Shapes your AI Coach&apos;s tone.
             </Text>
             {!canEditGoldHabits ? <Text style={styles.lockedHint}>{t('Gold membership is required for this setting.')}</Text> : null}
 
             <TextInput
-              style={styles.textArea}
+              style={[
+                styles.textArea,
+                {
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#FFFFFF',
+                  borderColor: colors.cardBorder,
+                  color: colors.text,
+                },
+              ]}
               value={identityStatement}
               onChangeText={setIdentityStatement}
               placeholder="I am someone who..."
-              placeholderTextColor="rgba(255, 255, 255, 0.4)"
+              placeholderTextColor={colors.placeholder}
               multiline
               autoCorrect={false}
               autoCapitalize="none"
@@ -213,40 +294,64 @@ export default function ProfileSettingsScreen() {
             />
 
             <View style={styles.examplesContainer}>
-              <Text style={styles.examplesTitle}>{t('Examples:')}</Text>
+              <Text style={[styles.examplesTitle, { color: colors.textMuted }]}>{t('Examples:')}</Text>
               <TouchableOpacity
                 onPress={() => setIdentityStatement('I am someone who trains even when it is hard.')}
                 activeOpacity={0.7}
-                style={styles.examplePill}
+                style={[
+                  styles.examplePill,
+                  {
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(13, 43, 69, 0.03)',
+                    borderColor: colors.divider,
+                  },
+                ]}
               >
-                <Text style={styles.examplePillText}>&ldquo;I am someone who trains even when it is hard.&rdquo;</Text>
+                <Text style={[styles.examplePillText, { color: colors.textSecondary }]}>
+                  &ldquo;I am someone who trains even when it is hard.&rdquo;
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => setIdentityStatement('I am a person who keeps their word to themselves.')}
                 activeOpacity={0.7}
-                style={styles.examplePill}
+                style={[
+                  styles.examplePill,
+                  {
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(13, 43, 69, 0.03)',
+                    borderColor: colors.divider,
+                  },
+                ]}
               >
-                <Text style={styles.examplePillText}>&ldquo;I am a person who keeps their word to themselves.&rdquo;</Text>
+                <Text style={[styles.examplePillText, { color: colors.textSecondary }]}>
+                  &ldquo;I am a person who keeps their word to themselves.&rdquo;
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => setIdentityStatement('I am becoming the strongest version of myself.')}
                 activeOpacity={0.7}
-                style={styles.examplePill}
+                style={[
+                  styles.examplePill,
+                  {
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(13, 43, 69, 0.03)',
+                    borderColor: colors.divider,
+                  },
+                ]}
               >
-                <Text style={styles.examplePillText}>&ldquo;I am becoming the strongest version of myself.&rdquo;</Text>
+                <Text style={[styles.examplePillText, { color: colors.textSecondary }]}>
+                  &ldquo;I am becoming the strongest version of myself.&rdquo;
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
 
           {/* Section 20.5: If-Then Trigger Builder */}
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: colors.surfaceCard, borderColor: colors.cardBorder }]}>
             <View style={styles.cardBadgeRow}>
               <View style={styles.badgeLeftGroup}>
                 <View style={styles.tierBadge}>
                   <Ionicons name="sparkles" size={12} color="#F59E0B" />
                   <Text style={styles.tierBadgeText}>GOLD</Text>
                 </View>
-                <Text style={styles.sectionCode}>Section 20.5</Text>
+                <Text style={[styles.sectionCode, { color: colors.textMuted }]}>Section 20.5</Text>
               </View>
               {trainingTriggerContext.trim() || trainingTriggerAction.trim() !== 'open the app and start my workout' ? (
                 <TouchableOpacity
@@ -263,58 +368,82 @@ export default function ProfileSettingsScreen() {
               ) : null}
             </View>
 
-            <Text style={styles.cardHeadline}>My Training Trigger</Text>
-            <Text style={styles.cardSubtext}>
+            <Text style={[styles.cardHeadline, { color: colors.text }]}>My Training Trigger</Text>
+            <Text style={[styles.cardSubtext, { color: colors.textSecondary }]}>
               Link your workout to something that already happens in your daily routine to replace generic reminders with a personally-anchored cue.
             </Text>
             {!canEditGoldHabits ? <Text style={styles.lockedHint}>{t('Gold membership is required for this setting.')}</Text> : null}
 
-            <Text style={styles.inputPrompt}>1. &ldquo;After I...&rdquo;</Text>
+            <Text style={[styles.inputPrompt, { color: colors.primary }]}>1. &ldquo;After I...&rdquo;</Text>
             <TextInput
-              style={styles.textInput}
+              style={[
+                styles.textInput,
+                {
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#FFFFFF',
+                  borderColor: colors.cardBorder,
+                  color: colors.text,
+                },
+              ]}
               value={trainingTriggerContext}
               onChangeText={setTrainingTriggerContext}
               placeholder="e.g. put the kids to bed / close my laptop"
-              placeholderTextColor="rgba(255, 255, 255, 0.4)"
+              placeholderTextColor={colors.placeholder}
               maxLength={140}
               editable={canEditGoldHabits}
             />
 
-            <Text style={styles.inputPrompt}>2. &ldquo;I will immediately...&rdquo;</Text>
+            <Text style={[styles.inputPrompt, { color: colors.primary }]}>2. &ldquo;I will immediately...&rdquo;</Text>
             <TextInput
-              style={styles.textInput}
+              style={[
+                styles.textInput,
+                {
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#FFFFFF',
+                  borderColor: colors.cardBorder,
+                  color: colors.text,
+                },
+              ]}
               value={trainingTriggerAction}
               onChangeText={setTrainingTriggerAction}
               placeholder="open the app and start my workout"
-              placeholderTextColor="rgba(255, 255, 255, 0.4)"
+              placeholderTextColor={colors.placeholder}
               maxLength={140}
               editable={canEditGoldHabits}
             />
 
             {/* Live Notification Preview */}
-            <View style={styles.previewBox}>
+            <View
+              style={[
+                styles.previewBox,
+                {
+                  backgroundColor: isDark ? 'rgba(6, 182, 212, 0.08)' : 'rgba(201, 148, 58, 0.08)',
+                  borderColor: isDark ? 'rgba(6, 182, 212, 0.25)' : 'rgba(201, 148, 58, 0.25)',
+                },
+              ]}
+            >
               <View style={styles.previewHeader}>
-                <Ionicons name="notifications" size={14} color="#06B6D4" />
-                <Text style={styles.previewTitle}>Personal Anchor Notification Preview</Text>
+                <Ionicons name="notifications" size={14} color={isDark ? '#06B6D4' : colors.primary} />
+                <Text style={[styles.previewTitle, { color: isDark ? '#06B6D4' : colors.primary }]}>
+                  Personal Anchor Notification Preview
+                </Text>
               </View>
-              <Text style={styles.previewText}>
+              <Text style={[styles.previewText, { color: colors.text }]}>
                 &ldquo;When {previewContext}? That means — {previewAction}.&rdquo;
               </Text>
-              <Text style={styles.previewHint}>
+              <Text style={[styles.previewHint, { color: colors.textMuted }]}>
                 Sent at your optimal workout notification hour. Coach Victor also references this cue in consistency conversations.
               </Text>
             </View>
           </View>
 
           {/* Section 20.4: Workout Unlock */}
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: colors.surfaceCard, borderColor: colors.cardBorder }]}>
             <View style={styles.cardBadgeRow}>
               <View style={styles.badgeLeftGroup}>
                 <View style={[styles.tierBadge, { backgroundColor: 'rgba(6, 182, 212, 0.2)' }]}>
                   <Ionicons name="key" size={12} color="#06B6D4" />
                   <Text style={[styles.tierBadgeText, { color: '#06B6D4' }]}>HABIT</Text>
                 </View>
-                <Text style={styles.sectionCode}>Section 20.4</Text>
+                <Text style={[styles.sectionCode, { color: colors.textMuted }]}>Section 20.4</Text>
               </View>
               {workoutUnlockLabel.trim() ? (
                 <TouchableOpacity
@@ -328,38 +457,52 @@ export default function ProfileSettingsScreen() {
               ) : null}
             </View>
 
-            <Text style={styles.cardHeadline}>My Workout Unlock</Text>
-            <Text style={styles.cardSubtext}>
+            <Text style={[styles.cardHeadline, { color: colors.text }]}>My Workout Unlock</Text>
+            <Text style={[styles.cardSubtext, { color: colors.textSecondary }]}>
               A ritual, reward, or sensory anchor you unlock only while training.
             </Text>
             {!canEditGoldHabits ? <Text style={styles.lockedHint}>{t('Gold membership is required for this setting.')}</Text> : null}
 
             <TextInput
-              style={styles.textInput}
+              style={[
+                styles.textInput,
+                {
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#FFFFFF',
+                  borderColor: colors.cardBorder,
+                  color: colors.text,
+                },
+              ]}
               value={workoutUnlockLabel}
               onChangeText={setWorkoutUnlockLabel}
               placeholder="e.g. Favorite Podcast, Fresh Espresso, Cold Shower"
-              placeholderTextColor="rgba(255, 255, 255, 0.4)"
+              placeholderTextColor={colors.placeholder}
               maxLength={100}
               editable={canEditGoldHabits}
             />
-            <Text style={styles.subtextSmall}>
+            <Text style={[styles.subtextSmall, { color: colors.textMuted }]}>
               Coach Victor will naturally ask: &ldquo;Are you making use of {workoutUnlockLabel.trim() || '[label]'} during sessions?&rdquo;
             </Text>
           </View>
 
           {/* Primary Commitment */}
-          <View style={styles.card}>
-            <Text style={styles.cardHeadline}>Motivation & Why</Text>
-            <Text style={styles.cardSubtext}>
+          <View style={[styles.card, { backgroundColor: colors.surfaceCard, borderColor: colors.cardBorder }]}>
+            <Text style={[styles.cardHeadline, { color: colors.text }]}>Motivation & Why</Text>
+            <Text style={[styles.cardSubtext, { color: colors.textSecondary }]}>
               Why this commitment matters to you right now.
             </Text>
             <TextInput
-              style={styles.textArea}
+              style={[
+                styles.textArea,
+                {
+                  backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#FFFFFF',
+                  borderColor: colors.cardBorder,
+                  color: colors.text,
+                },
+              ]}
               value={motivationStatement}
               onChangeText={setMotivationStatement}
               placeholder="Why this matters to you"
-              placeholderTextColor="rgba(255, 255, 255, 0.4)"
+              placeholderTextColor={colors.placeholder}
               multiline
               maxLength={280}
             />
@@ -368,14 +511,18 @@ export default function ProfileSettingsScreen() {
           {/* Bottom Save Button */}
           <TouchableOpacity
             onPress={handleSaveAll}
-            style={[styles.bigSaveButton, saving && styles.saveHeaderBtnDisabled]}
+            style={[
+              styles.bigSaveButton,
+              { backgroundColor: colors.primary },
+              saving && styles.saveHeaderBtnDisabled,
+            ]}
             disabled={saving}
             activeOpacity={0.85}
           >
             {saving ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color="#0D0D0D" />
             ) : (
-              <Text style={styles.bigSaveButtonText}>{t('Save All Changes')}</Text>
+              <Text style={[styles.bigSaveButtonText, { color: '#0D0D0D' }]}>{t('Save All Changes')}</Text>
             )}
           </TouchableOpacity>
         </ScrollView>
@@ -632,5 +779,46 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#fff',
     letterSpacing: 0.5,
+  },
+  themeSelectorRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 4,
+  },
+  themeOptionCard: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+  },
+  themeOptionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  themeOptionIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeCheckmark: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  themeOptionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  themeOptionDesc: {
+    fontSize: 11,
+    fontWeight: '500',
   },
 });

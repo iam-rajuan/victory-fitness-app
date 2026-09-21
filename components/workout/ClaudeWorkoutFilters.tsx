@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, TextInput, ScrollView, Pressable, Platform } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ClaudeWorkoutFiltersProps {
   searchQuery: string;
@@ -37,20 +38,30 @@ export default function ClaudeWorkoutFilters({
   onSelectKit,
   resultCountText = '12 of 170 workouts · shortest first',
 }: ClaudeWorkoutFiltersProps) {
+  const { colors, isDark } = useTheme();
+
   return (
     <View style={styles.container}>
       {/* Header with Title & Count */}
       <View style={styles.headerRow}>
-        <Text style={styles.sectionTitle}>The whole library</Text>
-        <Text style={styles.totalBadge}>170 workouts</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>The whole library</Text>
+        <Text style={[styles.totalBadge, { color: colors.textMuted }]}>170 workouts</Text>
       </View>
 
       {/* Search Input */}
-      <View style={styles.searchBox}>
+      <View
+        style={[
+          styles.searchBox,
+          {
+            borderColor: isDark ? 'rgba(247, 243, 238, 0.18)' : 'rgba(13, 43, 69, 0.15)',
+            backgroundColor: isDark ? 'rgba(247, 243, 238, 0.03)' : '#FFFFFF',
+          },
+        ]}
+      >
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { color: colors.text }]}
           placeholder="Search by name, muscle or kit…"
-          placeholderTextColor="rgba(247, 243, 238, 0.45)"
+          placeholderTextColor={colors.placeholder}
           value={searchQuery}
           onChangeText={onSearchChange}
         />
@@ -58,7 +69,7 @@ export default function ClaudeWorkoutFilters({
 
       {/* Purpose Filter Row */}
       <View style={styles.filterRow}>
-        <Text style={styles.filterLabel}>PURPOSE</Text>
+        <Text style={[styles.filterLabel, { color: colors.textMuted }]}>PURPOSE</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
           {PURPOSES.map((p) => {
             const active = p === selectedPurpose;
@@ -66,9 +77,23 @@ export default function ClaudeWorkoutFilters({
               <Pressable
                 key={p}
                 onPress={() => onSelectPurpose(p)}
-                style={[styles.chip, active && styles.chipActive]}
+                style={[
+                  styles.chip,
+                  {
+                    borderColor: isDark ? 'rgba(247, 243, 238, 0.22)' : 'rgba(13, 43, 69, 0.18)',
+                  },
+                  active && styles.chipActive,
+                ]}
               >
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>{p}</Text>
+                <Text
+                  style={[
+                    styles.chipText,
+                    { color: isDark ? 'rgba(247, 243, 238, 0.7)' : colors.text },
+                    active && styles.chipTextActive,
+                  ]}
+                >
+                  {p}
+                </Text>
               </Pressable>
             );
           })}
@@ -77,7 +102,7 @@ export default function ClaudeWorkoutFilters({
 
       {/* Minutes Filter Row */}
       <View style={styles.filterRow}>
-        <Text style={styles.filterLabel}>MINUTES</Text>
+        <Text style={[styles.filterLabel, { color: colors.textMuted }]}>MINUTES</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
           {DURATIONS.map((d) => {
             const label = d === 'Any' ? 'Any' : `≤ ${d} min`;
@@ -86,9 +111,23 @@ export default function ClaudeWorkoutFilters({
               <Pressable
                 key={d}
                 onPress={() => onSelectDuration(d)}
-                style={[styles.chip, active && styles.chipActive]}
+                style={[
+                  styles.chip,
+                  {
+                    borderColor: isDark ? 'rgba(247, 243, 238, 0.22)' : 'rgba(13, 43, 69, 0.18)',
+                  },
+                  active && styles.chipActive,
+                ]}
               >
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
+                <Text
+                  style={[
+                    styles.chipText,
+                    { color: isDark ? 'rgba(247, 243, 238, 0.7)' : colors.text },
+                    active && styles.chipTextActive,
+                  ]}
+                >
+                  {label}
+                </Text>
               </Pressable>
             );
           })}
@@ -97,7 +136,7 @@ export default function ClaudeWorkoutFilters({
 
       {/* Kit Filter Row */}
       <View style={styles.filterRow}>
-        <Text style={styles.filterLabel}>KIT</Text>
+        <Text style={[styles.filterLabel, { color: colors.textMuted }]}>KIT</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
           {KITS.map((k) => {
             const active = k === selectedKit;
@@ -105,9 +144,23 @@ export default function ClaudeWorkoutFilters({
               <Pressable
                 key={k}
                 onPress={() => onSelectKit(k)}
-                style={[styles.chip, active && styles.chipActive]}
+                style={[
+                  styles.chip,
+                  {
+                    borderColor: isDark ? 'rgba(247, 243, 238, 0.22)' : 'rgba(13, 43, 69, 0.18)',
+                  },
+                  active && styles.chipActive,
+                ]}
               >
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>{k}</Text>
+                <Text
+                  style={[
+                    styles.chipText,
+                    { color: isDark ? 'rgba(247, 243, 238, 0.7)' : colors.text },
+                    active && styles.chipTextActive,
+                  ]}
+                >
+                  {k}
+                </Text>
               </Pressable>
             );
           })}

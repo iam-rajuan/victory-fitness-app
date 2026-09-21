@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 export type ChallengeTabType = 'challenges' | 'community';
 
@@ -9,7 +10,6 @@ interface ClaudeChallengeTabsProps {
 }
 
 const NAVY = '#0D2B45';
-const GOLD = '#C9943A';
 const IVORY = '#F7F3EE';
 
 const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
@@ -18,18 +18,42 @@ export default function ClaudeChallengeTabs({
   activeTab,
   onChangeTab,
 }: ClaudeChallengeTabsProps) {
+  const { isDark } = useTheme();
+
   return (
     <View style={styles.container}>
-      <View style={styles.tabWrap}>
+      <View
+        style={[
+          styles.tabWrap,
+          {
+            backgroundColor: isDark ? '#0A2033' : '#EDE8E1',
+            borderColor: isDark ? 'rgba(247, 243, 238, 0.16)' : 'rgba(13, 43, 69, 0.12)',
+          },
+        ]}
+      >
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'challenges' && styles.tabActive]}
+          style={[
+            styles.tab,
+            activeTab === 'challenges' && {
+              backgroundColor: isDark ? NAVY : '#FFFFFF',
+            },
+          ]}
           activeOpacity={0.8}
           onPress={() => onChangeTab('challenges')}
         >
           <Text
             style={[
               styles.tabText,
-              activeTab === 'challenges' ? styles.tabTextActive : styles.tabTextInactive,
+              {
+                color:
+                  activeTab === 'challenges'
+                    ? isDark
+                      ? IVORY
+                      : NAVY
+                    : isDark
+                    ? 'rgba(247, 243, 238, 0.55)'
+                    : 'rgba(13, 43, 69, 0.6)',
+              },
             ]}
           >
             Challenges
@@ -37,14 +61,28 @@ export default function ClaudeChallengeTabs({
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'community' && styles.tabActive]}
+          style={[
+            styles.tab,
+            activeTab === 'community' && {
+              backgroundColor: isDark ? NAVY : '#FFFFFF',
+            },
+          ]}
           activeOpacity={0.8}
           onPress={() => onChangeTab('community')}
         >
           <Text
             style={[
               styles.tabText,
-              activeTab === 'community' ? styles.tabTextActive : styles.tabTextInactive,
+              {
+                color:
+                  activeTab === 'community'
+                    ? isDark
+                      ? IVORY
+                      : NAVY
+                    : isDark
+                    ? 'rgba(247, 243, 238, 0.55)'
+                    : 'rgba(13, 43, 69, 0.6)',
+              },
             ]}
           >
             Community
@@ -64,10 +102,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 4,
     borderWidth: 1,
-    borderColor: 'rgba(247, 243, 238, 0.16)',
     borderRadius: 13,
     padding: 4,
-    backgroundColor: '#0A2033',
   },
   tab: {
     flex: 1,
@@ -76,18 +112,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  tabActive: {
-    backgroundColor: NAVY,
-  },
   tabText: {
     fontFamily: DMSANS,
     fontSize: 14,
     fontWeight: '600',
   },
-  tabTextActive: {
-    color: IVORY,
-  },
-  tabTextInactive: {
-    color: 'rgba(247, 243, 238, 0.55)',
-  },
 });
+

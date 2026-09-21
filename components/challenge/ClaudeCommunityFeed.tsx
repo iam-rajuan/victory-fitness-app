@@ -8,6 +8,7 @@ import {
   Platform,
   Alert,
 } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 interface CommunityPost {
   id: string;
@@ -73,6 +74,7 @@ export default function ClaudeCommunityFeed({
   userTier = 'GOLD',
   userInitials = 'ME',
 }: ClaudeCommunityFeedProps) {
+  const { colors, isDark } = useTheme();
   const [posts, setPosts] = useState<CommunityPost[]>(INITIAL_POSTS);
   const [scope, setScope] = useState<'GLOBAL' | 'INNER_CIRCLE' | 'COHORT'>('GLOBAL');
   const [postDraft, setPostDraft] = useState('');
@@ -118,16 +120,35 @@ export default function ClaudeCommunityFeed({
   return (
     <View style={styles.container}>
       {/* Scope Filter matching lines 917-924 */}
-      <View style={styles.scopeCard}>
+      <View
+        style={[
+          styles.scopeCard,
+          {
+            backgroundColor: isDark ? NAVY : '#FFFFFF',
+            borderWidth: isDark ? 0 : 1,
+            borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
+            shadowColor: '#0D2B45',
+            shadowOffset: { width: 0, height: 4 },
+            shadowRadius: 10,
+            elevation: 2,
+            shadowOpacity: isDark ? 0.35 : 0.05,
+          },
+        ]}
+      >
         <View style={styles.scopeHeader}>
-          <Text style={styles.scopeTitle}>
+          <Text style={[styles.scopeTitle, { color: isDark ? IVORY : NAVY }]}>
             {scope === 'GLOBAL'
               ? 'Victory Community'
               : scope === 'INNER_CIRCLE'
               ? 'Inner Circle Lounge'
               : 'Cohort Feed'}
           </Text>
-          <Text style={styles.scopeSub}>
+          <Text
+            style={[
+              styles.scopeSub,
+              { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
+            ]}
+          >
             {scope === 'GLOBAL'
               ? 'All active members training across tiers'
               : scope === 'INNER_CIRCLE'
@@ -176,15 +197,29 @@ export default function ClaudeCommunityFeed({
       </View>
 
       {/* Composer Card matching lines 925-929 */}
-      <View style={styles.composerCard}>
+      <View
+        style={[
+          styles.composerCard,
+          {
+            backgroundColor: isDark ? 'rgba(247, 243, 238, 0.04)' : '#FFFFFF',
+            borderWidth: isDark ? 0 : 1,
+            borderColor: isDark ? 'rgba(247, 243, 238, 0.15)' : 'rgba(13, 43, 69, 0.08)',
+            shadowColor: '#0D2B45',
+            shadowOffset: { width: 0, height: 4 },
+            shadowRadius: 10,
+            elevation: 2,
+            shadowOpacity: isDark ? 0 : 0.05,
+          },
+        ]}
+      >
         <View style={styles.composerAvatar}>
           <Text style={styles.composerAvatarText}>{userInitials}</Text>
         </View>
 
         <TextInput
-          style={styles.composerInput}
+          style={[styles.composerInput, { color: colors.text }]}
           placeholder="Share something with your circle…"
-          placeholderTextColor="rgba(247,243,238,0.5)"
+          placeholderTextColor={colors.placeholder}
           value={postDraft}
           onChangeText={setPostDraft}
         />
@@ -201,7 +236,22 @@ export default function ClaudeCommunityFeed({
       {/* Feed Posts matching lines 931-960 */}
       <View style={styles.postsList}>
         {posts.map((p) => (
-          <View key={p.id} style={styles.postCard}>
+          <View
+            key={p.id}
+            style={[
+              styles.postCard,
+              {
+                backgroundColor: isDark ? NAVY : '#FFFFFF',
+                borderWidth: isDark ? 0 : 1,
+                borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
+                shadowColor: '#0D2B45',
+                shadowOffset: { width: 0, height: 4 },
+                shadowRadius: 10,
+                elevation: 2,
+                shadowOpacity: isDark ? 0.35 : 0.05,
+              },
+            ]}
+          >
             <View style={styles.postHeader}>
               <View style={styles.postAvatar}>
                 <Text style={styles.postAvatarText}>{p.i}</Text>
@@ -209,17 +259,38 @@ export default function ClaudeCommunityFeed({
 
               <View style={styles.postMetaCol}>
                 <View style={styles.postNameRow}>
-                  <Text style={styles.postAuthor}>{p.name}</Text>
+                  <Text style={[styles.postAuthor, { color: isDark ? IVORY : NAVY }]}>{p.name}</Text>
                   <Text style={styles.postTierBadge}>{p.tier}</Text>
                 </View>
-                <Text style={styles.postTime}>{p.when}</Text>
+                <Text
+                  style={[
+                    styles.postTime,
+                    { color: isDark ? 'rgba(247, 243, 238, 0.45)' : 'rgba(13, 43, 69, 0.55)' },
+                  ]}
+                >
+                  {p.when}
+                </Text>
               </View>
             </View>
 
-            <Text style={styles.postBody}>{p.body}</Text>
+            <Text
+              style={[
+                styles.postBody,
+                { color: isDark ? 'rgba(247, 243, 238, 0.85)' : '#1F2937' },
+              ]}
+            >
+              {p.body}
+            </Text>
 
             <View style={styles.postFooter}>
-              <Text style={styles.postReactText}>{p.react}</Text>
+              <Text
+                style={[
+                  styles.postReactText,
+                  { color: isDark ? 'rgba(247, 243, 238, 0.45)' : 'rgba(13, 43, 69, 0.55)' },
+                ]}
+              >
+                {p.react}
+              </Text>
               <TouchableOpacity activeOpacity={0.7} onPress={() => handleCheer(p.id)}>
                 <Text style={[styles.cheerBtnText, p.hasCheered && styles.cheerBtnTextActive]}>
                   {p.hasCheered ? 'Cheered ✓' : 'Cheer'}
@@ -231,7 +302,7 @@ export default function ClaudeCommunityFeed({
       </View>
 
       {/* Moderation Footnote matching line 961 */}
-      <Text style={styles.moderationFootnote}>
+      <Text style={[styles.moderationFootnote, { color: colors.textMuted }]}>
         Posts are pre-checked before they appear. Report anything off and a human reviews it within 4 hours.
       </Text>
     </View>

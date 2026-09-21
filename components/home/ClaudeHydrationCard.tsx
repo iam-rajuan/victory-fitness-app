@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View, Pressable, Animated, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ClaudeHydrationCardProps {
   targetLiters?: number;
@@ -10,8 +11,8 @@ interface ClaudeHydrationCardProps {
 
 const NAVY = '#0D2B45';
 const OBSIDIAN = '#0D0D0D';
-const IVORY = '#F7F3EE';
 const BLUE_GRAY = '#8FA8C4';
+const IVORY = '#F7F3EE';
 
 const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
 const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
@@ -30,6 +31,7 @@ export default function ClaudeHydrationCard({
   initialMl = 1400,
   onWaterChange,
 }: ClaudeHydrationCardProps) {
+  const { colors, isDark } = useTheme();
   const [waterMl, setWaterMl] = useState(initialMl);
   const [remindEnabled, setRemindEnabled] = useState(false);
   const [remindMode, setRemindMode] = useState<'Vibrate' | 'Tone'>('Vibrate');
@@ -110,11 +112,28 @@ export default function ClaudeHydrationCard({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionKicker}>HYDRATION</Text>
+      <Text style={[styles.sectionKicker, { color: colors.textMuted }]}>HYDRATION</Text>
 
-      <View style={styles.card}>
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: isDark ? NAVY : '#FFFFFF',
+            borderWidth: isDark ? 0 : 1,
+            borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
+            shadowOpacity: isDark ? 0.35 : 0.05,
+          },
+        ]}
+      >
         {/* Glass Graphic Container */}
-        <View style={styles.glassOutline}>
+        <View
+          style={[
+            styles.glassOutline,
+            {
+              backgroundColor: isDark ? 'rgba(13, 43, 69, 0.5)' : 'rgba(143, 168, 196, 0.12)',
+            },
+          ]}
+        >
           <Animated.View style={[styles.liquidFill, { height: fillHeight }]} />
           <View style={styles.pctCenterWrap}>
             <Text style={styles.pctText}>{`${pctNum}%`}</Text>
@@ -125,10 +144,24 @@ export default function ClaudeHydrationCard({
         <View style={styles.infoCol}>
           <View style={styles.volumeRow}>
             <Text style={styles.waterValue}>{waterLabel}</Text>
-            <Text style={styles.waterTarget}>{`of ${targetLiters.toFixed(1)} L`}</Text>
+            <Text
+              style={[
+                styles.waterTarget,
+                { color: isDark ? 'rgba(247, 243, 238, 0.5)' : 'rgba(13, 43, 69, 0.55)' },
+              ]}
+            >
+              {`of ${targetLiters.toFixed(1)} L`}
+            </Text>
           </View>
 
-          <Text style={styles.waterNote}>{waterNote}</Text>
+          <Text
+            style={[
+              styles.waterNote,
+              { color: isDark ? BLUE_GRAY : '#3A6B94' },
+            ]}
+          >
+            {waterNote}
+          </Text>
 
           <View style={styles.actionsRow}>
             <Pressable style={styles.addBtn} onPress={() => void addWater(250)}>
@@ -153,10 +186,19 @@ export default function ClaudeHydrationCard({
 
       {/* Expandable Reminder Row */}
       {remindEnabled ? (
-        <View style={styles.reminderRow}>
+        <View
+          style={[
+            styles.reminderRow,
+            {
+              backgroundColor: isDark ? 'rgba(143, 168, 196, 0.12)' : '#FFFFFF',
+              borderColor: isDark ? 'transparent' : colors.cardBorder,
+              borderWidth: isDark ? 0 : 1,
+            },
+          ]}
+        >
           <View style={styles.reminderTextCol}>
-            <Text style={styles.reminderTitle}>Reminder every 2 hours</Text>
-            <Text style={styles.reminderSubtitle}>
+            <Text style={[styles.reminderTitle, { color: colors.text }]}>Reminder every 2 hours</Text>
+            <Text style={[styles.reminderSubtitle, { color: colors.textSecondary }]}>
               {remindMode === 'Vibrate'
                 ? 'A short buzz, 09:00 to 21:00. Silent.'
                 : 'A soft tone, 09:00 to 21:00.'}
@@ -170,9 +212,19 @@ export default function ClaudeHydrationCard({
                 <Pressable
                   key={m}
                   onPress={() => void changeMode(m)}
-                  style={[styles.modePill, isActive && styles.modePillActive]}
+                  style={[
+                    styles.modePill,
+                    isActive && styles.modePillActive,
+                    !isActive && !isDark && { borderColor: 'rgba(13, 43, 69, 0.2)' },
+                  ]}
                 >
-                  <Text style={[styles.modePillText, isActive && styles.modePillTextActive]}>
+                  <Text
+                    style={[
+                      styles.modePillText,
+                      isActive && styles.modePillTextActive,
+                      !isActive && !isDark && { color: colors.text },
+                    ]}
+                  >
                     {m}
                   </Text>
                 </Pressable>
@@ -207,6 +259,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 18,
+    shadowColor: '#0D2B45',
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 14,
+    elevation: 2,
   },
   glassOutline: {
     width: 74,

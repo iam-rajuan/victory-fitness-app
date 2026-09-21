@@ -22,6 +22,7 @@ import ClaudeMealAnalysisCard from '../../components/nutrition/ClaudeMealAnalysi
 import ClaudeMealAnalysisModal from '../../components/nutrition/ClaudeMealAnalysisModal';
 import ClaudeWeekPlanModal from '../../components/nutrition/ClaudeWeekPlanModal';
 import ClaudeShoppingListModal from '../../components/nutrition/ClaudeShoppingListModal';
+import { useTheme } from '../../context/ThemeContext';
 
 const OBSIDIAN = '#0D0D0D';
 const NAVY = '#0D2B45';
@@ -35,6 +36,7 @@ const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' })
 
 export default function MealPlanScreen() {
   const router = useRouter();
+  const { isDark, colors } = useTheme();
 
   // Tier access state
   const [userTier, setUserTier] = useState<string>('gold');
@@ -140,7 +142,7 @@ export default function MealPlanScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -149,8 +151,8 @@ export default function MealPlanScreen() {
         {/* Header matching line 998-1001 */}
         <View style={styles.headerRow}>
           <View>
-            <Text style={styles.screenTitle}>Food</Text>
-            <Text style={styles.screenDate}>{getFormattedDate()}</Text>
+            <Text style={[styles.screenTitle, { color: colors.text }]}>Food</Text>
+            <Text style={[styles.screenDate, { color: colors.textMuted }]}>{getFormattedDate()}</Text>
           </View>
 
           <TouchableOpacity
@@ -164,12 +166,31 @@ export default function MealPlanScreen() {
 
         {/* Silver Paywall Lock Teaser if user is Silver */}
         {!canAccessNutrition ? (
-          <View style={styles.silverLockCard}>
+          <View
+            style={[
+              styles.silverLockCard,
+              {
+                backgroundColor: isDark ? NAVY : '#FFFFFF',
+                borderWidth: isDark ? 0 : 1,
+                borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
+                shadowColor: '#0D2B45',
+                shadowOffset: { width: 0, height: 4 },
+                shadowRadius: 14,
+                elevation: 2,
+                shadowOpacity: isDark ? 0.35 : 0.05,
+              },
+            ]}
+          >
             <View style={styles.silverBadge}>
               <Text style={styles.silverBadgeText}>GOLD FEATURE</Text>
             </View>
-            <Text style={styles.silverLockTitle}>Full Nutrition Planner & Macro Tracking</Text>
-            <Text style={styles.silverLockSub}>
+            <Text style={[styles.silverLockTitle, { color: isDark ? IVORY : NAVY }]}>Full Nutrition Planner & Macro Tracking</Text>
+            <Text
+              style={[
+                styles.silverLockSub,
+                { color: isDark ? 'rgba(247, 243, 238, 0.65)' : 'rgba(13, 43, 69, 0.65)' },
+              ]}
+            >
               Macro rings, daily AI actions, plate photo scanner, and 7-day meal plans are included in Gold, Platinum, and Inner Circle memberships.
             </Text>
             <TouchableOpacity
@@ -184,21 +205,12 @@ export default function MealPlanScreen() {
           <>
             {/* 4 Macro Rings matching lines 1003-1014 */}
             <ClaudeMacroCards proteinTarget={proteinTarget} />
-            <Text style={styles.macroFootnote}>
-              Gold is protein, copper is carbs, ivory is fat, green is calories — the same four colours everywhere in the app.
-            </Text>
 
             {/* YOUR FULL DAY matching lines 1017-1026 */}
             <ClaudeFullDayMeals onLogMeal={() => setShowMealAnalysisModal(true)} />
-            <Text style={styles.fullDayFootnote}>
-              Every meal of the day is laid out from the start, dinner included — so you can see at 09:00 whether the target is reachable, not at 22:00.
-            </Text>
 
             {/* TODAY'S FIVE ACTIONS matching lines 1028-1046 */}
             <ClaudeTodayFiveActions />
-            <Text style={styles.actionsFootnote}>
-              Written each morning from the meals you have logged before — not a generic checklist. Do three and you land on target.
-            </Text>
 
             {/* MEAL ANALYSIS Photo Card matching lines 1048-1063 */}
             <ClaudeMealAnalysisCard
@@ -207,10 +219,29 @@ export default function MealPlanScreen() {
             />
 
             {/* Week Plan Builder Banner matching lines 1065-1070 */}
-            <View style={styles.weekPlanBannerCard}>
-              <Text style={styles.weekPlanKicker}>YOUR NUTRITION PLAN</Text>
-              <Text style={styles.weekPlanTitle}>A week of food you actually like</Text>
-              <Text style={styles.weekPlanSub}>
+            <View
+              style={[
+                styles.weekPlanBannerCard,
+                {
+                  backgroundColor: isDark ? NAVY : '#FFFFFF',
+                  borderWidth: isDark ? 0 : 1,
+                  borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
+                  shadowColor: '#0D2B45',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowRadius: 14,
+                  elevation: 2,
+                  shadowOpacity: isDark ? 0.35 : 0.05,
+                },
+              ]}
+            >
+              <Text style={[styles.weekPlanKicker, { color: isDark ? GOLD : '#B5651D' }]}>YOUR NUTRITION PLAN</Text>
+              <Text style={[styles.weekPlanTitle, { color: isDark ? IVORY : NAVY }]}>A week of food you actually like</Text>
+              <Text
+                style={[
+                  styles.weekPlanSub,
+                  { color: isDark ? 'rgba(247, 243, 238, 0.65)' : 'rgba(13, 43, 69, 0.65)' },
+                ]}
+              >
                 Six questions about the dishes you love, the cuisines you cook, and anything you cannot eat. Then a full week with preparation steps and a shopping list.
               </Text>
               <TouchableOpacity

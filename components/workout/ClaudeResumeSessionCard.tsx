@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ClaudeResumeSessionCardProps {
   sessionTitle?: string;
@@ -25,11 +26,27 @@ export default function ClaudeResumeSessionCard({
   progressPct = 43,
   onResume,
 }: ClaudeResumeSessionCardProps) {
+  const { colors, isDark } = useTheme();
+
   return (
     <View style={styles.container}>
-      <Text style={styles.eyebrow}>PICK UP WHERE YOU LEFT OFF</Text>
+      <Text style={[styles.eyebrow, { color: colors.textMuted }]}>PICK UP WHERE YOU LEFT OFF</Text>
 
-      <Pressable style={styles.card} onPress={onResume}>
+      <Pressable
+        style={[
+          styles.card,
+          {
+            backgroundColor: isDark ? NAVY : '#FFFFFF',
+            borderColor: isDark ? 'rgba(247, 243, 238, 0.1)' : 'rgba(13, 43, 69, 0.08)',
+            shadowColor: '#0D2B45',
+            shadowOffset: { width: 0, height: 4 },
+            shadowRadius: 14,
+            elevation: 2,
+            shadowOpacity: isDark ? 0.35 : 0.05,
+          },
+        ]}
+        onPress={onResume}
+      >
         {/* Top media container */}
         <View style={styles.mediaWrap}>
           {/* Big gold play circle */}
@@ -49,8 +66,15 @@ export default function ClaudeResumeSessionCard({
         {/* Bottom details row */}
         <View style={styles.bottomRow}>
           <View style={styles.textCol}>
-            <Text style={styles.title}>{sessionTitle}</Text>
-            <Text style={styles.line}>{sessionLine}</Text>
+            <Text style={[styles.title, { color: isDark ? IVORY : NAVY }]}>{sessionTitle}</Text>
+            <Text
+              style={[
+                styles.line,
+                { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
+              ]}
+            >
+              {sessionLine}
+            </Text>
           </View>
 
           <Pressable style={styles.resumeBtn} onPress={onResume}>

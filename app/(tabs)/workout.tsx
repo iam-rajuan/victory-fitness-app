@@ -17,6 +17,7 @@ import {
 import { normalizeSubscriptionTier } from '../../lib/access';
 import { pushRoute } from '../../lib/navigation';
 import { useModuleAccessGuard } from '../../lib/useModuleAccessGuard';
+import { useTheme } from '../../context/ThemeContext';
 
 // Modular Claude Workout Components
 import ClaudeTrainHeader from '../../components/workout/ClaudeTrainHeader';
@@ -78,7 +79,8 @@ const PLAN_SUMMARY_KEY = '@victory_plan_summary';
 
 export default function WorkoutScreen() {
   const router = useRouter();
-  const checkingAccess = useModuleAccessGuard('workout');
+  const checkingAccess = useModuleAccessGuard('/workout');
+  const { isDark, colors } = useTheme();
 
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -208,14 +210,14 @@ export default function WorkoutScreen() {
 
   if (checkingAccess) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator color={GOLD} size="large" />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}

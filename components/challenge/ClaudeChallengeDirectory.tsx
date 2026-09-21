@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Platform,
 } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 export interface ChallengeItem {
   id: string;
@@ -148,6 +149,7 @@ export default function ClaudeChallengeDirectory({
   onSelectChallenge,
   onOpenInviteGuest,
 }: ClaudeChallengeDirectoryProps) {
+  const { colors, isDark } = useTheme();
   const [selectedDay, setSelectedDay] = useState('ALL');
   const [selectedCat, setSelectedCat] = useState('ALL');
 
@@ -166,7 +168,7 @@ export default function ClaudeChallengeDirectory({
     <View style={styles.container}>
       {/* Horizontal Rail: Most joined this week matching line 851-874 */}
       <View style={styles.railHeader}>
-        <Text style={styles.railTitle}>Most joined this week</Text>
+        <Text style={[styles.railTitle, { color: colors.text }]}>Most joined this week</Text>
         <Text style={styles.railAllLink}>All ›</Text>
       </View>
 
@@ -178,16 +180,28 @@ export default function ClaudeChallengeDirectory({
         {RAIL_CHALLENGES.map((c) => (
           <TouchableOpacity
             key={c.id}
-            style={styles.railCard}
+            style={[
+              styles.railCard,
+              {
+                backgroundColor: isDark ? NAVY : '#FFFFFF',
+                borderWidth: isDark ? 0 : 1,
+                borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
+                shadowColor: '#0D2B45',
+                shadowOffset: { width: 0, height: 4 },
+                shadowRadius: 10,
+                elevation: 2,
+                shadowOpacity: isDark ? 0.35 : 0.05,
+              },
+            ]}
             activeOpacity={0.85}
             onPress={() => onSelectChallenge(c)}
           >
             <View style={styles.railCardTop}>
-              <Text style={styles.railCardDays}>{c.d}</Text>
+              <Text style={[styles.railCardDays, { color: isDark ? IVORY : NAVY }]}>{c.d}</Text>
               <Text style={styles.railCardCategory}>{c.c}</Text>
             </View>
 
-            <Text style={styles.railCardName} numberOfLines={2}>
+            <Text style={[styles.railCardName, { color: isDark ? IVORY : NAVY }]} numberOfLines={2}>
               {c.n}
             </Text>
             <Text style={styles.railCardPoints}>{c.p}</Text>
@@ -200,7 +214,14 @@ export default function ClaudeChallengeDirectory({
                   </View>
                 ))}
               </View>
-              <Text style={styles.railCardJoined}>{c.joined}</Text>
+              <Text
+                style={[
+                  styles.railCardJoined,
+                  { color: isDark ? 'rgba(247, 243, 238, 0.5)' : 'rgba(13, 43, 69, 0.55)' },
+                ]}
+              >
+                {c.joined}
+              </Text>
             </View>
           </TouchableOpacity>
         ))}
@@ -208,7 +229,7 @@ export default function ClaudeChallengeDirectory({
 
       {/* HOW MANY DAYS? Filter Chips matching lines 876-881 */}
       <View style={styles.filterSection}>
-        <Text style={styles.filterLabel}>HOW MANY DAYS?</Text>
+        <Text style={[styles.filterLabel, { color: colors.textMuted }]}>HOW MANY DAYS?</Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -217,11 +238,24 @@ export default function ClaudeChallengeDirectory({
           {DAY_FILTERS.map((d) => (
             <TouchableOpacity
               key={`day-${d}`}
-              style={[styles.chip, selectedDay === d && styles.chipActive]}
+              style={[
+                styles.chip,
+                {
+                  backgroundColor: isDark ? NAVY : '#FFFFFF',
+                  borderColor: isDark ? 'rgba(247, 243, 238, 0.12)' : 'rgba(13, 43, 69, 0.12)',
+                },
+                selectedDay === d && styles.chipActive,
+              ]}
               activeOpacity={0.8}
               onPress={() => setSelectedDay(d)}
             >
-              <Text style={[styles.chipText, selectedDay === d && styles.chipTextActive]}>
+              <Text
+                style={[
+                  styles.chipText,
+                  { color: isDark ? 'rgba(247, 243, 238, 0.7)' : colors.text },
+                  selectedDay === d && styles.chipTextActive,
+                ]}
+              >
                 {d}
               </Text>
             </TouchableOpacity>
@@ -231,7 +265,7 @@ export default function ClaudeChallengeDirectory({
 
       {/* WHAT KIND? Filter Chips matching lines 882-887 */}
       <View style={styles.filterSectionSmall}>
-        <Text style={styles.filterLabel}>WHAT KIND?</Text>
+        <Text style={[styles.filterLabel, { color: colors.textMuted }]}>WHAT KIND?</Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -240,11 +274,24 @@ export default function ClaudeChallengeDirectory({
           {CAT_FILTERS.map((cat) => (
             <TouchableOpacity
               key={`cat-${cat}`}
-              style={[styles.chip, selectedCat === cat && styles.chipActive]}
+              style={[
+                styles.chip,
+                {
+                  backgroundColor: isDark ? NAVY : '#FFFFFF',
+                  borderColor: isDark ? 'rgba(247, 243, 238, 0.12)' : 'rgba(13, 43, 69, 0.12)',
+                },
+                selectedCat === cat && styles.chipActive,
+              ]}
               activeOpacity={0.8}
               onPress={() => setSelectedCat(cat)}
             >
-              <Text style={[styles.chipText, selectedCat === cat && styles.chipTextActive]}>
+              <Text
+                style={[
+                  styles.chipText,
+                  { color: isDark ? 'rgba(247, 243, 238, 0.7)' : colors.text },
+                  selectedCat === cat && styles.chipTextActive,
+                ]}
+              >
                 {cat}
               </Text>
             </TouchableOpacity>
@@ -253,7 +300,7 @@ export default function ClaudeChallengeDirectory({
       </View>
 
       {/* Count Line matching line 889 */}
-      <Text style={styles.countLine}>
+      <Text style={[styles.countLine, { color: colors.textMuted }]}>
         {`${filteredChallenges.length} OF 35 CHALLENGES · SORTED BY POPULARITY`}
       </Text>
 
@@ -262,19 +309,45 @@ export default function ClaudeChallengeDirectory({
         {filteredChallenges.map((c) => (
           <TouchableOpacity
             key={c.id}
-            style={styles.challengeCard}
+            style={[
+              styles.challengeCard,
+              {
+                backgroundColor: isDark ? NAVY : '#FFFFFF',
+                borderWidth: isDark ? 0 : 1,
+                borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
+                shadowColor: '#0D2B45',
+                shadowOffset: { width: 0, height: 4 },
+                shadowRadius: 10,
+                elevation: 2,
+                shadowOpacity: isDark ? 0.35 : 0.05,
+              },
+            ]}
             activeOpacity={0.85}
             onPress={() => onSelectChallenge(c)}
           >
             <View style={styles.challengeDaysCol}>
-              <Text style={styles.challengeDaysNum}>{c.d}</Text>
-              <Text style={styles.challengeDaysLabel}>DAYS</Text>
+              <Text style={[styles.challengeDaysNum, { color: isDark ? IVORY : NAVY }]}>{c.d}</Text>
+              <Text
+                style={[
+                  styles.challengeDaysLabel,
+                  { color: isDark ? 'rgba(247, 243, 238, 0.45)' : 'rgba(13, 43, 69, 0.55)' },
+                ]}
+              >
+                DAYS
+              </Text>
             </View>
 
-            <View style={styles.challengeDivider} />
+            <View
+              style={[
+                styles.challengeDivider,
+                {
+                  backgroundColor: isDark ? 'rgba(247, 243, 238, 0.12)' : 'rgba(13, 43, 69, 0.08)',
+                },
+              ]}
+            />
 
             <View style={styles.challengeInfoCol}>
-              <Text style={styles.challengeCardName}>{c.n}</Text>
+              <Text style={[styles.challengeCardName, { color: isDark ? IVORY : NAVY }]}>{c.n}</Text>
               <View style={styles.challengeMetaRow}>
                 <Text style={styles.challengeMetaCategory}>{c.c}</Text>
                 <Text style={styles.challengeMetaPoints}>{c.p}</Text>
@@ -299,8 +372,8 @@ export default function ClaudeChallengeDirectory({
         onPress={onOpenInviteGuest}
       >
         <View style={styles.guestTextCol}>
-          <Text style={styles.guestTitle}>Pull someone in from outside</Text>
-          <Text style={styles.guestSub}>
+          <Text style={[styles.guestTitle, { color: colors.text }]}>Pull someone in from outside</Text>
+          <Text style={[styles.guestSub, { color: colors.textSecondary }]}>
             They don't need the app. They follow the challenge as a guest for its full length.
           </Text>
         </View>

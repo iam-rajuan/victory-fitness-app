@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ActionItem {
   id: string;
@@ -24,6 +25,7 @@ const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' })
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
 
 export default function ClaudeTodayFiveActions({ onActionToggle }: ClaudeTodayFiveActionsProps) {
+  const { colors, isDark } = useTheme();
   const [actions, setActions] = useState<ActionItem[]>([
     {
       id: 'a1',
@@ -80,31 +82,65 @@ export default function ClaudeTodayFiveActions({ onActionToggle }: ClaudeTodayFi
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <Text style={styles.kicker}>TODAY'S FIVE ACTIONS</Text>
+        <Text style={[styles.kicker, { color: colors.textMuted }]}>TODAY'S FIVE ACTIONS</Text>
         <Text style={styles.trackBadge}>{`${doneCount} of 5 done · +${doneCount * 15} pts`}</Text>
       </View>
 
-      <View style={styles.card}>
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: isDark ? NAVY : '#FFFFFF',
+            borderWidth: isDark ? 0 : 1,
+            borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
+            shadowColor: '#0D2B45',
+            shadowOffset: { width: 0, height: 4 },
+            shadowRadius: 14,
+            elevation: 2,
+            shadowOpacity: isDark ? 0.35 : 0.05,
+          },
+        ]}
+      >
         {actions.map((a, idx) => (
           <Pressable
             key={a.id}
             style={[
               styles.actionRow,
               idx < actions.length - 1 && styles.actionRowBorder,
+              { borderBottomColor: isDark ? 'rgba(247, 243, 238, 0.08)' : 'rgba(13, 43, 69, 0.08)' },
             ]}
             onPress={() => toggleAction(a.id)}
           >
             {/* Custom Checkbox */}
-            <View style={[styles.checkBox, a.done && styles.checkBoxDone]}>
+            <View
+              style={[
+                styles.checkBox,
+                { borderColor: isDark ? 'rgba(247, 243, 238, 0.3)' : 'rgba(13, 43, 69, 0.25)' },
+                a.done && styles.checkBoxDone,
+              ]}
+            >
               {a.done ? <View style={styles.checkMarkWhite} /> : null}
             </View>
 
             {/* Texts */}
             <View style={styles.textCol}>
-              <Text style={[styles.actionTitle, a.done && styles.actionTitleDone]}>
+              <Text
+                style={[
+                  styles.actionTitle,
+                  { color: isDark ? IVORY : NAVY },
+                  a.done && styles.actionTitleDone,
+                ]}
+              >
                 {a.t}
               </Text>
-              <Text style={styles.actionWhy}>{a.why}</Text>
+              <Text
+                style={[
+                  styles.actionWhy,
+                  { color: isDark ? 'rgba(247, 243, 238, 0.5)' : 'rgba(13, 43, 69, 0.55)' },
+                ]}
+              >
+                {a.why}
+              </Text>
             </View>
 
             {/* Points Gain */}
@@ -113,7 +149,7 @@ export default function ClaudeTodayFiveActions({ onActionToggle }: ClaudeTodayFi
         ))}
       </View>
 
-      <Text style={styles.footnote}>
+      <Text style={[styles.footnote, { color: colors.textMuted }]}>
         Written each morning from the meals you have logged before — not a generic checklist. Do three and you land on target.
       </Text>
     </View>

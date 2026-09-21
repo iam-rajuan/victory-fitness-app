@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 interface MealRecord {
   id: string;
@@ -25,6 +26,7 @@ const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' })
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
 
 export default function ClaudeFullDayMeals({ onLogMeal }: ClaudeFullDayMealsProps) {
+  const { colors, isDark } = useTheme();
   const [meals, setMeals] = useState<MealRecord[]>([
     {
       id: 'm1',
@@ -45,16 +47,16 @@ export default function ClaudeFullDayMeals({ onLogMeal }: ClaudeFullDayMealsProp
     {
       id: 'm3',
       name: 'Salmon, potatoes & broccoli',
-      sub: 'Dinner · planned for 19:30',
-      proteinG: 31,
-      kcal: 510,
-      logged: false,
+      sub: 'Dinner · from week plan · 19:30',
+      proteinG: 46,
+      kcal: 680,
       planned: true,
+      logged: false,
     },
     {
       id: 'm4',
-      name: 'Evening shake',
-      sub: 'Only if dinner leaves you short',
+      name: 'Clear whey & banana',
+      sub: 'Snack · after training',
       proteinG: 25,
       kcal: 180,
       logged: false,
@@ -80,9 +82,23 @@ export default function ClaudeFullDayMeals({ onLogMeal }: ClaudeFullDayMealsProp
 
   return (
     <View style={styles.container}>
-      <Text style={styles.kicker}>YOUR FULL DAY</Text>
+      <Text style={[styles.kicker, { color: colors.textMuted }]}>YOUR FULL DAY</Text>
 
-      <View style={styles.card}>
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: isDark ? NAVY : '#FFFFFF',
+            borderWidth: isDark ? 0 : 1,
+            borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
+            shadowColor: '#0D2B45',
+            shadowOffset: { width: 0, height: 4 },
+            shadowRadius: 14,
+            elevation: 2,
+            shadowOpacity: isDark ? 0.35 : 0.05,
+          },
+        ]}
+      >
         {meals.map((m, idx) => {
           const isHighlight = m.planned && !m.logged;
           return (
@@ -92,6 +108,7 @@ export default function ClaudeFullDayMeals({ onLogMeal }: ClaudeFullDayMealsProp
                 styles.mealRow,
                 idx < meals.length - 1 && styles.mealRowBorder,
                 isHighlight && styles.highlightRow,
+                { borderBottomColor: isDark ? 'rgba(247, 243, 238, 0.1)' : 'rgba(13, 43, 69, 0.08)' },
               ]}
             >
               {/* Status Indicator Dot */}
@@ -100,20 +117,39 @@ export default function ClaudeFullDayMeals({ onLogMeal }: ClaudeFullDayMealsProp
               ) : isHighlight ? (
                 <View style={styles.goldRingDot} />
               ) : (
-                <View style={styles.grayRingDot} />
+                <View
+                  style={[
+                    styles.grayRingDot,
+                    { borderColor: isDark ? 'rgba(247, 243, 238, 0.3)' : 'rgba(13, 43, 69, 0.25)' },
+                  ]}
+                />
               )}
 
               {/* Meal Name & Sub */}
               <View style={styles.mealTextCol}>
-                <Text style={styles.mealName}>{m.name}</Text>
-                <Text style={styles.mealSub}>{m.sub}</Text>
+                <Text style={[styles.mealName, { color: isDark ? IVORY : NAVY }]}>{m.name}</Text>
+                <Text
+                  style={[
+                    styles.mealSub,
+                    { color: isDark ? 'rgba(247, 243, 238, 0.5)' : 'rgba(13, 43, 69, 0.55)' },
+                  ]}
+                >
+                  {m.sub}
+                </Text>
               </View>
 
               {/* Action / Value */}
               <View style={styles.rightCol}>
                 <Text style={styles.proteinVal}>{`${m.proteinG} g`}</Text>
                 {m.logged ? (
-                  <Text style={styles.kcalVal}>{`${m.kcal} kcal`}</Text>
+                  <Text
+                    style={[
+                      styles.kcalVal,
+                      { color: isDark ? 'rgba(247, 243, 238, 0.45)' : 'rgba(13, 43, 69, 0.5)' },
+                    ]}
+                  >
+                    {`${m.kcal} kcal`}
+                  </Text>
                 ) : (
                   <Pressable
                     hitSlop={8}
@@ -131,7 +167,7 @@ export default function ClaudeFullDayMeals({ onLogMeal }: ClaudeFullDayMealsProp
         })}
       </View>
 
-      <Text style={styles.footnote}>
+      <Text style={[styles.footnote, { color: colors.textMuted }]}>
         Every meal of the day is laid out from the start, dinner included — so you can see at 09:00 whether the target is reachable, not at 22:00.
       </Text>
     </View>

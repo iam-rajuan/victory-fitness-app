@@ -93,9 +93,10 @@ export default function VictoryHeader({
         {/* Left: Brand Logo */}
         <View style={[styles.brandBlock, { width: sideBlockWidth }]}>
           <Image
-            source={require('../assets/logo_dark.png')}
+            source={require('../assets/images/onboarding/vf-logo-white.png')}
             style={[styles.brandLogo, { width: logoWidth, height: logoHeight }]}
             resizeMode="contain"
+            accessibilityLabel="Victory Fitness"
           />
         </View>
 

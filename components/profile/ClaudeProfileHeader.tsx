@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, Platform } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ClaudeProfileHeaderProps {
   name?: string;
@@ -33,6 +34,7 @@ export default function ClaudeProfileHeader({
   totalSessions = 64,
   consistencyPct = 78,
 }: ClaudeProfileHeaderProps) {
+  const { isDark, colors } = useTheme();
   const isSilver = tier.toUpperCase() === 'SILVER';
   const isIC = tier.toUpperCase() === 'INNER CIRCLE' || tier.toUpperCase() === 'INNER_CIRCLE';
 
@@ -45,7 +47,7 @@ export default function ClaudeProfileHeader({
         </View>
 
         <View style={styles.nameCol}>
-          <Text style={styles.userName}>{name}</Text>
+          <Text style={[styles.userName, { color: colors.text }]}>{name}</Text>
           <View style={styles.metaRow}>
             <View
               style={[
@@ -67,21 +69,30 @@ export default function ClaudeProfileHeader({
                 {tier.toUpperCase()}
               </Text>
             </View>
-            <Text style={styles.userLocation}>{`${country} · since ${sinceDate}`}</Text>
+            <Text style={[styles.userLocation, { color: colors.textMuted }]}>{`${country} · since ${sinceDate}`}</Text>
           </View>
         </View>
       </View>
 
       {/* Stats Row matching lines 1137-1141 */}
-      <View style={styles.statsRow}>
-        <View style={[styles.statCol, styles.statBorder]}>
+      <View
+        style={[
+          styles.statsRow,
+          {
+            backgroundColor: isDark ? NAVY : '#FFFFFF',
+            borderColor: isDark ? 'transparent' : colors.cardBorder,
+            borderWidth: isDark ? 0 : 1,
+          },
+        ]}
+      >
+        <View style={[styles.statCol, styles.statBorder, { borderRightColor: colors.divider }]}>
           <Text style={[styles.statValue, { color: GOLD }]}>{streakDays}</Text>
-          <Text style={styles.statLabel}>STREAK</Text>
+          <Text style={[styles.statLabel, { color: colors.textMuted }]}>STREAK</Text>
         </View>
 
-        <View style={[styles.statCol, styles.statBorder]}>
-          <Text style={[styles.statValue, { color: IVORY }]}>{totalSessions}</Text>
-          <Text style={styles.statLabel}>SESSIONS</Text>
+        <View style={[styles.statCol, styles.statBorder, { borderRightColor: colors.divider }]}>
+          <Text style={[styles.statValue, { color: colors.text }]}>{totalSessions}</Text>
+          <Text style={[styles.statLabel, { color: colors.textMuted }]}>SESSIONS</Text>
         </View>
 
         <View style={styles.statCol}>
@@ -89,7 +100,7 @@ export default function ClaudeProfileHeader({
             {consistencyPct}
             <Text style={{ fontSize: 13 }}>%</Text>
           </Text>
-          <Text style={styles.statLabel}>CONSISTENCY</Text>
+          <Text style={[styles.statLabel, { color: colors.textMuted }]}>CONSISTENCY</Text>
         </View>
       </View>
     </View>

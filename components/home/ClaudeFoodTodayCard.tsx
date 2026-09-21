@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { pushRoute } from '../../lib/navigation';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ClaudeFoodTodayCardProps {
   tier: 'SILVER' | 'GOLD' | 'GOLD_BETA' | 'PLATINUM' | 'INNER_CIRCLE' | 'NONE';
@@ -25,6 +26,7 @@ export default function ClaudeFoodTodayCard({
   onLogDinner,
 }: ClaudeFoodTodayCardProps) {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const hasFoodPlanner = tier !== 'SILVER' && tier !== 'NONE';
   const [dinnerLogged, setDinnerLogged] = useState(false);
 
@@ -53,7 +55,7 @@ export default function ClaudeFoodTodayCard({
     <View style={styles.container}>
       {/* Header Row */}
       <View style={styles.headerRow}>
-        <Text style={styles.sectionKicker}>FOOD TODAY</Text>
+        <Text style={[styles.sectionKicker, { color: colors.textMuted }]}>FOOD TODAY</Text>
         <Pressable hitSlop={8} onPress={handleOpenFood}>
           <Text style={styles.screenLink}>Food screen ›</Text>
         </Pressable>
@@ -61,28 +63,68 @@ export default function ClaudeFoodTodayCard({
 
       {/* Card Content based on Tier */}
       {hasFoodPlanner ? (
-        <View style={styles.card}>
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: isDark ? NAVY : '#FFFFFF',
+              borderWidth: isDark ? 0 : 1,
+              borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
+              shadowOpacity: isDark ? 0.35 : 0.05,
+            },
+          ]}
+        >
           {/* Breakfast */}
-          <Pressable style={styles.mealRow} onPress={handleOpenFood}>
+          <Pressable
+            style={[
+              styles.mealRow,
+              { borderBottomColor: isDark ? 'rgba(247, 243, 238, 0.1)' : 'rgba(13, 43, 69, 0.08)' },
+            ]}
+            onPress={handleOpenFood}
+          >
             <View style={styles.greenDot} />
             <View style={styles.mealTextCol}>
-              <Text style={styles.mealTitle}>Oats, skyr &amp; berries</Text>
-              <Text style={styles.mealSub}>Breakfast · eaten</Text>
+              <Text style={[styles.mealTitle, { color: isDark ? IVORY : NAVY }]}>Oats, skyr &amp; berries</Text>
+              <Text
+                style={[
+                  styles.mealSub,
+                  { color: isDark ? 'rgba(247, 243, 238, 0.5)' : 'rgba(13, 43, 69, 0.55)' },
+                ]}
+              >
+                Breakfast · eaten
+              </Text>
             </View>
           </Pressable>
 
           {/* Lunch */}
-          <Pressable style={styles.mealRow} onPress={handleOpenFood}>
+          <Pressable
+            style={[
+              styles.mealRow,
+              { borderBottomColor: isDark ? 'rgba(247, 243, 238, 0.1)' : 'rgba(13, 43, 69, 0.08)' },
+            ]}
+            onPress={handleOpenFood}
+          >
             <View style={styles.greenDot} />
             <View style={styles.mealTextCol}>
-              <Text style={styles.mealTitle}>Chicken &amp; rice bowl</Text>
-              <Text style={styles.mealSub}>Lunch · eaten</Text>
+              <Text style={[styles.mealTitle, { color: isDark ? IVORY : NAVY }]}>Chicken &amp; rice bowl</Text>
+              <Text
+                style={[
+                  styles.mealSub,
+                  { color: isDark ? 'rgba(247, 243, 238, 0.5)' : 'rgba(13, 43, 69, 0.55)' },
+                ]}
+              >
+                Lunch · eaten
+              </Text>
             </View>
           </Pressable>
 
           {/* Dinner */}
           <Pressable
-            style={[styles.mealRow, !dinnerLogged && styles.dinnerHighlightRow]}
+            style={[
+              styles.mealRow,
+              !dinnerLogged && styles.dinnerHighlightRow,
+              { borderBottomColor: isDark ? 'rgba(247, 243, 238, 0.1)' : 'rgba(13, 43, 69, 0.08)' },
+            ]}
             onPress={handleOpenFood}
           >
             {dinnerLogged ? (
@@ -91,8 +133,13 @@ export default function ClaudeFoodTodayCard({
               <View style={styles.goldRingDot} />
             )}
             <View style={styles.mealTextCol}>
-              <Text style={styles.mealTitle}>Salmon, potatoes &amp; broccoli</Text>
-              <Text style={styles.mealSub}>
+              <Text style={[styles.mealTitle, { color: isDark ? IVORY : NAVY }]}>Salmon, potatoes &amp; broccoli</Text>
+              <Text
+                style={[
+                  styles.mealSub,
+                  { color: isDark ? 'rgba(247, 243, 238, 0.5)' : 'rgba(13, 43, 69, 0.55)' },
+                ]}
+              >
                 {dinnerLogged
                   ? 'Dinner · eaten'
                   : 'Dinner · 19:30, from your week plan'}
@@ -105,22 +152,41 @@ export default function ClaudeFoodTodayCard({
 
           {/* Week Plan Row */}
           <Pressable style={styles.weekPlanRow} onPress={handleOpenWeekPlan}>
-            <Text style={styles.weekPlanTitle}>This week's food plan</Text>
+            <Text
+              style={[
+                styles.weekPlanTitle,
+                { color: isDark ? 'rgba(247, 243, 238, 0.7)' : 'rgba(13, 43, 69, 0.75)' },
+              ]}
+            >
+              This week's food plan
+            </Text>
             <Text style={styles.weekPlanArrow}>›</Text>
           </Pressable>
         </View>
       ) : (
         /* Silver locked card */
         <Pressable
-          style={styles.lockedCard}
+          style={[
+            styles.lockedCard,
+            {
+              backgroundColor: isDark ? NAVY : '#FFFFFF',
+              borderColor: isDark ? 'rgba(247, 243, 238, 0.14)' : 'rgba(13, 43, 69, 0.08)',
+              shadowOpacity: isDark ? 0.35 : 0.05,
+            },
+          ]}
           onPress={() => pushRoute(router, '/plan')}
         >
           <View style={styles.lockIconBox}>
             <View style={styles.lockIconGraphic} />
           </View>
           <View style={styles.lockedTextCol}>
-            <Text style={styles.lockedTitle}>The nutrition planner lives on Gold</Text>
-            <Text style={styles.lockedSub}>
+            <Text style={[styles.lockedTitle, { color: isDark ? IVORY : NAVY }]}>The nutrition planner lives on Gold</Text>
+            <Text
+              style={[
+                styles.lockedSub,
+                { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
+              ]}
+            >
               A full week of meals built from your favourites list, hitting your protein target.
             </Text>
           </View>
@@ -159,6 +225,10 @@ const styles = StyleSheet.create({
     backgroundColor: NAVY,
     borderRadius: 18,
     overflow: 'hidden',
+    shadowColor: '#0D2B45',
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 14,
+    elevation: 2,
   },
   mealRow: {
     flexDirection: 'row',
@@ -238,6 +308,10 @@ const styles = StyleSheet.create({
     gap: 13,
     borderWidth: 1,
     borderColor: 'rgba(247, 243, 238, 0.14)',
+    shadowColor: '#0D2B45',
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 14,
+    elevation: 2,
   },
   lockIconBox: {
     width: 32,

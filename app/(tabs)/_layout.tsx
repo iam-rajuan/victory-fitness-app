@@ -10,6 +10,7 @@ import { fetchCurrentUser, getAuthUser, getValidAuthTokens } from '../../lib/api
 import { getAllowedTabNames, isSubscriptionActive } from '../../lib/access';
 import { preloadAppData } from '../../lib/appPreload';
 import { useLanguage } from '../../lib/i18n';
+import { useTheme } from '../../context/ThemeContext';
 import { replaceRoute } from '../../lib/navigation';
 
 const WEB_PROFILE_AVATAR_STYLE: React.CSSProperties = {
@@ -25,6 +26,7 @@ export default function TabsLayout() {
   const segments = useSegments();
   const routerRef = React.useRef(router);
   const { t } = useLanguage();
+  const { isDark, colors } = useTheme();
   const { width } = useWindowDimensions();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [profileImage, setProfileImage] = useState('');
@@ -152,10 +154,16 @@ export default function TabsLayout() {
               height: tabBarHeight,
               paddingBottom: isCompactWidth ? 7 : 8,
               paddingTop: isCompactWidth ? 7 : 8,
+              backgroundColor: isDark ? Colors.navy : '#FFFFFF',
+              borderTopColor: isDark ? 'rgba(181, 101, 29, 0.25)' : 'rgba(13, 43, 69, 0.08)',
+              shadowColor: isDark ? '#000000' : 'rgba(13, 43, 69, 0.1)',
+              shadowOffset: { width: 0, height: -2 },
+              shadowOpacity: isDark ? 0.35 : 0.08,
+              shadowRadius: 8,
             },
           ],
-          tabBarActiveTintColor: Colors.primary,
-          tabBarInactiveTintColor: Colors.textMuted,
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: isDark ? 'rgba(247, 243, 238, 0.65)' : 'rgba(13, 43, 69, 0.55)',
           tabBarShowLabel: false,
         }}
       >

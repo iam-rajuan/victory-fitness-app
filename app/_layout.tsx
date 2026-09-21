@@ -16,6 +16,7 @@ import {
 } from '../lib/biometricUnlock';
 import { appendRunLog, formatRunLogMessage } from '../lib/runLog';
 import { LanguageProvider } from '../lib/i18n';
+import { ThemeProvider, useTheme } from '../context/ThemeContext';
 import { blurActiveElementBeforeNavigation, replaceRoute } from '../lib/navigation';
 import { PushNotificationEvent, registerForPushNotificationsAsync, startForegroundNotificationStream, stopForegroundNotificationStream, subscribeToPushNotifications } from '../lib/pushNotifications';
 import { cleanupLocalWebServiceWorkers } from '../lib/webServiceWorker';
@@ -447,38 +448,74 @@ export default function RootLayout() {
   }
 
   return (
-    <LanguageProvider>
-      <View style={styles.container}>
-        <StatusBar style="light" />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: Colors.background },
-            animation: 'none',
-          }}
+    <ThemeProvider>
+      <LanguageProvider>
+        <ThemedAppShell
+          toastNotification={toastNotification}
+          setToastNotification={setToastNotification}
+          router={router}
         />
-        <PwaInstallPrompt />
-        {toastNotification ? (
+      </LanguageProvider>
+    </ThemeProvider>
+  );
+}
+
+function ThemedAppShell({
+  toastNotification,
+  setToastNotification,
+  router,
+}: {
+  toastNotification: PushNotificationEvent | null;
+  setToastNotification: (n: PushNotificationEvent | null) => void;
+  router: any;
+}) {
+  const { isDark, colors } = useTheme();
+
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.background },
+          animation: 'none',
+        }}
+      />
+      <PwaInstallPrompt />
+      {toastNotification ? (
+        <TouchableOpacity
+          style={[
+            styles.notificationToast,
+            {
+              backgroundColor: colors.surfaceCard,
+              borderColor: colors.cardBorder,
+            },
+          ]}
+          onPress={() => {
+            setToastNotification(null);
+            router.push('/notifications');
+          }}
+          activeOpacity={0.9}
+        >
+          <View style={styles.notificationToastIcon}>
+            <Text style={styles.notificationToastIconText}>!</Text>
+          </View>
+          <View style={styles.notificationToastCopy}>
+            <Text style={[styles.notificationToastTitle, { color: colors.text }]}>{toastNotification.title}</Text>
+            <Text style={[styles.notificationToastMessage, { color: colors.textSecondary }]}>
+              {toastNotification.message}
+            </Text>
+          </View>
           <TouchableOpacity
-            style={styles.notificationToast}
-            onPress={() => {
-              setToastNotification(null);
-              router.push('/notifications');
-            }}
-            activeOpacity={0.9}
+            onPress={() => setToastNotification(null)}
+            hitSlop={10}
+            accessibilityLabel="Dismiss notification"
           >
-            <View style={styles.notificationToastIcon}><Text style={styles.notificationToastIconText}>!</Text></View>
-            <View style={styles.notificationToastCopy}>
-              <Text style={styles.notificationToastTitle}>{toastNotification.title}</Text>
-              <Text style={styles.notificationToastMessage}>{toastNotification.message}</Text>
-            </View>
-            <TouchableOpacity onPress={() => setToastNotification(null)} hitSlop={10} accessibilityLabel="Dismiss notification">
-              <Text style={styles.notificationToastClose}>×</Text>
-            </TouchableOpacity>
+            <Text style={[styles.notificationToastClose, { color: colors.textMuted }]}>×</Text>
           </TouchableOpacity>
-        ) : null}
-      </View>
-    </LanguageProvider>
+        </TouchableOpacity>
+      ) : null}
+    </View>
   );
 }
 

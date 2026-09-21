@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { pushRoute } from '../../lib/navigation';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ClaudeHomeHeaderProps {
   name: string;
@@ -9,7 +10,6 @@ interface ClaudeHomeHeaderProps {
 }
 
 const GOLD = '#C9943A';
-const IVORY = '#F7F3EE';
 
 const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
 const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
@@ -20,6 +20,7 @@ export default function ClaudeHomeHeader({
   streakDays,
 }: ClaudeHomeHeaderProps) {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
 
   // Format today's date: "FRIDAY, 8 MAY"
   const formattedDate = React.useMemo(() => {
@@ -34,36 +35,44 @@ export default function ClaudeHomeHeader({
 
   return (
     <View style={styles.container}>
-      {/* Top greeting bar */}
-      <View style={styles.topRow}>
-        <View style={styles.greetingWrap}>
-          <Text style={styles.dateLabel}>{formattedDate}</Text>
-          <Text style={styles.greetingTitle}>{`Hello ${firstName},`}</Text>
-        </View>
-
-        {/* Streak Pill */}
-        <Pressable
-          style={styles.streakPill}
-          onPress={() => pushRoute(router, '/profile')}
-        >
-          <View style={styles.goldSquareDot} />
-          <Text style={styles.streakNumber}>{streakDays || 12}</Text>
-        </Pressable>
+      {/* Left: Date & Greeting */}
+      <View style={styles.greetingWrap}>
+        <Text style={[styles.dateLabel, { color: colors.textMuted }]}>
+          {formattedDate}
+        </Text>
+        <Text style={[styles.greetingTitle, { color: colors.text }]}>
+          {`Hello ${firstName},`}
+        </Text>
       </View>
+
+      {/* Right: Streak Pill */}
+      <Pressable
+        style={[
+          styles.streakPill,
+          {
+            borderColor: isDark ? 'rgba(247, 243, 238, 0.2)' : 'rgba(13, 43, 69, 0.12)',
+            backgroundColor: isDark ? 'rgba(13, 43, 69, 0.6)' : '#FFFFFF',
+          },
+        ]}
+        onPress={() => pushRoute(router, '/profile')}
+      >
+        <View style={styles.goldSquareDot} />
+        <Text style={[styles.streakNumber, { color: colors.text }]}>
+          {streakDays || 12}
+        </Text>
+      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 16,
-  },
-  topRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 14,
   },
   greetingWrap: {
     flex: 1,
@@ -74,7 +83,6 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     fontWeight: '500',
     letterSpacing: 1.5,
-    color: 'rgba(247, 243, 238, 0.45)',
     marginBottom: 4,
   },
   greetingTitle: {
@@ -82,19 +90,16 @@ const styles = StyleSheet.create({
     fontSize: 21,
     lineHeight: 28,
     fontWeight: '600',
-    color: IVORY,
     letterSpacing: -0.3,
   },
   streakPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
-    borderWidth: 1,
-    borderColor: 'rgba(247, 243, 238, 0.2)',
     borderRadius: 999,
     paddingVertical: 6,
     paddingHorizontal: 12,
-    backgroundColor: 'rgba(247, 243, 238, 0.04)',
+    borderWidth: 1,
   },
   goldSquareDot: {
     width: 8,
@@ -106,6 +111,6 @@ const styles = StyleSheet.create({
     fontFamily: MONO,
     fontSize: 13,
     fontWeight: '700',
-    color: IVORY,
   },
 });
+

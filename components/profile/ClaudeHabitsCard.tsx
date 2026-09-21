@@ -9,6 +9,7 @@ import {
   Platform,
   Alert,
 } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ClaudeHabitsCardProps {
   identity?: string;
@@ -46,6 +47,7 @@ export default function ClaudeHabitsCard({
   onUpgrade,
   onSaveHabits,
 }: ClaudeHabitsCardProps) {
+  const { colors, isDark } = useTheme();
   const [editing, setEditing] = useState(false);
   const [currentIdentity, setCurrentIdentity] = useState(identity);
   const [currentUnlock, setCurrentUnlock] = useState(unlock);
@@ -66,21 +68,52 @@ export default function ClaudeHabitsCard({
   if (isSilver) {
     return (
       <View style={styles.container}>
-        <Text style={styles.sectionKicker}>MY HABITS</Text>
-        <View style={styles.duoCard}>
+        <Text style={[styles.sectionKicker, { color: colors.textMuted }]}>MY HABITS</Text>
+        <View
+          style={[
+            styles.duoCard,
+            {
+              backgroundColor: isDark ? NAVY : '#FFFFFF',
+              borderWidth: isDark ? 0 : 1,
+              borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
+              shadowColor: '#0D2B45',
+              shadowOffset: { width: 0, height: 4 },
+              shadowRadius: 14,
+              elevation: 2,
+              shadowOpacity: isDark ? 0.35 : 0.05,
+            },
+          ]}
+        >
           <TouchableOpacity style={styles.itemRow} activeOpacity={0.7} onPress={onOpenDuo}>
             <View style={styles.dotGreen} />
             <View style={styles.itemTextCol}>
-              <Text style={styles.itemTitle}>{partnerTitle}</Text>
-              <Text style={styles.itemSub}>{partnerNote}</Text>
+              <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]}>{partnerTitle}</Text>
+              <Text
+                style={[
+                  styles.itemSub,
+                  { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
+                ]}
+              >
+                {partnerNote}
+              </Text>
             </View>
             <Text style={styles.chevron}>›</Text>
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.upgradeTeaserCard} activeOpacity={0.85} onPress={onUpgrade}>
-          <Text style={styles.upgradeTeaserTitle}>Identity statement, unlock and trigger</Text>
-          <Text style={styles.upgradeTeaserSub}>
+        <TouchableOpacity
+          style={[
+            styles.upgradeTeaserCard,
+            {
+              backgroundColor: isDark ? 'transparent' : '#FFFFFF',
+              borderColor: isDark ? 'rgba(247, 243, 238, 0.16)' : 'rgba(13, 43, 69, 0.12)',
+            },
+          ]}
+          activeOpacity={0.85}
+          onPress={onUpgrade}
+        >
+          <Text style={[styles.upgradeTeaserTitle, { color: colors.text }]}>Identity statement, unlock and trigger</Text>
+          <Text style={[styles.upgradeTeaserSub, { color: colors.textSecondary }]}>
             The three personal habit fields arrive with Gold. Your partner and network count stay on Silver.
           </Text>
           <Text style={styles.upgradeLink}>See what Gold adds ›</Text>
@@ -92,39 +125,93 @@ export default function ClaudeHabitsCard({
   return (
     <View style={styles.container}>
       <View style={styles.sectionHeaderRow}>
-        <Text style={styles.sectionKicker}>MY HABITS</Text>
+        <Text style={[styles.sectionKicker, { color: colors.textMuted }]}>MY HABITS</Text>
         <TouchableOpacity onPress={() => setEditing(true)} activeOpacity={0.7}>
           <Text style={styles.editLink}>Edit fields</Text>
         </TouchableOpacity>
       </View>
 
       {/* WHO I'M BECOMING Card matching lines 1188-1191 */}
-      <View style={styles.identityCard}>
-        <Text style={styles.fieldKicker}>WHO I'M BECOMING</Text>
-        <Text style={styles.identityStatement}>{currentIdentity}</Text>
+      <View
+        style={[
+          styles.identityCard,
+          {
+            backgroundColor: isDark ? NAVY : '#FFFFFF',
+            borderWidth: isDark ? 0 : 1,
+            borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
+            borderLeftWidth: 4,
+            borderLeftColor: COPPER,
+            shadowColor: '#0D2B45',
+            shadowOffset: { width: 0, height: 4 },
+            shadowRadius: 14,
+            elevation: 2,
+            shadowOpacity: isDark ? 0.35 : 0.05,
+          },
+        ]}
+      >
+        <Text style={[styles.fieldKicker, { color: isDark ? GOLD : '#B5651D' }]}>WHO I'M BECOMING</Text>
+        <Text style={[styles.identityStatement, { color: isDark ? IVORY : NAVY }]}>{currentIdentity}</Text>
       </View>
 
       {/* Unlock, Trigger, and Duo Cards matching lines 1192-1196 */}
-      <View style={styles.habitsBlock}>
+      <View
+        style={[
+          styles.habitsBlock,
+          {
+            backgroundColor: isDark ? NAVY : '#FFFFFF',
+            borderWidth: isDark ? 0 : 1,
+            borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
+            shadowColor: '#0D2B45',
+            shadowOffset: { width: 0, height: 4 },
+            shadowRadius: 14,
+            elevation: 2,
+            shadowOpacity: isDark ? 0.35 : 0.05,
+          },
+        ]}
+      >
         {/* UNLOCK */}
-        <View style={styles.habitRow}>
-          <Text style={styles.fieldKicker}>MY UNLOCK</Text>
-          <Text style={styles.habitValue}>{currentUnlock}</Text>
+        <View
+          style={[
+            styles.habitRow,
+            { borderBottomColor: isDark ? 'rgba(247, 243, 238, 0.1)' : 'rgba(13, 43, 69, 0.08)' },
+          ]}
+        >
+          <Text style={[styles.fieldKicker, { color: isDark ? GOLD : '#B5651D' }]}>MY UNLOCK</Text>
+          <Text style={[styles.habitValue, { color: isDark ? IVORY : NAVY }]}>{currentUnlock}</Text>
         </View>
 
         {/* TRIGGER + Trigger usage counter matching line 1194 */}
-        <View style={styles.habitRow}>
-          <Text style={styles.fieldKicker}>MY TRIGGER</Text>
-          <Text style={styles.habitValue}>{currentTrigger}</Text>
-          <Text style={styles.triggerUsageText}>{triggerUsage}</Text>
+        <View
+          style={[
+            styles.habitRow,
+            { borderBottomColor: isDark ? 'rgba(247, 243, 238, 0.1)' : 'rgba(13, 43, 69, 0.08)' },
+          ]}
+        >
+          <Text style={[styles.fieldKicker, { color: isDark ? GOLD : '#B5651D' }]}>MY TRIGGER</Text>
+          <Text style={[styles.habitValue, { color: isDark ? IVORY : NAVY }]}>{currentTrigger}</Text>
+          <Text
+            style={[
+              styles.triggerUsageText,
+              { color: isDark ? 'rgba(247, 243, 238, 0.5)' : 'rgba(13, 43, 69, 0.55)' },
+            ]}
+          >
+            {triggerUsage}
+          </Text>
         </View>
 
         {/* ACCOUNTABILITY DUO ROW */}
         <TouchableOpacity style={styles.duoRow} activeOpacity={0.7} onPress={onOpenDuo}>
           <View style={styles.dotGreen} />
           <View style={styles.itemTextCol}>
-            <Text style={styles.itemTitle}>{partnerTitle}</Text>
-            <Text style={styles.itemSub}>{partnerNote}</Text>
+            <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]}>{partnerTitle}</Text>
+            <Text
+              style={[
+                styles.itemSub,
+                { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
+              ]}
+            >
+              {partnerNote}
+            </Text>
           </View>
           <Text style={styles.chevron}>›</Text>
         </TouchableOpacity>
@@ -132,12 +219,12 @@ export default function ClaudeHabitsCard({
 
       {/* Edit Habits Modal */}
       <Modal visible={editing} animationType="slide" transparent={false}>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
+        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: colors.divider }]}>
             <TouchableOpacity onPress={() => setEditing(false)} activeOpacity={0.7}>
-              <Text style={styles.modalCancel}>Cancel</Text>
+              <Text style={[styles.modalCancel, { color: colors.textMuted }]}>Cancel</Text>
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Edit Habit Fields</Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Edit Habit Fields</Text>
             <TouchableOpacity onPress={handleSave} activeOpacity={0.7}>
               <Text style={styles.modalSave}>Save</Text>
             </TouchableOpacity>
@@ -147,7 +234,15 @@ export default function ClaudeHabitsCard({
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>WHO I'M BECOMING (IDENTITY)</Text>
               <TextInput
-                style={styles.modalInput}
+                style={[
+                  styles.modalInput,
+                  {
+                    backgroundColor: isDark ? NAVY : '#FFFFFF',
+                    color: colors.text,
+                    borderColor: colors.cardBorder,
+                    borderWidth: isDark ? 0 : 1,
+                  },
+                ]}
                 value={currentIdentity}
                 onChangeText={setCurrentIdentity}
                 multiline
@@ -158,7 +253,15 @@ export default function ClaudeHabitsCard({
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>MY UNLOCK (REWARD ONLY WHILE TRAINING)</Text>
               <TextInput
-                style={styles.modalInput}
+                style={[
+                  styles.modalInput,
+                  {
+                    backgroundColor: isDark ? NAVY : '#FFFFFF',
+                    color: colors.text,
+                    borderColor: colors.cardBorder,
+                    borderWidth: isDark ? 0 : 1,
+                  },
+                ]}
                 value={currentUnlock}
                 onChangeText={setCurrentUnlock}
                 multiline
@@ -169,7 +272,15 @@ export default function ClaudeHabitsCard({
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>MY TRIGGER (ANCHOR HABIT)</Text>
               <TextInput
-                style={styles.modalInput}
+                style={[
+                  styles.modalInput,
+                  {
+                    backgroundColor: isDark ? NAVY : '#FFFFFF',
+                    color: colors.text,
+                    borderColor: colors.cardBorder,
+                    borderWidth: isDark ? 0 : 1,
+                  },
+                ]}
                 value={currentTrigger}
                 onChangeText={setCurrentTrigger}
                 multiline

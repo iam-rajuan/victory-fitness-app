@@ -15,6 +15,7 @@ import ClaudeChallengeDirectory, { ChallengeItem } from '../../components/challe
 import ClaudeChallengeDetailModal from '../../components/challenge/ClaudeChallengeDetailModal';
 import ClaudeCohortModal from '../../components/challenge/ClaudeCohortModal';
 import ClaudeCommunityFeed from '../../components/challenge/ClaudeCommunityFeed';
+import { useTheme } from '../../context/ThemeContext';
 
 const OBSIDIAN = '#0D0D0D';
 const IVORY = '#F7F3EE';
@@ -23,6 +24,7 @@ const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", d
 
 export default function ChallengeScreen() {
   const router = useRouter();
+  const { isDark, colors } = useTheme();
 
   const [activeTab, setActiveTab] = useState<ChallengeTabType>('challenges');
   const [selectedChallenge, setSelectedChallenge] = useState<ChallengeItem | null>(null);
@@ -75,14 +77,14 @@ export default function ChallengeScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         {/* Screen Title matching line 824 */}
-        <Text style={styles.screenTitle}>Challenges</Text>
+        <Text style={[styles.screenTitle, { color: colors.text }]}>Challenges</Text>
 
         {/* Top Tab Toggle: Challenges vs Community matching lines 825-827 */}
         <ClaudeChallengeTabs activeTab={activeTab} onChangeTab={setActiveTab} />

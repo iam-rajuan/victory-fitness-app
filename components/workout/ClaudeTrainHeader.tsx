@@ -1,12 +1,12 @@
 import React from 'react';
 import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ClaudeTrainHeaderProps {
   totalWorkouts?: number;
   onPressFilter?: () => void;
 }
 
-const IVORY = '#F7F3EE';
 const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
 
@@ -14,17 +14,32 @@ export default function ClaudeTrainHeader({
   totalWorkouts = 170,
   onPressFilter,
 }: ClaudeTrainHeaderProps) {
+  const { colors, isDark } = useTheme();
+
   return (
     <View style={styles.headerRow}>
-      <Text style={styles.title}>Train</Text>
+      <Text style={[styles.title, { color: colors.text }]}>Train</Text>
       <View style={styles.rightGroup}>
-        <Text style={styles.countText}>{`${totalWorkouts} workouts`}</Text>
+        <Text style={[styles.countText, { color: colors.textMuted }]}>{`${totalWorkouts} workouts`}</Text>
         <Pressable
-          style={styles.filterBtn}
+          style={[
+            styles.filterBtn,
+            {
+              borderColor: isDark ? 'rgba(247, 243, 238, 0.2)' : 'rgba(13, 43, 69, 0.15)',
+              backgroundColor: isDark ? 'rgba(247, 243, 238, 0.04)' : '#FFFFFF',
+            },
+          ]}
           onPress={onPressFilter}
           hitSlop={8}
         >
-          <View style={styles.filterCircle} />
+          <View
+            style={[
+              styles.filterCircle,
+              {
+                borderColor: isDark ? 'rgba(247, 243, 238, 0.6)' : 'rgba(13, 43, 69, 0.6)',
+              },
+            ]}
+          />
         </Pressable>
       </View>
     </View>
@@ -45,7 +60,6 @@ const styles = StyleSheet.create({
     fontSize: 27,
     lineHeight: 32,
     fontWeight: '600',
-    color: IVORY,
   },
   rightGroup: {
     flexDirection: 'row',
@@ -56,23 +70,20 @@ const styles = StyleSheet.create({
     fontFamily: MONO,
     fontSize: 11.5,
     fontWeight: '500',
-    color: 'rgba(247, 243, 238, 0.45)',
   },
   filterBtn: {
     width: 34,
     height: 34,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(247, 243, 238, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(247, 243, 238, 0.04)',
   },
   filterCircle: {
     width: 12,
     height: 12,
     borderRadius: 99,
     borderWidth: 1.5,
-    borderColor: 'rgba(247, 243, 238, 0.6)',
   },
 });
+

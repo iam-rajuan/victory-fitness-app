@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, ScrollView, Pressable, Platform } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 export interface ProgramCardItem {
   n: string;
@@ -41,21 +42,23 @@ const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Cou
 export default function ClaudeWorkoutRowCarousel({
   title,
   subtitle,
-  actionText = 'All ›',
+  actionText,
   onActionPress,
-  type,
+  type = 'workouts',
   programs = [],
   workouts = [],
   onSelectProgram,
   onSelectWorkout,
 }: ClaudeWorkoutRowCarouselProps) {
+  const { colors, isDark } = useTheme();
+
   return (
     <View style={styles.section}>
       {/* Section Header */}
       <View style={styles.headerRow}>
         <View style={styles.titleWrap}>
-          <Text style={styles.title}>{title}</Text>
-          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+          <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+          {subtitle ? <Text style={[styles.subtitle, { color: colors.textMuted }]}>{subtitle}</Text> : null}
         </View>
 
         {actionText ? (
@@ -78,18 +81,45 @@ export default function ClaudeWorkoutRowCarousel({
               style={styles.programCard}
               onPress={() => onSelectProgram && onSelectProgram(p)}
             >
-              <View style={styles.programMedia}>
+              <View
+                style={[
+                  styles.programMedia,
+                  {
+                    backgroundColor: isDark ? NAVY : '#FFFFFF',
+                    borderColor: isDark ? 'rgba(247, 243, 238, 0.1)' : 'rgba(13, 43, 69, 0.08)',
+                    shadowColor: '#0D2B45',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowRadius: 10,
+                    elevation: 2,
+                    shadowOpacity: isDark ? 0.35 : 0.05,
+                  },
+                ]}
+              >
                 {p.rank !== undefined ? (
-                  <Text style={styles.programRank}>{p.rank}</Text>
+                  <Text
+                    style={[
+                      styles.programRank,
+                      { color: isDark ? 'rgba(247, 243, 238, 0.22)' : 'rgba(13, 43, 69, 0.12)' },
+                    ]}
+                  >
+                    {p.rank}
+                  </Text>
                 ) : null}
                 <Text style={styles.programTag}>{p.t}</Text>
 
                 <View style={styles.programBottomInfo}>
-                  <Text style={styles.programName}>{p.n}</Text>
-                  <Text style={styles.programMeta}>{p.m}</Text>
+                  <Text style={[styles.programName, { color: isDark ? IVORY : NAVY }]}>{p.n}</Text>
+                  <Text
+                    style={[
+                      styles.programMeta,
+                      { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
+                    ]}
+                  >
+                    {p.m}
+                  </Text>
                 </View>
               </View>
-              {p.c ? <Text style={styles.programCount}>{p.c}</Text> : null}
+              {p.c ? <Text style={[styles.programCount, { color: colors.textMuted }]}>{p.c}</Text> : null}
             </Pressable>
           ))}
 
@@ -106,8 +136,8 @@ export default function ClaudeWorkoutRowCarousel({
                 </View>
                 <Text style={styles.workoutBadge}>{w.t}</Text>
               </View>
-              <Text style={styles.workoutName}>{w.n}</Text>
-              <Text style={styles.workoutMeta}>{w.m}</Text>
+              <Text style={[styles.workoutName, { color: colors.text }]}>{w.n}</Text>
+              <Text style={[styles.workoutMeta, { color: colors.textMuted }]}>{w.m}</Text>
             </Pressable>
           ))}
       </ScrollView>

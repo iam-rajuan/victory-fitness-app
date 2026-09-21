@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { pushRoute } from '../../lib/navigation';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ClaudeTodayWorkoutCardProps {
   tier: 'SILVER' | 'GOLD' | 'GOLD_BETA' | 'PLATINUM' | 'INNER_CIRCLE' | 'NONE';
@@ -31,6 +32,7 @@ export default function ClaudeTodayWorkoutCard({
   onStartSession,
 }: ClaudeTodayWorkoutCardProps) {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const hasCoach = tier !== 'SILVER' && tier !== 'NONE';
 
   const planLabel = hasCoach ? 'YOUR PLAN · WEEK 2 OF 6' : "TODAY'S WORKOUT";
@@ -59,30 +61,61 @@ export default function ClaudeTodayWorkoutCard({
     <View style={styles.container}>
       {/* Top badges row */}
       <View style={styles.headerRow}>
-        <Text style={styles.planLabel}>{planLabel}</Text>
-        <Text style={[styles.planSource, hasCoach && styles.planSourceCoach]}>{planSource}</Text>
+        <Text style={[styles.planLabel, { color: colors.textMuted }]}>{planLabel}</Text>
+        <Text style={[styles.planSource, { color: hasCoach ? GOLD : colors.textMuted }]}>{planSource}</Text>
       </View>
 
       {/* Main card */}
-      <View style={styles.card}>
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: isDark ? NAVY : '#FFFFFF',
+            borderWidth: isDark ? 0 : 1,
+            borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
+            shadowOpacity: isDark ? 0.35 : 0.06,
+          },
+        ]}
+      >
         <View style={styles.accentGoldBar} />
 
-        <Text style={styles.dayKicker}>{planDayLine}</Text>
-        <Text style={styles.title}>{workoutTitle}</Text>
+        <Text style={[styles.dayKicker, { color: isDark ? GOLD : '#B5651D' }]}>{planDayLine}</Text>
+        <Text style={[styles.title, { color: isDark ? IVORY : NAVY }]}>{workoutTitle}</Text>
 
         {/* Stats row */}
         <View style={styles.statsRow}>
           <View style={styles.statCol}>
-            <Text style={styles.statVal}>{durationMinutes}</Text>
-            <Text style={styles.statLabel}>MINUTES</Text>
+            <Text style={[styles.statVal, { color: isDark ? IVORY : NAVY }]}>{durationMinutes}</Text>
+            <Text
+              style={[
+                styles.statLabel,
+                { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
+              ]}
+            >
+              MINUTES
+            </Text>
           </View>
           <View style={styles.statCol}>
-            <Text style={styles.statVal}>{exerciseCount}</Text>
-            <Text style={styles.statLabel}>EXERCISES</Text>
+            <Text style={[styles.statVal, { color: isDark ? IVORY : NAVY }]}>{exerciseCount}</Text>
+            <Text
+              style={[
+                styles.statLabel,
+                { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
+              ]}
+            >
+              EXERCISES
+            </Text>
           </View>
           <View style={styles.statCol}>
-            <Text style={styles.statVal}>{equipment.toUpperCase()}</Text>
-            <Text style={styles.statLabel}>EQUIPMENT</Text>
+            <Text style={[styles.statVal, { color: isDark ? IVORY : NAVY }]}>{equipment.toUpperCase()}</Text>
+            <Text
+              style={[
+                styles.statLabel,
+                { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
+              ]}
+            >
+              EQUIPMENT
+            </Text>
           </View>
         </View>
 
@@ -93,7 +126,14 @@ export default function ClaudeTodayWorkoutCard({
 
         {/* Secondary link */}
         <Pressable style={styles.altLinkWrap} onPress={handleAlt}>
-          <Text style={styles.altLinkText}>{planAlt}</Text>
+          <Text
+            style={[
+              styles.altLinkText,
+              { color: isDark ? 'rgba(247, 243, 238, 0.6)' : 'rgba(13, 43, 69, 0.65)' },
+            ]}
+          >
+            {planAlt}
+          </Text>
         </Pressable>
       </View>
     </View>
@@ -117,17 +157,12 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     fontWeight: '500',
     letterSpacing: 1.5,
-    color: 'rgba(247, 243, 238, 0.42)',
   },
   planSource: {
     fontFamily: DMSANS,
     fontSize: 9.5,
     fontWeight: '700',
     letterSpacing: 1.1,
-    color: 'rgba(247, 243, 238, 0.42)',
-  },
-  planSourceCoach: {
-    color: GOLD,
   },
   card: {
     backgroundColor: NAVY,
@@ -135,6 +170,10 @@ const styles = StyleSheet.create({
     padding: 22,
     position: 'relative',
     overflow: 'hidden',
+    shadowColor: '#0D2B45',
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 16,
+    elevation: 2,
   },
   accentGoldBar: {
     position: 'absolute',

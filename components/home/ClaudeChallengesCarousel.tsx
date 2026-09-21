@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { pushRoute } from '../../lib/navigation';
+import { useTheme } from '../../context/ThemeContext';
 
 export interface ChallengeItem {
   id?: string;
@@ -55,6 +56,7 @@ export default function ClaudeChallengesCarousel({
   onOpenChallenge,
 }: ClaudeChallengesCarouselProps) {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const [activeIdx, setActiveIdx] = useState(0);
 
   const list = challenges.length > 0 ? challenges : DEFAULT_CHALLENGES;
@@ -80,9 +82,9 @@ export default function ClaudeChallengesCarousel({
     <View style={styles.container}>
       {/* Header with counter and arrows */}
       <View style={styles.headerRow}>
-        <Text style={styles.sectionKicker}>YOUR CHALLENGES</Text>
+        <Text style={[styles.sectionKicker, { color: colors.textMuted }]}>YOUR CHALLENGES</Text>
         <View style={styles.controlsRow}>
-          <Text style={styles.countText}>{`${activeIdx + 1} of ${list.length} active`}</Text>
+          <Text style={[styles.countText, { color: colors.textMuted }]}>{`${activeIdx + 1} of ${list.length} active`}</Text>
           <Pressable hitSlop={10} onPress={goPrev}>
             <Text style={styles.arrowBtn}>‹</Text>
           </Pressable>
@@ -93,20 +95,45 @@ export default function ClaudeChallengesCarousel({
       </View>
 
       {/* Challenge Card */}
-      <Pressable style={styles.card} onPress={handleCardPress}>
+      <Pressable
+        style={[
+          styles.card,
+          {
+            backgroundColor: isDark ? NAVY : '#FFFFFF',
+            borderWidth: isDark ? 0 : 1,
+            borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
+            shadowOpacity: isDark ? 0.35 : 0.05,
+          },
+        ]}
+        onPress={handleCardPress}
+      >
         <View style={styles.cardTopRow}>
-          <Text style={styles.challengeName}>{current.n}</Text>
+          <Text style={[styles.challengeName, { color: isDark ? IVORY : NAVY }]}>{current.n}</Text>
           <Text style={styles.rankBadge}>{current.rank}</Text>
         </View>
 
-        <Text style={styles.dayProgressText}>{current.d}</Text>
+        <Text
+          style={[
+            styles.dayProgressText,
+            { color: isDark ? 'rgba(247, 243, 238, 0.6)' : 'rgba(13, 43, 69, 0.55)' },
+          ]}
+        >
+          {current.d}
+        </Text>
 
         {/* Progress Bar */}
-        <View style={styles.progressTrack}>
+        <View
+          style={[
+            styles.progressTrack,
+            {
+              backgroundColor: isDark ? 'rgba(247, 243, 238, 0.14)' : 'rgba(13, 43, 69, 0.08)',
+            },
+          ]}
+        >
           <View style={[styles.progressFill, { width: `${Math.min(100, current.pct)}%` }]} />
         </View>
 
-        <Text style={styles.noteText}>{current.note}</Text>
+        <Text style={[styles.noteText, { color: isDark ? GOLD : '#B5651D' }]}>{current.note}</Text>
       </Pressable>
 
       {/* Dots Indicator */}
@@ -115,12 +142,25 @@ export default function ClaudeChallengesCarousel({
           <Pressable
             key={i}
             onPress={() => setActiveIdx(i)}
-            style={[styles.dot, i === activeIdx && styles.dotActive]}
+            style={[
+              styles.dot,
+              {
+                backgroundColor:
+                  i === activeIdx
+                    ? GOLD
+                    : isDark
+                    ? 'rgba(247, 243, 238, 0.24)'
+                    : 'rgba(13, 43, 69, 0.2)',
+              },
+              i === activeIdx && styles.dotActive,
+            ]}
           />
         ))}
       </View>
 
-      <Text style={styles.footnote}>swipe between your active challenges</Text>
+      <Text style={[styles.footnote, { color: colors.textMuted }]}>
+        swipe between your active challenges
+      </Text>
     </View>
   );
 }
@@ -166,6 +206,10 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     paddingVertical: 17,
     paddingHorizontal: 18,
+    shadowColor: '#0D2B45',
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 14,
+    elevation: 2,
   },
   cardTopRow: {
     flexDirection: 'row',

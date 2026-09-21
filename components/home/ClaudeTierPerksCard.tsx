@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { pushRoute } from '../../lib/navigation';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ClaudeTierPerksCardProps {
   tier: 'SILVER' | 'GOLD' | 'GOLD_BETA' | 'PLATINUM' | 'INNER_CIRCLE' | 'NONE';
@@ -18,6 +19,7 @@ const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' })
 
 export default function ClaudeTierPerksCard({ tier }: ClaudeTierPerksCardProps) {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
 
   if (tier !== 'PLATINUM' && tier !== 'INNER_CIRCLE') {
     return null;
@@ -27,20 +29,40 @@ export default function ClaudeTierPerksCard({ tier }: ClaudeTierPerksCardProps) 
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionKicker}>
+      <Text style={[styles.sectionKicker, { color: colors.textMuted }]}>
         {isInnerCircle ? 'INNER CIRCLE EXCLUSIVES' : 'PLATINUM PRIVILEGES'}
       </Text>
 
-      <View style={[styles.card, isInnerCircle && styles.cardInnerCircle]}>
+      <View
+        style={[
+          styles.card,
+          isInnerCircle && styles.cardInnerCircle,
+          {
+            backgroundColor: isDark ? NAVY : '#FFFFFF',
+            borderWidth: isDark ? 0 : 1,
+            borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
+            shadowOpacity: isDark ? 0.35 : 0.05,
+          },
+        ]}
+      >
         {/* Row 1: Wearables sync */}
         <Pressable
-          style={[styles.itemRow, styles.itemRowBorder]}
+          style={[
+            styles.itemRow,
+            styles.itemRowBorder,
+            { borderBottomColor: isDark ? 'rgba(247, 243, 238, 0.1)' : 'rgba(13, 43, 69, 0.08)' },
+          ]}
           onPress={() => pushRoute(router, '/profile')}
         >
           <View style={styles.syncedDot} />
           <View style={styles.textCol}>
-            <Text style={styles.itemTitle}>Wearables synced</Text>
-            <Text style={styles.itemSub}>
+            <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]}>Wearables synced</Text>
+            <Text
+              style={[
+                styles.itemSub,
+                { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
+              ]}
+            >
               Resting HR, sleep, calories and heart-rate zones
             </Text>
           </View>
@@ -49,15 +71,24 @@ export default function ClaudeTierPerksCard({ tier }: ClaudeTierPerksCardProps) 
 
         {/* Row 2: Human Coaching Session / Brief */}
         <Pressable
-          style={[styles.itemRow, styles.itemRowBorder]}
+          style={[
+            styles.itemRow,
+            styles.itemRowBorder,
+            { borderBottomColor: isDark ? 'rgba(247, 243, 238, 0.1)' : 'rgba(13, 43, 69, 0.08)' },
+          ]}
           onPress={() => pushRoute(router, isInnerCircle ? '/profile/application' : '/chat')}
         >
           <View style={styles.goldDot} />
           <View style={styles.textCol}>
-            <Text style={styles.itemTitle}>
+            <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]}>
               {isInnerCircle ? '1-to-1 coaching with Victor' : 'Monthly 1-to-1 coaching session'}
             </Text>
-            <Text style={styles.itemSub}>
+            <Text
+              style={[
+                styles.itemSub,
+                { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
+              ]}
+            >
               {isInnerCircle
                 ? 'Coach sees your habit brief before every session'
                 : 'Next available Thursday 19:00 · Included in your plan'}
@@ -73,8 +104,13 @@ export default function ClaudeTierPerksCard({ tier }: ClaudeTierPerksCardProps) 
         >
           <View style={styles.copperDot} />
           <View style={styles.textCol}>
-            <Text style={styles.itemTitle}>Weekly habit digest</Text>
-            <Text style={styles.itemSub}>
+            <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]}>Weekly habit digest</Text>
+            <Text
+              style={[
+                styles.itemSub,
+                { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
+              ]}
+            >
               Monday 08:00, built from your four habit fields
             </Text>
           </View>
@@ -104,6 +140,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderLeftWidth: 4,
     borderLeftColor: GOLD,
+    shadowColor: '#0D2B45',
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 14,
+    elevation: 2,
   },
   cardInnerCircle: {
     borderLeftColor: COPPER,

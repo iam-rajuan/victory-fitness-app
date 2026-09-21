@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ClaudePlanBuildBannerProps {
   planBuilt?: boolean;
@@ -21,6 +22,8 @@ export default function ClaudePlanBuildBanner({
   hasCoach = true,
   onPress,
 }: ClaudePlanBuildBannerProps) {
+  const { colors } = useTheme();
+
   if (!hasCoach) {
     return null;
   }
@@ -37,10 +40,10 @@ export default function ClaudePlanBuildBanner({
       >
         <View style={styles.textCol}>
           <Text style={[styles.kicker, planBuilt && styles.kickerGreen]}>{kicker}</Text>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.note}>{note}</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+          <Text style={[styles.note, { color: colors.textSecondary }]}>{note}</Text>
         </View>
-        <Text style={styles.arrow}>{planBuilt ? '›' : '›'}</Text>
+        <Text style={styles.arrow}>›</Text>
       </Pressable>
     </View>
   );

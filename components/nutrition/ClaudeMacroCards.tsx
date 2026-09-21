@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, Platform } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 interface MacroItem {
   k: string; // label, e.g. "Protein"
@@ -40,6 +41,8 @@ export default function ClaudeMacroCards({
   kcalCurrent = 1580,
   kcalTarget = 2200,
 }: ClaudeMacroCardsProps) {
+  const { colors, isDark } = useTheme();
+
   const macros: MacroItem[] = [
     {
       k: 'Protein',
@@ -59,7 +62,7 @@ export default function ClaudeMacroCards({
       k: 'Fat',
       v: `${fatCurrent} g`,
       of: `of ${fatTarget} g`,
-      color: IVORY,
+      color: isDark ? IVORY : '#4A5568',
       pct: Math.min(100, Math.round((fatCurrent / fatTarget) * 100)),
     },
     {
@@ -76,7 +79,22 @@ export default function ClaudeMacroCards({
       {/* 4 Macro Cards Row */}
       <View style={styles.cardsRow}>
         {macros.map((m) => (
-          <View key={m.k} style={styles.card}>
+          <View
+            key={m.k}
+            style={[
+              styles.card,
+              {
+                backgroundColor: isDark ? NAVY : '#FFFFFF',
+                borderWidth: isDark ? 0 : 1,
+                borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
+                shadowColor: '#0D2B45',
+                shadowOffset: { width: 0, height: 4 },
+                shadowRadius: 10,
+                elevation: 2,
+                shadowOpacity: isDark ? 0.35 : 0.05,
+              },
+            ]}
+          >
             {/* Macro Ring Graphic */}
             <View style={[styles.outerRing, { borderColor: `${m.color}40` }]}>
               <View
@@ -90,18 +108,30 @@ export default function ClaudeMacroCards({
                   },
                 ]}
               />
-              <View style={styles.innerRing} />
+              <View
+                style={[
+                  styles.innerRing,
+                  { backgroundColor: isDark ? NAVY : '#FFFFFF' },
+                ]}
+              />
             </View>
 
-            <Text style={styles.valueText}>{m.v}</Text>
-            <Text style={styles.targetText}>{m.of}</Text>
+            <Text style={[styles.valueText, { color: isDark ? IVORY : NAVY }]}>{m.v}</Text>
+            <Text
+              style={[
+                styles.targetText,
+                { color: isDark ? 'rgba(247, 243, 238, 0.45)' : 'rgba(13, 43, 69, 0.5)' },
+              ]}
+            >
+              {m.of}
+            </Text>
             <Text style={[styles.labelText, { color: m.color }]}>{m.k}</Text>
           </View>
         ))}
       </View>
 
       {/* Color System Footnote */}
-      <Text style={styles.footnote}>
+      <Text style={[styles.footnote, { color: colors.textMuted }]}>
         Gold is protein, copper is carbs, ivory is fat, green is calories — the same four colours everywhere in the app.
       </Text>
     </View>

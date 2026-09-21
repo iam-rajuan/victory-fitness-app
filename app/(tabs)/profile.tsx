@@ -19,6 +19,7 @@ import ClaudeOneToOneBookingModal from '../../components/profile/ClaudeOneToOneB
 import ClaudeInnerCircleApplyModal from '../../components/profile/ClaudeInnerCircleApplyModal';
 import ClaudeNotificationPreferencesModal from '../../components/profile/ClaudeNotificationPreferencesModal';
 import ClaudeDuoModal from '../../components/duo/ClaudeDuoModal';
+import { useTheme } from '../../context/ThemeContext';
 
 const OBSIDIAN = '#0D0D0D';
 const NAVY = '#0D2B45';
@@ -33,6 +34,7 @@ const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Cou
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { isDark, colors, theme } = useTheme();
 
   const [user, setUser] = useState<any>(null);
   const [name, setName] = useState('Michael Krause');
@@ -98,7 +100,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -116,9 +118,16 @@ export default function ProfileScreen() {
 
         {/* Daily Journal Teaser Card matching lines 1143-1156 */}
         <View style={styles.sectionWrap}>
-          <Text style={styles.sectionKicker}>JOURNAL</Text>
+          <Text style={[styles.sectionKicker, { color: colors.copper }]}>JOURNAL</Text>
           <TouchableOpacity
-            style={styles.journalCard}
+            style={[
+              styles.journalCard,
+              {
+                backgroundColor: isDark ? NAVY : '#FFFFFF',
+                borderColor: isDark ? 'transparent' : colors.cardBorder,
+                borderWidth: isDark ? 0 : 1,
+              },
+            ]}
             activeOpacity={0.85}
             onPress={() => router.push('/journal')}
           >
@@ -126,9 +135,9 @@ export default function ProfileScreen() {
               <Text style={styles.journalPromptKicker}>TODAY'S PROMPT</Text>
               <Text style={styles.journalRunningBadge}>5 DAYS RUNNING</Text>
             </View>
-            <Text style={styles.journalTitle}>What went better than you expected?</Text>
+            <Text style={[styles.journalTitle, { color: colors.text }]}>What went better than you expected?</Text>
             <View style={styles.journalBottomRow}>
-              <Text style={styles.journalSub}>Two minutes. Nobody else sees it.</Text>
+              <Text style={[styles.journalSub, { color: colors.textSecondary }]}>Two minutes. Nobody else sees it.</Text>
               <Text style={styles.journalWriteLink}>Write ›</Text>
             </View>
           </TouchableOpacity>
@@ -150,13 +159,20 @@ export default function ProfileScreen() {
         {isPlatinumOrIC && (
           <View style={styles.digestWrap}>
             <TouchableOpacity
-              style={styles.digestCard}
+              style={[
+                styles.digestCard,
+                {
+                  backgroundColor: isDark ? NAVY : '#FFFFFF',
+                  borderColor: isDark ? 'transparent' : colors.cardBorder,
+                  borderWidth: isDark ? 0 : 1,
+                },
+              ]}
               activeOpacity={0.8}
               onPress={() => setShowDigestModal(true)}
             >
               <View style={styles.digestTextCol}>
-                <Text style={styles.digestTitle}>Your week, in your own words</Text>
-                <Text style={styles.digestSub}>Monday 08:00 habit and training digest</Text>
+                <Text style={[styles.digestTitle, { color: colors.text }]}>Your week, in your own words</Text>
+                <Text style={[styles.digestSub, { color: colors.textSecondary }]}>Monday 08:00 habit and training digest</Text>
               </View>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
@@ -165,45 +181,76 @@ export default function ProfileScreen() {
 
         {/* ACCOUNT Menu Section matching lines 1222-1231 */}
         <View style={styles.sectionWrap}>
-          <Text style={styles.sectionKicker}>ACCOUNT</Text>
-          <View style={styles.menuCard}>
+          <Text style={[styles.sectionKicker, { color: colors.copper }]}>ACCOUNT</Text>
+          <View
+            style={[
+              styles.menuCard,
+              {
+                backgroundColor: isDark ? NAVY : '#FFFFFF',
+                borderColor: isDark ? 'transparent' : colors.cardBorder,
+                borderWidth: isDark ? 0 : 1,
+              },
+            ]}
+          >
             <TouchableOpacity
-              style={styles.menuRow}
+              style={[styles.menuRow, { borderBottomColor: colors.divider }]}
+              activeOpacity={0.7}
+              onPress={() => router.push('/profile/settings')}
+            >
+              <Text style={[styles.menuTitle, { color: colors.text }]}>Settings</Text>
+              <Text style={[styles.menuMeta, { color: colors.textMuted }]}>Habits & mindset</Text>
+              <Text style={styles.chevron}>›</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.menuRow, { borderBottomColor: colors.divider }]}
+              activeOpacity={0.7}
+              onPress={() => router.push('/profile/settings')}
+            >
+              <Text style={[styles.menuTitle, { color: colors.text }]}>Appearance</Text>
+              <Text style={[styles.menuMeta, { fontFamily: MONO, color: GOLD }]}>
+                {isDark ? 'DARK MODE' : 'WHITE MODE'}
+              </Text>
+              <Text style={styles.chevron}>›</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.menuRow, { borderBottomColor: colors.divider }]}
               activeOpacity={0.7}
               onPress={() => router.push('/profile/edit')}
             >
-              <Text style={styles.menuTitle}>Edit profile</Text>
-              <Text style={styles.menuMeta}>Name, photo, targets</Text>
+              <Text style={[styles.menuTitle, { color: colors.text }]}>Edit profile</Text>
+              <Text style={[styles.menuMeta, { color: colors.textMuted }]}>Name, photo, targets</Text>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.menuRow}
+              style={[styles.menuRow, { borderBottomColor: colors.divider }]}
               activeOpacity={0.7}
               onPress={() => setShowNotifModal(true)}
             >
-              <Text style={styles.menuTitle}>Notifications</Text>
-              <Text style={[styles.menuMeta, { fontFamily: MONO }]}>20:30 · PUSH & WA</Text>
+              <Text style={[styles.menuTitle, { color: colors.text }]}>Notifications</Text>
+              <Text style={[styles.menuMeta, { fontFamily: MONO, color: colors.textMuted }]}>20:30 · PUSH & WA</Text>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.menuRow}
+              style={[styles.menuRow, { borderBottomColor: colors.divider }]}
               activeOpacity={0.7}
               onPress={() => Alert.alert('Language', 'English (UK) is currently selected.')}
             >
-              <Text style={styles.menuTitle}>Language</Text>
+              <Text style={[styles.menuTitle, { color: colors.text }]}>Language</Text>
               <Text style={[styles.menuMeta, { fontFamily: MONO, color: GOLD }]}>ENGLISH</Text>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.menuRow}
+              style={[styles.menuRow, { borderBottomColor: colors.divider }]}
               activeOpacity={0.7}
               onPress={() => router.push('/profile/support')}
             >
-              <Text style={styles.menuTitle}>Help & support</Text>
-              <Text style={styles.menuMeta}>Replies within a day</Text>
+              <Text style={[styles.menuTitle, { color: colors.text }]}>Help & support</Text>
+              <Text style={[styles.menuMeta, { color: colors.textMuted }]}>Replies within a day</Text>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
 
@@ -212,8 +259,8 @@ export default function ProfileScreen() {
               activeOpacity={0.7}
               onPress={() => router.push('/profile/privacy')}
             >
-              <Text style={styles.menuTitle}>Privacy policy</Text>
-              <Text style={styles.menuMeta}>Export or delete data</Text>
+              <Text style={[styles.menuTitle, { color: colors.text }]}>Privacy policy</Text>
+              <Text style={[styles.menuMeta, { color: colors.textMuted }]}>Export or delete data</Text>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
           </View>
@@ -223,13 +270,20 @@ export default function ProfileScreen() {
         {!isIC && (
           <View style={styles.sectionWrap}>
             <TouchableOpacity
-              style={styles.applyCard}
+              style={[
+                styles.applyCard,
+                {
+                  backgroundColor: isDark ? NAVY : '#FFFFFF',
+                  borderColor: isDark ? 'transparent' : colors.cardBorder,
+                  borderWidth: isDark ? 0 : 1,
+                },
+              ]}
               activeOpacity={0.85}
               onPress={() => setShowApplyModal(true)}
             >
               <View style={styles.applyTextCol}>
-                <Text style={styles.applyTitle}>Apply for Inner Circle</Text>
-                <Text style={styles.applySub}>
+                <Text style={[styles.applyTitle, { color: colors.text }]}>Apply for Inner Circle</Text>
+                <Text style={[styles.applySub, { color: colors.textSecondary }]}>
                   Five questions, straight to Victor. Then a call to see whether it fits.
                 </Text>
               </View>
@@ -239,14 +293,23 @@ export default function ProfileScreen() {
         )}
 
         {/* YOUR PLAN Card matching lines 1242-1246 */}
-        <View style={styles.planCard}>
+        <View
+          style={[
+            styles.planCard,
+            {
+              backgroundColor: isDark ? NAVY : '#FFFFFF',
+              borderColor: isDark ? 'transparent' : colors.cardBorder,
+              borderWidth: isDark ? 0 : 1,
+            },
+          ]}
+        >
           <View style={styles.planHeaderRow}>
             <Text style={styles.planKicker}>{`YOUR PLAN · ${tier}`}</Text>
-            <Text style={styles.planPrice}>
+            <Text style={[styles.planPrice, { color: colors.textMuted }]}>
               {tier === 'SILVER' ? '€19/mo' : tier === 'GOLD' ? '€49/mo' : tier === 'PLATINUM' ? '€129/mo' : '€490/mo'}
             </Text>
           </View>
-          <Text style={styles.planSub}>
+          <Text style={[styles.planSub, { color: colors.textSecondary }]}>
             {tier === 'SILVER'
               ? 'Workouts and community. Upgrade to Gold for AI Coach, macro tracker, and week meal plans.'
               : tier === 'GOLD'
@@ -258,13 +321,22 @@ export default function ProfileScreen() {
             activeOpacity={0.85}
             onPress={() => router.push('/membership')}
           >
-            <Text style={styles.compareBtnText}>Compare plans</Text>
+            <Text style={styles.compareBtnText}>Compare tiers & upgrade</Text>
           </TouchableOpacity>
         </View>
 
         {/* Sign Out Button */}
-        <TouchableOpacity style={styles.signOutBtn} activeOpacity={0.7} onPress={handleLogout}>
-          <Text style={styles.signOutBtnText}>Sign Out</Text>
+        <TouchableOpacity
+          style={[
+            styles.signOutBtn,
+            {
+              backgroundColor: isDark ? 'rgba(247, 243, 238, 0.08)' : 'rgba(13, 43, 69, 0.06)',
+            },
+          ]}
+          activeOpacity={0.75}
+          onPress={handleLogout}
+        >
+          <Text style={[styles.signOutBtnText, { color: colors.textSecondary }]}>Sign out</Text>
         </TouchableOpacity>
       </ScrollView>
 

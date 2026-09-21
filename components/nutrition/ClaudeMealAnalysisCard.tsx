@@ -1,6 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 
+import { useTheme } from '../../context/ThemeContext';
+
 interface ClaudeMealAnalysisCardProps {
   onTakePhoto: () => void;
   onUploadPhoto: () => void;
@@ -20,9 +22,25 @@ export default function ClaudeMealAnalysisCard({
   onTakePhoto,
   onUploadPhoto,
 }: ClaudeMealAnalysisCardProps) {
+  const { isDark } = useTheme();
+
   return (
     <View style={styles.container}>
-      <View style={styles.card}>
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: isDark ? NAVY : '#FFFFFF',
+            borderWidth: isDark ? 0 : 1,
+            borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
+            shadowColor: '#0D2B45',
+            shadowOffset: { width: 0, height: 4 },
+            shadowRadius: 14,
+            elevation: 2,
+            shadowOpacity: isDark ? 0.35 : 0.05,
+          },
+        ]}
+      >
         <View style={styles.topRow}>
           {/* Camera Graphic Icon */}
           <View style={styles.cameraIconBox}>
@@ -33,9 +51,14 @@ export default function ClaudeMealAnalysisCard({
           </View>
 
           <View style={styles.textCol}>
-            <Text style={styles.kicker}>MEAL ANALYSIS</Text>
-            <Text style={styles.title}>Photograph it instead of typing it</Text>
-            <Text style={styles.sub}>
+            <Text style={[styles.kicker, { color: isDark ? GOLD : '#B5651D' }]}>MEAL ANALYSIS</Text>
+            <Text style={[styles.title, { color: isDark ? IVORY : NAVY }]}>Photograph it instead of typing it</Text>
+            <Text
+              style={[
+                styles.sub,
+                { color: isDark ? 'rgba(247, 243, 238, 0.65)' : 'rgba(13, 43, 69, 0.65)' },
+              ]}
+            >
               Point your camera at the plate, or upload a photo. You get protein, carbs, fat and calories back — and one sentence on what to do about it.
             </Text>
           </View>
@@ -47,8 +70,23 @@ export default function ClaudeMealAnalysisCard({
             <Text style={styles.takePhotoBtnText}>Take a photo</Text>
           </Pressable>
 
-          <Pressable style={styles.uploadBtn} onPress={onUploadPhoto}>
-            <Text style={styles.uploadBtnText}>Upload</Text>
+          <Pressable
+            style={[
+              styles.uploadBtn,
+              {
+                borderColor: isDark ? 'rgba(247, 243, 238, 0.3)' : 'rgba(13, 43, 69, 0.2)',
+              },
+            ]}
+            onPress={onUploadPhoto}
+          >
+            <Text
+              style={[
+                styles.uploadBtnText,
+                { color: isDark ? IVORY : NAVY },
+              ]}
+            >
+              Upload
+            </Text>
           </Pressable>
         </View>
       </View>

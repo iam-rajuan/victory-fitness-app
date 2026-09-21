@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 export interface GridWorkoutItem {
   id?: string;
@@ -20,7 +21,6 @@ interface ClaudeWorkoutGridProps {
 const NAVY = '#0D2B45';
 const OBSIDIAN = '#0D0D0D';
 const GOLD = '#C9943A';
-const COPPER = '#B5651D';
 const IVORY = '#F7F3EE';
 
 const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
@@ -33,6 +33,8 @@ export default function ClaudeWorkoutGrid({
   onSelectWorkout,
   onAskCoach,
 }: ClaudeWorkoutGridProps) {
+  const { colors, isDark } = useTheme();
+
   return (
     <View style={styles.container}>
       {/* 2-Column Grid */}
@@ -50,23 +52,31 @@ export default function ClaudeWorkoutGrid({
               <Text style={styles.badge}>{w.badge}</Text>
             </View>
 
-            <Text style={styles.workoutName}>{w.name}</Text>
-            <Text style={styles.workoutMeta}>{w.meta}</Text>
+            <Text style={[styles.workoutName, { color: colors.text }]}>{w.name}</Text>
+            <Text style={[styles.workoutMeta, { color: colors.textMuted }]}>{w.meta}</Text>
           </Pressable>
         ))}
       </View>
 
       {/* Footnote */}
-      <Text style={styles.footnote}>
+      <Text style={[styles.footnote, { color: colors.textMuted }]}>
         Every workout streams from Vimeo, quality stepped down automatically on slow connections. Downloaded workouts play with no signal at all.
       </Text>
 
       {/* Coach Teaser Card */}
       {hasCoach ? (
-        <Pressable style={styles.coachCard} onPress={onAskCoach}>
+        <Pressable
+          style={[
+            styles.coachCard,
+            {
+              backgroundColor: isDark ? 'rgba(181, 101, 29, 0.04)' : 'rgba(181, 101, 29, 0.07)',
+            },
+          ]}
+          onPress={onAskCoach}
+        >
           <View style={styles.coachTextCol}>
-            <Text style={styles.coachTitle}>None of these fit today?</Text>
-            <Text style={styles.coachSub}>Tell your coach your time and kit</Text>
+            <Text style={[styles.coachTitle, { color: colors.text }]}>None of these fit today?</Text>
+            <Text style={[styles.coachSub, { color: colors.textSecondary }]}>Tell your coach your time and kit</Text>
           </View>
           <Text style={styles.coachCta}>Ask coach</Text>
         </Pressable>

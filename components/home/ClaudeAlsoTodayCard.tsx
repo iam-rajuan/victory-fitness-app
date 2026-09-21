@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { pushRoute } from '../../lib/navigation';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ClaudeAlsoTodayCardProps {
   partnerName?: string;
@@ -28,6 +29,7 @@ export default function ClaudeAlsoTodayCard({
   journalWrittenToday = false,
 }: ClaudeAlsoTodayCardProps) {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
 
   const duoTitle = partnerName
     ? (partnerTrainedToday ? `${partnerName} trained today` : `${partnerName} has not trained yet`)
@@ -38,23 +40,49 @@ export default function ClaudeAlsoTodayCard({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionKicker}>ALSO TODAY</Text>
+      <Text style={[styles.sectionKicker, { color: colors.textMuted }]}>ALSO TODAY</Text>
 
-      <View style={styles.card}>
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: isDark ? NAVY : '#FFFFFF',
+            borderWidth: isDark ? 0 : 1,
+            borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
+            shadowOpacity: isDark ? 0.35 : 0.05,
+          },
+        ]}
+      >
         {/* Row 1: Accountability Duo */}
         <Pressable
-          style={[styles.itemRow, styles.itemRowBorder]}
+          style={[
+            styles.itemRow,
+            styles.itemRowBorder,
+            { borderBottomColor: isDark ? 'rgba(247, 243, 238, 0.1)' : 'rgba(13, 43, 69, 0.08)' },
+          ]}
           onPress={() => pushRoute(router, '/duo')}
         >
           {partnerName ? (
             <View style={[styles.dot, partnerTrainedToday ? styles.dotGreen : styles.dotGoldRing]} />
           ) : (
-            <View style={styles.dotOutline} />
+            <View
+              style={[
+                styles.dotOutline,
+                { borderColor: isDark ? 'rgba(247, 243, 238, 0.35)' : 'rgba(13, 43, 69, 0.25)' },
+              ]}
+            />
           )}
 
           <View style={styles.textCol}>
-            <Text style={styles.itemTitle}>{duoTitle}</Text>
-            <Text style={styles.itemSub}>{duoNote}</Text>
+            <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]}>{duoTitle}</Text>
+            <Text
+              style={[
+                styles.itemSub,
+                { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
+              ]}
+            >
+              {duoNote}
+            </Text>
           </View>
 
           <Text style={styles.arrowChevron}>›</Text>
@@ -62,16 +90,27 @@ export default function ClaudeAlsoTodayCard({
 
         {/* Row 2: Daily Journal */}
         <Pressable
-          style={[styles.itemRow, styles.itemRowBorder]}
+          style={[
+            styles.itemRow,
+            styles.itemRowBorder,
+            { borderBottomColor: isDark ? 'rgba(247, 243, 238, 0.1)' : 'rgba(13, 43, 69, 0.08)' },
+          ]}
           onPress={() => pushRoute(router, '/journal')}
         >
           <View style={[styles.dot, journalWrittenToday ? styles.dotGreen : styles.dotCopperRing]} />
 
           <View style={styles.textCol}>
-            <Text style={styles.itemTitle}>
+            <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]}>
               {journalWrittenToday ? 'Journal completed for today' : 'Journal not written yet'}
             </Text>
-            <Text style={styles.itemSub}>One prompt a day · lives in your profile</Text>
+            <Text
+              style={[
+                styles.itemSub,
+                { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
+              ]}
+            >
+              One prompt a day · lives in your profile
+            </Text>
           </View>
 
           <Text style={styles.arrowChevron}>›</Text>
@@ -83,10 +122,17 @@ export default function ClaudeAlsoTodayCard({
           onPress={() => pushRoute(router, '/workout-library')}
         >
           <View style={styles.textCol}>
-            <Text style={styles.itemTitle}>
+            <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]}>
               {`${sessionsDoneThisWeek} of ${sessionsTargetThisWeek} sessions this week`}
             </Text>
-            <Text style={styles.itemSub}>Browse the library for a short one</Text>
+            <Text
+              style={[
+                styles.itemSub,
+                { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
+              ]}
+            >
+              Browse the library for a short one
+            </Text>
           </View>
 
           <Text style={styles.arrowChevron}>›</Text>
@@ -113,6 +159,10 @@ const styles = StyleSheet.create({
     backgroundColor: NAVY,
     borderRadius: 18,
     overflow: 'hidden',
+    shadowColor: '#0D2B45',
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 14,
+    elevation: 2,
   },
   itemRow: {
     flexDirection: 'row',

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Platform, Alert } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ClaudeActiveChallengeBannerProps {
   onOpenCohort: () => void;
@@ -21,6 +22,7 @@ export default function ClaudeActiveChallengeBanner({
   onOpenCohort,
   onInvite,
 }: ClaudeActiveChallengeBannerProps) {
+  const { isDark } = useTheme();
   const [checkedToday, setCheckedToday] = useState(true);
 
   // 21-day warrior pips: 18 done, 3 to go
@@ -29,16 +31,37 @@ export default function ClaudeActiveChallengeBanner({
 
   return (
     <View style={styles.container}>
-      <View style={styles.card}>
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: isDark ? NAVY : '#FFFFFF',
+            borderWidth: isDark ? 0 : 1,
+            borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
+            shadowColor: '#0D2B45',
+            shadowOffset: { width: 0, height: 4 },
+            shadowRadius: 14,
+            elevation: 2,
+            shadowOpacity: isDark ? 0.35 : 0.05,
+          },
+        ]}
+      >
         <View style={styles.headerRow}>
-          <Text style={styles.kicker}>YOU'RE IN · DAY 18 OF 21</Text>
+          <Text style={[styles.kicker, { color: isDark ? GOLD : '#B5651D' }]}>YOU'RE IN · DAY 18 OF 21</Text>
           <Text style={styles.pointsBadge}>800 PTS AT STAKE</Text>
         </View>
 
-        <Text style={styles.title}>21-Day Warrior</Text>
+        <Text style={[styles.title, { color: isDark ? IVORY : NAVY }]}>21-Day Warrior</Text>
 
         {/* Progress Bar */}
-        <View style={styles.progressBarBg}>
+        <View
+          style={[
+            styles.progressBarBg,
+            {
+              backgroundColor: isDark ? 'rgba(247, 243, 238, 0.16)' : 'rgba(13, 43, 69, 0.08)',
+            },
+          ]}
+        >
           <View style={[styles.progressBarFill, { width: `${(currentDay / daysTotal) * 100}%` }]} />
         </View>
 
@@ -56,7 +79,14 @@ export default function ClaudeActiveChallengeBanner({
                     ? styles.pipDone
                     : isToday
                     ? styles.pipToday
-                    : styles.pipFuture,
+                    : [
+                        styles.pipFuture,
+                        {
+                          backgroundColor: isDark
+                            ? 'rgba(247, 243, 238, 0.18)'
+                            : 'rgba(13, 43, 69, 0.08)',
+                        },
+                      ],
                 ]}
               />
             );
@@ -65,7 +95,12 @@ export default function ClaudeActiveChallengeBanner({
 
         {/* Daily Check Card matching line 838-844 */}
         <TouchableOpacity
-          style={styles.checkCard}
+          style={[
+            styles.checkCard,
+            {
+              backgroundColor: isDark ? 'rgba(247, 243, 238, 0.06)' : 'rgba(13, 43, 69, 0.04)',
+            },
+          ]}
           activeOpacity={0.85}
           onPress={() => setCheckedToday((prev) => !prev)}
         >
@@ -73,10 +108,21 @@ export default function ClaudeActiveChallengeBanner({
             {checkedToday && <View style={styles.checkTick} />}
           </View>
           <View style={styles.checkTextWrap}>
-            <Text style={[styles.checkTitle, checkedToday && styles.checkTitleActive]}>
+            <Text
+              style={[
+                styles.checkTitle,
+                { color: isDark ? IVORY : NAVY },
+                checkedToday && styles.checkTitleActive,
+              ]}
+            >
               {checkedToday ? 'Day 18 complete ✓' : 'Log Day 18 workout'}
             </Text>
-            <Text style={styles.checkNote}>
+            <Text
+              style={[
+                styles.checkNote,
+                { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
+              ]}
+            >
               {checkedToday ? 'Counted toward your 800 pts finish' : 'Tap to mark today completed'}
             </Text>
           </View>

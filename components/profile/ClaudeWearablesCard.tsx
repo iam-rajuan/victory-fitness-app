@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ClaudeWearablesCardProps {
   onOpenWearables: () => void;
@@ -20,53 +21,149 @@ export default function ClaudeWearablesCard({
   onOpenWearables,
   connectedDevice = 'Garmin Forerunner 965',
 }: ClaudeWearablesCardProps) {
+  const { colors, isDark } = useTheme();
+
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionKicker}>YOUR HEALTH · LAST 4 WEEKS</Text>
+      <Text style={[styles.sectionKicker, { color: colors.textMuted }]}>YOUR HEALTH · LAST 4 WEEKS</Text>
 
-      <View style={styles.mainCard}>
+      <View
+        style={[
+          styles.mainCard,
+          {
+            backgroundColor: isDark ? NAVY : '#FFFFFF',
+            borderWidth: isDark ? 0 : 1,
+            borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
+            shadowColor: '#0D2B45',
+            shadowOffset: { width: 0, height: 4 },
+            shadowRadius: 14,
+            elevation: 2,
+            shadowOpacity: isDark ? 0.35 : 0.05,
+          },
+        ]}
+      >
         {/* Metric Triplet matching lines 1163-1167 */}
         <View style={styles.tripletRow}>
           <View style={styles.tripletCol}>
             <Text style={[styles.tripletValue, { color: GREEN }]}>54</Text>
-            <Text style={styles.tripletLabel}>RESTING BPM</Text>
-            <Text style={styles.tripletDelta}>−3 in 4 weeks</Text>
+            <Text
+              style={[
+                styles.tripletLabel,
+                { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
+              ]}
+            >
+              RESTING BPM
+            </Text>
+            <Text
+              style={[
+                styles.tripletDelta,
+                { color: isDark ? 'rgba(247, 243, 238, 0.4)' : 'rgba(13, 43, 69, 0.45)' },
+              ]}
+            >
+              −3 in 4 weeks
+            </Text>
           </View>
 
           <View style={styles.tripletCol}>
-            <Text style={[styles.tripletValue, { color: IVORY }]}>6:48</Text>
-            <Text style={styles.tripletLabel}>SLEEP AVG</Text>
-            <Text style={styles.tripletDelta}>72% quality</Text>
+            <Text style={[styles.tripletValue, { color: isDark ? IVORY : NAVY }]}>6:48</Text>
+            <Text
+              style={[
+                styles.tripletLabel,
+                { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
+              ]}
+            >
+              SLEEP AVG
+            </Text>
+            <Text
+              style={[
+                styles.tripletDelta,
+                { color: isDark ? 'rgba(247, 243, 238, 0.4)' : 'rgba(13, 43, 69, 0.45)' },
+              ]}
+            >
+              72% quality
+            </Text>
           </View>
 
           <View style={styles.tripletCol}>
             <Text style={[styles.tripletValue, { color: GOLD }]}>2 410</Text>
-            <Text style={styles.tripletLabel}>KCAL / DAY</Text>
-            <Text style={styles.tripletDelta}>Garmin</Text>
+            <Text
+              style={[
+                styles.tripletLabel,
+                { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
+              ]}
+            >
+              KCAL / DAY
+            </Text>
+            <Text
+              style={[
+                styles.tripletDelta,
+                { color: isDark ? 'rgba(247, 243, 238, 0.4)' : 'rgba(13, 43, 69, 0.45)' },
+              ]}
+            >
+              Garmin
+            </Text>
           </View>
         </View>
 
         {/* HR Zones Breakdown matching lines 1168-1174 */}
-        <View style={styles.zonesSection}>
+        <View
+          style={[
+            styles.zonesSection,
+            { borderTopColor: isDark ? 'rgba(247, 243, 238, 0.12)' : 'rgba(13, 43, 69, 0.08)' },
+          ]}
+        >
           <Text style={styles.zonesKicker}>TIME IN HEART-RATE ZONES</Text>
           <View style={styles.zonesBar}>
-            <View style={[styles.zoneSegment, { flex: 2, backgroundColor: 'rgba(247,243,238,0.2)' }]} />
+            <View
+              style={[
+                styles.zoneSegment,
+                { flex: 2, backgroundColor: isDark ? 'rgba(247,243,238,0.2)' : 'rgba(13,43,69,0.1)' },
+              ]}
+            />
             <View style={[styles.zoneSegment, { flex: 3, backgroundColor: GREEN }]} />
             <View style={[styles.zoneSegment, { flex: 4, backgroundColor: GOLD }]} />
             <View style={[styles.zoneSegment, { flex: 2, backgroundColor: COPPER }]} />
             <View style={[styles.zoneSegment, { flex: 1, backgroundColor: 'rgba(181,101,29,0.4)' }]} />
           </View>
-          <Text style={styles.zonesFootnote}>
+          <Text
+            style={[
+              styles.zonesFootnote,
+              { color: isDark ? 'rgba(247, 243, 238, 0.6)' : 'rgba(13, 43, 69, 0.65)' },
+            ]}
+          >
             Most of your work sits in zone 3. Your coach uses this to set next week's volume — you don't have to read it.
           </Text>
         </View>
       </View>
 
       {/* Device Sync Row matching lines 1176-1179 */}
-      <TouchableOpacity style={styles.deviceRow} activeOpacity={0.7} onPress={onOpenWearables}>
+      <TouchableOpacity
+        style={[
+          styles.deviceRow,
+          {
+            backgroundColor: isDark ? NAVY : '#FFFFFF',
+            borderWidth: isDark ? 0 : 1,
+            borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
+            shadowColor: '#0D2B45',
+            shadowOffset: { width: 0, height: 4 },
+            shadowRadius: 14,
+            elevation: 2,
+            shadowOpacity: isDark ? 0.35 : 0.05,
+          },
+        ]}
+        activeOpacity={0.7}
+        onPress={onOpenWearables}
+      >
         <View style={styles.deviceTextCol}>
-          <Text style={styles.deviceName}>{connectedDevice}</Text>
-          <Text style={styles.deviceMeta}>Connected · syncs every workout</Text>
+          <Text style={[styles.deviceName, { color: isDark ? IVORY : NAVY }]}>{connectedDevice}</Text>
+          <Text
+            style={[
+              styles.deviceMeta,
+              { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
+            ]}
+          >
+            Connected · syncs every workout
+          </Text>
         </View>
         <Text style={styles.chevron}>›</Text>
       </TouchableOpacity>

@@ -2,13 +2,13 @@ import React from 'react';
 import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { pushRoute } from '../../lib/navigation';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ClaudeCoachBarProps {
   tier: 'SILVER' | 'GOLD' | 'GOLD_BETA' | 'PLATINUM' | 'INNER_CIRCLE' | 'NONE';
 }
 
 const GOLD = '#C9943A';
-const COPPER = '#B5651D';
 const OBSIDIAN = '#0D0D0D';
 const IVORY = '#F7F3EE';
 
@@ -17,6 +17,7 @@ const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' })
 
 export default function ClaudeCoachBar({ tier }: ClaudeCoachBarProps) {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const hasCoach = tier !== 'SILVER' && tier !== 'NONE';
   const isPriority = tier === 'PLATINUM' || tier === 'INNER_CIRCLE';
 
@@ -33,7 +34,14 @@ export default function ClaudeCoachBar({ tier }: ClaudeCoachBarProps) {
       <View style={styles.container}>
         <Pressable style={styles.activeCoachCard} onPress={handleOpenCoach}>
           <View style={styles.promptTextCol}>
-            <Text style={styles.promptPlaceholder}>Ask your coach anything…</Text>
+            <Text
+              style={[
+                styles.promptPlaceholder,
+                { color: isDark ? 'rgba(247, 243, 238, 0.65)' : 'rgba(13, 43, 69, 0.65)' },
+              ]}
+            >
+              Ask your coach anything…
+            </Text>
             {isPriority ? (
               <View style={styles.priorityPill}>
                 <Text style={styles.priorityText}>PRIORITY RESPONSES</Text>
@@ -52,14 +60,23 @@ export default function ClaudeCoachBar({ tier }: ClaudeCoachBarProps) {
   // Silver locked teaser
   return (
     <View style={styles.container}>
-      <Pressable style={styles.lockedCard} onPress={handleOpenUpgrade}>
+      <Pressable
+        style={[
+          styles.lockedCard,
+          {
+            backgroundColor: isDark ? 'rgba(247, 243, 238, 0.02)' : '#FFFFFF',
+            borderColor: isDark ? 'rgba(247, 243, 238, 0.16)' : 'rgba(13, 43, 69, 0.12)',
+          },
+        ]}
+        onPress={handleOpenUpgrade}
+      >
         <View style={styles.lockBox}>
           <View style={styles.lockGraphic} />
         </View>
 
         <View style={styles.lockedTextCol}>
-          <Text style={styles.lockedTitle}>AI Coach is part of Gold</Text>
-          <Text style={styles.lockedSub}>
+          <Text style={[styles.lockedTitle, { color: colors.text }]}>AI Coach is part of Gold</Text>
+          <Text style={[styles.lockedSub, { color: colors.textSecondary }]}>
             Workouts, journal and challenges stay open either way
           </Text>
         </View>

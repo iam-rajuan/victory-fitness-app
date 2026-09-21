@@ -22,6 +22,7 @@ import {
 import { normalizeSubscriptionTier } from '../../lib/access';
 import { useModuleAccessGuard } from '../../lib/useModuleAccessGuard';
 import { useLanguage } from '../../lib/i18n';
+import { useTheme } from '../../context/ThemeContext';
 import { pushRoute, replaceRoute } from '../../lib/navigation';
 import {
   markWeightPromptHandled,
@@ -54,6 +55,7 @@ export default function HomeScreen() {
   const checkingAccess = useModuleAccessGuard('/');
   const router = useRouter();
   const { t } = useLanguage();
+  const { isDark, colors } = useTheme();
 
   const [refreshing, setRefreshing] = useState(false);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
@@ -192,14 +194,14 @@ export default function HomeScreen() {
 
   if (checkingAccess) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator color={GOLD} size="large" />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -227,7 +229,17 @@ export default function HomeScreen() {
 
         {/* 3. Weight check-in dialog if due */}
         {weightPromptVisible ? (
-          <View style={styles.weightReminderCard}>
+          <View
+            style={[
+              styles.weightReminderCard,
+              {
+                backgroundColor: isDark ? NAVY : '#FFFFFF',
+                borderWidth: isDark ? 0 : 1,
+                borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
+                shadowOpacity: isDark ? 0.35 : 0.05,
+              },
+            ]}
+          >
             <View style={styles.weightReminderHeader}>
               <Text style={styles.weightReminderEyebrow}>PERIODIC CHECK-IN</Text>
               <TouchableOpacity
@@ -237,12 +249,17 @@ export default function HomeScreen() {
                 <Text style={styles.weightReminderCloseBtn}>✕</Text>
               </TouchableOpacity>
             </View>
-            <Text style={styles.weightReminderTitle}>
+            <Text style={[styles.weightReminderTitle, { color: isDark ? IVORY : NAVY }]}>
               {currentWeight
                 ? `Is your weight still ${currentWeight} kg?`
                 : 'Confirm your current weight'}
             </Text>
-            <Text style={styles.weightReminderText}>
+            <Text
+              style={[
+                styles.weightReminderText,
+                { color: isDark ? 'rgba(247, 243, 238, 0.65)' : 'rgba(13, 43, 69, 0.65)' },
+              ]}
+            >
               Confirm or update your weight to keep your training and nutrition accurate.
             </Text>
 
@@ -252,9 +269,15 @@ export default function HomeScreen() {
                   value={weightDraft}
                   onChangeText={setWeightDraft}
                   placeholder="Enter current weight"
-                  placeholderTextColor="rgba(247, 243, 238, 0.4)"
+                  placeholderTextColor={isDark ? 'rgba(247, 243, 238, 0.4)' : 'rgba(13, 43, 69, 0.4)'}
                   keyboardType="numeric"
-                  style={styles.weightInput}
+                  style={[
+                    styles.weightInput,
+                    {
+                      color: isDark ? IVORY : NAVY,
+                      backgroundColor: isDark ? 'rgba(13, 13, 13, 0.5)' : '#F5F1EA',
+                    },
+                  ]}
                   autoFocus
                 />
                 <View style={styles.weightEditActions}>
@@ -269,7 +292,14 @@ export default function HomeScreen() {
                     style={styles.weightCancelBtn}
                     onPress={() => setWeightPromptEditing(false)}
                   >
-                    <Text style={styles.weightCancelBtnText}>Cancel</Text>
+                    <Text
+                      style={[
+                        styles.weightCancelBtnText,
+                        { color: isDark ? 'rgba(247, 243, 238, 0.6)' : 'rgba(13, 43, 69, 0.6)' },
+                      ]}
+                    >
+                      Cancel
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -285,17 +315,29 @@ export default function HomeScreen() {
                   </TouchableOpacity>
                 ) : null}
                 <TouchableOpacity
-                  style={styles.weightUpdateBtn}
+                  style={[
+                    styles.weightUpdateBtn,
+                    {
+                      borderColor: isDark ? 'rgba(247, 243, 238, 0.3)' : 'rgba(13, 43, 69, 0.2)',
+                    },
+                  ]}
                   onPress={() => setWeightPromptEditing(true)}
                 >
-                  <Text style={styles.weightUpdateBtnText}>Update Weight</Text>
+                  <Text style={[styles.weightUpdateBtnText, { color: isDark ? IVORY : NAVY }]}>Update Weight</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.weightSnoozeBtn}
                   onPress={() => void handleSnoozeWeightPrompt()}
                   disabled={weightPromptSaving}
                 >
-                  <Text style={styles.weightSnoozeBtnText}>Remind in 7 days</Text>
+                  <Text
+                    style={[
+                      styles.weightSnoozeBtnText,
+                      { color: isDark ? 'rgba(247, 243, 238, 0.5)' : 'rgba(13, 43, 69, 0.5)' },
+                    ]}
+                  >
+                    Remind in 7 days
+                  </Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -353,7 +395,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: OBSIDIAN,
   },
   loadingContainer: {
     flex: 1,
@@ -376,6 +417,10 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: GOLD,
     padding: 18,
+    shadowColor: '#0D2B45',
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 14,
+    elevation: 2,
   },
   weightReminderHeader: {
     flexDirection: 'row',
