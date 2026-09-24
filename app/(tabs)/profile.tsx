@@ -7,9 +7,11 @@ import {
   TouchableOpacity,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { fetchCurrentUser, logout } from '../../lib/api';
+import { replaceRoute } from '../../lib/navigation';
 import ClaudeProfileHeader from '../../components/profile/ClaudeProfileHeader';
 import ClaudeHabitsCard from '../../components/profile/ClaudeHabitsCard';
 import ClaudeWearablesCard from '../../components/profile/ClaudeWearablesCard';
@@ -43,6 +45,7 @@ export default function ProfileScreen() {
   const [streakDays, setStreakDays] = useState(12);
   const [totalSessions, setTotalSessions] = useState(64);
   const [consistencyPct, setConsistencyPct] = useState(78);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   // Modals state
   const [showDuoModal, setShowDuoModal] = useState(false);
@@ -85,18 +88,22 @@ export default function ProfileScreen() {
   const isPlatinumOrIC = tier === 'PLATINUM' || tier === 'INNER CIRCLE' || tier === 'INNER_CIRCLE';
   const isIC = tier === 'INNER CIRCLE' || tier === 'INNER_CIRCLE';
 
+  const performLogout = async () => {
+    if (isSigningOut) {
+      return;
+    }
+
+    setIsSigningOut(true);
+    await logout();
+    replaceRoute(router, '/welcome');
+  };
+
   const handleLogout = async () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: async () => {
-          await logout();
-          router.replace('/(auth)/welcome');
-        },
-      },
-    ]);
+    if (isSigningOut) {
+      return;
+    }
+
+    await performLogout();
   };
 
   return (
@@ -334,9 +341,14 @@ export default function ProfileScreen() {
             },
           ]}
           activeOpacity={0.75}
+          disabled={isSigningOut}
           onPress={handleLogout}
         >
-          <Text style={[styles.signOutBtnText, { color: colors.textSecondary }]}>Sign out</Text>
+          {isSigningOut ? (
+            <ActivityIndicator color={colors.textSecondary} />
+          ) : (
+            <Text style={[styles.signOutBtnText, { color: colors.textSecondary }]}>Sign out</Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
 

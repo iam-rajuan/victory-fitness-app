@@ -187,6 +187,8 @@ export type AuthUser = {
   preferred_language?: string;
   country?: string;
   country_code?: string | null;
+  contact_number?: string | null;
+  contactNumber?: string | null;
   profileImage?: string;
   onboarding_completed?: boolean;
   motivation_statement?: string | null;
@@ -607,6 +609,7 @@ function normalizeBoolean(value: unknown, fallback = false) {
 
 function normalizeAuthUser(user: Partial<AuthUser> & { id?: string; name?: string; email?: string; is_verified?: boolean }): AuthUser {
   const normalizedSubscription = user.subscription && typeof user.subscription === 'object' ? user.subscription : undefined;
+  const contactNumber = user.contact_number ?? user.contactNumber;
   return {
     id: String(user.id ?? ''),
     created_at: user.created_at ? String(user.created_at) : null,
@@ -617,6 +620,8 @@ function normalizeAuthUser(user: Partial<AuthUser> & { id?: string; name?: strin
     preferred_language: String(user.preferred_language ?? ''),
     country: String(user.country ?? ''),
     country_code: user.country_code ? String(user.country_code).toUpperCase() : null,
+    contact_number: contactNumber == null ? null : String(contactNumber),
+    contactNumber: contactNumber == null ? null : String(contactNumber),
     profileImage: String(user.profileImage ?? ''),
     onboarding_completed: normalizeBoolean(user.onboarding_completed),
     motivation_statement: user.motivation_statement == null ? null : String(user.motivation_statement),
@@ -945,7 +950,7 @@ export async function fetchCurrentUser(options?: { forceRefresh?: boolean }) {
   }
 
   if (!currentUserRequestPromise) {
-    currentUserRequestPromise = apiRequest<AuthUser & { role?: string; is_admin?: boolean; country?: string; profileImage?: string }>('/me')
+    currentUserRequestPromise = apiRequest<AuthUser & { role?: string; is_admin?: boolean; country?: string; country_code?: string | null; contact_number?: string | null; profileImage?: string }>('/me')
       .then(async (user) => {
         authUser = normalizeAuthUser(user);
         authUserLoaded = true;
@@ -1010,6 +1015,7 @@ export async function updateCurrentUserProfile(payload: {
   email?: string;
   country?: string;
   country_code?: string;
+  contact_number?: string;
   preferred_language?: string;
   profileImage?: string;
   onboarding_completed?: boolean;
@@ -1021,7 +1027,7 @@ export async function updateCurrentUserProfile(payload: {
   daily_protein_target?: number;
   share_activity_with_network?: boolean;
 }) {
-  const user = await apiRequest<AuthUser & { role?: string; is_admin?: boolean; country?: string; country_code?: string | null; profileImage?: string; onboarding_completed?: boolean; daily_protein_target?: number; share_activity_with_network?: boolean }>(
+  const user = await apiRequest<AuthUser & { role?: string; is_admin?: boolean; country?: string; country_code?: string | null; contact_number?: string | null; profileImage?: string; onboarding_completed?: boolean; daily_protein_target?: number; share_activity_with_network?: boolean }>(
     '/me',
     {
       method: 'PATCH',
@@ -1244,7 +1250,7 @@ export async function startGoldTrial() {
 }
 
 export async function startPhaseOneBetaSubscription() {
-  const user = await apiRequest<AuthUser & { role?: string; is_admin?: boolean; country?: string; country_code?: string | null; profileImage?: string; onboarding_completed?: boolean }>(
+  const user = await apiRequest<AuthUser & { role?: string; is_admin?: boolean; country?: string; country_code?: string | null; contact_number?: string | null; profileImage?: string; onboarding_completed?: boolean }>(
     '/me/trial/phase-one-beta/start',
     {
       method: 'POST',

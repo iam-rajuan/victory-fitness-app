@@ -36,6 +36,7 @@ import {
 } from '../../lib/api';
 import { getPostAuthRoute } from '../../lib/access';
 import { replaceRoute } from '../../lib/navigation';
+import { buildE164PhoneNumber, normalizeDialCode, splitE164PhoneNumber } from '../../lib/phone';
 
 export const ONBOARDING_STEP_KEY = '@vf_onboarding_current_step';
 export const ONBOARDING_ANSWERS_KEY = '@vf_onboarding_answers';
@@ -209,6 +210,7 @@ const DEFAULT_PRICES: [string, number, number, string, string][] = [
   ['Gold', 299, 29, 'Silver plus unlimited AI coaching, the nutrition planner and your habit fields.', 'MOST CHOSEN'],
   ['Platinum', 399, 39, 'Gold plus wearable sync, the Monday digest and a human coach each month.', ''],
 ];
+const BETA_TIER_INDEX = -1;
 
 export interface ClaudeOnboardingFlowProps {
   user?: AuthUser | null;
@@ -251,15 +253,24 @@ export default function ClaudeOnboardingFlow({
   const [pct, setPct] = useState<number>(0);
   const [prices, setPrices] = useState<[string, number, number, string, string][]>(DEFAULT_PRICES);
   const [identity, setIdentity] = useState<string>('');
-  const [tier, setTier] = useState<number>(1); // Default Gold
+  const [tier, setTier] = useState<number>(BETA_TIER_INDEX); // Default 21-Day Gold Beta
   const [cycle, setCycle] = useState<'year' | 'month'>('year');
   const [region, setRegion] = useState<string>('de');
   const [method, setMethod] = useState<number>(0);
   const [nudge, setNudge] = useState<string[]>(['Push']);
+  const [dialCode, setDialCode] = useState<string>('+49');
   const [dialNumber, setDialNumber] = useState<string>('');
   const [submitting, setSubmitting] = useState<boolean>(false);
 
   const isHydratedRef = useRef(false);
+
+  const hydratePhoneNumber = (value?: string | null) => {
+    const parsedPhone = splitE164PhoneNumber(String(value || '').trim());
+    if (!parsedPhone) return false;
+    setDialCode(parsedPhone.country.dialCode);
+    setDialNumber(parsedPhone.nationalNumber);
+    return true;
+  };
 
   // Dynamically load real subscription plans from backend
   useEffect(() => {
@@ -339,7 +350,7 @@ export default function ClaudeOnboardingFlow({
         // 1. Fetch real user profile and real onboarding state from the backend
         let activeUser = initialUser;
         try {
-          const freshUser = await fetchCurrentUser();
+          const freshUser = await fetchCurrentUser({ forceRefresh: true });
           if (freshUser) {
             activeUser = freshUser;
             if (!cancelled) {
@@ -419,6 +430,19 @@ export default function ClaudeOnboardingFlow({
           else if (cc === 'in') setRegion('in');
         }
 
+        const profileContactNumber = activeUser?.contact_number || (activeUser as any)?.contactNumber || '';
+        const hydratedPhoneFromProfile = !cancelled && hydratePhoneNumber(profileContactNumber);
+        if (!hydratedPhoneFromProfile && !cancelled) {
+          const fallbackCountryCode = String(realOnboarding?.countryCode || activeUser?.country_code || '').toLowerCase();
+          const fallbackRegion =
+            fallbackCountryCode === 'gb' || fallbackCountryCode === 'uk'
+              ? 'uk'
+              : fallbackCountryCode === 'us' || fallbackCountryCode === 'de' || fallbackCountryCode === 'gh' || fallbackCountryCode === 'in'
+                ? fallbackCountryCode
+                : region;
+          setDialCode(REGIONS[fallbackRegion]?.dial || '+49');
+        }
+
         // Check if user profile has motivation_statement
         if (activeUser?.motivation_statement && !cancelled) {
           const gIdx = GOALS.findIndex(
@@ -460,7 +484,10 @@ export default function ClaudeOnboardingFlow({
             if (typeof parsed.region === 'string') setRegion(parsed.region);
             if (typeof parsed.method === 'number') setMethod(parsed.method);
             if (Array.isArray(parsed.nudge)) setNudge(parsed.nudge);
-            if (typeof parsed.dialNumber === 'string') setDialNumber(parsed.dialNumber);
+            if (!hydratedPhoneFromProfile && typeof parsed.dialCode === 'string' && parsed.dialCode.trim()) {
+              setDialCode(normalizeDialCode(parsed.dialCode) || parsed.dialCode.trim());
+            }
+            if (!hydratedPhoneFromProfile && typeof parsed.dialNumber === 'string') setDialNumber(parsed.dialNumber);
           } catch {}
         }
 
@@ -511,6 +538,8 @@ export default function ClaudeOnboardingFlow({
       region,
       method,
       nudge,
+      dialCode,
+      dialNumber,
       step,
     };
     void AsyncStorage.setItem(ONBOARDING_ANSWERS_KEY, JSON.stringify(dataToSave)).catch(() => {});
@@ -530,6 +559,8 @@ export default function ClaudeOnboardingFlow({
     region,
     method,
     nudge,
+    dialCode,
+    dialNumber,
     step,
   ]);
 
@@ -745,17 +776,20 @@ export default function ClaudeOnboardingFlow({
   const yearly = cycle === 'year';
   const saving = (y: number, m: number) => Math.round((1 - y / (m * 12)) * 100);
 
-  const curTier = prices[tier] || prices[1] || DEFAULT_PRICES[1];
+  const isBetaTierSelected = tier === BETA_TIER_INDEX;
+  const curTier = isBetaTierSelected
+    ? ['21-Day Gold Beta', 0, 0, '21 days of Gold access. No card required, no charge today.', '21 DAY BETA'] as [string, number, number, string, string]
+    : prices[tier] || prices[1] || DEFAULT_PRICES[1];
   const payAmount = yearly ? money(curTier[1]) : money(curTier[2]);
   const payRenewal = yearly ? `${money(curTier[1])} every year` : `${money(curTier[2])} every month`;
   const paySaving = yearly
     ? `You are saving ${saving(curTier[1], curTier[2])}% against ${money(curTier[2])} a month — ${money(curTier[2] * 12 - curTier[1])} a year.`
     : `Switching to yearly costs ${money(curTier[1])} and saves you ${money(curTier[2] * 12 - curTier[1])} — ${saving(curTier[1], curTier[2])}%.`;
 
-  // Calculated trial end date (5 days from today)
+  // Calculated beta end date (21 days from today)
   const trialEndDate = useMemo(() => {
     const d = new Date();
-    d.setDate(d.getDate() + 5);
+    d.setDate(d.getDate() + 21);
     return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
   }, []);
 
@@ -767,6 +801,11 @@ export default function ClaudeOnboardingFlow({
   // Nudge toggler
   const toggleNudge = (n: string) => {
     setNudge((prev) => (prev.includes(n) ? (prev.length > 1 ? prev.filter((x) => x !== n) : prev) : [...prev, n]));
+  };
+
+  const normalizeDialCodeInput = (value: string) => {
+    const normalized = normalizeDialCode(value);
+    setDialCode(normalized || value);
   };
 
   // Sync state to backend API on milestones
@@ -810,6 +849,7 @@ export default function ClaudeOnboardingFlow({
         identity_statement: identity.trim() || 'I am someone who trains even when it is hard',
         country: currentRegion.n,
         country_code: countryCode,
+        contact_number: buildE164PhoneNumber(dialCode, dialNumber) || undefined,
         training_trigger_action: `${days} sessions of ${mins} minutes`,
         workout_unlock_label: firstSession,
         onboarding_completed: markComplete ? true : undefined,
@@ -828,6 +868,11 @@ export default function ClaudeOnboardingFlow({
 
   // Activate trial or subscription with fallback for Phase 1 Beta
   const activateTrialOrSubscription = async () => {
+    if (isBetaTierSelected) {
+      await startPhaseOneBetaSubscription();
+      return;
+    }
+
     const tierName = String(curTier[0]).toUpperCase();
     try {
       if (tierName === 'GOLD') {
@@ -862,6 +907,17 @@ export default function ClaudeOnboardingFlow({
     }
 
     if (step === 9) {
+      if (isBetaTierSelected) {
+        setSubmitting(true);
+        try {
+          await activateTrialOrSubscription();
+          goToStep(11);
+        } finally {
+          setSubmitting(false);
+        }
+        return;
+      }
+
       // From Tier selection to Payment step
       goToStep(10);
       return;
@@ -1512,11 +1568,10 @@ export default function ClaudeOnboardingFlow({
             {/* STEP 9: TIER SELECTION */}
             {step === 9 && (
               <View style={styles.stepContent}>
-                <Text style={styles.copperKicker}>FIVE DAYS FREE ON ANY TIER</Text>
+                <Text style={styles.copperKicker}>21 DAY GOLD BETA</Text>
                 <Text style={styles.stepTitle}>Start where you think you belong</Text>
                 <Text style={styles.stepSubtitle}>
-                  Your plan is already built either way. Nothing is charged until day five, and you can stay, step down
-                  or step up then.
+                  Your plan is already built either way. Start with the 21-day beta, or choose the tier you want to keep.
                 </Text>
 
                 {/* Billing Cycle Switch */}
@@ -1541,6 +1596,23 @@ export default function ClaudeOnboardingFlow({
 
                 {/* Tiers List */}
                 <View style={styles.optionsList}>
+                  <Pressable
+                    onPress={() => setTier(BETA_TIER_INDEX)}
+                    style={[styles.tierCard, styles.betaTierCard, isBetaTierSelected && styles.tierCardActive]}
+                  >
+                    <View style={styles.tierTopRow}>
+                      <Text style={[styles.tierName, isBetaTierSelected && styles.tierNameActive]}>21-Day Gold Beta</Text>
+                      <Text style={styles.tierPrice}>Free</Text>
+                    </View>
+                    <Text style={styles.tierDesc}>Gold access for 21 days. No card required, no charge today.</Text>
+                    <View style={styles.tierBottomRow}>
+                      <View style={styles.tierTag}>
+                        <Text style={styles.tierTagText}>21 DAY BETA</Text>
+                      </View>
+                      <Text style={styles.tierAlt}>No card required</Text>
+                    </View>
+                  </Pressable>
+
                   {prices.map(([name, yearlyPrice, monthlyPrice, desc, tag], idx) => {
                     const isSelected = idx === tier;
                     const priceLabel = yearly ? `${money(yearlyPrice)} / year` : `${money(monthlyPrice)} / month`;
@@ -1582,8 +1654,14 @@ export default function ClaudeOnboardingFlow({
                   </Text>
                 </View>
 
-                <Pressable style={styles.ctaButton} onPress={handleNext}>
-                  <Text style={styles.ctaButtonText}>{`Try ${curTier[0]} free for 5 days`}</Text>
+                <Pressable style={styles.ctaButton} onPress={handleNext} disabled={submitting}>
+                  {submitting && isBetaTierSelected ? (
+                    <ActivityIndicator color={OBSIDIAN} size="small" />
+                  ) : (
+                    <Text style={styles.ctaButtonText}>
+                      {isBetaTierSelected ? 'Start 21-Day Gold Beta' : `Continue with ${curTier[0]}`}
+                    </Text>
+                  )}
                 </Pressable>
               </View>
             )}
@@ -1599,7 +1677,7 @@ export default function ClaudeOnboardingFlow({
                   <View style={styles.summaryHeader}>
                     <Text style={styles.summaryTierTitle}>{`${curTier[0]} · ${yearly ? 'yearly' : 'monthly'}`}</Text>
                     <View style={styles.freeBadge}>
-                      <Text style={styles.freeBadgeText}>5 DAYS FREE</Text>
+                      <Text style={styles.freeBadgeText}>21 DAY BETA</Text>
                     </View>
                   </View>
                   <View style={styles.summaryLine}>
@@ -1607,7 +1685,7 @@ export default function ClaudeOnboardingFlow({
                     <Text style={styles.summaryLineGreen}>{`${currentRegion.cur}0`}</Text>
                   </View>
                   <View style={styles.summaryLine}>
-                    <Text style={styles.summaryLineLabel}>{`${trialEndDate}, when the trial ends`}</Text>
+                    <Text style={styles.summaryLineLabel}>{`${trialEndDate}, when the beta ends`}</Text>
                     <Text style={styles.summaryLineWhite}>{payAmount}</Text>
                   </View>
                   <View style={styles.summaryLineLast}>
@@ -1692,12 +1770,12 @@ export default function ClaudeOnboardingFlow({
                   {submitting ? (
                     <ActivityIndicator color={OBSIDIAN} size="small" />
                   ) : (
-                    <Text style={styles.ctaButtonText}>Start my 5 free days</Text>
+                    <Text style={styles.ctaButtonText}>Start my access</Text>
                   )}
                 </Pressable>
 
                 <Text style={styles.payFinePrint}>
-                  {`${currentRegion.note} We remind you on day four, before anything is taken; we never see your card or wallet details.`}
+                  {`${currentRegion.note} The 21-day Gold Beta uses the existing beta access system when selected; paid tiers continue through the normal billing flow.`}
                 </Text>
               </View>
             )}
@@ -1751,7 +1829,14 @@ export default function ClaudeOnboardingFlow({
                     <View style={styles.phoneInputRow}>
                       <Text style={styles.phoneInputLabel}>MOBILE NUMBER</Text>
                       <View style={styles.phoneInputFields}>
-                        <Text style={styles.dialCode}>{currentRegion.dial}</Text>
+                        <TextInput
+                          value={dialCode}
+                          onChangeText={normalizeDialCodeInput}
+                          placeholder={currentRegion.dial}
+                          placeholderTextColor="rgba(201,148,58,0.55)"
+                          keyboardType="phone-pad"
+                          style={styles.dialCodeInput}
+                        />
                         <TextInput
                           value={dialNumber}
                           onChangeText={setDialNumber}
@@ -1762,7 +1847,9 @@ export default function ClaudeOnboardingFlow({
                         />
                       </View>
                       <Text style={styles.phoneInputFootnote}>
-                        {`Country code set from ${currentRegion.n}. You can change it in your profile.`}
+                        {dialNumber
+                          ? 'Loaded from your registration number. You can edit it here.'
+                          : `Country code set from ${currentRegion.n}. You can edit it here.`}
                       </Text>
                     </View>
                   ) : null}
@@ -2552,6 +2639,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(247,243,238,0.14)',
     marginBottom: 10,
   },
+  betaTierCard: {
+    borderColor: 'rgba(201,148,58,0.38)',
+    backgroundColor: '#12324E',
+  },
   tierCardActive: {
     borderWidth: 2,
     borderColor: GOLD,
@@ -2898,11 +2989,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  dialCode: {
+  dialCodeInput: {
+    minWidth: 54,
     fontFamily: MONO,
     fontSize: 15,
     fontWeight: '700',
     color: GOLD,
+    paddingVertical: 0,
   },
   phoneNumberInput: {
     flex: 1,
