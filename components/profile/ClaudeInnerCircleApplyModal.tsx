@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   StyleSheet,
   Text,
   View,
@@ -10,12 +11,14 @@ import {
   Platform,
   Alert,
 } from 'react-native';
+import { submitCoachingApplication } from '../../lib/api';
 
 interface ClaudeInnerCircleApplyModalProps {
   visible: boolean;
   onClose: () => void;
   userName?: string;
   userEmail?: string;
+  userPhone?: string;
 }
 
 const NAVY = '#0D2B45';
@@ -62,20 +65,57 @@ export default function ClaudeInnerCircleApplyModal({
   onClose,
   userName = 'Michael Krause',
   userEmail = 'm.krause@mail.de',
+  userPhone = '',
 }: ClaudeInnerCircleApplyModalProps) {
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
 
   const handleAnswerChange = (qIndex: string, text: string) => {
     setAnswers((prev) => ({ ...prev, [qIndex]: text }));
   };
 
-  const handleSubmit = () => {
-    setSubmitted(true);
+  const handleSubmit = async () => {
+    if (submitting) return;
+    const missing = QUESTIONS.find((q) => !String(answers[q.n] || '').trim());
+    if (missing) {
+      Alert.alert('Answer needed', 'Please answer all five questions before sending your application.');
+      return;
+    }
+
+    const nameParts = String(userName || '').trim().split(/\s+/).filter(Boolean);
+    const firstName = nameParts[0] || 'Inner';
+    const lastName = nameParts.slice(1).join(' ') || 'Circle';
+    const answerFor = (n: string, fallback: string) => String(answers[n] || fallback).trim().slice(0, 200);
+    const notes = QUESTIONS.map((q) => `${q.n}. ${q.q}\n${String(answers[q.n] || '').trim()}`).join('\n\n');
+
+    setSubmitting(true);
+    try {
+      await submitCoachingApplication({
+        first_name: firstName,
+        last_name: lastName,
+        email: userEmail,
+        phone_number: userPhone,
+        goal: answerFor('4', 'Inner Circle coaching'),
+        obstacle: answerFor('2', 'Shared in Inner Circle answers'),
+        investment: 'Ready to discuss Inner Circle',
+        commitment: answerFor('3', 'Shared in Inner Circle answers'),
+        injury: 'Shared in application notes',
+        additional_notes: notes,
+        agreement_accepted: true,
+      });
+      setSubmitted(true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to submit your application right now.';
+      Alert.alert('Submission failed', message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleFinish = () => {
     setSubmitted(false);
+    setAnswers({});
     onClose();
   };
 
@@ -91,8 +131,13 @@ export default function ClaudeInnerCircleApplyModal({
             <>
               {/* Top Bar matching lines 1386-1389 */}
               <View style={styles.topBar}>
-                <View style={styles.icBadge}>
-                  <Text style={styles.icBadgeText}>INNER CIRCLE</Text>
+                <View style={styles.topBarLeft}>
+                  <TouchableOpacity style={styles.closeButton} onPress={onClose} activeOpacity={0.85}>
+                    <Text style={styles.closeButtonText}>‹</Text>
+                  </TouchableOpacity>
+                  <View style={styles.icBadge}>
+                    <Text style={styles.icBadgeText}>INNER CIRCLE</Text>
+                  </View>
                 </View>
                 <Text style={styles.metaText}>APPLICATION · 5 QUESTIONS</Text>
               </View>
@@ -156,11 +201,16 @@ export default function ClaudeInnerCircleApplyModal({
 
               {/* Submit CTA matching lines 1413-1414 */}
               <TouchableOpacity
-                style={styles.submitBtn}
+                style={[styles.submitBtn, submitting && styles.submitBtnDisabled]}
                 activeOpacity={0.85}
                 onPress={handleSubmit}
+                disabled={submitting}
               >
-                <Text style={styles.submitBtnText}>Send my application</Text>
+                {submitting ? (
+                  <ActivityIndicator color="#0D0D0D" size="small" />
+                ) : (
+                  <Text style={styles.submitBtnText}>Send my application</Text>
+                )}
               </TouchableOpacity>
 
               <Text style={styles.privacyNote}>
@@ -243,6 +293,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 22,
+  },
+  topBarLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  closeButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: 'rgba(247, 243, 238, 0.16)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeButtonText: {
+    fontFamily: DMSANS,
+    fontSize: 28,
+    lineHeight: 30,
+    fontWeight: '500',
+    color: 'rgba(247, 243, 238, 0.72)',
+    marginTop: -2,
   },
   icBadge: {
     backgroundColor: COPPER,
@@ -371,6 +443,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 20,
+  },
+  submitBtnDisabled: {
+    opacity: 0.65,
   },
   submitBtnText: {
     fontFamily: DMSANS,

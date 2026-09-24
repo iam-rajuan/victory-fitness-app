@@ -377,6 +377,7 @@ export default function ProfileScreen() {
         onClose={() => setShowApplyModal(false)}
         userName={name}
         userEmail={user?.email || 'm.krause@mail.de'}
+        userPhone={user?.contact_number || ''}
       />
       <ClaudeNotificationPreferencesModal
         visible={showNotifModal}

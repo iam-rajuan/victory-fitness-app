@@ -37,6 +37,7 @@ import {
 import { getPostAuthRoute } from '../../lib/access';
 import { replaceRoute } from '../../lib/navigation';
 import { buildE164PhoneNumber, normalizeDialCode, splitE164PhoneNumber } from '../../lib/phone';
+import ClaudeInnerCircleApplyModal from '../profile/ClaudeInnerCircleApplyModal';
 
 export const ONBOARDING_STEP_KEY = '@vf_onboarding_current_step';
 export const ONBOARDING_ANSWERS_KEY = '@vf_onboarding_answers';
@@ -261,6 +262,7 @@ export default function ClaudeOnboardingFlow({
   const [dialCode, setDialCode] = useState<string>('+49');
   const [dialNumber, setDialNumber] = useState<string>('');
   const [submitting, setSubmitting] = useState<boolean>(false);
+  const [showInnerCircleApply, setShowInnerCircleApply] = useState(false);
 
   const isHydratedRef = useRef(false);
 
@@ -1644,7 +1646,7 @@ export default function ClaudeOnboardingFlow({
                 </View>
 
                 {/* Inner Circle Info */}
-                <View style={styles.innerCircleCard}>
+                <Pressable style={styles.innerCircleCard} onPress={() => setShowInnerCircleApply(true)}>
                   <View style={styles.innerCircleHeader}>
                     <Text style={styles.innerCircleName}>Inner Circle</Text>
                     <Text style={styles.innerCircleTag}>NO TRIAL</Text>
@@ -1652,7 +1654,8 @@ export default function ClaudeOnboardingFlow({
                   <Text style={styles.innerCircleDesc}>
                     Five questions, then a call with Victor to see whether it fits — both ways.
                   </Text>
-                </View>
+                  <Text style={styles.innerCircleApplyLink}>Apply instead ›</Text>
+                </Pressable>
 
                 <Pressable style={styles.ctaButton} onPress={handleNext} disabled={submitting}>
                   {submitting && isBetaTierSelected ? (
@@ -1934,6 +1937,13 @@ export default function ClaudeOnboardingFlow({
           )}
         </View>
       </ScrollView>
+      <ClaudeInnerCircleApplyModal
+        visible={showInnerCircleApply}
+        onClose={() => setShowInnerCircleApply(false)}
+        userName={currentUser?.name || 'Inner Circle'}
+        userEmail={currentUser?.email || ''}
+        userPhone={currentUser?.contact_number || buildE164PhoneNumber(dialCode, dialNumber)}
+      />
     </View>
   );
 }
@@ -2731,6 +2741,13 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     lineHeight: 19,
     color: 'rgba(247,243,238,0.6)',
+  },
+  innerCircleApplyLink: {
+    fontFamily: DMSANS,
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: GOLD,
+    marginTop: 11,
   },
   summaryCard: {
     backgroundColor: NAVY,

@@ -18,10 +18,8 @@ import { InternationalPhoneField } from '../../components/InternationalPhoneFiel
 import { fetchCurrentUser, submitCoachingApplication } from '../../lib/api';
 import { isE164PhoneNumber } from '../../lib/phone';
 import { goBackOrReplace } from '../../lib/navigation';
-import { useModuleAccessGuard } from '../../lib/useModuleAccessGuard';
 
 export default function ApplicationScreen() {
-  const checkingAccess = useModuleAccessGuard('/profile/application');
   const router = useRouter();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -114,10 +112,6 @@ export default function ApplicationScreen() {
       setSubmitting(false);
     }
   };
-
-  if (checkingAccess) {
-    return null;
-  }
 
   const RadioOption = ({ label, selected, onSelect }: { label: string; selected: boolean; onSelect: () => void }) => (
     <TouchableOpacity
