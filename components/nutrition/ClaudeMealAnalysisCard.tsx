@@ -1,7 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
-
-import { useTheme } from '../../context/ThemeContext';
+import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
 
 interface ClaudeMealAnalysisCardProps {
   onTakePhoto: () => void;
@@ -22,27 +20,11 @@ export default function ClaudeMealAnalysisCard({
   onTakePhoto,
   onUploadPhoto,
 }: ClaudeMealAnalysisCardProps) {
-  const { isDark } = useTheme();
-
   return (
     <View style={styles.container}>
-      <View
-        style={[
-          styles.card,
-          {
-            backgroundColor: isDark ? NAVY : '#FFFFFF',
-            borderWidth: isDark ? 0 : 1,
-            borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
-            shadowColor: '#0D2B45',
-            shadowOffset: { width: 0, height: 4 },
-            shadowRadius: 14,
-            elevation: 2,
-            shadowOpacity: isDark ? 0.35 : 0.05,
-          },
-        ]}
-      >
-        <Pressable style={styles.topRow} onPress={onTakePhoto}>
-          {/* Camera Graphic Icon */}
+      <TouchableOpacity activeOpacity={0.9} style={styles.card} onPress={onTakePhoto}>
+        <View style={styles.topRow}>
+          {/* Camera Graphic Icon matching lines 1050-1052 */}
           <View style={styles.cameraIconBox}>
             <View style={styles.cameraBody}>
               <View style={styles.cameraFlash} />
@@ -51,35 +33,33 @@ export default function ClaudeMealAnalysisCard({
           </View>
 
           <View style={styles.textCol}>
-            <Text style={[styles.kicker, { color: isDark ? GOLD : '#B5651D' }]}>MEAL ANALYSIS</Text>
-            <Text style={[styles.title, { color: isDark ? IVORY : NAVY }]}>Photograph it instead of typing it</Text>
-            <Text
-              style={[
-                styles.sub,
-                { color: isDark ? 'rgba(247, 243, 238, 0.65)' : 'rgba(13, 43, 69, 0.65)' },
-              ]}
-            >
+            <Text style={styles.kicker}>MEAL ANALYSIS</Text>
+            <Text style={styles.title}>Photograph it instead of typing it</Text>
+            <Text style={styles.sub}>
               Point your camera at the plate, or upload a photo. You get protein, carbs, fat and calories back — and one sentence on what to do about it.
             </Text>
           </View>
-        </Pressable>
+        </View>
 
-        {/* Action Buttons */}
+        {/* Action Buttons matching lines 1059-1062 */}
         <View style={styles.actionsRow}>
-          <Pressable style={styles.takePhotoBtn} onPress={onTakePhoto}>
+          <TouchableOpacity
+            activeOpacity={0.85}
+            style={styles.takePhotoBtn}
+            onPress={onTakePhoto}
+          >
             <Text style={styles.takePhotoBtnText}>Take a photo</Text>
-          </Pressable>
+          </TouchableOpacity>
 
-          <Pressable
+          <TouchableOpacity
+            activeOpacity={0.85}
             style={styles.uploadBtn}
             onPress={onUploadPhoto}
           >
-            <Text style={styles.uploadBtnText}>
-              Upload
-            </Text>
-          </Pressable>
+            <Text style={styles.uploadBtnText}>Upload</Text>
+          </TouchableOpacity>
         </View>
-      </View>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -109,6 +89,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(201, 148, 58, 0.55)',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   cameraBody: {
     width: 22,
@@ -123,13 +104,17 @@ const styles = StyleSheet.create({
   cameraFlash: {
     position: 'absolute',
     top: -5,
-    left: 4,
+    left: 6,
     width: 8,
     height: 3,
     backgroundColor: GOLD,
-    borderRadius: 2,
+    borderTopLeftRadius: 2,
+    borderTopRightRadius: 2,
   },
   cameraLens: {
+    position: 'absolute',
+    top: 4,
+    left: 7,
     width: 6,
     height: 6,
     borderRadius: 99,
@@ -157,8 +142,8 @@ const styles = StyleSheet.create({
   },
   sub: {
     fontFamily: INTER,
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: 13.5,
+    lineHeight: 21,
     color: 'rgba(247, 243, 238, 0.65)',
     marginTop: 7,
   },

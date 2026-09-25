@@ -93,7 +93,10 @@ export default function MealPlanScreen() {
 
   const getFormattedDate = () => {
     const d = new Date();
-    return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+    const weekday = d.toLocaleDateString('en-GB', { weekday: 'long' });
+    const day = d.toLocaleDateString('en-GB', { day: 'numeric' });
+    const month = d.toLocaleDateString('en-GB', { month: 'long' });
+    return `${weekday}, ${day} ${month}`;
   };
 
   const handleTakePhoto = async () => {
@@ -148,169 +151,56 @@ export default function MealPlanScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Silver Paywall Lock Teaser if user is Silver / None (matching prototype lines 1111-1129) */}
-        {isSilver ? (
-          <View style={styles.silverLockContainer}>
-            <View style={styles.silverLockTopRow}>
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => pushRoute(router, '/')}
-              >
-                <Text style={styles.silverBackBtn}>← Back</Text>
-              </TouchableOpacity>
-              <View style={styles.goldFeatureBadge}>
-                <Text style={styles.goldFeatureBadgeText}>GOLD FEATURE</Text>
-              </View>
-            </View>
-
-            {/* Lock Icon Box matching line 1117 */}
-            <View style={styles.lockIconBox}>
-              <View style={styles.lockShackle} />
-              <View style={styles.lockBodyShape} />
-            </View>
-
-            <Text style={[styles.silverLockTitle, { color: isDark ? IVORY : NAVY }]}>
-              The nutrition planner lives on Gold
-            </Text>
-            <Text
-              style={[
-                styles.silverLockBody,
-                { color: isDark ? 'rgba(247, 243, 238, 0.65)' : 'rgba(13, 43, 69, 0.65)' },
-              ]}
-            >
-              A full week of meals built from your own favourites list, hitting your 112 g protein target without you doing the maths.
-            </Text>
-
-            {/* STILL YOURS ON SILVER box matching line 1120-1125 */}
-            <View
-              style={[
-                styles.stillYoursBox,
-                {
-                  backgroundColor: isDark ? NAVY : '#FFFFFF',
-                  borderWidth: isDark ? 0 : 1,
-                  borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
-                  shadowColor: '#0D2B45',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowRadius: 14,
-                  elevation: 2,
-                  shadowOpacity: isDark ? 0.35 : 0.05,
-                },
-              ]}
-            >
-              <Text style={styles.stillYoursKicker}>STILL YOURS ON SILVER</Text>
-              <View style={styles.stillYoursRow}>
-                <View style={styles.greenTickDot} />
-                <Text style={[styles.stillYoursText, { color: isDark ? 'rgba(247, 243, 238, 0.85)' : 'rgba(13, 43, 69, 0.85)' }]}>
-                  The full workout library
-                </Text>
-              </View>
-              <View style={styles.stillYoursRow}>
-                <View style={styles.greenTickDot} />
-                <Text style={[styles.stillYoursText, { color: isDark ? 'rgba(247, 243, 238, 0.85)' : 'rgba(13, 43, 69, 0.85)' }]}>
-                  All 35 challenges
-                </Text>
-              </View>
-              <View style={styles.stillYoursRow}>
-                <View style={styles.greenTickDot} />
-                <Text style={[styles.stillYoursText, { color: isDark ? 'rgba(247, 243, 238, 0.85)' : 'rgba(13, 43, 69, 0.85)' }]}>
-                  Your accountability partner and network count
-                </Text>
-              </View>
-            </View>
-
-            {/* CTA matching line 1126 */}
-            <TouchableOpacity
-              style={styles.seeGoldBtn}
-              activeOpacity={0.85}
-              onPress={() => pushRoute(router, '/subscription')}
-            >
-              <Text style={styles.seeGoldBtnText}>See what Gold adds</Text>
-            </TouchableOpacity>
-
-            {/* Not now matching line 1127 */}
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => pushRoute(router, '/')}
-              style={styles.notNowBtn}
-            >
-              <Text style={styles.notNowText}>Not now</Text>
-            </TouchableOpacity>
+        {/* Header matching line 998-1001 */}
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={[styles.screenTitle, { color: colors.text }]}>Food</Text>
+            <Text style={[styles.screenDate, { color: colors.textMuted }]}>{getFormattedDate()}</Text>
           </View>
-        ) : (
-          <>
-            {/* Header matching line 998-1001 */}
-            <View style={styles.headerRow}>
-              <View>
-                <Text style={[styles.screenTitle, { color: colors.text }]}>Food</Text>
-                <Text style={[styles.screenDate, { color: colors.textMuted }]}>{getFormattedDate()}</Text>
-              </View>
 
-              <TouchableOpacity
-                style={styles.logFoodBtn}
-                activeOpacity={0.8}
-                onPress={() => setShowMealAnalysisModal(true)}
-              >
-                <Text style={styles.logFoodBtnText}>+ Log food</Text>
-              </TouchableOpacity>
-            </View>
+          <TouchableOpacity
+            style={styles.logFoodBtn}
+            activeOpacity={0.8}
+            onPress={() => setShowMealAnalysisModal(true)}
+          >
+            <Text style={styles.logFoodBtnText}>+ Log food</Text>
+          </TouchableOpacity>
+        </View>
 
-            {/* 4 Macro Rings matching lines 1003-1014 */}
-            <ClaudeMacroCards proteinTarget={proteinTarget} />
+        {/* 4 Macro Rings matching lines 1003-1014 */}
+        <ClaudeMacroCards proteinTarget={proteinTarget} />
 
-            {/* YOUR FULL DAY matching lines 1017-1026 */}
-            <ClaudeFullDayMeals onLogMeal={() => setShowMealAnalysisModal(true)} />
+        {/* YOUR FULL DAY matching lines 1017-1026 */}
+        <ClaudeFullDayMeals onLogMeal={() => setShowMealAnalysisModal(true)} />
 
-            {/* TODAY'S FIVE ACTIONS matching lines 1028-1046 */}
-            <ClaudeTodayFiveActions />
+        {/* TODAY'S FIVE ACTIONS matching lines 1028-1046 */}
+        <ClaudeTodayFiveActions />
 
-            {/* MEAL ANALYSIS Photo Card matching lines 1048-1063 */}
-            <ClaudeMealAnalysisCard
-              onTakePhoto={handleTakePhoto}
-              onUploadPhoto={handleUploadPhoto}
-            />
+        {/* MEAL ANALYSIS Photo Card matching lines 1048-1063 */}
+        <ClaudeMealAnalysisCard
+          onTakePhoto={handleTakePhoto}
+          onUploadPhoto={handleUploadPhoto}
+        />
 
-            {/* Week Plan Builder Banner matching lines 1065-1070 & tier differences (prototype lines 2413, 3422-3423) */}
-            <View
-              style={[
-                styles.weekPlanBannerCard,
-                {
-                  backgroundColor: isDark ? NAVY : '#FFFFFF',
-                  borderWidth: isDark ? 0 : 1,
-                  borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
-                  shadowColor: '#0D2B45',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowRadius: 14,
-                  elevation: 2,
-                  shadowOpacity: isDark ? 0.35 : 0.05,
-                },
-              ]}
-            >
-              <Text style={[styles.weekPlanKicker, { color: isDark ? GOLD : '#B5651D' }]}>
-                {isPlatinumOrIC ? 'FULL PLANNER + RECIPES' : 'AI NUTRITION PLANNER'}
-              </Text>
-              <Text style={[styles.weekPlanTitle, { color: isDark ? IVORY : NAVY }]}>
-                A week of food you actually like
-              </Text>
-              <Text
-                style={[
-                  styles.weekPlanSub,
-                  { color: isDark ? 'rgba(247, 243, 238, 0.65)' : 'rgba(13, 43, 69, 0.65)' },
-                ]}
-              >
-                {isPlatinumOrIC
-                  ? 'Six questions about the dishes you love, the cuisines you cook, and anything you cannot eat. Every meal comes with a full recipe, preparation steps, and a shopping list.'
-                  : 'Six questions about the dishes you love, the cuisines you cook, and anything you cannot eat. Then a full week with preparation steps and a shopping list.'}
-              </Text>
-              <TouchableOpacity
-                style={styles.buildPlanBtn}
-                activeOpacity={0.85}
-                onPress={() => setShowWeekPlanModal(true)}
-              >
-                <Text style={styles.buildPlanBtnText}>Build my plan</Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
+        {/* Week Plan Builder Banner matching lines 1065-1070 */}
+        <View style={styles.weekPlanBannerCard}>
+          <Text style={styles.weekPlanKicker}>
+            NUTRITION PLANNER · SIX WEEKS
+          </Text>
+          <Text style={styles.weekPlanTitle}>
+            A week of food you actually like
+          </Text>
+          <Text style={styles.weekPlanSub}>
+            Six questions about the dishes you love, the cuisines you cook, and anything you cannot eat. Then a full week with preparation steps and a shopping list.
+          </Text>
+          <TouchableOpacity
+            style={styles.buildPlanBtn}
+            activeOpacity={0.85}
+            onPress={() => setShowWeekPlanModal(true)}
+          >
+            <Text style={styles.buildPlanBtnText}>Build my plan</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
       {/* Meal Analysis Modal matching lines 1074-1110 */}

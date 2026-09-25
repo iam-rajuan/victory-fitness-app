@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
-import { useTheme } from '../../context/ThemeContext';
+import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
 
 interface MealRecord {
   id: string;
@@ -9,7 +8,7 @@ interface MealRecord {
   proteinG: number;
   kcal?: number;
   logged: boolean;
-  planned?: boolean;
+  isDinnerPlanned?: boolean;
 }
 
 interface ClaudeFullDayMealsProps {
@@ -26,7 +25,6 @@ const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", defau
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 export default function ClaudeFullDayMeals({ onLogMeal }: ClaudeFullDayMealsProps) {
-  const { colors, isDark } = useTheme();
   const [meals, setMeals] = useState<MealRecord[]>([
     {
       id: 'm1',
@@ -50,8 +48,8 @@ export default function ClaudeFullDayMeals({ onLogMeal }: ClaudeFullDayMealsProp
       sub: 'Dinner · planned for 19:30',
       proteinG: 31,
       kcal: 680,
-      planned: true,
       logged: false,
+      isDinnerPlanned: true,
     },
     {
       id: 'm4',
@@ -67,11 +65,15 @@ export default function ClaudeFullDayMeals({ onLogMeal }: ClaudeFullDayMealsProp
     setMeals((prev) =>
       prev.map((m) => {
         if (m.id === id) {
-          const next = !m.logged;
+          const nextLogged = !m.logged;
           return {
             ...m,
-            logged: next,
-            sub: next ? `${m.name.split(' ')[0]} · eaten` : m.sub,
+            logged: nextLogged,
+            sub: nextLogged
+              ? `${m.name.split(' ')[0]} · eaten`
+              : m.id === 'm3'
+              ? 'Dinner · planned for 19:30'
+              : 'Only if dinner leaves you short',
           };
         }
         return m;
@@ -82,93 +84,59 @@ export default function ClaudeFullDayMeals({ onLogMeal }: ClaudeFullDayMealsProp
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.kicker, { color: colors.textMuted }]}>YOUR FULL DAY</Text>
+      <Text style={styles.kicker}>YOUR FULL DAY</Text>
 
-      <View
-        style={[
-          styles.card,
-          {
-            backgroundColor: isDark ? NAVY : '#FFFFFF',
-            borderWidth: isDark ? 0 : 1,
-            borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
-            shadowColor: '#0D2B45',
-            shadowOffset: { width: 0, height: 4 },
-            shadowRadius: 14,
-            elevation: 2,
-            shadowOpacity: isDark ? 0.35 : 0.05,
-          },
-        ]}
-      >
+      <View style={styles.card}>
         {meals.map((m, idx) => {
-          const isHighlight = m.planned && !m.logged;
+          const isHighlight = m.isDinnerPlanned && !m.logged;
+          const isLast = idx === meals.length - 1;
+
           return (
             <View
               key={m.id}
               style={[
                 styles.mealRow,
-                idx < meals.length - 1 && styles.mealRowBorder,
+                !isLast && styles.mealRowBorder,
                 isHighlight && styles.highlightRow,
-                { borderBottomColor: isDark ? 'rgba(247, 243, 238, 0.1)' : 'rgba(13, 43, 69, 0.08)' },
               ]}
             >
-              {/* Status Indicator Dot */}
+              {/* Status Indicator Dot matching prototype */}
               {m.logged ? (
                 <View style={styles.greenDot} />
               ) : isHighlight ? (
                 <View style={styles.goldRingDot} />
               ) : (
-                <View
-                  style={[
-                    styles.grayRingDot,
-                    { borderColor: isDark ? 'rgba(247, 243, 238, 0.3)' : 'rgba(13, 43, 69, 0.25)' },
-                  ]}
-                />
+                <View style={styles.grayRingDot} />
               )}
 
               {/* Meal Name & Sub */}
               <View style={styles.mealTextCol}>
-                <Text style={[styles.mealName, { color: isDark ? IVORY : NAVY }]}>{m.name}</Text>
-                <Text
-                  style={[
-                    styles.mealSub,
-                    { color: isDark ? 'rgba(247, 243, 238, 0.5)' : 'rgba(13, 43, 69, 0.55)' },
-                  ]}
-                >
-                  {m.sub}
-                </Text>
+                <Text style={styles.mealName}>{m.name}</Text>
+                <Text style={styles.mealSub}>{m.sub}</Text>
               </View>
 
-              {/* Action / Value */}
+              {/* Right Macro & CTA */}
               <View style={styles.rightCol}>
                 <Text
                   style={[
                     styles.proteinVal,
-                    !m.logged && !isHighlight && {
-                      color: isDark ? 'rgba(247, 243, 238, 0.6)' : 'rgba(13, 43, 69, 0.6)',
-                    },
+                    !m.logged && !isHighlight && { color: 'rgba(247, 243, 238, 0.6)' },
                   ]}
                 >
                   {`${m.proteinG} g`}
                 </Text>
                 {m.logged ? (
-                  <Text
-                    style={[
-                      styles.kcalVal,
-                      { color: isDark ? 'rgba(247, 243, 238, 0.45)' : 'rgba(13, 43, 69, 0.5)' },
-                    ]}
-                  >
-                    {`${m.kcal} kcal`}
-                  </Text>
+                  <Text style={styles.kcalVal}>{`${m.kcal} kcal`}</Text>
                 ) : (
-                  <Pressable
-                    hitSlop={8}
+                  <TouchableOpacity
+                    activeOpacity={0.7}
                     onPress={() => handleToggleMeal(m.id)}
                     style={styles.actionBtn}
                   >
                     <Text style={styles.actionText}>
                       {isHighlight ? 'LOG IT' : 'ADD'}
                     </Text>
-                  </Pressable>
+                  </TouchableOpacity>
                 )}
               </View>
             </View>
@@ -176,7 +144,7 @@ export default function ClaudeFullDayMeals({ onLogMeal }: ClaudeFullDayMealsProp
         })}
       </View>
 
-      <Text style={[styles.footnote, { color: colors.textMuted }]}>
+      <Text style={styles.footnote}>
         Every meal of the day is laid out from the start, dinner included — so you can see at 09:00 whether the target is reachable, not at 22:00.
       </Text>
     </View>
@@ -220,6 +188,7 @@ const styles = StyleSheet.create({
     height: 7,
     borderRadius: 99,
     backgroundColor: GREEN,
+    flexShrink: 0,
   },
   goldRingDot: {
     width: 7,
@@ -227,6 +196,7 @@ const styles = StyleSheet.create({
     borderRadius: 99,
     borderWidth: 1.5,
     borderColor: GOLD,
+    flexShrink: 0,
   },
   grayRingDot: {
     width: 7,
@@ -234,6 +204,7 @@ const styles = StyleSheet.create({
     borderRadius: 99,
     borderWidth: 1.5,
     borderColor: 'rgba(247, 243, 238, 0.3)',
+    flexShrink: 0,
   },
   mealTextCol: {
     flex: 1,
@@ -269,17 +240,20 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     marginTop: 2,
+    paddingVertical: 2,
   },
   actionText: {
     fontFamily: DMSANS,
     fontSize: 11.5,
     fontWeight: '700',
     color: GOLD,
+    letterSpacing: 0.8,
   },
   footnote: {
     fontFamily: INTER,
     fontSize: 12,
-    lineHeight: 18,
+    lineHeight: 18.5,
+    fontWeight: '400',
     color: 'rgba(247, 243, 238, 0.45)',
     marginTop: 10,
   },

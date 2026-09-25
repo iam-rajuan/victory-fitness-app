@@ -1,12 +1,11 @@
 import React from 'react';
 import { StyleSheet, Text, View, Platform } from 'react-native';
-import { useTheme } from '../../context/ThemeContext';
 
 interface MacroItem {
-  k: string; // label, e.g. "Protein"
-  v: string; // current value, e.g. "86 g"
-  of: string; // target, e.g. "of 112 g"
-  color: string; // ring color
+  k: string;
+  v: string;
+  of: string;
+  color: string;
   pct: number;
 }
 
@@ -34,15 +33,13 @@ const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Jet
 export default function ClaudeMacroCards({
   proteinTarget = 112,
   proteinCurrent = 86,
-  carbsCurrent = 160,
-  carbsTarget = 210,
-  fatCurrent = 48,
-  fatTarget = 65,
-  kcalCurrent = 1580,
+  carbsCurrent = 164,
+  carbsTarget = 220,
+  fatCurrent = 44,
+  fatTarget = 70,
+  kcalCurrent = 1480,
   kcalTarget = 2200,
 }: ClaudeMacroCardsProps) {
-  const { colors, isDark } = useTheme();
-
   const macros: MacroItem[] = [
     {
       k: 'Protein',
@@ -62,7 +59,7 @@ export default function ClaudeMacroCards({
       k: 'Fat',
       v: `${fatCurrent}`,
       of: `of ${fatTarget} g`,
-      color: isDark ? IVORY : '#4A5568',
+      color: IVORY,
       pct: Math.min(100, Math.round((fatCurrent / fatTarget) * 100)),
     },
     {
@@ -76,62 +73,44 @@ export default function ClaudeMacroCards({
 
   return (
     <View style={styles.container}>
-      {/* 4 Macro Cards Row */}
+      {/* 4 Macro Cards Row matching lines 1003-1014 */}
       <View style={styles.cardsRow}>
-        {macros.map((m) => (
-          <View
-            key={m.k}
-            style={[
-              styles.card,
-              {
-                backgroundColor: isDark ? NAVY : '#FFFFFF',
-                borderWidth: isDark ? 0 : 1,
-                borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
-                shadowColor: '#0D2B45',
-                shadowOffset: { width: 0, height: 4 },
-                shadowRadius: 10,
-                elevation: 2,
-                shadowOpacity: isDark ? 0.35 : 0.05,
-              },
-            ]}
-          >
-            {/* Macro Ring Graphic */}
-            <View style={[styles.outerRing, { borderColor: `${m.color}40` }]}>
-              <View
-                style={[
-                  styles.activeRingFill,
-                  {
-                    borderTopColor: m.color,
-                    borderRightColor: m.pct > 50 ? m.color : 'transparent',
-                    borderBottomColor: m.pct > 75 ? m.color : 'transparent',
-                    borderLeftColor: m.pct > 25 ? m.color : 'transparent',
-                  },
-                ]}
-              />
-              <View
-                style={[
-                  styles.innerRing,
-                  { backgroundColor: isDark ? NAVY : '#FFFFFF' },
-                ]}
-              />
-            </View>
+        {macros.map((m) => {
+          const ringDeg = Math.round(m.pct * 3.6);
+          const ringBackground = `conic-gradient(${m.color} ${ringDeg}deg, rgba(247,243,238,0.12) 0deg)`;
 
-            <Text style={[styles.valueText, { color: m.k === 'Fat' ? (isDark ? IVORY : '#1A202C') : m.color }]}>{m.v}</Text>
-            <Text
-              style={[
-                styles.targetText,
-                { color: isDark ? 'rgba(247, 243, 238, 0.45)' : 'rgba(13, 43, 69, 0.5)' },
-              ]}
-            >
-              {m.of}
-            </Text>
-            <Text style={[styles.labelText, { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.65)' }]}>{m.k}</Text>
-          </View>
-        ))}
+          return (
+            <View key={m.k} style={styles.card}>
+              {/* Conic Donut Ring matching lines 1006-1008 */}
+              <View
+                style={[
+                  styles.outerRing,
+                  Platform.OS === 'web'
+                    ? ({ background: ringBackground } as any)
+                    : { borderColor: m.color, borderWidth: 7 },
+                ]}
+              >
+                <View style={styles.innerRing} />
+              </View>
+
+              {/* Macro Value & Target matching lines 1009-1011 */}
+              <Text
+                style={[
+                  styles.valueText,
+                  { color: m.k === 'Fat' ? IVORY : m.color },
+                ]}
+              >
+                {m.v}
+              </Text>
+              <Text style={styles.targetText}>{m.of}</Text>
+              <Text style={styles.labelText}>{m.k}</Text>
+            </View>
+          );
+        })}
       </View>
 
-      {/* Color System Footnote */}
-      <Text style={[styles.footnote, { color: colors.textMuted }]}>
+      {/* Color System Explainer Footnote matching line 1015 */}
+      <Text style={styles.footnote}>
         Gold is protein, copper is carbs, ivory is fat, green is calories — the same four colours everywhere in the app.
       </Text>
     </View>
@@ -140,12 +119,12 @@ export default function ClaudeMacroCards({
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 20,
     paddingTop: 16,
   },
   cardsRow: {
     flexDirection: 'row',
     gap: 9,
+    paddingHorizontal: 20,
   },
   card: {
     flex: 1,
@@ -159,16 +138,10 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 99,
-    borderWidth: 3,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 9,
-    position: 'relative',
-  },
-  activeRingFill: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 99,
-    borderWidth: 3,
+    overflow: 'hidden',
   },
   innerRing: {
     width: 38,
@@ -178,9 +151,9 @@ const styles = StyleSheet.create({
   },
   valueText: {
     fontFamily: MONO,
-    fontSize: 18,
+    fontSize: 19,
+    lineHeight: 22,
     fontWeight: '700',
-    color: IVORY,
   },
   targetText: {
     fontFamily: MONO,
@@ -194,13 +167,16 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '500',
     letterSpacing: 0.9,
+    color: 'rgba(247, 243, 238, 0.55)',
     marginTop: 3,
   },
   footnote: {
     fontFamily: INTER,
     fontSize: 11.5,
-    lineHeight: 18,
+    lineHeight: 17,
+    fontWeight: '400',
     color: 'rgba(247, 243, 238, 0.42)',
     marginTop: 10,
+    marginHorizontal: 20,
   },
 });

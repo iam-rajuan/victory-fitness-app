@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
-import { useTheme } from '../../context/ThemeContext';
+import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
 
 interface ActionItem {
   id: string;
@@ -25,7 +24,6 @@ const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", defau
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 export default function ClaudeTodayFiveActions({ onActionToggle }: ClaudeTodayFiveActionsProps) {
-  const { colors, isDark } = useTheme();
   const [actions, setActions] = useState<ActionItem[]>([
     {
       id: 'a1',
@@ -82,74 +80,63 @@ export default function ClaudeTodayFiveActions({ onActionToggle }: ClaudeTodayFi
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <Text style={[styles.kicker, { color: colors.textMuted }]}>TODAY'S FIVE ACTIONS</Text>
+        <Text style={styles.kicker}>TODAY'S FIVE ACTIONS</Text>
         <Text style={styles.trackBadge}>{`${doneCount} of 5 done`}</Text>
       </View>
 
-      <View
-        style={[
-          styles.card,
-          {
-            backgroundColor: isDark ? NAVY : '#FFFFFF',
-            borderWidth: isDark ? 0 : 1,
-            borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
-            shadowColor: '#0D2B45',
-            shadowOffset: { width: 0, height: 4 },
-            shadowRadius: 14,
-            elevation: 2,
-            shadowOpacity: isDark ? 0.35 : 0.05,
-          },
-        ]}
-      >
-        {actions.map((a, idx) => (
-          <Pressable
-            key={a.id}
-            style={[
-              styles.actionRow,
-              idx < actions.length - 1 && styles.actionRowBorder,
-              a.done && styles.actionRowDone,
-              { borderBottomColor: isDark ? 'rgba(247, 243, 238, 0.08)' : 'rgba(13, 43, 69, 0.08)' },
-            ]}
-            onPress={() => toggleAction(a.id)}
-          >
-            {/* Custom Checkbox */}
-            <View
+      <View style={styles.card}>
+        {actions.map((a, idx) => {
+          const isLast = idx === actions.length - 1;
+
+          return (
+            <TouchableOpacity
+              key={a.id}
+              activeOpacity={0.8}
               style={[
-                styles.checkBox,
-                a.done ? styles.checkBoxDone : styles.checkBoxPending,
+                styles.actionRow,
+                !isLast && styles.actionRowBorder,
+                a.done && styles.actionRowDone,
               ]}
+              onPress={() => toggleAction(a.id)}
             >
-              {a.done ? <View style={styles.checkMarkWhite} /> : null}
-            </View>
-
-            {/* Texts */}
-            <View style={styles.textCol}>
-              <Text
+              {/* Checkbox box matching prototype lines 2729-2731 */}
+              <View
                 style={[
-                  styles.actionTitle,
-                  { color: isDark ? IVORY : NAVY },
-                  a.done && styles.actionTitleDone,
+                  styles.checkBox,
+                  a.done ? styles.checkBoxDone : styles.checkBoxPending,
                 ]}
               >
-                {a.t}
-              </Text>
+                {a.done && <Text style={styles.checkGlyph}>✓</Text>}
+              </View>
+
+              {/* Text column matching lines 2732 */}
+              <View style={styles.textCol}>
+                <Text
+                  style={[
+                    styles.actionTitle,
+                    a.done && styles.actionTitleDone,
+                  ]}
+                >
+                  {a.t}
+                </Text>
+                <Text style={styles.actionWhy}>{a.why}</Text>
+              </View>
+
+              {/* Gain matching line 2733 */}
               <Text
                 style={[
-                  styles.actionWhy,
-                  { color: isDark ? 'rgba(247, 243, 238, 0.45)' : 'rgba(13, 43, 69, 0.55)' },
+                  styles.gainText,
+                  a.done && styles.gainTextDone,
                 ]}
               >
-                {a.why}
+                {a.g}
               </Text>
-            </View>
-
-            {/* Points Gain */}
-            <Text style={[styles.gainText, a.done && styles.gainTextDone]}>{a.g}</Text>
-          </Pressable>
-        ))}
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
-      <Text style={[styles.footnote, { color: colors.textMuted }]}>
+      <Text style={styles.footnote}>
         Written each morning from the meals you have logged before — not a generic checklist. Do three and you land on target.
       </Text>
     </View>
@@ -165,6 +152,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'baseline',
     justifyContent: 'space-between',
+    gap: 10,
     marginBottom: 10,
   },
   kicker: {
@@ -177,7 +165,7 @@ const styles = StyleSheet.create({
   trackBadge: {
     fontFamily: MONO,
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '500',
     color: GOLD,
   },
   card: {
@@ -196,7 +184,7 @@ const styles = StyleSheet.create({
   },
   actionRowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(247, 243, 238, 0.08)',
+    borderBottomColor: 'rgba(247, 243, 238, 0.1)',
   },
   actionRowDone: {
     backgroundColor: 'rgba(26, 122, 74, 0.1)',
@@ -208,6 +196,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
+    flexShrink: 0,
   },
   checkBoxPending: {
     borderWidth: 1.5,
@@ -216,14 +205,11 @@ const styles = StyleSheet.create({
   checkBoxDone: {
     backgroundColor: GREEN,
   },
-  checkMarkWhite: {
-    width: 9,
-    height: 5,
-    borderLeftWidth: 2,
-    borderBottomWidth: 2,
-    borderColor: IVORY,
-    transform: [{ rotate: '-45deg' }],
-    marginTop: -2,
+  checkGlyph: {
+    color: IVORY,
+    fontSize: 12,
+    fontWeight: '800',
+    lineHeight: 14,
   },
   textCol: {
     flex: 1,
@@ -253,6 +239,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: GOLD,
     marginTop: 2,
+    flexShrink: 0,
   },
   gainTextDone: {
     color: 'rgba(247, 243, 238, 0.4)',
@@ -260,7 +247,8 @@ const styles = StyleSheet.create({
   footnote: {
     fontFamily: INTER,
     fontSize: 12,
-    lineHeight: 18,
+    lineHeight: 18.5,
+    fontWeight: '400',
     color: 'rgba(247, 243, 238, 0.45)',
     marginTop: 10,
   },
