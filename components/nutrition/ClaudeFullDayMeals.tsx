@@ -21,9 +21,9 @@ const GOLD = '#C9943A';
 const GREEN = '#1A7A4A';
 const IVORY = '#F7F3EE';
 
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 export default function ClaudeFullDayMeals({ onLogMeal }: ClaudeFullDayMealsProps) {
   const { colors, isDark } = useTheme();
@@ -47,16 +47,16 @@ export default function ClaudeFullDayMeals({ onLogMeal }: ClaudeFullDayMealsProp
     {
       id: 'm3',
       name: 'Salmon, potatoes & broccoli',
-      sub: 'Dinner · from week plan · 19:30',
-      proteinG: 46,
+      sub: 'Dinner · planned for 19:30',
+      proteinG: 31,
       kcal: 680,
       planned: true,
       logged: false,
     },
     {
       id: 'm4',
-      name: 'Clear whey & banana',
-      sub: 'Snack · after training',
+      name: 'Evening shake',
+      sub: 'Only if dinner leaves you short',
       proteinG: 25,
       kcal: 180,
       logged: false,
@@ -140,7 +140,16 @@ export default function ClaudeFullDayMeals({ onLogMeal }: ClaudeFullDayMealsProp
 
               {/* Action / Value */}
               <View style={styles.rightCol}>
-                <Text style={styles.proteinVal}>{`${m.proteinG} g`}</Text>
+                <Text
+                  style={[
+                    styles.proteinVal,
+                    !m.logged && !isHighlight && {
+                      color: isDark ? 'rgba(247, 243, 238, 0.6)' : 'rgba(13, 43, 69, 0.6)',
+                    },
+                  ]}
+                >
+                  {`${m.proteinG} g`}
+                </Text>
                 {m.logged ? (
                   <Text
                     style={[

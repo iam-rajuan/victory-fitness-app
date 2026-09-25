@@ -27,9 +27,9 @@ const COPPER = '#B5651D';
 const GREEN = '#1A7A4A';
 const IVORY = '#F7F3EE';
 
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 export default function ClaudeMacroCards({
   proteinTarget = 112,
@@ -46,29 +46,29 @@ export default function ClaudeMacroCards({
   const macros: MacroItem[] = [
     {
       k: 'Protein',
-      v: `${proteinCurrent} g`,
+      v: `${proteinCurrent}`,
       of: `of ${proteinTarget} g`,
       color: GOLD,
       pct: Math.min(100, Math.round((proteinCurrent / proteinTarget) * 100)),
     },
     {
       k: 'Carbs',
-      v: `${carbsCurrent} g`,
+      v: `${carbsCurrent}`,
       of: `of ${carbsTarget} g`,
       color: COPPER,
       pct: Math.min(100, Math.round((carbsCurrent / carbsTarget) * 100)),
     },
     {
       k: 'Fat',
-      v: `${fatCurrent} g`,
+      v: `${fatCurrent}`,
       of: `of ${fatTarget} g`,
       color: isDark ? IVORY : '#4A5568',
       pct: Math.min(100, Math.round((fatCurrent / fatTarget) * 100)),
     },
     {
       k: 'Calories',
-      v: `${kcalCurrent}`,
-      of: `of ${kcalTarget}`,
+      v: kcalCurrent >= 1000 ? `${Math.floor(kcalCurrent / 1000)} ${kcalCurrent % 1000}` : `${kcalCurrent}`,
+      of: kcalTarget >= 1000 ? `of ${Math.floor(kcalTarget / 1000)} ${kcalTarget % 1000}` : `of ${kcalTarget}`,
       color: GREEN,
       pct: Math.min(100, Math.round((kcalCurrent / kcalTarget) * 100)),
     },
@@ -116,7 +116,7 @@ export default function ClaudeMacroCards({
               />
             </View>
 
-            <Text style={[styles.valueText, { color: isDark ? IVORY : NAVY }]}>{m.v}</Text>
+            <Text style={[styles.valueText, { color: m.k === 'Fat' ? (isDark ? IVORY : '#1A202C') : m.color }]}>{m.v}</Text>
             <Text
               style={[
                 styles.targetText,
@@ -125,7 +125,7 @@ export default function ClaudeMacroCards({
             >
               {m.of}
             </Text>
-            <Text style={[styles.labelText, { color: m.color }]}>{m.k}</Text>
+            <Text style={[styles.labelText, { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.65)' }]}>{m.k}</Text>
           </View>
         ))}
       </View>
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
   },
   valueText: {
     fontFamily: MONO,
-    fontSize: 14,
+    fontSize: 18,
     fontWeight: '700',
     color: IVORY,
   },
@@ -191,9 +191,10 @@ const styles = StyleSheet.create({
   },
   labelText: {
     fontFamily: DMSANS,
-    fontSize: 11,
-    fontWeight: '600',
-    marginTop: 4,
+    fontSize: 10,
+    fontWeight: '500',
+    letterSpacing: 0.9,
+    marginTop: 3,
   },
   footnote: {
     fontFamily: INTER,

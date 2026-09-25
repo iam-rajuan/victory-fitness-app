@@ -170,15 +170,12 @@ export default function WorkoutScreen() {
   const shownCount = Math.max(1, Math.round((170 * filteredWorkouts.length) / PROTOTYPE_LIB.length));
   const resultCountText = `${shownCount} of 170 workouts · shortest first`;
 
+  const [completeInitialStep, setCompleteInitialStep] = useState<'feedback' | 'complete'>('complete');
+
   // Actions
   const handleStartWorkout = (w: GridWorkoutItem) => {
     setSelectedWorkout(w);
-    // If user has coach, show the Start my session plan detail screen. Otherwise, launch Vimeo video session.
-    if (hasCoach) {
-      setPlanDetailVisible(true);
-    } else {
-      setVimeoModalVisible(true);
-    }
+    setVimeoModalVisible(true);
   };
 
   const handleResumeSession = () => {
@@ -198,8 +195,12 @@ export default function WorkoutScreen() {
     }
   };
 
-  const handleFinishSession = (stats?: { minutes: number; setsLogged: number; volumeKg: number }) => {
+  const handleFinishSession = (
+    stats?: { minutes: number; setsLogged: number; volumeKg: number },
+    stepMode: 'feedback' | 'complete' = 'complete'
+  ) => {
     if (stats) setCompletedStats(stats);
+    setCompleteInitialStep(stepMode);
     setVimeoModalVisible(false);
     setActiveSessionVisible(false);
     setCompleteModalVisible(true);
@@ -338,7 +339,7 @@ export default function WorkoutScreen() {
         workoutTitle={selectedWorkout?.name || 'Upper Body Strength'}
         workoutMeta={selectedWorkout?.meta || 'FROM THE LIBRARY · 40 MIN'}
         vimeoId={selectedWorkout?.vimeoId || '912440318'}
-        onFinishSession={() => handleFinishSession()}
+        onFinishSession={() => handleFinishSession(undefined, 'complete')}
       />
 
       {/* 2. Plan Detail Modal ("Start my session" screen) */}
@@ -365,13 +366,14 @@ export default function WorkoutScreen() {
         tier={tier}
         workoutTitle={selectedWorkout?.name || 'Upper Body Strength'}
         unlockNote={currentUser?.identity_statement || 'Your unlock is ready — your true-crime podcast is yours for this workout.'}
-        onEndSession={(stats) => handleFinishSession(stats)}
+        onEndSession={(stats) => handleFinishSession(stats, 'feedback')}
       />
 
       {/* 3. Session Complete Modal with unlabelled sentence */}
       <ClaudeSessionCompleteModal
         visible={completeModalVisible}
         onClose={() => setCompleteModalVisible(false)}
+        initialStep={completeInitialStep}
         workoutTitle={selectedWorkout?.name || 'Upper Body Strength'}
         minutes={completedStats.minutes}
         setsLogged={completedStats.setsLogged}

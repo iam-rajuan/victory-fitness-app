@@ -27,8 +27,8 @@ export default function ClaudePlanBuildBanner({
     ? (planBuilt ? 'Rebuild your plan' : 'Build a plan around your week')
     : 'A plan built around your week';
   const note = hasCoach
-    ? (planBuilt ? planBuiltLine : 'Four questions. Victor sets your split, minutes and kit.')
-    : 'Gold builds your 4-week programme around the days and kit you have.';
+    ? (planBuilt ? planBuiltLine : 'Four questions — goal, days, session length, equipment. Two minutes and you have six weeks.')
+    : 'Four questions and your coach builds six weeks. Part of Gold.';
 
   return (
     <View style={styles.container}>

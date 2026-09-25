@@ -97,6 +97,12 @@ export default function ClaudeSessionCompleteModal({
   const [isNoteFocused, setIsNoteFocused] = useState(false);
   const [upsellDismissed, setUpsellDismissed] = useState(false);
 
+  React.useEffect(() => {
+    if (visible) {
+      setStep(initialStep);
+    }
+  }, [visible, initialStep]);
+
   const normalizedTier = (tier || 'GOLD').toLowerCase();
   const isSilver = normalizedTier === 'silver' || normalizedTier === 'none';
   const hasCoach = !isSilver;

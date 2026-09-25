@@ -27,45 +27,36 @@ const COPPER = '#B5651D';
 const GREEN = '#1A7A4A';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
+const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
+const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 
 const SHOP_CATEGORIES: ShopCategory[] = [
   {
-    category: 'PRODUCE',
+    category: 'Produce',
     items: [
-      { id: 'p1', name: 'Fresh berries (400 g)' },
-      { id: 'p2', name: 'Sweet potatoes (2 kg)' },
-      { id: 'p3', name: 'Broccoli (3 heads)' },
-      { id: 'p4', name: 'Plantains (4 yellow)' },
-      { id: 'p5', name: 'Spinach & kale leaves (500 g)' },
+      { id: 'p1', name: 'Spinach 400 g' },
+      { id: 'p2', name: 'Berries 500 g' },
+      { id: 'p3', name: 'Sweet potatoes 1 kg' },
+      { id: 'p4', name: 'Broccoli 2 heads' },
     ],
   },
   {
-    category: 'MEAT & FISH',
+    category: 'Protein',
     items: [
-      { id: 'm1', name: 'Chicken breast (1.2 kg)' },
-      { id: 'm2', name: 'Wild salmon fillets (800 g)' },
-      { id: 'm3', name: 'Lean turkey mince (600 g)' },
-      { id: 'm4', name: 'White cod fillets (600 g)' },
+      { id: 'm1', name: 'Chicken breast 1 kg' },
+      { id: 'm2', name: 'Salmon fillets ×4' },
+      { id: 'm3', name: 'Greek yoghurt 1 kg' },
+      { id: 'm4', name: 'Eggs ×12' },
     ],
   },
   {
-    category: 'DAIRY & EGGS (LACTOSE-FREE)',
+    category: 'Pantry',
     items: [
-      { id: 'd1', name: 'Skyr / Greek yogurt lactose-free (1 kg)' },
-      { id: 'd2', name: 'Eggs (24 large free-range)' },
-      { id: 'd3', name: 'Almond milk unsweetened (2 L)' },
-    ],
-  },
-  {
-    category: 'PANTRY',
-    items: [
-      { id: 'pa1', name: 'Rolled oats (1 kg)' },
-      { id: 'pa2', name: 'Basmati rice & jollof spices' },
-      { id: 'pa3', name: 'Red lentils & canned black beans' },
-      { id: 'pa4', name: 'Olive oil & raw honey' },
+      { id: 'pa1', name: 'Oats 1 kg' },
+      { id: 'pa2', name: 'Jollof rice mix' },
+      { id: 'pa3', name: 'Olive oil' },
+      { id: 'pa4', name: 'Whey protein 1 kg' },
     ],
   },
 ];

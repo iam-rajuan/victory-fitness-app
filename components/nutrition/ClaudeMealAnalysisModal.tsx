@@ -28,16 +28,16 @@ const COPPER = '#B5651D';
 const GREEN = '#1A7A4A';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
+const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 const SNAP_MACROS: MacroSnapshot[] = [
-  { k: 'Protein', v: '42 g', color: GOLD },
-  { k: 'Carbs', v: '58 g', color: COPPER },
-  { k: 'Fat', v: '14 g', color: IVORY },
-  { k: 'Calories', v: '526', color: GREEN },
+  { k: 'PROTEIN', v: '48 g', color: GOLD },
+  { k: 'CARBS', v: '96 g', color: COPPER },
+  { k: 'FAT', v: '18 g', color: IVORY },
+  { k: 'KCAL', v: '720', color: GREEN },
 ];
 
 export default function ClaudeMealAnalysisModal({
@@ -48,10 +48,10 @@ export default function ClaudeMealAnalysisModal({
   const handleLog = () => {
     onLogMeal({
       name: 'Jollof rice with grilled chicken',
-      protein: 42,
-      carbs: 58,
-      fat: 14,
-      calories: 526,
+      protein: 48,
+      carbs: 96,
+      fat: 18,
+      calories: 720,
     });
     onClose();
   };
@@ -229,15 +229,16 @@ const styles = StyleSheet.create({
   },
   macroVal: {
     fontFamily: MONO,
-    fontSize: 17,
+    fontSize: 20,
     fontWeight: '700',
     marginBottom: 4,
   },
   macroLabel: {
     fontFamily: DMSANS,
-    fontSize: 11,
+    fontSize: 9.5,
     fontWeight: '500',
-    color: 'rgba(247, 243, 238, 0.55)',
+    letterSpacing: 0.7,
+    color: 'rgba(247, 243, 238, 0.5)',
   },
   adviceCard: {
     backgroundColor: NAVY,

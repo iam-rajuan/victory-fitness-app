@@ -14,9 +14,9 @@ const COPPER = '#B5651D';
 const OBSIDIAN = '#0D0D0D';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
+const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
+const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 
 export default function ClaudeMealAnalysisCard({
   onTakePhoto,
@@ -41,7 +41,7 @@ export default function ClaudeMealAnalysisCard({
           },
         ]}
       >
-        <View style={styles.topRow}>
+        <Pressable style={styles.topRow} onPress={onTakePhoto}>
           {/* Camera Graphic Icon */}
           <View style={styles.cameraIconBox}>
             <View style={styles.cameraBody}>
@@ -62,7 +62,7 @@ export default function ClaudeMealAnalysisCard({
               Point your camera at the plate, or upload a photo. You get protein, carbs, fat and calories back — and one sentence on what to do about it.
             </Text>
           </View>
-        </View>
+        </Pressable>
 
         {/* Action Buttons */}
         <View style={styles.actionsRow}>
@@ -71,20 +71,10 @@ export default function ClaudeMealAnalysisCard({
           </Pressable>
 
           <Pressable
-            style={[
-              styles.uploadBtn,
-              {
-                borderColor: isDark ? 'rgba(247, 243, 238, 0.3)' : 'rgba(13, 43, 69, 0.2)',
-              },
-            ]}
+            style={styles.uploadBtn}
             onPress={onUploadPhoto}
           >
-            <Text
-              style={[
-                styles.uploadBtnText,
-                { color: isDark ? IVORY : NAVY },
-              ]}
-            >
+            <Text style={styles.uploadBtnText}>
               Upload
             </Text>
           </Pressable>

@@ -105,7 +105,6 @@ export default function ClaudeWorkoutFilters({
         <Text style={[styles.filterLabel, { color: colors.textMuted }]}>MINUTES</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
           {DURATIONS.map((d) => {
-            const label = d === 'Any' ? 'Any' : `≤ ${d} min`;
             const active = d === selectedDuration;
             return (
               <Pressable
@@ -126,7 +125,7 @@ export default function ClaudeWorkoutFilters({
                     active && styles.chipTextActive,
                   ]}
                 >
-                  {label}
+                  {d}
                 </Text>
               </Pressable>
             );
