@@ -105,9 +105,7 @@ export default function ClaudeTodayFiveActions({ onActionToggle }: ClaudeTodayFi
                   styles.checkBox,
                   a.done ? styles.checkBoxDone : styles.checkBoxPending,
                 ]}
-              >
-                {a.done && <Text style={styles.checkGlyph}>✓</Text>}
-              </View>
+              />
 
               {/* Text column matching lines 2732 */}
               <View style={styles.textCol}>
@@ -204,12 +202,6 @@ const styles = StyleSheet.create({
   },
   checkBoxDone: {
     backgroundColor: GREEN,
-  },
-  checkGlyph: {
-    color: IVORY,
-    fontSize: 12,
-    fontWeight: '800',
-    lineHeight: 14,
   },
   textCol: {
     flex: 1,
