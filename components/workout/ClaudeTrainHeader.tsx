@@ -7,8 +7,8 @@ interface ClaudeTrainHeaderProps {
   onPressFilter?: () => void;
 }
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
+const CLASH = Platform.select({ web: 'Clash Display', default: 'ClashDisplay-Bold' });
+const MONO = Platform.select({ web: 'JetBrains Mono', default: 'JetBrainsMono-Bold' });
 
 export default function ClaudeTrainHeader({
   totalWorkouts = 170,
@@ -18,15 +18,17 @@ export default function ClaudeTrainHeader({
 
   return (
     <View style={styles.headerRow}>
-      <Text style={[styles.title, { color: colors.text }]}>Train</Text>
+      <Text style={[styles.title, { color: isDark ? '#F7F3EE' : '#0D0D0D' }]}>Train</Text>
       <View style={styles.rightGroup}>
-        <Text style={[styles.countText, { color: colors.textMuted }]}>{`${totalWorkouts} workouts`}</Text>
+        <Text style={[styles.countText, { color: isDark ? 'rgba(247, 243, 238, 0.45)' : 'rgba(13, 43, 69, 0.45)' }]}>
+          {`${totalWorkouts} workouts`}
+        </Text>
         <Pressable
           style={[
             styles.filterBtn,
             {
               borderColor: isDark ? 'rgba(247, 243, 238, 0.2)' : 'rgba(13, 43, 69, 0.15)',
-              backgroundColor: isDark ? 'rgba(247, 243, 238, 0.04)' : '#FFFFFF',
+              backgroundColor: 'transparent',
             },
           ]}
           onPress={onPressFilter}

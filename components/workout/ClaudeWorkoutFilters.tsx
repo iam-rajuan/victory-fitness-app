@@ -18,10 +18,10 @@ const GOLD = '#C9943A';
 const OBSIDIAN = '#0D0D0D';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
-const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
-const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
+const CLASH = Platform.select({ web: 'Clash Display', default: 'ClashDisplay-Bold' });
+const DMSANS = Platform.select({ web: 'DM Sans', default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: 'Inter', default: 'Inter-Regular' });
+const MONO = Platform.select({ web: 'JetBrains Mono', default: 'JetBrainsMono-Bold' });
 
 const PURPOSES = ['All', 'Strength', 'Hypertrophy', 'Conditioning', 'Mobility', 'Core', 'Recovery'];
 const DURATIONS = ['Any', '15', '30', '45', '60'];
@@ -36,32 +36,24 @@ export default function ClaudeWorkoutFilters({
   onSelectDuration,
   selectedKit,
   onSelectKit,
-  resultCountText = '12 of 170 workouts · shortest first',
+  resultCountText = '170 of 170 workouts · shortest first',
 }: ClaudeWorkoutFiltersProps) {
-  const { colors, isDark } = useTheme();
+  const { isDark } = useTheme();
 
   return (
     <View style={styles.container}>
       {/* Header with Title & Count */}
       <View style={styles.headerRow}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>The whole library</Text>
-        <Text style={[styles.totalBadge, { color: colors.textMuted }]}>170 workouts</Text>
+        <Text style={styles.sectionTitle}>The whole library</Text>
+        <Text style={styles.totalBadge}>170 workouts</Text>
       </View>
 
       {/* Search Input */}
-      <View
-        style={[
-          styles.searchBox,
-          {
-            borderColor: isDark ? 'rgba(247, 243, 238, 0.18)' : 'rgba(13, 43, 69, 0.15)',
-            backgroundColor: isDark ? 'rgba(247, 243, 238, 0.03)' : '#FFFFFF',
-          },
-        ]}
-      >
+      <View style={styles.searchBox}>
         <TextInput
-          style={[styles.searchInput, { color: colors.text }]}
+          style={styles.searchInput}
           placeholder="Search by name, muscle or kit…"
-          placeholderTextColor={colors.placeholder}
+          placeholderTextColor="rgba(247, 243, 238, 0.45)"
           value={searchQuery}
           onChangeText={onSearchChange}
         />
@@ -69,29 +61,21 @@ export default function ClaudeWorkoutFilters({
 
       {/* Purpose Filter Row */}
       <View style={styles.filterRow}>
-        <Text style={[styles.filterLabel, { color: colors.textMuted }]}>PURPOSE</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
+        <Text style={styles.filterLabel}>PURPOSE</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipsScroll}
+        >
           {PURPOSES.map((p) => {
             const active = p === selectedPurpose;
             return (
               <Pressable
                 key={p}
                 onPress={() => onSelectPurpose(p)}
-                style={[
-                  styles.chip,
-                  {
-                    borderColor: isDark ? 'rgba(247, 243, 238, 0.22)' : 'rgba(13, 43, 69, 0.18)',
-                  },
-                  active && styles.chipActive,
-                ]}
+                style={[styles.chip, active && styles.chipActive]}
               >
-                <Text
-                  style={[
-                    styles.chipText,
-                    { color: isDark ? 'rgba(247, 243, 238, 0.7)' : colors.text },
-                    active && styles.chipTextActive,
-                  ]}
-                >
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>
                   {p}
                 </Text>
               </Pressable>
@@ -102,29 +86,21 @@ export default function ClaudeWorkoutFilters({
 
       {/* Minutes Filter Row */}
       <View style={styles.filterRow}>
-        <Text style={[styles.filterLabel, { color: colors.textMuted }]}>MINUTES</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
+        <Text style={styles.filterLabel}>MINUTES</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipsScroll}
+        >
           {DURATIONS.map((d) => {
             const active = d === selectedDuration;
             return (
               <Pressable
                 key={d}
                 onPress={() => onSelectDuration(d)}
-                style={[
-                  styles.chip,
-                  {
-                    borderColor: isDark ? 'rgba(247, 243, 238, 0.22)' : 'rgba(13, 43, 69, 0.18)',
-                  },
-                  active && styles.chipActive,
-                ]}
+                style={[styles.chip, active && styles.chipActive]}
               >
-                <Text
-                  style={[
-                    styles.chipText,
-                    { color: isDark ? 'rgba(247, 243, 238, 0.7)' : colors.text },
-                    active && styles.chipTextActive,
-                  ]}
-                >
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>
                   {d}
                 </Text>
               </Pressable>
@@ -135,29 +111,21 @@ export default function ClaudeWorkoutFilters({
 
       {/* Kit Filter Row */}
       <View style={styles.filterRow}>
-        <Text style={[styles.filterLabel, { color: colors.textMuted }]}>KIT</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
+        <Text style={styles.filterLabel}>KIT</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipsScroll}
+        >
           {KITS.map((k) => {
             const active = k === selectedKit;
             return (
               <Pressable
                 key={k}
                 onPress={() => onSelectKit(k)}
-                style={[
-                  styles.chip,
-                  {
-                    borderColor: isDark ? 'rgba(247, 243, 238, 0.22)' : 'rgba(13, 43, 69, 0.18)',
-                  },
-                  active && styles.chipActive,
-                ]}
+                style={[styles.chip, active && styles.chipActive]}
               >
-                <Text
-                  style={[
-                    styles.chipText,
-                    { color: isDark ? 'rgba(247, 243, 238, 0.7)' : colors.text },
-                    active && styles.chipTextActive,
-                  ]}
-                >
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>
                   {k}
                 </Text>
               </Pressable>
@@ -174,7 +142,10 @@ export default function ClaudeWorkoutFilters({
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 26,
+    marginTop: 26,
+    paddingTop: 22,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(247, 243, 238, 0.14)',
   },
   headerRow: {
     flexDirection: 'row',
@@ -201,8 +172,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(247, 243, 238, 0.18)',
     borderRadius: 14,
     paddingHorizontal: 15,
-    paddingVertical: 12,
-    backgroundColor: 'rgba(247, 243, 238, 0.03)',
+    paddingVertical: 13,
+    backgroundColor: 'transparent',
   },
   searchInput: {
     fontFamily: INTER,
@@ -211,7 +182,7 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   filterRow: {
-    paddingTop: 14,
+    paddingTop: 16,
   },
   filterLabel: {
     fontFamily: DMSANS,
@@ -220,15 +191,15 @@ const styles = StyleSheet.create({
     letterSpacing: 1.4,
     color: 'rgba(247, 243, 238, 0.42)',
     paddingHorizontal: 20,
-    paddingBottom: 8,
+    paddingBottom: 9,
   },
   chipsScroll: {
     paddingHorizontal: 20,
     gap: 8,
   },
   chip: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingVertical: 9,
+    paddingHorizontal: 15,
     borderRadius: 99,
     borderWidth: 1,
     borderColor: 'rgba(247, 243, 238, 0.22)',

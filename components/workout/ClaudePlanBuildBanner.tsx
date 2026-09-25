@@ -12,9 +12,9 @@ interface ClaudePlanBuildBannerProps {
 const GOLD = '#C9943A';
 const GREEN = '#1A7A4A';
 const IVORY = '#F7F3EE';
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
-const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
-const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
+const CLASH = Platform.select({ web: 'Clash Display', default: 'ClashDisplay-Bold' });
+const DMSANS = Platform.select({ web: 'DM Sans', default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: 'Inter', default: 'Inter-Regular' });
 
 export default function ClaudePlanBuildBanner({
   planBuilt = false,

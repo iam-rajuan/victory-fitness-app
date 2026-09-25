@@ -55,8 +55,8 @@ const PROTOTYPE_LIB: GridWorkoutItem[] = [
 ];
 
 const PROGRAMS: ProgramCardItem[] = [
-  { n: 'Strong at 45+', m: '8 weeks · 4 a week', t: 'STRENGTH', c: '2 140 training now', rank: 1 },
-  { n: 'Home Body Reset', m: '6 weeks · 3 a week', t: 'NO KIT', c: '1 870 training now', rank: 2 },
+  { n: 'Strong at 45+', m: '8 weeks · 4 a week', t: 'STRENGTH', c: '2 148 training now', rank: 1 },
+  { n: 'Home Body Reset', m: '6 weeks · 3 a week', t: 'NO KIT', c: '1 878 training now', rank: 2 },
   { n: 'Dumbbell Only', m: '10 weeks · 4 a week', t: 'HYPERTROPHY', c: '1 460 training now', rank: 3 },
   { n: 'Back & Knees Care', m: '4 weeks · 5 a week', t: 'RECOVERY', c: '1 205 training now', rank: 4 },
   { n: 'Lean & Conditioned', m: '8 weeks · 4 a week', t: 'CONDITIONING', c: '980 training now', rank: 5 },
@@ -241,9 +241,9 @@ export default function WorkoutScreen() {
           />
         }
       >
-        {/* 1. Header: Train, 170 workouts */}
+        {/* 1. Header: Train, 215 workouts */}
         <ClaudeTrainHeader
-          totalWorkouts={170}
+          totalWorkouts={215}
           onPressFilter={() => {}}
         />
 
@@ -258,15 +258,17 @@ export default function WorkoutScreen() {
         {/* 3. Pick Up Where You Left Off */}
         <ClaudeResumeSessionCard
           sessionTitle={selectedWorkout?.name || 'Upper Body Strength'}
-          sessionLine="exercise 3 of 7 · Strong at 45+ · week 2"
-          minutesLeft="18 min left"
-          progressPct={43}
+          sessionLine="exercise 1 of 4 · strong at 45+ · week 2"
+          minutesLeft="48 min left"
+          progressPct={35}
           onResume={handleResumeSession}
         />
 
         {/* 4. Most trained programmes */}
         <ClaudeWorkoutRowCarousel
           title="Most trained programmes"
+          actionText="All ›"
+          onActionPress={() => {}}
           type="programs"
           programs={PROGRAMS}
           onSelectProgram={(p) => {
@@ -281,7 +283,7 @@ export default function WorkoutScreen() {
         {/* 5. Because of how you train */}
         <ClaudeWorkoutRowCarousel
           title="Because of how you train"
-          subtitle={hasCoach ? 'Dumbbells at home, 40 minutes, four evenings a week' : 'All workouts unlocked'}
+          subtitle="Home gym, 40 minutes, four evenings a week"
           type="workouts"
           workouts={FORYOU}
           onSelectWorkout={(w) => {

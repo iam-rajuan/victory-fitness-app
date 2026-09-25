@@ -34,10 +34,10 @@ const OBSIDIAN = '#0D0D0D';
 const GOLD = '#C9943A';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
-const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
-const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
+const CLASH = Platform.select({ web: 'Clash Display', default: 'ClashDisplay-Bold' });
+const DMSANS = Platform.select({ web: 'DM Sans', default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: 'Inter', default: 'Inter-Regular' });
+const MONO = Platform.select({ web: 'JetBrains Mono', default: 'JetBrainsMono-Bold' });
 
 export default function ClaudeWorkoutRowCarousel({
   title,
@@ -50,8 +50,13 @@ export default function ClaudeWorkoutRowCarousel({
   onSelectProgram,
   onSelectWorkout,
 }: ClaudeWorkoutRowCarouselProps) {
-  const { colors, isDark } = useTheme();
+  const { isDark } = useTheme();
   const scrollRef = React.useRef<ScrollView>(null);
+
+  const isMouseDown = React.useRef(false);
+  const startX = React.useRef(0);
+  const scrollStartLeft = React.useRef(0);
+  const hasDragged = React.useRef(false);
 
   const snapInterval = type === 'programs' ? 170 : 208;
 
@@ -63,13 +68,41 @@ export default function ClaudeWorkoutRowCarousel({
     }
   };
 
+  // Mouse drag-to-slide handlers for web
+  const handleMouseDown = (e: any) => {
+    if (Platform.OS !== 'web') return;
+    isMouseDown.current = true;
+    hasDragged.current = false;
+    startX.current = e.nativeEvent?.pageX ?? e.pageX ?? 0;
+    const node = (scrollRef.current as any)?.getScrollResponder?.()?.getScrollableNode?.() || (scrollRef.current as any);
+    scrollStartLeft.current = node?.scrollLeft || 0;
+  };
+
+  const handleMouseMove = (e: any) => {
+    if (Platform.OS !== 'web' || !isMouseDown.current) return;
+    const currentX = e.nativeEvent?.pageX ?? e.pageX ?? 0;
+    const diff = currentX - startX.current;
+    if (Math.abs(diff) > 4) {
+      hasDragged.current = true;
+    }
+    const node = (scrollRef.current as any)?.getScrollResponder?.()?.getScrollableNode?.() || (scrollRef.current as any);
+    if (node) {
+      node.scrollLeft = scrollStartLeft.current - diff;
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (Platform.OS !== 'web') return;
+    isMouseDown.current = false;
+  };
+
   return (
     <View style={styles.section}>
       {/* Section Header */}
       <View style={styles.headerRow}>
         <View style={styles.titleWrap}>
-          <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
-          {subtitle ? <Text style={[styles.subtitle, { color: colors.textMuted }]}>{subtitle}</Text> : null}
+          <Text style={styles.title}>{title}</Text>
+          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
         </View>
 
         {actionText ? (
@@ -79,7 +112,7 @@ export default function ClaudeWorkoutRowCarousel({
         ) : null}
       </View>
 
-      {/* Horizontal Snap Scroll Area */}
+      {/* Horizontal Slideable Snap Scroll Area */}
       <ScrollView
         ref={scrollRef}
         horizontal
@@ -90,53 +123,51 @@ export default function ClaudeWorkoutRowCarousel({
         directionalLockEnabled
         nestedScrollEnabled
         contentContainerStyle={styles.scrollContent}
+        {...(Platform.OS === 'web' ? {
+          onMouseDown: handleMouseDown,
+          onMouseMove: handleMouseMove,
+          onMouseUp: handleMouseUp,
+          onMouseLeave: handleMouseUp,
+        } : {})}
+        style={Platform.OS === 'web' ? ({ cursor: 'grab', userSelect: 'none' } as any) : undefined}
       >
         {type === 'programs' &&
           programs.map((p, idx) => (
             <Pressable
               key={idx}
               style={styles.programCard}
-              onPress={() => onSelectProgram && onSelectProgram(p)}
+              onPress={() => {
+                if (hasDragged.current) return;
+                onSelectProgram && onSelectProgram(p);
+              }}
             >
-              <View
-                style={[
-                  styles.programMedia,
-                  {
-                    backgroundColor: isDark ? NAVY : '#FFFFFF',
-                    borderColor: isDark ? 'rgba(247, 243, 238, 0.1)' : 'rgba(13, 43, 69, 0.08)',
-                    shadowColor: '#0D2B45',
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowRadius: 10,
-                    elevation: 2,
-                    shadowOpacity: isDark ? 0.35 : 0.05,
-                  },
-                ]}
-              >
+              <View style={styles.programMedia}>
+                {/* Gradient overlay from prototype: linear-gradient(180deg, rgba(201,148,58,.14) 0%, rgba(13,43,69,0) 55%) */}
+                <View
+                  style={[
+                    StyleSheet.absoluteFillObject,
+                    Platform.select({
+                      web: {
+                        background: 'linear-gradient(180deg, rgba(201,148,58,.14) 0%, rgba(13,43,69,0) 55%)',
+                      } as any,
+                      default: {
+                        backgroundColor: 'rgba(201, 148, 58, 0.06)',
+                      },
+                    }),
+                  ]}
+                />
+
                 {p.rank !== undefined ? (
-                  <Text
-                    style={[
-                      styles.programRank,
-                      { color: isDark ? 'rgba(247, 243, 238, 0.22)' : 'rgba(13, 43, 69, 0.12)' },
-                    ]}
-                  >
-                    {p.rank}
-                  </Text>
+                  <Text style={styles.programRank}>{p.rank}</Text>
                 ) : null}
                 <Text style={styles.programTag}>{p.t}</Text>
 
                 <View style={styles.programBottomInfo}>
-                  <Text style={[styles.programName, { color: isDark ? IVORY : NAVY }]}>{p.n}</Text>
-                  <Text
-                    style={[
-                      styles.programMeta,
-                      { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
-                    ]}
-                  >
-                    {p.m}
-                  </Text>
+                  <Text style={styles.programName}>{p.n}</Text>
+                  <Text style={styles.programMeta}>{p.m}</Text>
                 </View>
               </View>
-              {p.c ? <Text style={[styles.programCount, { color: colors.textMuted }]}>{p.c}</Text> : null}
+              {p.c ? <Text style={styles.programCount}>{p.c}</Text> : null}
             </Pressable>
           ))}
 
@@ -145,7 +176,10 @@ export default function ClaudeWorkoutRowCarousel({
             <Pressable
               key={idx}
               style={styles.workoutCard}
-              onPress={() => onSelectWorkout && onSelectWorkout(w)}
+              onPress={() => {
+                if (hasDragged.current) return;
+                onSelectWorkout && onSelectWorkout(w);
+              }}
             >
               <View style={styles.workoutMedia}>
                 <View style={styles.playCircle}>
@@ -153,8 +187,8 @@ export default function ClaudeWorkoutRowCarousel({
                 </View>
                 <Text style={styles.workoutBadge}>{w.t}</Text>
               </View>
-              <Text style={[styles.workoutName, { color: colors.text }]}>{w.n}</Text>
-              <Text style={[styles.workoutMeta, { color: colors.textMuted }]}>{w.m}</Text>
+              <Text style={styles.workoutName}>{w.n}</Text>
+              <Text style={styles.workoutMeta}>{w.m}</Text>
             </Pressable>
           ))}
       </ScrollView>

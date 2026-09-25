@@ -36,6 +36,8 @@ export default function Root({ children }: { children: React.ReactNode }) {
         <link rel="icon" type="image/png" href="/favicon.png?v=5" sizes="64x64" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
         <link rel="stylesheet" href="/fonts/fonts.css" />
+        <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@600,700&amp;display=swap" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&amp;family=Inter:wght@400;500&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" />
         {isProduction && hasFirebaseWebPushConfig ? (
           <>
             <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js" />
@@ -57,7 +59,16 @@ export default function Root({ children }: { children: React.ReactNode }) {
         <style
           id="expo-reset"
           dangerouslySetInnerHTML={{
-            __html: '#root,body,html{height:100%}body{overflow:hidden;background:#0D0D0D}#root{display:flex}',
+            __html: `
+              #root,body,html{height:100%}
+              body{overflow:hidden;background:#0D0D0D;font-family:'DM Sans',-apple-system,sans-serif}
+              #root{display:flex}
+              ::-webkit-scrollbar{display:none !important;width:0 !important;height:0 !important}
+              * {
+                scrollbar-width: none !important;
+                -ms-overflow-style: none !important;
+              }
+            `,
           }}
         />
         {isProduction ? (

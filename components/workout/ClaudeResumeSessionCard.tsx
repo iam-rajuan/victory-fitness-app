@@ -15,9 +15,9 @@ const OBSIDIAN = '#0D0D0D';
 const GOLD = '#C9943A';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
-const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
+const CLASH = Platform.select({ web: 'Clash Display', default: 'ClashDisplay-Bold' });
+const DMSANS = Platform.select({ web: 'DM Sans', default: 'DMSans-SemiBold' });
+const MONO = Platform.select({ web: 'JetBrains Mono', default: 'JetBrainsMono-Bold' });
 
 export default function ClaudeResumeSessionCard({
   sessionTitle = 'Upper Body Strength',
@@ -49,6 +49,21 @@ export default function ClaudeResumeSessionCard({
       >
         {/* Top media container */}
         <View style={styles.mediaWrap}>
+          {/* Radial gradient background */}
+          <View
+            style={[
+              StyleSheet.absoluteFillObject,
+              Platform.select({
+                web: {
+                  background: 'radial-gradient(90% 120% at 20% 10%, rgba(201,148,58,.16) 0%, rgba(13,13,13,0) 60%)',
+                } as any,
+                default: {
+                  backgroundColor: 'rgba(201, 148, 58, 0.08)',
+                },
+              }),
+            ]}
+          />
+
           {/* Big gold play circle */}
           <View style={styles.playCircle}>
             <View style={styles.playArrow} />

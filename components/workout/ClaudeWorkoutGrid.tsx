@@ -23,9 +23,9 @@ const OBSIDIAN = '#0D0D0D';
 const GOLD = '#C9943A';
 const IVORY = '#F7F3EE';
 
-const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
-const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
+const DMSANS = Platform.select({ web: 'DM Sans', default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: 'Inter', default: 'Inter-Regular' });
+const MONO = Platform.select({ web: 'JetBrains Mono', default: 'JetBrainsMono-Bold' });
 
 export default function ClaudeWorkoutGrid({
   workouts,
