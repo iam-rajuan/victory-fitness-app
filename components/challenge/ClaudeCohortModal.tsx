@@ -31,31 +31,38 @@ const NAVY = '#0D2B45';
 const GOLD = '#C9943A';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
+const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 const INITIAL_MESSAGES: CohortMessage[] = [
   {
     id: 'cm-1',
-    n: 'Marcus Vance',
-    i: 'MV',
-    t: '08:42',
-    m: 'Day 18 morning session locked in. Grip strength gave out on set 4 of chin-ups, but finished the reps.',
+    n: 'Anna R.',
+    i: 'AR',
+    t: '09:12',
+    m: 'Day 18 done. Anyone else feel the shoulders today?',
   },
   {
     id: 'cm-2',
-    n: 'Sarah Jenkins',
-    i: 'SJ',
-    t: '09:15',
-    m: 'Pushing through the fatigue today. My accountability trigger got me to the gym floor!',
+    n: 'Dominik S.',
+    i: 'DS',
+    t: '09:40',
+    m: 'Both shoulders. Worth it.',
   },
   {
     id: 'cm-3',
+    n: 'Victor Akko',
+    i: 'VA',
+    t: '10:05',
+    m: 'Three days left. Do not let the last stretch be the one you skip.',
+  },
+  {
+    id: 'cm-4',
     n: 'You',
-    i: 'ME',
-    t: '09:30',
+    i: 'MK',
+    t: '10:14',
     m: 'Day 18 done here too. Three to go.',
     isMe: true,
   },

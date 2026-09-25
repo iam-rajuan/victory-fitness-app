@@ -9,6 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { ChallengeItem } from './ClaudeChallengeDirectory';
+import RequirementAuditBoundary from '../audit/RequirementAuditBoundary';
 
 interface ClaudeChallengeDetailModalProps {
   challenge: ChallengeItem | null;
@@ -16,6 +17,7 @@ interface ClaudeChallengeDetailModalProps {
   onClose: () => void;
   onJoin: (challenge: ChallengeItem) => void;
   onOpenCohort: () => void;
+  onInvite?: () => void;
 }
 
 const NAVY = '#0D2B45';
@@ -23,10 +25,10 @@ const GOLD = '#C9943A';
 const COPPER = '#B5651D';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
+const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 export default function ClaudeChallengeDetailModal({
   challenge,
@@ -34,6 +36,7 @@ export default function ClaudeChallengeDetailModal({
   onClose,
   onJoin,
   onOpenCohort,
+  onInvite,
 }: ClaudeChallengeDetailModalProps) {
   if (!challenge) return null;
 
@@ -109,7 +112,7 @@ export default function ClaudeChallengeDetailModal({
               <TouchableOpacity
                 style={styles.inviteOutlineBtn}
                 activeOpacity={0.8}
-                onPress={onClose}
+                onPress={onInvite || onClose}
               >
                 <Text style={styles.inviteOutlineBtnText}>Invite someone</Text>
               </TouchableOpacity>
@@ -117,20 +120,26 @@ export default function ClaudeChallengeDetailModal({
           </View>
 
           {/* Points Rules Table matching lines 1759-1763 */}
-          <View style={styles.rulesCard}>
-            <View style={[styles.rulesRow, styles.rulesRowBorder]}>
-              <Text style={styles.rulesLabel}>If you finish</Text>
-              <Text style={styles.rulesPoints}>{challenge.p}</Text>
+          <RequirementAuditBoundary
+            auditId="APP-EXTRA-020"
+            status="extra"
+            label="NEW FEATURE - NOT IN REQUIREMENT (PRORATED POINTS & STREAK PRESERVATION)"
+          >
+            <View style={styles.rulesCard}>
+              <View style={[styles.rulesRow, styles.rulesRowBorder]}>
+                <Text style={styles.rulesLabel}>If you finish</Text>
+                <Text style={styles.rulesPoints}>{challenge.p}</Text>
+              </View>
+              <View style={[styles.rulesRow, styles.rulesRowBorder]}>
+                <Text style={styles.rulesLabel}>Over half done</Text>
+                <Text style={styles.rulesSub}>50% of points</Text>
+              </View>
+              <View style={styles.rulesRow}>
+                <Text style={styles.rulesLabel}>If you leave early</Text>
+                <Text style={styles.rulesSub}>streak untouched</Text>
+              </View>
             </View>
-            <View style={[styles.rulesRow, styles.rulesRowBorder]}>
-              <Text style={styles.rulesLabel}>Over half done</Text>
-              <Text style={styles.rulesSub}>50% of points</Text>
-            </View>
-            <View style={styles.rulesRow}>
-              <Text style={styles.rulesLabel}>If you leave early</Text>
-              <Text style={styles.rulesSub}>streak untouched</Text>
-            </View>
-          </View>
+          </RequirementAuditBoundary>
 
           {/* Join CTA matching lines 1765-1766 */}
           <TouchableOpacity

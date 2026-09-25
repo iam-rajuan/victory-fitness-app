@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -31,135 +31,102 @@ const GOLD = '#C9943A';
 const COPPER = '#B5651D';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
+const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
-const RAIL_CHALLENGES: ChallengeItem[] = [
+const CLAUDE_CHALLENGES: ChallengeItem[] = [
   {
-    id: 'ch-rail-1',
+    id: 'ch-cold-start',
+    d: 3,
+    n: 'Cold Start',
+    c: 'PHYSICAL',
+    p: '75 pts',
+    joined: '312 joined',
+    faces: [{ i: 'AR' }, { i: 'DS' }, { i: 'LM' }],
+    desc: 'Finish every shower with 60 seconds of cold water for 3 consecutive days.',
+    why: 'Each icy shock teaches your nervous system that discomfort is survivable — and suddenly every hard thing feels smaller.',
+  },
+  {
+    id: 'ch-sleep-lock',
+    d: 5,
+    n: 'Sleep Lock',
+    c: 'MENTAL',
+    p: '120 pts',
+    joined: '268 joined',
+    faces: [{ i: 'AR' }, { i: 'DS' }, { i: 'LM' }],
+    desc: 'Go to bed at the same time and wake at the same time for 5 days straight.',
+    why: 'Every elite performer guards their sleep schedule like a secret weapon. Five days builds the rhythm that fuels everything else.',
+  },
+  {
+    id: 'ch-week-strength',
+    d: 7,
+    n: 'Week of Strength',
+    c: 'PHYSICAL',
+    p: '250 pts',
+    joined: '204 joined',
+    faces: [{ i: 'AR' }, { i: 'DS' }, { i: 'LM' }],
+    desc: 'Complete all 7 scheduled workouts in a single week — zero skipped sessions.',
+    why: 'A perfect workout week is not about fitness. It is about proving to yourself that you keep your word to yourself.',
+  },
+  {
+    id: 'ch-deep-connection',
+    d: 14,
+    n: 'Deep Connection',
+    c: 'RELATIONAL',
+    p: '420 pts',
+    joined: '187 joined',
+    faces: [{ i: 'AR' }, { i: 'DS' }, { i: 'LM' }],
+    desc: 'One meaningful, uninterrupted conversation per day — no phones on the table.',
+    why: 'Fourteen real conversations do more for your wellbeing than a hundred casual exchanges. Deep connection is the one thing no app can replace.',
+  },
+  {
+    id: 'ch-warrior-21',
+    d: 21,
     n: '21-Day Warrior',
-    d: 21,
-    c: 'STRENGTH',
+    c: 'PHYSICAL',
     p: '800 pts',
-    joined: '142 in it',
-    faces: [{ i: 'MK' }, { i: 'JR' }, { i: 'AN' }],
-    desc: '3 full-body sessions per week plus 1 recovery walk. No missed days allowed.',
-    why: 'Three weeks creates the neuro-pathway that turns conscious discipline into automatic behavior.',
-  },
-  {
-    id: 'ch-rail-2',
-    n: '7-Day Core Reset',
-    d: 7,
-    c: 'HABITS',
-    p: '350 pts',
-    joined: '89 in it',
-    faces: [{ i: 'SL' }, { i: 'TK' }],
-    desc: '10 minutes of deep core and breathwork before coffee every single morning.',
-    why: 'Activates the transverse abdominis and stabilizes lumbar pressure before seated work begins.',
-  },
-  {
-    id: 'ch-rail-3',
-    n: '14-Day Morning Hydration',
-    d: 14,
-    c: 'HABITS',
-    p: '500 pts',
-    joined: '215 in it',
-    faces: [{ i: 'EM' }, { i: 'DA' }, { i: 'LW' }],
-    desc: '500ml water with pinch of sea salt upon waking, before checking your smartphone.',
-    why: 'Reverses overnight cellular dehydration and stimulates morning cortisol awakening response.',
-  },
-  {
-    id: 'ch-rail-4',
-    n: '30-Day Pull-Up Ladder',
-    d: 30,
-    c: 'STRENGTH',
-    p: '1,200 pts',
-    joined: '64 in it',
-    faces: [{ i: 'VB' }, { i: 'CH' }],
-    desc: 'Sub-maximal volume every other day using grease-the-groove methodology.',
-    why: 'Builds tendon resilience and vertical pulling capacity without central nervous system fatigue.',
+    joined: '312 joined',
+    faces: [{ i: 'AR' }, { i: 'DS' }, { i: 'LM' }],
+    desc: 'Five sessions a week, progressive difficulty, for a full 21 days without missing one.',
+    why: 'Twenty-one days is the threshold where behaviour becomes identity. Finish this and you are no longer someone who tries to train — you are someone who trains.',
   },
 ];
 
-const ALL_CHALLENGES: ChallengeItem[] = [
-  ...RAIL_CHALLENGES,
-  {
-    id: 'ch-5',
-    n: '14-Day Protein Precision',
-    d: 14,
-    c: 'HABITS',
-    p: '600 pts',
-    joined: '112 in it',
-    faces: [{ i: 'AK' }],
-    desc: 'Hit your bodyweight protein target before dinner every single day for two weeks.',
-    why: 'Eliminates late-night hunger spikes and guarantees optimal amino acid availability.',
-  },
-  {
-    id: 'ch-6',
-    n: '10,000 Steps Daily',
-    d: 21,
-    c: 'CARDIO',
-    p: '750 pts',
-    joined: '198 in it',
-    faces: [{ i: 'PL' }],
-    desc: 'Hit ten thousand verified steps daily regardless of meetings or weather.',
-    why: 'Non-exercise activity thermogenesis (NEAT) accounts for 70% of non-resting metabolic expenditure.',
-  },
-  {
-    id: 'ch-7',
-    n: 'Zone 2 Engine Builder',
-    d: 30,
-    c: 'CARDIO',
-    p: '1,000 pts',
-    joined: '77 in it',
-    faces: [{ i: 'RT' }],
-    desc: 'Two 45-minute nasal-breathing aerobic sessions per week.',
-    why: 'Expands mitochondrial density and capillary beds in slow-twitch muscle fibers.',
-  },
-  {
-    id: 'ch-8',
-    n: 'Evening Screen Sunset',
-    d: 7,
-    c: 'HABITS',
-    p: '300 pts',
-    joined: '140 in it',
-    faces: [{ i: 'SJ' }],
-    desc: 'All screens off 45 minutes before sleep. Read or journal under warm dim light.',
-    why: 'Protects natural melatonin surge and deep delta-wave restorative sleep latency.',
-  },
-  {
-    id: 'ch-9',
-    n: 'Hip Mobility Flow',
-    d: 14,
-    c: 'MOBILITY',
-    p: '450 pts',
-    joined: '93 in it',
-    faces: [{ i: 'OM' }],
-    desc: '12-minute 90/90 and couch stretch routine every evening.',
-    why: 'Restores internal and external hip rotation lost to prolonged chair sitting.',
-  },
-];
+const RAIL_CHALLENGES: ChallengeItem[] = CLAUDE_CHALLENGES.slice(0, 4);
+const ALL_CHALLENGES: ChallengeItem[] = CLAUDE_CHALLENGES;
 
-const DAY_FILTERS = ['ALL', '7 DAYS', '14 DAYS', '21 DAYS', '30 DAYS'];
-const CAT_FILTERS = ['ALL', 'STRENGTH', 'HABITS', 'CARDIO', 'MOBILITY'];
+const DAY_FILTERS = ['All', '3', '5', '7', '14', '21'];
+const CAT_FILTERS = ['All', 'Physical', 'Mental', 'Relational'];
 
 export default function ClaudeChallengeDirectory({
   onSelectChallenge,
   onOpenInviteGuest,
 }: ClaudeChallengeDirectoryProps) {
   const { colors, isDark } = useTheme();
-  const [selectedDay, setSelectedDay] = useState('ALL');
-  const [selectedCat, setSelectedCat] = useState('ALL');
+  const [selectedDay, setSelectedDay] = useState('All');
+  const [selectedCat, setSelectedCat] = useState('All');
+  const railScrollRef = useRef<ScrollView>(null);
+  const [railOffset, setRailOffset] = useState(0);
+
+  const handleSlideRail = () => {
+    if (railScrollRef.current) {
+      // 176px card width + 12px gap = 188px step
+      const maxOffset = (RAIL_CHALLENGES.length - 1) * 188;
+      const nextOffset = railOffset >= maxOffset ? 0 : railOffset + 188;
+      railScrollRef.current.scrollTo({ x: nextOffset, animated: true });
+      setRailOffset(nextOffset);
+    }
+  };
 
   const filteredChallenges = ALL_CHALLENGES.filter((ch) => {
-    if (selectedDay !== 'ALL') {
+    if (selectedDay !== 'All') {
       const targetDays = parseInt(selectedDay, 10);
       if (ch.d !== targetDays) return false;
     }
-    if (selectedCat !== 'ALL') {
-      if (ch.c.toUpperCase() !== selectedCat) return false;
+    if (selectedCat !== 'All') {
+      if (ch.c.toUpperCase() !== selectedCat.toUpperCase()) return false;
     }
     return true;
   });
@@ -169,12 +136,22 @@ export default function ClaudeChallengeDirectory({
       {/* Horizontal Rail: Most joined this week matching line 851-874 */}
       <View style={styles.railHeader}>
         <Text style={[styles.railTitle, { color: colors.text }]}>Most joined this week</Text>
-        <Text style={styles.railAllLink}>All ›</Text>
+        <TouchableOpacity activeOpacity={0.7} onPress={handleSlideRail}>
+          <Text style={styles.railAllLink}>All ›</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView
+        ref={railScrollRef}
         horizontal
         showsHorizontalScrollIndicator={false}
+        decelerationRate="fast"
+        snapToInterval={188}
+        snapToAlignment="start"
+        directionalLockEnabled
+        nestedScrollEnabled
+        onScroll={(e) => setRailOffset(e.nativeEvent.contentOffset.x)}
+        scrollEventThrottle={16}
         contentContainerStyle={styles.railScroll}
       >
         {RAIL_CHALLENGES.map((c) => (
@@ -235,31 +212,34 @@ export default function ClaudeChallengeDirectory({
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.chipRow}
         >
-          {DAY_FILTERS.map((d) => (
-            <TouchableOpacity
-              key={`day-${d}`}
-              style={[
-                styles.chip,
-                {
-                  backgroundColor: isDark ? NAVY : '#FFFFFF',
-                  borderColor: isDark ? 'rgba(247, 243, 238, 0.12)' : 'rgba(13, 43, 69, 0.12)',
-                },
-                selectedDay === d && styles.chipActive,
-              ]}
-              activeOpacity={0.8}
-              onPress={() => setSelectedDay(d)}
-            >
-              <Text
+          {DAY_FILTERS.map((d) => {
+            const isCircle = d !== 'All';
+            const isSelected = selectedDay === d;
+            return (
+              <TouchableOpacity
+                key={`day-${d}`}
                 style={[
-                  styles.chipText,
-                  { color: isDark ? 'rgba(247, 243, 238, 0.7)' : colors.text },
-                  selectedDay === d && styles.chipTextActive,
+                  isCircle ? styles.circleChip : styles.chip,
+                  {
+                    backgroundColor: isSelected ? GOLD : (isDark ? 'transparent' : '#FFFFFF'),
+                    borderColor: isSelected ? GOLD : (isDark ? 'rgba(247, 243, 238, 0.22)' : 'rgba(13, 43, 69, 0.2)'),
+                  },
                 ]}
+                activeOpacity={0.8}
+                onPress={() => setSelectedDay(d)}
               >
-                {d}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text
+                  style={[
+                    styles.chipText,
+                    { color: isSelected ? '#0D0D0D' : (isDark ? 'rgba(247, 243, 238, 0.7)' : colors.text) },
+                    isSelected && styles.chipTextActive,
+                  ]}
+                >
+                  {d}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       </View>
 
@@ -271,37 +251,39 @@ export default function ClaudeChallengeDirectory({
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.chipRow}
         >
-          {CAT_FILTERS.map((cat) => (
-            <TouchableOpacity
-              key={`cat-${cat}`}
-              style={[
-                styles.chip,
-                {
-                  backgroundColor: isDark ? NAVY : '#FFFFFF',
-                  borderColor: isDark ? 'rgba(247, 243, 238, 0.12)' : 'rgba(13, 43, 69, 0.12)',
-                },
-                selectedCat === cat && styles.chipActive,
-              ]}
-              activeOpacity={0.8}
-              onPress={() => setSelectedCat(cat)}
-            >
-              <Text
+          {CAT_FILTERS.map((cat) => {
+            const isSelected = selectedCat === cat;
+            return (
+              <TouchableOpacity
+                key={`cat-${cat}`}
                 style={[
-                  styles.chipText,
-                  { color: isDark ? 'rgba(247, 243, 238, 0.7)' : colors.text },
-                  selectedCat === cat && styles.chipTextActive,
+                  styles.chip,
+                  {
+                    backgroundColor: isSelected ? GOLD : (isDark ? 'transparent' : '#FFFFFF'),
+                    borderColor: isSelected ? GOLD : (isDark ? 'rgba(247, 243, 238, 0.22)' : 'rgba(13, 43, 69, 0.2)'),
+                  },
                 ]}
+                activeOpacity={0.8}
+                onPress={() => setSelectedCat(cat)}
               >
-                {cat}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text
+                  style={[
+                    styles.chipText,
+                    { color: isSelected ? '#0D0D0D' : (isDark ? 'rgba(247, 243, 238, 0.7)' : colors.text) },
+                    isSelected && styles.chipTextActive,
+                  ]}
+                >
+                  {cat}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       </View>
 
-      {/* Count Line matching line 889 */}
-      <Text style={[styles.countLine, { color: colors.textMuted }]}>
-        {`${filteredChallenges.length} OF 35 CHALLENGES · SORTED BY POPULARITY`}
+      {/* Count Line matching line 889 & 3354 */}
+      <Text style={[styles.countLine, { color: GOLD }]}>
+        {`${filteredChallenges.length} of 35 challenges${selectedDay === 'All' ? ' · 3 to 21 days' : ` · ${selectedDay} days`}`}
       </Text>
 
       {/* Challenge List matching lines 891-906 */}
@@ -413,9 +395,10 @@ const styles = StyleSheet.create({
   },
   railCard: {
     width: 176,
+    flexShrink: 0,
     backgroundColor: NAVY,
     borderRadius: 14,
-    borderLeftWidth: 3,
+    borderLeftWidth: 4,
     borderLeftColor: COPPER,
     padding: 14,
   },
@@ -504,12 +487,24 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chip: {
-    paddingHorizontal: 13,
-    paddingVertical: 7,
+    paddingHorizontal: 16,
+    height: 42,
     borderRadius: 99,
-    backgroundColor: NAVY,
+    backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: 'rgba(247, 243, 238, 0.12)',
+    borderColor: 'rgba(247, 243, 238, 0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  circleChip: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: 'rgba(247, 243, 238, 0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   chipActive: {
     backgroundColor: GOLD,
@@ -517,12 +512,13 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontFamily: DMSANS,
-    fontSize: 11.5,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '500',
     color: 'rgba(247, 243, 238, 0.7)',
   },
   chipTextActive: {
     color: '#0D0D0D',
+    fontWeight: '700',
   },
   countLine: {
     fontFamily: MONO,
@@ -540,7 +536,7 @@ const styles = StyleSheet.create({
   challengeCard: {
     backgroundColor: NAVY,
     borderRadius: 16,
-    borderLeftWidth: 3,
+    borderLeftWidth: 4,
     borderLeftColor: COPPER,
     paddingVertical: 14,
     paddingHorizontal: 16,

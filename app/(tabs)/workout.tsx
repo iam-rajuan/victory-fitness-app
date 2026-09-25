@@ -30,6 +30,7 @@ import ClaudeWorkoutRowCarousel, {
 import ClaudeWorkoutFilters from '../../components/workout/ClaudeWorkoutFilters';
 import ClaudeWorkoutGrid, { GridWorkoutItem } from '../../components/workout/ClaudeWorkoutGrid';
 import ClaudeVimeoPlayerModal from '../../components/workout/ClaudeVimeoPlayerModal';
+import ClaudePlanDetailModal from '../../components/workout/ClaudePlanDetailModal';
 import ClaudeActiveSessionModal from '../../components/workout/ClaudeActiveSessionModal';
 import ClaudeSessionCompleteModal from '../../components/workout/ClaudeSessionCompleteModal';
 import ClaudePlanBuildModal from '../../components/workout/ClaudePlanBuildModal';
@@ -97,6 +98,7 @@ export default function WorkoutScreen() {
 
   // Modals State
   const [vimeoModalVisible, setVimeoModalVisible] = useState(false);
+  const [planDetailVisible, setPlanDetailVisible] = useState(false);
   const [activeSessionVisible, setActiveSessionVisible] = useState(false);
   const [completeModalVisible, setCompleteModalVisible] = useState(false);
   const [planBuildModalVisible, setPlanBuildModalVisible] = useState(false);
@@ -171,9 +173,9 @@ export default function WorkoutScreen() {
   // Actions
   const handleStartWorkout = (w: GridWorkoutItem) => {
     setSelectedWorkout(w);
-    // If user has coach, start active tracking session. Otherwise, launch Vimeo video session.
+    // If user has coach, show the Start my session plan detail screen. Otherwise, launch Vimeo video session.
     if (hasCoach) {
-      setActiveSessionVisible(true);
+      setPlanDetailVisible(true);
     } else {
       setVimeoModalVisible(true);
     }
@@ -182,7 +184,7 @@ export default function WorkoutScreen() {
   const handleResumeSession = () => {
     setSelectedWorkout(PROTOTYPE_LIB[5]); // Full Body Strength / Upper Body
     if (hasCoach) {
-      setActiveSessionVisible(true);
+      setPlanDetailVisible(true);
     } else {
       setVimeoModalVisible(true);
     }
@@ -335,7 +337,24 @@ export default function WorkoutScreen() {
         onFinishSession={() => handleFinishSession()}
       />
 
-      {/* 2. Active Session Tracker Modal */}
+      {/* 2. Plan Detail Modal ("Start my session" screen) */}
+      <ClaudePlanDetailModal
+        visible={planDetailVisible}
+        onClose={() => setPlanDetailVisible(false)}
+        planTitle={selectedWorkout?.name || 'Upper Body Strength'}
+        dayKicker="DAY 3 OF WEEK 2 · PUSH DAY"
+        planSource={hasCoach ? 'BUILT BY YOUR COACH' : 'TODAY’S WORKOUT'}
+        onBeginSession={() => {
+          setPlanDetailVisible(false);
+          setActiveSessionVisible(true);
+        }}
+        onAdjustWithCoach={() => {
+          setPlanDetailVisible(false);
+          pushRoute(router, '/chat');
+        }}
+      />
+
+      {/* 3. Active Session Tracker Modal */}
       <ClaudeActiveSessionModal
         visible={activeSessionVisible}
         onClose={() => setActiveSessionVisible(false)}

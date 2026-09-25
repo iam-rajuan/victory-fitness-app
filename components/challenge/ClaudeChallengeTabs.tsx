@@ -12,7 +12,10 @@ interface ClaudeChallengeTabsProps {
 const NAVY = '#0D2B45';
 const IVORY = '#F7F3EE';
 
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
+const GOLD = '#C9943A';
+const OBSIDIAN = '#0D0D0D';
+
+const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
 
 export default function ClaudeChallengeTabs({
   activeTab,
@@ -26,34 +29,24 @@ export default function ClaudeChallengeTabs({
         style={[
           styles.tabWrap,
           {
-            backgroundColor: isDark ? '#0A2033' : '#EDE8E1',
-            borderColor: isDark ? 'rgba(247, 243, 238, 0.16)' : 'rgba(13, 43, 69, 0.12)',
+            borderColor: isDark ? 'rgba(247, 243, 238, 0.16)' : 'rgba(13, 43, 69, 0.15)',
           },
         ]}
       >
         <TouchableOpacity
           style={[
             styles.tab,
-            activeTab === 'challenges' && {
-              backgroundColor: isDark ? NAVY : '#FFFFFF',
-            },
+            activeTab === 'challenges' && styles.tabActive,
           ]}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
           onPress={() => onChangeTab('challenges')}
         >
           <Text
             style={[
               styles.tabText,
-              {
-                color:
-                  activeTab === 'challenges'
-                    ? isDark
-                      ? IVORY
-                      : NAVY
-                    : isDark
-                    ? 'rgba(247, 243, 238, 0.55)'
-                    : 'rgba(13, 43, 69, 0.6)',
-              },
+              activeTab === 'challenges'
+                ? styles.tabTextActive
+                : { color: isDark ? 'rgba(247, 243, 238, 0.6)' : 'rgba(13, 43, 69, 0.6)' },
             ]}
           >
             Challenges
@@ -63,26 +56,17 @@ export default function ClaudeChallengeTabs({
         <TouchableOpacity
           style={[
             styles.tab,
-            activeTab === 'community' && {
-              backgroundColor: isDark ? NAVY : '#FFFFFF',
-            },
+            activeTab === 'community' && styles.tabActive,
           ]}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
           onPress={() => onChangeTab('community')}
         >
           <Text
             style={[
               styles.tabText,
-              {
-                color:
-                  activeTab === 'community'
-                    ? isDark
-                      ? IVORY
-                      : NAVY
-                    : isDark
-                    ? 'rgba(247, 243, 238, 0.55)'
-                    : 'rgba(13, 43, 69, 0.6)',
-              },
+              activeTab === 'community'
+                ? styles.tabTextActive
+                : { color: isDark ? 'rgba(247, 243, 238, 0.6)' : 'rgba(13, 43, 69, 0.6)' },
             ]}
           >
             Community
@@ -104,18 +88,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 13,
     padding: 4,
+    backgroundColor: 'transparent',
   },
   tab: {
     flex: 1,
-    height: 38,
-    borderRadius: 9,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  tabActive: {
+    backgroundColor: GOLD,
   },
   tabText: {
     fontFamily: DMSANS,
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13.5,
+    fontWeight: '500',
+  },
+  tabTextActive: {
+    color: OBSIDIAN,
+    fontWeight: '700',
   },
 });
 

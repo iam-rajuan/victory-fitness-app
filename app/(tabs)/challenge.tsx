@@ -14,13 +14,14 @@ import ClaudeActiveChallengeBanner from '../../components/challenge/ClaudeActive
 import ClaudeChallengeDirectory, { ChallengeItem } from '../../components/challenge/ClaudeChallengeDirectory';
 import ClaudeChallengeDetailModal from '../../components/challenge/ClaudeChallengeDetailModal';
 import ClaudeCohortModal from '../../components/challenge/ClaudeCohortModal';
+import ClaudeInviteModal from '../../components/challenge/ClaudeInviteModal';
 import ClaudeCommunityFeed from '../../components/challenge/ClaudeCommunityFeed';
 import { useTheme } from '../../context/ThemeContext';
 
 const OBSIDIAN = '#0D0D0D';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
+const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
 
 export default function ChallengeScreen() {
   const router = useRouter();
@@ -30,8 +31,10 @@ export default function ChallengeScreen() {
   const [selectedChallenge, setSelectedChallenge] = useState<ChallengeItem | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showCohortModal, setShowCohortModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const [userTier, setUserTier] = useState('GOLD');
-  const [userInitials, setUserInitials] = useState('ME');
+  const [userName, setUserName] = useState('Michael');
+  const [userInitials, setUserInitials] = useState('MK');
 
   useEffect(() => {
     let cancelled = false;
@@ -44,6 +47,7 @@ export default function ChallengeScreen() {
         const tier = (u.tier || u.membership_tier || 'gold').toUpperCase();
         setUserTier(tier);
         if (u.name) {
+          setUserName(u.name);
           const parts = u.name.split(' ');
           const inits = parts.length > 1 ? `${parts[0][0]}${parts[1][0]}` : parts[0].slice(0, 2);
           setUserInitials(inits.toUpperCase());
@@ -68,12 +72,10 @@ export default function ChallengeScreen() {
   const handleJoinChallenge = (c: ChallengeItem) => {
     setShowDetailModal(false);
     setShowCohortModal(true);
-    Alert.alert('Joined Challenge', `Welcome to the ${c.n} cohort!`);
   };
 
   const handleInviteSomeone = () => {
-    const code = 'CH-WARRIOR';
-    Alert.alert('Guest Invite Code', `Share guest link with a friend:\nvictoryfitness.app/join/${code}`);
+    setShowInviteModal(true);
   };
 
   return (
@@ -115,6 +117,7 @@ export default function ChallengeScreen() {
         visible={showDetailModal}
         onClose={() => setShowDetailModal(false)}
         onJoin={handleJoinChallenge}
+        onInvite={handleInviteSomeone}
         onOpenCohort={() => {
           setShowDetailModal(false);
           setShowCohortModal(true);
@@ -127,6 +130,14 @@ export default function ChallengeScreen() {
         onClose={() => setShowCohortModal(false)}
         onInvite={handleInviteSomeone}
         challengeTitle={selectedChallenge?.n || '21-Day Warrior'}
+      />
+
+      {/* Guest Mode Invite Modal matching lines 1461-1502 */}
+      <ClaudeInviteModal
+        visible={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        challengeTitle={selectedChallenge?.n || '21-Day Warrior'}
+        userName={userName}
       />
     </View>
   );

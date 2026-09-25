@@ -162,7 +162,7 @@ export default function ProfileScreen() {
         <ClaudeHabitsCard
           isSilver={isSilver}
           onOpenDuo={() => setShowDuoModal(true)}
-          onUpgrade={() => router.push('/membership')}
+          onUpgrade={() => router.push('/plan')}
         />
 
         {/* Weekly Digest Teaser Card matching lines 1213-1220 (Platinum & Inner Circle) */}
@@ -329,7 +329,7 @@ export default function ProfileScreen() {
           <TouchableOpacity
             style={styles.compareBtn}
             activeOpacity={0.85}
-            onPress={() => router.push('/membership')}
+            onPress={() => router.push('/plan')}
           >
             <Text style={styles.compareBtnText}>Compare tiers & upgrade</Text>
           </TouchableOpacity>

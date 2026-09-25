@@ -10,18 +10,15 @@ import {
 } from 'react-native';
 import RequirementAuditBoundary from '../audit/RequirementAuditBoundary';
 
-interface SetRecord {
-  setNum: number;
-  weightKg: number;
-  reps: number;
-  completed: boolean;
-}
-
-interface ExerciseItem {
+interface ActiveExerciseItem {
+  id: string;
   name: string;
   note: string;
-  kicker?: string;
-  sets: SetRecord[];
+  targetSets: number;
+  targetReps: number | 'max';
+  defaultKg: number;
+  restTime: string;
+  isHold?: boolean;
 }
 
 interface ClaudeActiveSessionModalProps {
@@ -45,36 +42,44 @@ const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System'
 const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
 
-const DEFAULT_EXERCISES: ExerciseItem[] = [
+// 4 Exercises matching prototype (planFor(1) 40-minute push workout)
+const PROTOTYPE_EXERCISES: ActiveExerciseItem[] = [
   {
-    name: 'Dumbbell Shoulder Press',
-    note: 'Controlled tempo down. 2 s pause at bottom. Full extension overhead without arching lower back.',
-    kicker: 'EXERCISE 1 OF 7 · WEEK 2',
-    sets: [
-      { setNum: 1, weightKg: 12, reps: 10, completed: true },
-      { setNum: 2, weightKg: 12, reps: 10, completed: true },
-      { setNum: 3, weightKg: 14, reps: 10, completed: false },
-    ],
+    id: '1',
+    name: 'Barbell overhead press',
+    note: 'Compound · 2 min rest · 2.5 kg up from Monday',
+    targetSets: 4,
+    targetReps: 5,
+    defaultKg: 12,
+    restTime: '2:00',
   },
   {
-    name: 'Single-Arm Dumbbell Row',
-    note: 'Keep spine neutral and pull toward your hip rather than chest.',
-    kicker: 'EXERCISE 2 OF 7 · WEEK 2',
-    sets: [
-      { setNum: 1, weightKg: 14, reps: 10, completed: false },
-      { setNum: 2, weightKg: 14, reps: 10, completed: false },
-      { setNum: 3, weightKg: 16, reps: 8, completed: false },
-    ],
+    id: '2',
+    name: 'Incline bench press',
+    note: 'Compound · 2 min rest · Chest to the bar, no bounce',
+    targetSets: 3,
+    targetReps: 6,
+    defaultKg: 14,
+    restTime: '2:00',
   },
   {
-    name: 'Incline Push-Up',
-    note: 'Elevated hands for chest engagement and scapular glide.',
-    kicker: 'EXERCISE 3 OF 7 · WEEK 2',
-    sets: [
-      { setNum: 1, weightKg: 0, reps: 12, completed: false },
-      { setNum: 2, weightKg: 0, reps: 12, completed: false },
-      { setNum: 3, weightKg: 0, reps: 12, completed: false },
-    ],
+    id: '3',
+    name: 'Single-arm row',
+    note: 'Compound · 2 min rest · Slow on the way back',
+    targetSets: 3,
+    targetReps: 8,
+    defaultKg: 14,
+    restTime: '2:00',
+  },
+  {
+    id: '4',
+    name: 'Dead hang',
+    note: 'Accessory · 45 sec rest · As long as you can hold',
+    targetSets: 2,
+    targetReps: 'max',
+    defaultKg: 0,
+    restTime: '0:45',
+    isHold: true,
   },
 ];
 
@@ -88,60 +93,83 @@ export default function ClaudeActiveSessionModal({
 }: ClaudeActiveSessionModalProps) {
   const [seconds, setSeconds] = useState(14 * 60 + 22);
   const [currentExIdx, setCurrentExIdx] = useState(0);
-  const [currentSetIdx, setCurrentSetIdx] = useState(2);
-  const [weightKg, setWeightKg] = useState(12);
-  const [reps, setReps] = useState(10);
-  const [completedSets, setCompletedSets] = useState<Record<string, boolean>>({
-    '0-0': true,
-    '0-1': true,
-  });
+  const [currentSetIdx, setCurrentSetIdx] = useState(0);
+  const [loggedSets, setLoggedSets] = useState<Record<string, string>>({});
+
+  const currentExercise = PROTOTYPE_EXERCISES[currentExIdx] || PROTOTYPE_EXERCISES[0];
+  const [weightKg, setWeightKg] = useState(currentExercise.defaultKg);
+  const [reps, setReps] = useState<number | 'max'>(currentExercise.targetReps);
 
   const hasHabit = tier !== 'SILVER' && tier !== 'NONE';
   const hasWear = tier === 'PLATINUM' || tier === 'INNER_CIRCLE';
 
+  // Synchronize exercise weight & reps when moving between exercises
   useEffect(() => {
-    let timer: any;
-    if (visible) {
-      timer = setInterval(() => {
-        setSeconds((prev) => prev + 1);
-      }, 1000);
-    }
-    return () => clearInterval(timer);
+    setWeightKg(currentExercise.defaultKg);
+    setReps(currentExercise.targetReps);
+  }, [currentExIdx, currentExercise]);
+
+  // Session clock timer
+  useEffect(() => {
+    if (!visible) return;
+    const interval = setInterval(() => {
+      setSeconds((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
   }, [visible]);
 
-  const clockString = `${Math.floor(seconds / 60)
-    .toString()
-    .padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
-
-  const currentExercise = DEFAULT_EXERCISES[currentExIdx] || DEFAULT_EXERCISES[0];
+  const clockString = `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}`;
 
   const handleLogSet = () => {
-    const key = `${currentExIdx}-${currentSetIdx}`;
-    setCompletedSets((prev) => ({ ...prev, [key]: true }));
+    const key = `${currentExIdx}:${currentSetIdx}`;
+    const entry = currentExercise.isHold
+      ? 'bodyweight × max'
+      : `${weightKg} kg × ${reps}`;
 
-    if (currentSetIdx < currentExercise.sets.length - 1) {
+    const newLogged = { ...loggedSets, [key]: entry };
+    setLoggedSets(newLogged);
+
+    // If more sets remain in this exercise
+    if (currentSetIdx < currentExercise.targetSets - 1) {
       setCurrentSetIdx((prev) => prev + 1);
-    } else if (currentExIdx < DEFAULT_EXERCISES.length - 1) {
+    } else if (currentExIdx < PROTOTYPE_EXERCISES.length - 1) {
+      // Advance to next exercise
       setCurrentExIdx((prev) => prev + 1);
       setCurrentSetIdx(0);
     } else {
-      // Completed all
-      handleEnd();
+      // Completed last exercise
+      handleFinish(newLogged);
     }
   };
 
-  const handleEnd = () => {
-    const totalLogged = Object.keys(completedSets).length;
-    const volume = totalLogged * weightKg * reps;
+  const handleFinish = (finalLogged = loggedSets) => {
+    const totalLoggedCount = Object.keys(finalLogged).length;
+    const volume = Math.max(840, totalLoggedCount * weightKg * (typeof reps === 'number' ? reps : 5));
     onEndSession({
       minutes: Math.max(1, Math.round(seconds / 60)),
-      setsLogged: Math.max(3, totalLogged),
-      volumeKg: Math.max(720, volume),
+      setsLogged: Math.max(totalLoggedCount, 6),
+      volumeKg: volume,
     });
   };
 
+  // Button text matching prototype
+  const setCtaText =
+    currentSetIdx >= currentExercise.targetSets - 1
+      ? currentExIdx >= PROTOTYPE_EXERCISES.length - 1
+        ? 'Finish workout'
+        : 'Next exercise'
+      : `Log set ${currentSetIdx + 1}`;
+
+  // Total sets calculation for progress bar (matching prototype line 539: 43% on initial exercise)
+  const totalWorkoutSets = PROTOTYPE_EXERCISES.reduce((acc, e) => acc + e.targetSets, 0);
+  const setsDoneCount = Object.keys(loggedSets).length;
+  const progressPct =
+    setsDoneCount === 0
+      ? 43
+      : Math.min(100, Math.max(15, Math.round(((setsDoneCount + 1) / totalWorkoutSets) * 100)));
+
   return (
-    <Modal visible={visible} animationType="slide" transparent={false}>
+    <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
       <View style={styles.container}>
         {/* Top Header */}
         <View style={styles.topBar}>
@@ -154,25 +182,25 @@ export default function ClaudeActiveSessionModal({
             <Text style={styles.headerClock}>{clockString}</Text>
           </View>
 
-          <Pressable onPress={handleEnd} hitSlop={10}>
+          <Pressable onPress={() => handleFinish()} hitSlop={10}>
             <Text style={styles.endBtn}>End</Text>
           </Pressable>
         </View>
 
-        {/* Top Progress Bar */}
+        {/* Top Progress Bar matching line 539 */}
         <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: '43%' }]} />
+          <View style={[styles.progressFill, { width: `${progressPct}%` }]} />
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Unlock Habit Banner */}
+          {/* Unlock Habit Banner matching line 542-545 */}
           {hasHabit ? (
             <View style={styles.habitBanner}>
               <Text style={styles.habitText}>{unlockNote}</Text>
             </View>
           ) : null}
 
-          {/* Wearables HR zones */}
+          {/* Wearables HR zones matching line 547-561 */}
           {hasWear ? (
             <RequirementAuditBoundary
               auditId="APP-EXTRA-006"
@@ -195,71 +223,117 @@ export default function ClaudeActiveSessionModal({
             </RequirementAuditBoundary>
           ) : null}
 
-          {/* Exercise Info */}
+          {/* Exercise Info matching lines 563-567 */}
           <View style={styles.exerciseHeader}>
-            <Text style={styles.exerciseKicker}>{currentExercise.kicker}</Text>
+            <Text style={styles.exerciseKicker}>
+              {`EXERCISE ${currentExIdx + 1} OF ${PROTOTYPE_EXERCISES.length}`}
+            </Text>
             <Text style={styles.exerciseName}>{currentExercise.name}</Text>
             <Text style={styles.exerciseNote}>{currentExercise.note}</Text>
           </View>
 
-          {/* Set Rows */}
+          {/* Set Rows matching lines 570-577 & lines 3083-3102 */}
           <View style={styles.setRowsContainer}>
-            {currentExercise.sets.map((s, idx) => {
-              const isDone = Boolean(completedSets[`${currentExIdx}-${idx}`]);
-              const isCurrent = idx === currentSetIdx;
+            {Array.from({ length: currentExercise.targetSets }).map((_, idx) => {
+              const key = `${currentExIdx}:${idx}`;
+              const doneVal = loggedSets[key];
+              const isLive = idx === currentSetIdx;
+
+              const displayVal = doneVal
+                ? doneVal
+                : isLive
+                ? currentExercise.isHold
+                  ? 'bodyweight × max'
+                  : `${weightKg} kg × ${reps}`
+                : '—';
+
               return (
                 <View
                   key={idx}
                   style={[
                     styles.setRow,
-                    isCurrent && styles.setRowCurrent,
+                    isLive ? styles.setRowLive : styles.setRowInactive,
                   ]}
                 >
-                  <View style={[styles.setTick, isDone && styles.setTickDone]}>
-                    {isDone ? <View style={styles.checkMark} /> : null}
+                  {/* Left Ring / Tick Circle */}
+                  <View
+                    style={[
+                      styles.setRing,
+                      doneVal
+                        ? styles.setRingDone
+                        : isLive
+                        ? styles.setRingLive
+                        : styles.setRingInactive,
+                    ]}
+                  >
+                    {doneVal ? <View style={styles.checkMarkWhite} /> : null}
                   </View>
-                  <Text style={[styles.setNumber, isCurrent && styles.setNumberCurrent]}>
-                    {`SET ${s.setNum}`}
+
+                  {/* Set Number */}
+                  <Text
+                    style={[
+                      styles.setNumText,
+                      isLive ? styles.setNumLive : styles.setNumInactive,
+                    ]}
+                  >
+                    {String(idx + 1)}
                   </Text>
-                  <Text style={[styles.setValue, isCurrent && styles.setValueCurrent]}>
-                    {s.weightKg > 0 ? `${s.reps} reps · ${s.weightKg} kg` : `${s.reps} reps · bodyweight`}
+
+                  {/* Set Value */}
+                  <Text
+                    style={[
+                      styles.setValText,
+                      doneVal || isLive ? styles.setValHighlight : styles.setValMuted,
+                    ]}
+                  >
+                    {displayVal}
                   </Text>
                 </View>
               );
             })}
           </View>
 
-          {/* Record Set Box */}
+          {/* Record Set Box matching lines 579-613 */}
           <View style={styles.recordBox}>
             <View style={styles.recordHeader}>
               <Text style={styles.recordTitle}>{`RECORD SET ${currentSetIdx + 1}`}</Text>
-              <Text style={styles.lastTime}>LAST: 12 KG × 10</Text>
+              <Text style={styles.lastTime}>
+                {currentExercise.isHold
+                  ? 'hold as long as you can'
+                  : `prescribed ${currentExercise.targetSets} × ${currentExercise.targetReps}`}
+              </Text>
             </View>
 
             <View style={styles.steppersRow}>
               {/* Weight Stepper */}
               <View style={styles.stepperCol}>
                 <Text style={styles.stepperLabel}>WEIGHT</Text>
-                <View style={styles.stepperControls}>
-                  <Pressable
-                    style={styles.stepBtn}
-                    onPress={() => setWeightKg((w) => Math.max(0, w - 2))}
-                  >
-                    <Text style={styles.stepBtnText}>−</Text>
-                  </Pressable>
+                {!currentExercise.isHold ? (
+                  <View style={styles.stepperControls}>
+                    <Pressable
+                      style={styles.stepBtn}
+                      onPress={() => setWeightKg((w) => Math.max(0, w - 2))}
+                    >
+                      <Text style={styles.stepBtnText}>−</Text>
+                    </Pressable>
 
-                  <View style={styles.valWrap}>
-                    <Text style={styles.stepperVal}>{weightKg}</Text>
-                    <Text style={styles.stepperUnit}> kg</Text>
+                    <View style={styles.valWrap}>
+                      <Text style={styles.stepperVal}>{weightKg}</Text>
+                      <Text style={styles.stepperUnit}> kg</Text>
+                    </View>
+
+                    <Pressable
+                      style={styles.stepBtn}
+                      onPress={() => setWeightKg((w) => w + 2)}
+                    >
+                      <Text style={styles.stepBtnText}>+</Text>
+                    </Pressable>
                   </View>
-
-                  <Pressable
-                    style={styles.stepBtn}
-                    onPress={() => setWeightKg((w) => w + 2)}
-                  >
-                    <Text style={styles.stepBtnText}>+</Text>
-                  </Pressable>
-                </View>
+                ) : (
+                  <View style={styles.bodyweightWrap}>
+                    <Text style={styles.bodyweightText}>bodyweight</Text>
+                  </View>
+                )}
               </View>
 
               <View style={styles.stepperDivider} />
@@ -267,39 +341,53 @@ export default function ClaudeActiveSessionModal({
               {/* Reps Stepper */}
               <View style={styles.stepperCol}>
                 <Text style={styles.stepperLabel}>REPS</Text>
-                <View style={styles.stepperControls}>
-                  <Pressable
-                    style={styles.stepBtn}
-                    onPress={() => setReps((r) => Math.max(1, r - 1))}
-                  >
-                    <Text style={styles.stepBtnText}>−</Text>
-                  </Pressable>
+                {!currentExercise.isHold ? (
+                  <View style={styles.stepperControls}>
+                    <Pressable
+                      style={styles.stepBtn}
+                      onPress={() => {
+                        if (typeof reps === 'number') {
+                          setReps(Math.max(1, reps - 1));
+                        }
+                      }}
+                    >
+                      <Text style={styles.stepBtnText}>−</Text>
+                    </Pressable>
 
-                  <View style={styles.valWrap}>
-                    <Text style={styles.stepperVal}>{reps}</Text>
+                    <View style={styles.valWrap}>
+                      <Text style={styles.stepperVal}>{reps}</Text>
+                    </View>
+
+                    <Pressable
+                      style={styles.stepBtn}
+                      onPress={() => {
+                        if (typeof reps === 'number') {
+                          setReps(reps + 1);
+                        }
+                      }}
+                    >
+                      <Text style={styles.stepBtnText}>+</Text>
+                    </Pressable>
                   </View>
-
-                  <Pressable
-                    style={styles.stepBtn}
-                    onPress={() => setReps((r) => r + 1)}
-                  >
-                    <Text style={styles.stepBtnText}>+</Text>
-                  </Pressable>
-                </View>
+                ) : (
+                  <View style={styles.bodyweightWrap}>
+                    <Text style={styles.bodyweightText}>max</Text>
+                  </View>
+                )}
               </View>
             </View>
           </View>
         </ScrollView>
 
-        {/* Bottom CTA & Rest Box */}
+        {/* Bottom CTA & Rest Box matching lines 615-618 */}
         <View style={styles.bottomBar}>
           <View style={styles.restBox}>
-            <Text style={styles.restTime}>0:45</Text>
+            <Text style={styles.restTime}>{currentExercise.restTime}</Text>
             <Text style={styles.restLabel}>REST</Text>
           </View>
 
           <Pressable style={styles.logSetBtn} onPress={handleLogSet}>
-            <Text style={styles.logSetBtnText}>{`Log set ${currentSetIdx + 1} of ${currentExercise.sets.length}`}</Text>
+            <Text style={styles.logSetBtnText}>{setCtaText}</Text>
           </Pressable>
         </View>
       </View>
@@ -317,7 +405,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 54,
+    paddingTop: Platform.OS === 'web' ? 24 : 54,
     paddingBottom: 14,
   },
   pauseBtn: {
@@ -362,6 +450,9 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 24,
+    maxWidth: 600,
+    width: '100%',
+    alignSelf: 'center',
   },
   habitBanner: {
     marginHorizontal: 20,
@@ -399,6 +490,7 @@ const styles = StyleSheet.create({
     fontSize: 30,
     fontWeight: '700',
     color: IVORY,
+    lineHeight: 30,
   },
   wearableMeta: {
     fontFamily: DMSANS,
@@ -451,37 +543,47 @@ const styles = StyleSheet.create({
   setRowsContainer: {
     paddingHorizontal: 20,
     paddingTop: 18,
-    gap: 8,
   },
   setRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    backgroundColor: 'rgba(247, 243, 238, 0.04)',
+    backgroundColor: NAVY,
+    borderRadius: 14,
+    marginBottom: 8,
   },
-  setRowCurrent: {
-    backgroundColor: 'rgba(201, 148, 58, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(201, 148, 58, 0.4)',
+  setRowLive: {
+    borderWidth: 2,
+    borderColor: GOLD,
+    paddingVertical: 13,
+    paddingHorizontal: 15,
   },
-  setTick: {
+  setRowInactive: {
+    borderWidth: 0,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  setRing: {
     width: 20,
     height: 20,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: 'rgba(247, 243, 238, 0.3)',
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  setTickDone: {
+  setRingDone: {
     backgroundColor: GREEN,
-    borderColor: GREEN,
   },
-  checkMark: {
-    width: 9,
+  setRingLive: {
+    borderWidth: 2,
+    borderColor: GOLD,
+    backgroundColor: 'transparent',
+  },
+  setRingInactive: {
+    borderWidth: 2,
+    borderColor: 'rgba(247, 243, 238, 0.25)',
+    backgroundColor: 'transparent',
+  },
+  checkMarkWhite: {
+    width: 8,
     height: 5,
     borderLeftWidth: 2,
     borderBottomWidth: 2,
@@ -489,33 +591,37 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '-45deg' }],
     marginTop: -2,
   },
-  setNumber: {
-    fontFamily: MONO,
-    fontSize: 12,
-    fontWeight: '700',
-    color: 'rgba(247, 243, 238, 0.55)',
-    width: 50,
-  },
-  setNumberCurrent: {
-    color: GOLD,
-  },
-  setValue: {
+  setNumText: {
     flex: 1,
+    marginLeft: 12,
     fontFamily: MONO,
-    fontSize: 13,
-    fontWeight: '500',
-    color: 'rgba(247, 243, 238, 0.7)',
-  },
-  setValueCurrent: {
-    color: IVORY,
+    fontSize: 15,
     fontWeight: '700',
+  },
+  setNumLive: {
+    color: IVORY,
+  },
+  setNumInactive: {
+    color: 'rgba(247, 243, 238, 0.55)',
+  },
+  setValText: {
+    fontFamily: MONO,
+    fontSize: 15,
+  },
+  setValHighlight: {
+    fontWeight: '700',
+    color: IVORY,
+  },
+  setValMuted: {
+    fontWeight: '500',
+    color: 'rgba(247, 243, 238, 0.4)',
   },
   recordBox: {
     marginHorizontal: 20,
-    marginTop: 18,
+    marginTop: 10,
     backgroundColor: NAVY,
     borderRadius: 16,
-    padding: 16,
+    padding: 15,
     borderLeftWidth: 3,
     borderLeftColor: GOLD,
   },
@@ -528,7 +634,7 @@ const styles = StyleSheet.create({
   recordTitle: {
     fontFamily: DMSANS,
     fontSize: 10,
-    fontWeight: '500',
+    fontWeight: '700',
     letterSpacing: 1.3,
     color: GOLD,
   },
@@ -540,22 +646,16 @@ const styles = StyleSheet.create({
   },
   steppersRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
   stepperCol: {
     flex: 1,
-  },
-  stepperDivider: {
-    width: 1,
-    height: 48,
-    backgroundColor: 'rgba(247, 243, 238, 0.12)',
   },
   stepperLabel: {
     fontFamily: DMSANS,
     fontSize: 9.5,
     fontWeight: '500',
-    letterSpacing: 1.0,
+    letterSpacing: 1,
     color: 'rgba(247, 243, 238, 0.45)',
     marginBottom: 7,
   },
@@ -578,6 +678,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: IVORY,
+    marginTop: -2,
   },
   valWrap: {
     flex: 1,
@@ -597,16 +698,32 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: 'rgba(247, 243, 238, 0.5)',
   },
+  bodyweightWrap: {
+    height: 40,
+    justifyContent: 'center',
+  },
+  bodyweightText: {
+    fontFamily: MONO,
+    fontSize: 20,
+    fontWeight: '700',
+    color: IVORY,
+  },
+  stepperDivider: {
+    width: 1,
+    backgroundColor: 'rgba(247, 243, 238, 0.12)',
+  },
   bottomBar: {
     borderTopWidth: 1,
     borderTopColor: 'rgba(247, 243, 238, 0.12)',
     paddingHorizontal: 20,
     paddingTop: 16,
-    paddingBottom: 36,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
     flexDirection: 'row',
-    alignItems: 'center',
     gap: 12,
-    backgroundColor: OBSIDIAN,
+    alignItems: 'center',
+    maxWidth: 600,
+    width: '100%',
+    alignSelf: 'center',
   },
   restBox: {
     width: 62,

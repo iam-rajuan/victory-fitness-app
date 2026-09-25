@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Platform,
   RefreshControl,
   ScrollView,
@@ -40,6 +41,12 @@ import ClaudeHydrationCard from '../../components/home/ClaudeHydrationCard';
 import ClaudeCoachBar from '../../components/home/ClaudeCoachBar';
 import ClaudeAlsoTodayCard from '../../components/home/ClaudeAlsoTodayCard';
 import ClaudeTierPerksCard from '../../components/home/ClaudeTierPerksCard';
+import ClaudePlanDetailModal from '../../components/workout/ClaudePlanDetailModal';
+import ClaudeVimeoPlayerModal from '../../components/workout/ClaudeVimeoPlayerModal';
+import ClaudeActiveSessionModal from '../../components/workout/ClaudeActiveSessionModal';
+import ClaudeSessionCompleteModal from '../../components/workout/ClaudeSessionCompleteModal';
+import ClaudeChallengeDetailModal from '../../components/challenge/ClaudeChallengeDetailModal';
+import ClaudeCohortModal from '../../components/challenge/ClaudeCohortModal';
 
 const OBSIDIAN = '#0D0D0D';
 const NAVY = '#0D2B45';
@@ -61,6 +68,22 @@ export default function HomeScreen() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [currentWeight, setCurrentWeight] = useState('');
   const [challenges, setChallenges] = useState<ChallengeItem[]>([]);
+
+  // Workout Plan Detail, Active Workout, and Completion Modals
+  const [planDetailVisible, setPlanDetailVisible] = useState(false);
+  const [vimeoModalVisible, setVimeoModalVisible] = useState(false);
+  const [activeSessionVisible, setActiveSessionVisible] = useState(false);
+  const [completeModalVisible, setCompleteModalVisible] = useState(false);
+  const [completedStats, setCompletedStats] = useState({
+    minutes: 40,
+    setsLogged: 6,
+    volumeKg: 840,
+  });
+
+  // Challenge Detail and Cohort Modals
+  const [challengeDetailVisible, setChallengeDetailVisible] = useState(false);
+  const [cohortModalVisible, setCohortModalVisible] = useState(false);
+  const [selectedChallengeDetail, setSelectedChallengeDetail] = useState<any | null>(null);
 
   // Weight check-in prompt
   const [weightPromptVisible, setWeightPromptVisible] = useState(false);
@@ -180,10 +203,10 @@ export default function HomeScreen() {
     }
   }, [weightDraft, weightPromptSaving, weightPromptUserId]);
 
-  // Derived user subscription details
+  // Derived user subscription tier from onboarding/payment profile
   const tier = useMemo(() => {
     const rawTier = normalizeSubscriptionTier(currentUser?.subscription_tier);
-    return rawTier;
+    return rawTier !== 'NONE' ? rawTier : 'GOLD';
   }, [currentUser?.subscription_tier]);
 
   const streakDays = currentUser?.streak_days || 12;
@@ -191,6 +214,26 @@ export default function HomeScreen() {
     const w = Number(currentWeight) || 70;
     return Math.round(w * 0.035 * 10) / 10;
   }, [currentWeight]);
+
+  const handleOpenChallenge = useCallback((ch: any) => {
+    router.push('/(tabs)/challenge');
+  }, [router]);
+
+  const handleInviteSomeone = useCallback(async () => {
+    const inviteText = `Join Michael's team for the 21-Day Warrior on Victory Fitness. We're in this together.\nhttps://victory-fitness-app.vercel.app/challenges/ch-warrior-21?inviter_id=${currentUser?.id || 'guest'}`;
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        await navigator.share({
+          title: '21-Day Warrior Challenge',
+          text: inviteText,
+        });
+        return;
+      } catch {
+        // Fallback silently
+      }
+    }
+    Alert.alert('Invite · 21-Day Warrior', inviteText);
+  }, [currentUser?.id]);
 
   if (checkingAccess) {
     return (
@@ -219,6 +262,7 @@ export default function HomeScreen() {
           name={currentUser?.name || currentUser?.email || ''}
           streakDays={streakDays}
         />
+
 
         {/* 2. Daily Inspiration (Silver: Victor Akko quote / Gold+: Identity statement) */}
         <ClaudeInspirationCard
@@ -344,20 +388,33 @@ export default function HomeScreen() {
           </View>
         ) : null}
 
-        {/* 4. Today's Workout Session Card */}
+        {/* 4. Today's Workout Session Card (Adaptive by Tier) */}
         <ClaudeTodayWorkoutCard
           tier={tier}
           workoutTitle={currentUser?.workout_unlock_label || 'Upper Body Strength'}
-          durationMinutes={40}
-          exerciseCount={7}
+          durationMinutes={tier === 'SILVER' ? 38 : 40}
+          exerciseCount={4}
           equipment="DUMBBELLS"
-          onStartSession={() => pushRoute(router, '/workout')}
+          onStartSession={() => {
+            if (tier === 'SILVER') {
+              setVimeoModalVisible(true);
+            } else {
+              setPlanDetailVisible(true);
+            }
+          }}
+          onAdjustPlan={() => {
+            if (tier === 'SILVER') {
+              pushRoute(router, '/workout-library');
+            } else {
+              pushRoute(router, '/chat');
+            }
+          }}
         />
 
         {/* 5. Your Challenges Carousel */}
         <ClaudeChallengesCarousel
           challenges={challenges}
-          onOpenChallenge={() => pushRoute(router, '/challenges')}
+          onOpenChallenge={handleOpenChallenge}
         />
 
         {/* 6. Food Today (Active for Gold/Plat/IC, locked teaser for Silver) */}
@@ -388,6 +445,97 @@ export default function HomeScreen() {
           journalWrittenToday={false}
         />
       </ScrollView>
+
+      {/* Silver Vimeo Player Modal (matching lines 489 & 2357-2358 of prototype) */}
+      <ClaudeVimeoPlayerModal
+        visible={vimeoModalVisible}
+        onClose={() => setVimeoModalVisible(false)}
+        workoutTitle={currentUser?.workout_unlock_label || 'Upper Body Strength'}
+        workoutMeta="FROM THE LIBRARY · 38 MIN · DUMBBELLS"
+        vimeoId="912440318"
+        onFinishSession={() => {
+          setVimeoModalVisible(false);
+          setCompletedStats({
+            minutes: 38,
+            setsLogged: 4,
+            volumeKg: 680,
+          });
+          setCompleteModalVisible(true);
+        }}
+      />
+
+      {/* Start My Session / Plan Detail Modal */}
+      <ClaudePlanDetailModal
+        visible={planDetailVisible}
+        onClose={() => setPlanDetailVisible(false)}
+        planTitle={currentUser?.workout_unlock_label || 'Upper Body Strength'}
+        dayKicker="DAY 3 OF WEEK 2 · PUSH DAY"
+        planSource={tier !== 'SILVER' ? 'BUILT BY YOUR COACH' : 'TODAY’S WORKOUT'}
+        onBeginSession={() => {
+          setPlanDetailVisible(false);
+          setActiveSessionVisible(true);
+        }}
+        onAdjustWithCoach={() => {
+          setPlanDetailVisible(false);
+          pushRoute(router, '/chat');
+        }}
+      />
+
+      {/* Active Workout Session Modal */}
+      <ClaudeActiveSessionModal
+        visible={activeSessionVisible}
+        onClose={() => setActiveSessionVisible(false)}
+        tier={tier}
+        workoutTitle={currentUser?.workout_unlock_label || 'Upper Body Strength'}
+        onEndSession={(stats) => {
+          if (stats) setCompletedStats(stats);
+          setActiveSessionVisible(false);
+          setCompleteModalVisible(true);
+        }}
+      />
+
+      {/* Post-Workout Feedback & Completion Celebration Modal */}
+      <ClaudeSessionCompleteModal
+        visible={completeModalVisible}
+        onClose={() => setCompleteModalVisible(false)}
+        workoutTitle={currentUser?.workout_unlock_label || 'Upper Body Strength'}
+        minutes={completedStats.minutes}
+        setsLogged={completedStats.setsLogged}
+        volumeKg={completedStats.volumeKg}
+        streakDays={streakDays}
+        identityStatement={currentUser?.identity_statement || undefined}
+        motivationStatement={currentUser?.motivation_statement || undefined}
+        tier={tier}
+        onDoneHome={() => setCompleteModalVisible(false)}
+        onUpgrade={() => {
+          setCompleteModalVisible(false);
+          pushRoute(router, '/plan');
+        }}
+      />
+
+      {/* 21-Day Warrior / Challenge Detail Modal */}
+      <ClaudeChallengeDetailModal
+        challenge={selectedChallengeDetail}
+        visible={challengeDetailVisible}
+        onClose={() => setChallengeDetailVisible(false)}
+        onJoin={() => {
+          setChallengeDetailVisible(false);
+          setCohortModalVisible(true);
+        }}
+        onOpenCohort={() => {
+          setChallengeDetailVisible(false);
+          setCohortModalVisible(true);
+        }}
+        onInvite={handleInviteSomeone}
+      />
+
+      {/* Cohort Lobby Modal */}
+      <ClaudeCohortModal
+        visible={cohortModalVisible}
+        onClose={() => setCohortModalVisible(false)}
+        onInvite={handleInviteSomeone}
+        challengeTitle={selectedChallengeDetail?.n || '21-Day Warrior'}
+      />
     </View>
   );
 }
@@ -532,4 +680,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(247, 243, 238, 0.6)',
   },
+
 });

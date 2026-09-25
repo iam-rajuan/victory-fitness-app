@@ -44,16 +44,23 @@ export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     // Role 1: Display / Hero
     'ClashDisplay-Bold': require('../assets/fonts/ClashDisplay-Bold.ttf'),
+    'Clash Display': require('../assets/fonts/ClashDisplay-Bold.ttf'),
+    ClashDisplay: require('../assets/fonts/ClashDisplay-Bold.ttf'),
     // Role 2: Headings
     'DMSans-SemiBold': require('../assets/fonts/DMSans_600SemiBold.ttf'),
+    'DM Sans': require('../assets/fonts/DMSans_600SemiBold.ttf'),
+    DMSans: require('../assets/fonts/DMSans_600SemiBold.ttf'),
     // Role 3: Body
     'Inter-Regular': require('../assets/fonts/Inter_400Regular.ttf'),
     'Inter-Medium': require('../assets/fonts/Inter_500Medium.ttf'),
     'Inter-SemiBold': require('../assets/fonts/Inter_600SemiBold.ttf'),
     'Inter-Bold': require('../assets/fonts/Inter_700Bold.ttf'),
+    Inter: require('../assets/fonts/Inter_400Regular.ttf'),
     // Role 4: Data / Numbers
     'JetBrainsMono-Medium': require('../assets/fonts/JetBrainsMono_500Medium.ttf'),
     'JetBrainsMono-Bold': require('../assets/fonts/JetBrainsMono_700Bold.ttf'),
+    'JetBrains Mono': require('../assets/fonts/JetBrainsMono_700Bold.ttf'),
+    JetBrainsMono: require('../assets/fonts/JetBrainsMono_700Bold.ttf'),
     // Backward-compatibility keys for existing code
     Inter_400Regular: require('../assets/fonts/Inter_400Regular.ttf'),
     Inter_500Medium: require('../assets/fonts/Inter_500Medium.ttf'),

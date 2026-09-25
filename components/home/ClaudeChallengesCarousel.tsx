@@ -22,10 +22,10 @@ const NAVY = '#0D2B45';
 const GOLD = '#C9943A';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'ClashDisplay-Bold' });
+const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'DMSans-Medium' });
+const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'Inter-Regular' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 const DEFAULT_CHALLENGES: ChallengeItem[] = [
   {
@@ -75,7 +75,7 @@ export default function ClaudeChallengesCarousel({
       onOpenChallenge(current);
       return;
     }
-    pushRoute(router, '/challenges');
+    pushRoute(router, '/(tabs)/challenge');
   };
 
   return (

@@ -11,6 +11,7 @@ interface ClaudeTodayWorkoutCardProps {
   exerciseCount?: number;
   equipment?: string;
   onStartSession?: () => void;
+  onAdjustPlan?: () => void;
 }
 
 const NAVY = '#0D2B45';
@@ -27,9 +28,10 @@ export default function ClaudeTodayWorkoutCard({
   tier,
   workoutTitle = 'Upper Body Strength',
   durationMinutes = 40,
-  exerciseCount = 7,
+  exerciseCount = 4,
   equipment = 'DUMBBELLS',
   onStartSession,
+  onAdjustPlan,
 }: ClaudeTodayWorkoutCardProps) {
   const router = useRouter();
   const { colors, isDark } = useTheme();
@@ -50,6 +52,10 @@ export default function ClaudeTodayWorkoutCard({
   };
 
   const handleAlt = () => {
+    if (onAdjustPlan) {
+      onAdjustPlan();
+      return;
+    }
     if (hasCoach) {
       pushRoute(router, '/chat');
     } else {

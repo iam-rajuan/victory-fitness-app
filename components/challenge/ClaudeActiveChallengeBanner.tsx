@@ -10,24 +10,24 @@ interface ClaudeActiveChallengeBannerProps {
 const NAVY = '#0D2B45';
 const GOLD = '#C9943A';
 const COPPER = '#B5651D';
-const GREEN = '#1A7A4A';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
+const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 export default function ClaudeActiveChallengeBanner({
   onOpenCohort,
   onInvite,
 }: ClaudeActiveChallengeBannerProps) {
   const { isDark } = useTheme();
-  const [checkedToday, setCheckedToday] = useState(true);
+  const [checkedToday, setCheckedToday] = useState(false);
 
-  // 21-day warrior pips: 18 done, 3 to go
+  // 21-day warrior pips: doneTo is 18 when checked, 17 when unchecked
   const daysTotal = 21;
-  const currentDay = 18;
+  const doneTo = checkedToday ? 18 : 17;
+  const barWidth = checkedToday ? 86 : 81;
 
   return (
     <View style={styles.container}>
@@ -47,13 +47,13 @@ export default function ClaudeActiveChallengeBanner({
         ]}
       >
         <View style={styles.headerRow}>
-          <Text style={[styles.kicker, { color: isDark ? GOLD : '#B5651D' }]}>YOU'RE IN · DAY 18 OF 21</Text>
+          <Text style={[styles.kicker, { color: GOLD }]}>YOU'RE IN · DAY 18 OF 21</Text>
           <Text style={styles.pointsBadge}>800 PTS AT STAKE</Text>
         </View>
 
         <Text style={[styles.title, { color: isDark ? IVORY : NAVY }]}>21-Day Warrior</Text>
 
-        {/* Progress Bar */}
+        {/* Progress Bar matching line 2914 */}
         <View
           style={[
             styles.progressBarBg,
@@ -62,68 +62,69 @@ export default function ClaudeActiveChallengeBanner({
             },
           ]}
         >
-          <View style={[styles.progressBarFill, { width: `${(currentDay / daysTotal) * 100}%` }]} />
+          <View style={[styles.progressBarFill, { width: `${barWidth}%` }]} />
         </View>
 
-        {/* 21 Day Pips matching line 836 */}
+        {/* 21 Day Pips matching line 2915-2922 */}
         <View style={styles.pipsRow}>
           {Array.from({ length: daysTotal }).map((_, i) => {
-            const isDone = i < currentDay - 1 || (i === currentDay - 1 && checkedToday);
-            const isToday = i === currentDay - 1;
+            const isDone = i < doneTo;
+            const isToday = i === 17;
+            const pipBg = isDone
+              ? GOLD
+              : isToday
+              ? 'rgba(201, 148, 58, 0.35)'
+              : isDark
+              ? 'rgba(247, 243, 238, 0.14)'
+              : 'rgba(13, 43, 69, 0.1)';
+
             return (
               <View
                 key={`pip-${i}`}
                 style={[
                   styles.pip,
-                  isDone
-                    ? styles.pipDone
-                    : isToday
-                    ? styles.pipToday
-                    : [
-                        styles.pipFuture,
-                        {
-                          backgroundColor: isDark
-                            ? 'rgba(247, 243, 238, 0.18)'
-                            : 'rgba(13, 43, 69, 0.08)',
-                        },
-                      ],
+                  { backgroundColor: pipBg },
                 ]}
               />
             );
           })}
         </View>
 
-        {/* Daily Check Card matching line 838-844 */}
+        {/* Daily Check Card matching line 2923-2935 */}
         <TouchableOpacity
           style={[
             styles.checkCard,
-            {
-              backgroundColor: isDark ? 'rgba(247, 243, 238, 0.06)' : 'rgba(13, 43, 69, 0.04)',
-            },
+            checkedToday ? styles.checkCardDone : styles.checkCardPending,
           ]}
           activeOpacity={0.85}
           onPress={() => setCheckedToday((prev) => !prev)}
         >
-          <View style={[styles.checkBox, checkedToday && styles.checkBoxActive]}>
+          <View
+            style={[
+              styles.checkBox,
+              checkedToday ? styles.checkBoxDone : styles.checkBoxPending,
+            ]}
+          >
             {checkedToday && <View style={styles.checkTick} />}
           </View>
           <View style={styles.checkTextWrap}>
             <Text
               style={[
                 styles.checkTitle,
-                { color: isDark ? IVORY : NAVY },
-                checkedToday && styles.checkTitleActive,
+                { color: checkedToday ? IVORY : '#0D0D0D' },
               ]}
             >
-              {checkedToday ? 'Day 18 complete ✓' : 'Log Day 18 workout'}
+              {checkedToday ? 'Day 18 done' : 'Mark day 18 done'}
             </Text>
             <Text
               style={[
                 styles.checkNote,
-                { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
+                { color: checkedToday ? 'rgba(247, 243, 238, 0.7)' : '#2A2218' },
               ]}
             >
-              {checkedToday ? 'Counted toward your 800 pts finish' : 'Tap to mark today completed'}
+              {checkedToday
+                ? 'Logged at 20:41. Three days to go — tap to undo.'
+                : 'Five sessions this week, progressive difficulty. Tap when today is finished.'}
             </Text>
           </View>
         </TouchableOpacity>
@@ -206,44 +207,44 @@ const styles = StyleSheet.create({
     height: 5,
     borderRadius: 2,
   },
-  pipDone: {
-    backgroundColor: GREEN,
-  },
-  pipToday: {
-    backgroundColor: GOLD,
-  },
-  pipFuture: {
-    backgroundColor: 'rgba(247, 243, 238, 0.18)',
-  },
   checkCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: 'rgba(247, 243, 238, 0.06)',
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 13,
+    padding: 14,
     marginTop: 14,
   },
-  checkBox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
+  checkCardPending: {
+    backgroundColor: GOLD,
+  },
+  checkCardDone: {
+    backgroundColor: 'rgba(26, 122, 74, 0.16)',
     borderWidth: 1.5,
-    borderColor: 'rgba(247, 243, 238, 0.4)',
+    borderColor: 'rgba(95, 196, 142, 0.5)',
+  },
+  checkBox: {
+    width: 24,
+    height: 24,
+    borderRadius: 7,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkBoxActive: {
-    backgroundColor: GOLD,
-    borderColor: GOLD,
+  checkBoxPending: {
+    borderWidth: 2,
+    borderColor: 'rgba(13, 13, 13, 0.55)',
+    backgroundColor: 'transparent',
+  },
+  checkBoxDone: {
+    backgroundColor: '#1A7A4A',
   },
   checkTick: {
-    width: 6,
-    height: 10,
-    borderColor: '#0D0D0D',
+    width: 10,
+    height: 6,
+    borderColor: IVORY,
+    borderLeftWidth: 2,
     borderBottomWidth: 2,
-    borderRightWidth: 2,
-    transform: [{ rotate: '45deg' }, { translateY: -1 }],
+    transform: [{ rotate: '-45deg' }, { translateY: -1 }],
   },
   checkTextWrap: {
     flex: 1,
