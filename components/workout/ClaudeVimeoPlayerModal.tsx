@@ -31,17 +31,17 @@ const NAVY = '#0D2B45';
 const GOLD = '#C9943A';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
+const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 const DEFAULT_CHAPTERS: ChapterItem[] = [
-  { at: '00:00', n: 'Warm-up: Rotators & Thoracic spine', active: true },
-  { at: '04:15', n: 'Block 1: Overhead Press & Single-Arm Row' },
-  { at: '16:30', n: 'Block 2: Lateral Raises & Face Pulls' },
-  { at: '28:10', n: 'Finisher: Hollow Hold & Dead Bug' },
-  { at: '36:00', n: 'Cooldown & Decompression' },
+  { at: '00:00', n: 'Warm-up and shoulder prep', active: true },
+  { at: '04:30', n: 'Overhead press' },
+  { at: '13:10', n: 'Incline press and rows' },
+  { at: '24:00', n: 'Shoulders and arms' },
+  { at: '33:20', n: 'Cool-down and stretch' },
 ];
 
 export default function ClaudeVimeoPlayerModal({
@@ -79,7 +79,7 @@ export default function ClaudeVimeoPlayerModal({
         {/* Top Header */}
         <View style={styles.topBar}>
           <Pressable onPress={onClose} hitSlop={10}>
-            <Text style={styles.backBtn}>← Back</Text>
+            <Text style={styles.backBtn}>← Home</Text>
           </Pressable>
 
           <View style={styles.clockCenter}>

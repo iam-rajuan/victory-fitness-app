@@ -9,6 +9,19 @@ import {
   Platform,
 } from 'react-native';
 
+interface OptionWithNote {
+  title: string;
+  note: string;
+}
+
+interface StepConfig {
+  kicker: string;
+  title: string;
+  sub: string;
+  options: OptionWithNote[];
+  cta: string;
+}
+
 interface ClaudePlanBuildModalProps {
   visible: boolean;
   onClose: () => void;
@@ -27,31 +40,61 @@ const GOLD = '#C9943A';
 const COPPER = '#B5651D';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
+const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
+const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
-const GOALS = [
-  'Get stronger',
-  'Lose weight and keep muscle',
-  'Move without pain',
-  'Stay consistent',
-];
-
-const DAYS_OPTIONS = [
-  'Mon, Wed, Fri',
-  'Mon, Tue, Thu, Fri',
-  'Five weekdays',
-  'Weekends only',
-];
-
-const DURATIONS = ['25 min', '40 min', '60 min', '90 min'];
-
-const KITS = [
-  'A full gym',
-  'Home gym',
-  'Dumbbells at home',
-  'Bodyweight',
+const BUILD_STEPS: StepConfig[] = [
+  {
+    kicker: 'STEP 1 OF 4 · YOUR GOAL',
+    title: 'What are you training for?',
+    sub: 'One answer. It decides how the whole plan is shaped, not just today.',
+    options: [
+      { title: 'Get stronger', note: 'Progressive load, longer rests, fewer sessions' },
+      { title: 'Lose weight and keep muscle', note: 'Higher volume, shorter rests, protein target enforced' },
+      { title: 'Move without pain', note: 'Mobility first, strength second, nothing explosive' },
+      { title: 'Stay consistent', note: 'Short sessions you will actually finish, four a week' },
+    ],
+    cta: 'Next',
+  },
+  {
+    kicker: 'STEP 2 OF 4 · YOUR WEEK',
+    title: 'Which days can you train?',
+    sub: 'Pick the days that are realistically yours. I would rather build four you keep than six you abandon.',
+    options: [
+      { title: 'Monday, Wednesday, Friday', note: 'Three days, a rest day between each' },
+      { title: 'Mon, Tue, Thu, Fri', note: 'Four days, weekend free' },
+      { title: 'Five weekdays', note: 'Shorter sessions, more of them' },
+      { title: 'Weekends only', note: 'Two longer sessions' },
+    ],
+    cta: 'Next',
+  },
+  {
+    kicker: 'STEP 3 OF 4 · YOUR TIME',
+    title: 'How long have you got per session?',
+    sub: 'The plan is built to this number. If a day runs short, I cut the accessory work, never the main lift.',
+    options: [
+      { title: '25 minutes', note: 'Tight, focused, no wasted sets' },
+      { title: '40 minutes', note: 'The sweet spot for most people' },
+      { title: '60 minutes', note: 'Full warm-up, main work and accessories' },
+      { title: '90 minutes', note: 'Proper strength work — 4 to 5 sets on the compounds, long rests' },
+      { title: 'It varies', note: 'I will give you a short and a long version of each day' },
+    ],
+    cta: 'Next',
+  },
+  {
+    kicker: 'STEP 4 OF 4 · YOUR KIT',
+    title: 'What do you actually have?',
+    sub: 'Last question. Then I build six weeks and you can change any of it.',
+    options: [
+      { title: 'Full gym', note: 'Barbells, machines, everything' },
+      { title: 'Home gym', note: 'Dumbbells, bands, a pull-up bar' },
+      { title: 'Dumbbells only', note: 'One pair, and I will work around it' },
+      { title: 'Nothing at all', note: 'Bodyweight, and it is enough' },
+    ],
+    cta: 'Build my plan',
+  },
 ];
 
 export default function ClaudePlanBuildModal({
@@ -59,141 +102,113 @@ export default function ClaudePlanBuildModal({
   onClose,
   onPlanBuilt,
 }: ClaudePlanBuildModalProps) {
-  const [step, setStep] = useState(1);
-  const [selectedGoal, setSelectedGoal] = useState(GOALS[0]);
-  const [selectedDays, setSelectedDays] = useState(DAYS_OPTIONS[0]);
-  const [selectedDuration, setSelectedDuration] = useState(DURATIONS[1]); // 40 min
-  const [selectedKit, setSelectedKit] = useState(KITS[2]); // Dumbbells
+  const [stepIdx, setStepIdx] = useState(0);
+  const [picks, setPicks] = useState<number[]>([0, 0, 1, 1]);
 
-  const handleContinue = () => {
-    if (step < 4) {
-      setStep((s) => s + 1);
+  const currentStep = BUILD_STEPS[stepIdx];
+  const currentPick = picks[stepIdx] !== undefined ? picks[stepIdx] : 0;
+
+  const handleSelectOption = (idx: number) => {
+    setPicks((prev) => {
+      const copy = [...prev];
+      copy[stepIdx] = idx;
+      return copy;
+    });
+  };
+
+  const handleNext = () => {
+    if (stepIdx < 3) {
+      setStepIdx((s) => s + 1);
     } else {
-      const line = `${selectedGoal} · ${selectedDays} · ${selectedDuration} · built around ${selectedKit.toLowerCase()}.`;
+      const goal = BUILD_STEPS[0].options[picks[0]]?.title || 'Get stronger';
+      const days = BUILD_STEPS[1].options[picks[1]]?.title || 'Mon, Wed, Fri';
+      const duration = BUILD_STEPS[2].options[picks[2]]?.title || '40 minutes';
+      const kit = BUILD_STEPS[3].options[picks[3]]?.title || 'Home gym';
+      const minsNum = duration.replace(' minutes', '').replace(' min', '');
+      const kitStr = kit.toLowerCase();
+      const line = `${goal} · ${days} · ${minsNum} min · built around ${kitStr}.`;
+
       onPlanBuilt({
-        goal: selectedGoal,
-        days: selectedDays,
-        duration: selectedDuration,
-        kit: selectedKit,
+        goal,
+        days,
+        duration,
+        kit,
         line,
       });
-      setStep(1);
+      setStepIdx(0);
       onClose();
     }
   };
 
-  const getStepTitle = () => {
-    switch (step) {
-      case 1:
-        return "What's the main goal right now?";
-      case 2:
-        return 'Which days can you commit to?';
-      case 3:
-        return 'How long per session?';
-      case 4:
-        return 'What kit do you have access to?';
-      default:
-        return '';
-    }
-  };
-
-  const getStepSubtitle = () => {
-    switch (step) {
-      case 1:
-        return 'Victor builds the exercise selection and loading patterns around this focus.';
-      case 2:
-        return 'Rest days are programmed between compound sessions for joint and CNS recovery.';
-      case 3:
-        return 'Warm-up and cooldown are included within your selected duration.';
-      case 4:
-        return 'Your 6-week plan will only prescribe movements you have the equipment for.';
-      default:
-        return '';
-    }
-  };
-
-  const getCurrentOptions = () => {
-    switch (step) {
-      case 1:
-        return { options: GOALS, selected: selectedGoal, set: setSelectedGoal };
-      case 2:
-        return { options: DAYS_OPTIONS, selected: selectedDays, set: setSelectedDays };
-      case 3:
-        return { options: DURATIONS, selected: selectedDuration, set: setSelectedDuration };
-      case 4:
-        return { options: KITS, selected: selectedKit, set: setSelectedKit };
-      default:
-        return { options: [], selected: '', set: () => {} };
-    }
-  };
-
-  const current = getCurrentOptions();
-
   return (
-    <Modal visible={visible} animationType="slide" transparent={false}>
+    <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
       <View style={styles.container}>
         {/* Top Header */}
         <View style={styles.topBar}>
           <Pressable
             onPress={() => {
-              if (step > 1) setStep((s) => s - 1);
+              if (stepIdx > 0) setStepIdx((s) => s - 1);
               else onClose();
             }}
             hitSlop={10}
           >
-            <Text style={styles.backBtn}>{step > 1 ? '← Back' : 'Cancel'}</Text>
+            <Text style={styles.backBtn}>{stepIdx > 0 ? '← Back' : 'Cancel'}</Text>
           </Pressable>
 
-          <Text style={styles.stepIndicator}>{`STEP ${step} OF 4`}</Text>
+          <Text style={styles.stepIndicator}>PLAN BUILDER</Text>
           <View style={{ width: 44 }} />
         </View>
 
-        {/* Progress Bar */}
+        {/* Progress Bar (4 steps) */}
         <View style={styles.progressRow}>
-          {[1, 2, 3, 4].map((s) => (
+          {[0, 1, 2, 3].map((s) => (
             <View
               key={s}
               style={[
                 styles.progressSegment,
-                s <= step && styles.progressSegmentActive,
+                s <= stepIdx && styles.progressSegmentActive,
               ]}
             />
           ))}
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <Text style={styles.kicker}>CUSTOM PLAN BUILDER</Text>
-          <Text style={styles.headline}>{getStepTitle()}</Text>
-          <Text style={styles.subheadline}>{getStepSubtitle()}</Text>
+          <Text style={styles.kicker}>{currentStep.kicker}</Text>
+          <Text style={styles.headline}>{currentStep.title}</Text>
+          <Text style={styles.subheadline}>{currentStep.sub}</Text>
 
-          {/* Options List */}
+          {/* Options List matching prototype lines 3215-3228 */}
           <View style={styles.optionsList}>
-            {current.options.map((opt) => {
-              const active = opt === current.selected;
+            {currentStep.options.map((opt, i) => {
+              const on = i === currentPick;
               return (
                 <Pressable
-                  key={opt}
-                  style={[styles.optCard, active && styles.optCardActive]}
-                  onPress={() => current.set(opt)}
+                  key={i}
+                  style={[styles.optCard, on && styles.optCardActive]}
+                  onPress={() => handleSelectOption(i)}
                 >
-                  <Text style={[styles.optText, active && styles.optTextActive]}>
-                    {opt}
-                  </Text>
-                  <View style={[styles.radioCircle, active && styles.radioCircleActive]}>
-                    {active ? <View style={styles.radioDot} /> : null}
+                  <View style={[styles.radioCircle, on && styles.radioCircleActive]} />
+                  <View style={styles.optContent}>
+                    <Text style={[styles.optName, on && styles.optNameActive]}>{opt.title}</Text>
+                    <Text style={styles.optNote}>{opt.note}</Text>
                   </View>
                 </Pressable>
               );
             })}
           </View>
+
+          {/* Fine text below options */}
+          <Text style={styles.fineText}>
+            {stepIdx === 3
+              ? 'You can change any session afterwards, and the plan adapts when your sleep or recovery moves.'
+              : 'Nothing here is permanent. Your coach re-reads these answers every week.'}
+          </Text>
         </ScrollView>
 
         {/* Bottom CTA */}
         <View style={styles.bottomBar}>
-          <Pressable style={styles.ctaBtn} onPress={handleContinue}>
-            <Text style={styles.ctaBtnText}>
-              {step === 4 ? 'Build my 6-week plan' : 'Continue'}
-            </Text>
+          <Pressable style={styles.ctaBtn} onPress={handleNext}>
+            <Text style={styles.ctaBtnText}>{currentStep.cta}</Text>
           </Pressable>
         </View>
       </View>
@@ -238,7 +253,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 3,
     borderRadius: 99,
-    backgroundColor: 'rgba(247, 243, 238, 0.15)',
+    backgroundColor: 'rgba(247, 243, 238, 0.18)',
   },
   progressSegmentActive: {
     backgroundColor: GOLD,
@@ -249,70 +264,83 @@ const styles = StyleSheet.create({
   },
   kicker: {
     fontFamily: DMSANS,
-    fontSize: 10.5,
+    fontSize: 10,
     fontWeight: '500',
-    letterSpacing: 1.5,
-    color: COPPER,
+    letterSpacing: 1.3,
+    color: GOLD,
     marginBottom: 8,
   },
   headline: {
     fontFamily: CLASH,
-    fontSize: 28,
+    fontSize: 27,
     lineHeight: 33,
     fontWeight: '600',
     color: IVORY,
-    marginBottom: 10,
+    marginBottom: 8,
   },
   subheadline: {
     fontFamily: INTER,
-    fontSize: 14,
-    lineHeight: 21,
-    color: 'rgba(247, 243, 238, 0.6)',
-    marginBottom: 24,
+    fontSize: 13.5,
+    lineHeight: 20,
+    color: 'rgba(247, 243, 238, 0.58)',
+    marginBottom: 22,
   },
   optionsList: {
-    gap: 10,
+    gap: 9,
   },
   optCard: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 18,
+    alignItems: 'flex-start',
+    gap: 13,
+    padding: 16,
     borderRadius: 16,
     backgroundColor: NAVY,
-    borderWidth: 1.5,
-    borderColor: 'rgba(247, 243, 238, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(247, 243, 238, 0.14)',
   },
   optCardActive: {
     borderColor: GOLD,
-    backgroundColor: 'rgba(201, 148, 58, 0.1)',
-  },
-  optText: {
-    fontFamily: DMSANS,
-    fontSize: 15.5,
-    fontWeight: '600',
-    color: 'rgba(247, 243, 238, 0.85)',
-  },
-  optTextActive: {
-    color: IVORY,
+    borderWidth: 2,
   },
   radioCircle: {
-    width: 20,
-    height: 20,
+    width: 19,
+    height: 19,
     borderRadius: 99,
     borderWidth: 1.5,
     borderColor: 'rgba(247, 243, 238, 0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    marginTop: 2,
+    flexShrink: 0,
   },
   radioCircleActive: {
+    borderWidth: 6,
     borderColor: GOLD,
   },
-  radioDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 99,
-    backgroundColor: GOLD,
+  optContent: {
+    flex: 1,
+    minWidth: 0,
+  },
+  optName: {
+    fontFamily: DMSANS,
+    fontSize: 16,
+    fontWeight: '600',
+    color: IVORY,
+  },
+  optNameActive: {
+    color: IVORY,
+  },
+  optNote: {
+    fontFamily: INTER,
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: 'rgba(247, 243, 238, 0.55)',
+    marginTop: 3,
+  },
+  fineText: {
+    fontFamily: INTER,
+    fontSize: 12,
+    lineHeight: 18,
+    color: 'rgba(247, 243, 238, 0.45)',
+    marginTop: 18,
   },
   bottomBar: {
     borderTopWidth: 1,

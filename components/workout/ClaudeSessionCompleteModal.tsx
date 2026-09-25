@@ -44,10 +44,10 @@ const COPPER = '#B5651D';
 const GREEN = '#1A7A4A';
 const IVORY = '#F7F3EE';
 
-const CLASH = 'ClashDisplay-Bold';
-const DMSANS = 'DMSans-SemiBold';
-const INTER = 'Inter-Regular';
-const MONO = 'JetBrainsMono-Bold';
+const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
+const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 const RPE_OPTS = [
   { id: 0, n: 'Too easy', note: 'I could have done three or four more reps on every set' },
@@ -97,10 +97,11 @@ export default function ClaudeSessionCompleteModal({
   const [isNoteFocused, setIsNoteFocused] = useState(false);
   const [upsellDismissed, setUpsellDismissed] = useState(false);
 
-  const isSilver = tier === 'SILVER' || tier === 'NONE';
+  const normalizedTier = (tier || 'GOLD').toLowerCase();
+  const isSilver = normalizedTier === 'silver' || normalizedTier === 'none';
   const hasCoach = !isSilver;
   const hasHabit = !isSilver;
-  const showUpsell = (isSilver || tier === 'GOLD' || tier === 'GOLD_BETA') && !upsellDismissed;
+  const showUpsell = (isSilver || normalizedTier === 'gold') && !upsellDismissed;
 
   const userStatement = identityStatement || motivationStatement || 'I am someone who trains even when it is hard.';
 

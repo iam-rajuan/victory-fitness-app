@@ -12,36 +12,37 @@ interface ClaudePlanBuildBannerProps {
 const GOLD = '#C9943A';
 const GREEN = '#1A7A4A';
 const IVORY = '#F7F3EE';
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
+const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
+const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 
 export default function ClaudePlanBuildBanner({
   planBuilt = false,
-  planBuiltLine = 'Get stronger · Mon, Wed, Fri · 40 min · built around dumbbells.',
+  planBuiltLine = 'Upper Body, Lower Body & Core · 4 sessions',
   hasCoach = true,
   onPress,
 }: ClaudePlanBuildBannerProps) {
-  const { colors } = useTheme();
-
-  if (!hasCoach) {
-    return null;
-  }
-
-  const kicker = planBuilt ? 'YOUR CUSTOM PLAN · SIX WEEKS' : 'CUSTOM PLAN · BUILT AROUND YOU';
-  const title = planBuilt ? 'Your plan is active' : 'Build a 6-week plan with your coach';
-  const note = planBuilt ? planBuiltLine : 'Four questions: your goal, your days, your time and your kit.';
+  const kicker = hasCoach ? 'YOUR CUSTOMISED PLAN' : 'GOLD FEATURE';
+  const title = hasCoach
+    ? (planBuilt ? 'Rebuild your plan' : 'Build a plan around your week')
+    : 'A plan built around your week';
+  const note = hasCoach
+    ? (planBuilt ? planBuiltLine : 'Four questions. Victor sets your split, minutes and kit.')
+    : 'Gold builds your 4-week programme around the days and kit you have.';
 
   return (
     <View style={styles.container}>
       <Pressable
-        style={[styles.banner, planBuilt && styles.bannerActive]}
+        style={[
+          styles.banner,
+          hasCoach ? styles.bannerCoach : styles.bannerDashed,
+        ]}
         onPress={onPress}
       >
         <View style={styles.textCol}>
-          <Text style={[styles.kicker, planBuilt && styles.kickerGreen]}>{kicker}</Text>
-          <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
-          <Text style={[styles.note, { color: colors.textSecondary }]}>{note}</Text>
+          <Text style={styles.kicker}>{kicker}</Text>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.note}>{note}</Text>
         </View>
         <Text style={styles.arrow}>›</Text>
       </Pressable>
@@ -52,23 +53,27 @@ export default function ClaudePlanBuildBanner({
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 20,
-    paddingTop: 14,
+    paddingTop: 16,
   },
   banner: {
-    borderWidth: 1.5,
-    borderColor: 'rgba(201, 148, 58, 0.45)',
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    backgroundColor: 'rgba(201, 148, 58, 0.07)',
+    borderRadius: 18,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 13,
   },
-  bannerActive: {
-    borderColor: GREEN,
-    backgroundColor: 'rgba(26, 122, 74, 0.1)',
+  bannerCoach: {
+    backgroundColor: '#0D2B45',
+    borderLeftWidth: 4,
+    borderLeftColor: GOLD,
+  },
+  bannerDashed: {
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(201, 148, 58, 0.45)',
+    backgroundColor: 'rgba(201, 148, 58, 0.05)',
   },
   textCol: {
     flex: 1,
@@ -81,9 +86,6 @@ const styles = StyleSheet.create({
     color: GOLD,
     marginBottom: 5,
   },
-  kickerGreen: {
-    color: GREEN,
-  },
   title: {
     fontFamily: CLASH,
     fontSize: 17,
@@ -95,7 +97,7 @@ const styles = StyleSheet.create({
     fontFamily: INTER,
     fontSize: 12.5,
     lineHeight: 18,
-    color: 'rgba(247, 243, 238, 0.6)',
+    color: 'rgba(247, 243, 238, 0.58)',
     marginTop: 4,
   },
   arrow: {

@@ -18,14 +18,14 @@ const GOLD = '#C9943A';
 const OBSIDIAN = '#0D0D0D';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
+const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
-const PURPOSES = ['All', 'Strength', 'Hypertrophy', 'Mobility', 'Conditioning', 'Recovery', 'Core'];
-const DURATIONS = ['Any', '10', '25', '40', '60'];
-const KITS = ['Any', 'Full gym', 'Dumbbells', 'No kit', 'Bands', 'Mat'];
+const PURPOSES = ['All', 'Strength', 'Hypertrophy', 'Conditioning', 'Mobility', 'Core', 'Recovery'];
+const DURATIONS = ['Any', '15', '30', '45', '60'];
+const KITS = ['Any', 'No kit', 'Dumbbells', 'Bands', 'Mat'];
 
 export default function ClaudeWorkoutFilters({
   searchQuery,

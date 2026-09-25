@@ -184,9 +184,17 @@ export default function WorkoutScreen() {
   const handleResumeSession = () => {
     setSelectedWorkout(PROTOTYPE_LIB[5]); // Full Body Strength / Upper Body
     if (hasCoach) {
-      setPlanDetailVisible(true);
+      setActiveSessionVisible(true);
     } else {
       setVimeoModalVisible(true);
+    }
+  };
+
+  const handlePlanBannerPress = () => {
+    if (hasCoach) {
+      setPlanBuildModalVisible(true);
+    } else {
+      pushRoute(router, '/subscription');
     }
   };
 
@@ -243,7 +251,7 @@ export default function WorkoutScreen() {
           planBuilt={planBuilt}
           planBuiltLine={planSummaryLine}
           hasCoach={hasCoach}
-          onPress={() => setPlanBuildModalVisible(true)}
+          onPress={handlePlanBannerPress}
         />
 
         {/* 3. Pick Up Where You Left Off */}
@@ -261,13 +269,11 @@ export default function WorkoutScreen() {
           type="programs"
           programs={PROGRAMS}
           onSelectProgram={(p) => {
-            setSelectedWorkout({
+            handleStartWorkout({
               name: p.n,
               meta: p.m,
               badge: p.t,
             });
-            if (hasCoach) setActiveSessionVisible(true);
-            else setVimeoModalVisible(true);
           }}
         />
 
@@ -278,13 +284,12 @@ export default function WorkoutScreen() {
           type="workouts"
           workouts={FORYOU}
           onSelectWorkout={(w) => {
-            setSelectedWorkout({
+            handleStartWorkout({
               name: w.n,
               meta: w.m,
               badge: w.t,
               vimeoId: w.v,
             });
-            setVimeoModalVisible(true);
           }}
         />
 
@@ -294,13 +299,12 @@ export default function WorkoutScreen() {
           type="workouts"
           workouts={NEWIN}
           onSelectWorkout={(w) => {
-            setSelectedWorkout({
+            handleStartWorkout({
               name: w.n,
               meta: w.m,
               badge: w.t,
               vimeoId: w.v,
             });
-            setVimeoModalVisible(true);
           }}
         />
 
@@ -379,6 +383,10 @@ export default function WorkoutScreen() {
         onDoneHome={() => {
           setCompleteModalVisible(false);
           pushRoute(router, '/(tabs)');
+        }}
+        onUpgrade={() => {
+          setCompleteModalVisible(false);
+          pushRoute(router, '/subscription');
         }}
       />
 

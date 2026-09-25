@@ -34,10 +34,10 @@ const OBSIDIAN = '#0D0D0D';
 const GOLD = '#C9943A';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
+const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 export default function ClaudeWorkoutRowCarousel({
   title,
@@ -51,6 +51,17 @@ export default function ClaudeWorkoutRowCarousel({
   onSelectWorkout,
 }: ClaudeWorkoutRowCarouselProps) {
   const { colors, isDark } = useTheme();
+  const scrollRef = React.useRef<ScrollView>(null);
+
+  const snapInterval = type === 'programs' ? 170 : 208;
+
+  const handleAction = () => {
+    if (onActionPress) {
+      onActionPress();
+    } else {
+      scrollRef.current?.scrollTo({ x: snapInterval * 2, animated: true });
+    }
+  };
 
   return (
     <View style={styles.section}>
@@ -62,16 +73,22 @@ export default function ClaudeWorkoutRowCarousel({
         </View>
 
         {actionText ? (
-          <Pressable onPress={onActionPress} hitSlop={8}>
+          <Pressable onPress={handleAction} hitSlop={8}>
             <Text style={styles.actionText}>{actionText}</Text>
           </Pressable>
         ) : null}
       </View>
 
-      {/* Horizontal Scroll Area */}
+      {/* Horizontal Snap Scroll Area */}
       <ScrollView
+        ref={scrollRef}
         horizontal
         showsHorizontalScrollIndicator={false}
+        decelerationRate="fast"
+        snapToInterval={snapInterval}
+        snapToAlignment="start"
+        directionalLockEnabled
+        nestedScrollEnabled
         contentContainerStyle={styles.scrollContent}
       >
         {type === 'programs' &&
@@ -186,6 +203,7 @@ const styles = StyleSheet.create({
   // Program card styles
   programCard: {
     width: 158,
+    flexShrink: 0,
   },
   programMedia: {
     height: 200,
@@ -244,6 +262,7 @@ const styles = StyleSheet.create({
   // Workout card styles
   workoutCard: {
     width: 196,
+    flexShrink: 0,
   },
   workoutMedia: {
     position: 'relative',

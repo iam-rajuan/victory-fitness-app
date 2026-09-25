@@ -37,10 +37,10 @@ const COPPER = '#B5651D';
 const GREEN = '#1A7A4A';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
+const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 // 4 Exercises matching prototype (planFor(1) 40-minute push workout)
 const PROTOTYPE_EXERCISES: ActiveExerciseItem[] = [
@@ -100,8 +100,9 @@ export default function ClaudeActiveSessionModal({
   const [weightKg, setWeightKg] = useState(currentExercise.defaultKg);
   const [reps, setReps] = useState<number | 'max'>(currentExercise.targetReps);
 
-  const hasHabit = tier !== 'SILVER' && tier !== 'NONE';
-  const hasWear = tier === 'PLATINUM' || tier === 'INNER_CIRCLE';
+  const normalizedTier = (tier || 'GOLD').toLowerCase();
+  const hasHabit = normalizedTier !== 'silver' && normalizedTier !== 'none';
+  const hasWear = normalizedTier === 'platinum' || normalizedTier === 'ic' || normalizedTier === 'inner_circle' || normalizedTier === 'inner circle';
 
   // Synchronize exercise weight & reps when moving between exercises
   useEffect(() => {
