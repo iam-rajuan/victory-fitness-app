@@ -34,6 +34,7 @@ import ClaudePlanDetailModal from '../../components/workout/ClaudePlanDetailModa
 import ClaudeActiveSessionModal from '../../components/workout/ClaudeActiveSessionModal';
 import ClaudeSessionCompleteModal from '../../components/workout/ClaudeSessionCompleteModal';
 import ClaudePlanBuildModal from '../../components/workout/ClaudePlanBuildModal';
+import { getSavedPlanStatus, savePlanBuiltData } from '../../lib/planStorage';
 
 const OBSIDIAN = '#0D0D0D';
 const GOLD = '#C9943A';
@@ -74,9 +75,6 @@ const NEWIN: WorkoutRowItem[] = [
   { n: 'Desk Neck & Shoulders', m: '8 min · new', t: 'ADDED FRIDAY', v: '912440319' },
   { n: 'Band Shoulder Build', m: '22 min · new', t: 'ADDED LAST WEEK', v: '912440324' },
 ];
-
-const PLAN_BUILT_KEY = '@victory_plan_built';
-const PLAN_SUMMARY_KEY = '@victory_plan_summary';
 
 export default function WorkoutScreen() {
   const router = useRouter();
@@ -122,10 +120,11 @@ export default function WorkoutScreen() {
       const user = await fetchCurrentUser();
       if (user) setCurrentUser(user);
 
-      const savedPlan = await AsyncStorage.getItem(PLAN_BUILT_KEY);
-      const savedSummary = await AsyncStorage.getItem(PLAN_SUMMARY_KEY);
-      if (savedPlan === 'true') setPlanBuilt(true);
-      if (savedSummary) setPlanSummaryLine(savedSummary);
+      const status = await getSavedPlanStatus();
+      if (status.planBuilt) {
+        setPlanBuilt(true);
+        setPlanSummaryLine(status.planSummary);
+      }
     } catch {}
   };
 
@@ -212,11 +211,20 @@ export default function WorkoutScreen() {
     });
   };
 
-  const handlePlanBuilt = async (summary: { line: string }) => {
+  const handlePlanBuilt = async (summary: {
+    goal?: string;
+    days?: string;
+    duration?: string;
+    kit?: string;
+    line: string;
+  }) => {
     setPlanBuilt(true);
     setPlanSummaryLine(summary.line);
-    await AsyncStorage.setItem(PLAN_BUILT_KEY, 'true');
-    await AsyncStorage.setItem(PLAN_SUMMARY_KEY, summary.line);
+    await savePlanBuiltData(summary);
+    setPlanBuildModalVisible(false);
+
+    // Follow Claude design routing flow: navigate to Home screen with new plan active!
+    router.replace('/(tabs)');
   };
 
   if (checkingAccess) {

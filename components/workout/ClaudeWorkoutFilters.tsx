@@ -60,82 +60,154 @@ export default function ClaudeWorkoutFilters({
       </View>
 
       {/* Purpose Filter Row */}
-      <View style={styles.filterRow}>
-        <Text style={styles.filterLabel}>PURPOSE</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipsScroll}
-        >
-          {PURPOSES.map((p) => {
-            const active = p === selectedPurpose;
-            return (
-              <Pressable
-                key={p}
-                onPress={() => onSelectPurpose(p)}
-                style={[styles.chip, active && styles.chipActive]}
-              >
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                  {p}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </View>
+      <SlideableChipsRow
+        label="PURPOSE"
+        items={PURPOSES}
+        selectedItem={selectedPurpose}
+        onSelect={onSelectPurpose}
+        paddingTop={16}
+      />
 
       {/* Minutes Filter Row */}
-      <View style={styles.filterRow}>
-        <Text style={styles.filterLabel}>MINUTES</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipsScroll}
-        >
-          {DURATIONS.map((d) => {
-            const active = d === selectedDuration;
-            return (
-              <Pressable
-                key={d}
-                onPress={() => onSelectDuration(d)}
-                style={[styles.chip, active && styles.chipActive]}
-              >
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                  {d}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </View>
+      <SlideableChipsRow
+        label="MINUTES"
+        items={DURATIONS}
+        selectedItem={selectedDuration}
+        onSelect={onSelectDuration}
+        paddingTop={14}
+      />
 
       {/* Kit Filter Row */}
-      <View style={styles.filterRow}>
-        <Text style={styles.filterLabel}>KIT</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipsScroll}
-        >
-          {KITS.map((k) => {
-            const active = k === selectedKit;
-            return (
-              <Pressable
-                key={k}
-                onPress={() => onSelectKit(k)}
-                style={[styles.chip, active && styles.chipActive]}
-              >
-                <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                  {k}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </View>
+      <SlideableChipsRow
+        label="KIT"
+        items={KITS}
+        selectedItem={selectedKit}
+        onSelect={onSelectKit}
+        paddingTop={14}
+      />
 
       {/* Result Count Banner */}
       <Text style={styles.resultCount}>{resultCountText}</Text>
+    </View>
+  );
+}
+
+interface SlideableChipsRowProps {
+  label: string;
+  items: string[];
+  selectedItem: string;
+  onSelect: (item: string) => void;
+  paddingTop?: number;
+}
+
+function SlideableChipsRow({
+  label,
+  items,
+  selectedItem,
+  onSelect,
+  paddingTop = 16,
+}: SlideableChipsRowProps) {
+  const scrollRef = React.useRef<ScrollView>(null);
+  const isMouseDown = React.useRef(false);
+  const startX = React.useRef(0);
+  const scrollStartLeft = React.useRef(0);
+  const hasDragged = React.useRef(false);
+
+  const getDomNode = () => {
+    return (
+      (scrollRef.current as any)?.getScrollResponder?.()?.getScrollableNode?.() ||
+      (scrollRef.current as any)
+    );
+  };
+
+  const handleMouseDown = (e: any) => {
+    if (Platform.OS !== 'web') return;
+    isMouseDown.current = true;
+    hasDragged.current = false;
+    startX.current = e.nativeEvent?.pageX ?? e.pageX ?? 0;
+    const node = getDomNode();
+    scrollStartLeft.current = node?.scrollLeft || 0;
+  };
+
+  const handleMouseMove = (e: any) => {
+    if (Platform.OS !== 'web' || !isMouseDown.current) return;
+    const currentX = e.nativeEvent?.pageX ?? e.pageX ?? 0;
+    const diff = currentX - startX.current;
+    if (Math.abs(diff) > 4) {
+      hasDragged.current = true;
+    }
+    const node = getDomNode();
+    if (node) {
+      node.scrollLeft = scrollStartLeft.current - diff;
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (Platform.OS !== 'web') return;
+    isMouseDown.current = false;
+  };
+
+  React.useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const node = getDomNode();
+    if (!node) return;
+
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaX) < Math.abs(e.deltaY) && e.deltaY !== 0) {
+        node.scrollLeft += e.deltaY * 0.8;
+      }
+    };
+
+    node.addEventListener('wheel', onWheel, { passive: true });
+    return () => {
+      node.removeEventListener('wheel', onWheel);
+    };
+  }, []);
+
+  return (
+    <View style={[styles.filterRow, { paddingTop }]}>
+      <Text style={styles.filterLabel}>{label}</Text>
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        showsHorizontalScrollIndicator={true}
+        contentContainerStyle={styles.chipsScroll}
+        style={
+          Platform.OS === 'web'
+            ? ({
+                cursor: 'grab',
+                userSelect: 'none',
+                WebkitOverflowScrolling: 'touch',
+              } as any)
+            : undefined
+        }
+        {...(Platform.OS === 'web'
+          ? {
+              onMouseDown: handleMouseDown,
+              onMouseMove: handleMouseMove,
+              onMouseUp: handleMouseUp,
+              onMouseLeave: handleMouseUp,
+            }
+          : {})}
+      >
+        {items.map((item) => {
+          const active = item === selectedItem;
+          return (
+            <Pressable
+              key={item}
+              onPress={() => {
+                if (hasDragged.current) return;
+                onSelect(item);
+              }}
+              style={[styles.chip, active && styles.chipActive]}
+            >
+              <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                {item}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
     </View>
   );
 }
@@ -196,6 +268,7 @@ const styles = StyleSheet.create({
   chipsScroll: {
     paddingHorizontal: 20,
     gap: 8,
+    paddingBottom: 6,
   },
   chip: {
     paddingVertical: 9,
@@ -204,6 +277,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(247, 243, 238, 0.22)',
     backgroundColor: 'transparent',
+    ...(Platform.OS === 'web' ? { whiteSpace: 'nowrap' as any } : {}),
   },
   chipActive: {
     backgroundColor: GOLD,

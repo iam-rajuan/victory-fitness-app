@@ -10,6 +10,7 @@ interface ClaudeTodayWorkoutCardProps {
   durationMinutes?: number;
   exerciseCount?: number;
   equipment?: string;
+  isPlanBuilt?: boolean;
   onStartSession?: () => void;
   onAdjustPlan?: () => void;
 }
@@ -19,10 +20,10 @@ const GOLD = '#C9943A';
 const OBSIDIAN = '#0D0D0D';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+const CLASH = Platform.select({ web: 'Clash Display', default: 'ClashDisplay-Bold' });
+const DMSANS = Platform.select({ web: 'DM Sans', default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: 'Inter', default: 'Inter-Regular' });
+const MONO = Platform.select({ web: 'JetBrains Mono', default: 'JetBrainsMono-Bold' });
 
 export default function ClaudeTodayWorkoutCard({
   tier,
@@ -30,6 +31,7 @@ export default function ClaudeTodayWorkoutCard({
   durationMinutes = 40,
   exerciseCount = 4,
   equipment = 'DUMBBELLS',
+  isPlanBuilt = false,
   onStartSession,
   onAdjustPlan,
 }: ClaudeTodayWorkoutCardProps) {
@@ -37,9 +39,13 @@ export default function ClaudeTodayWorkoutCard({
   const { colors, isDark } = useTheme();
   const hasCoach = tier !== 'SILVER' && tier !== 'NONE';
 
-  const planLabel = hasCoach ? 'YOUR PLAN · WEEK 2 OF 6' : "TODAY'S WORKOUT";
+  const planLabel = hasCoach
+    ? (isPlanBuilt ? 'YOUR NEW PLAN · WEEK 1 OF 6' : 'YOUR PLAN · WEEK 2 OF 6')
+    : "TODAY'S WORKOUT";
   const planSource = hasCoach ? 'BUILT BY YOUR COACH' : 'VIDEO · FROM THE LIBRARY';
-  const planDayLine = (hasCoach ? 'DAY 3 OF WEEK 2 · ' : 'PICKED FOR TODAY · ') + `${durationMinutes} MIN`;
+  const planDayLine = (hasCoach
+    ? (isPlanBuilt ? 'DAY 1 OF WEEK 1 · ' : 'DAY 3 OF WEEK 2 · ')
+    : 'PICKED FOR TODAY · ') + `${durationMinutes} MIN`;
   const planAlt = hasCoach ? 'Adjust this plan with your coach' : 'Pick a different video instead';
 
   const handleStart = () => {

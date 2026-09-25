@@ -63,10 +63,48 @@ export default function Root({ children }: { children: React.ReactNode }) {
               #root,body,html{height:100%}
               body{overflow:hidden;background:#0D0D0D;font-family:'DM Sans',-apple-system,sans-serif}
               #root{display:flex}
-              ::-webkit-scrollbar{display:none !important;width:0 !important;height:0 !important}
+              /* WebKit Scrollbar (Parity with Claude prototype VF Prototype.dc.html line 18) */
+              ::-webkit-scrollbar {
+                width: 8px;
+                height: 8px;
+              }
+              ::-webkit-scrollbar-track {
+                background: transparent;
+              }
+              ::-webkit-scrollbar-thumb {
+                background: rgba(247, 243, 238, 0.16);
+                border-radius: 99px;
+              }
+              ::-webkit-scrollbar-thumb:hover {
+                background: rgba(247, 243, 238, 0.32);
+              }
+              /* Firefox scrollbar */
               * {
-                scrollbar-width: none !important;
-                -ms-overflow-style: none !important;
+                scrollbar-width: thin;
+                scrollbar-color: rgba(247, 243, 238, 0.16) transparent;
+              }
+              /* Ensure horizontal scrollables display the 8px slidebar */
+              div[style*="overflow-x: auto"]::-webkit-scrollbar,
+              div[style*="overflow-x: scroll"]::-webkit-scrollbar,
+              div[style*="overflow: auto"]::-webkit-scrollbar,
+              div[style*="overflow: scroll"]::-webkit-scrollbar {
+                display: block !important;
+                height: 8px !important;
+                width: 8px !important;
+              }
+              div[style*="overflow-x: auto"]::-webkit-scrollbar-thumb,
+              div[style*="overflow-x: scroll"]::-webkit-scrollbar-thumb,
+              div[style*="overflow: auto"]::-webkit-scrollbar-thumb,
+              div[style*="overflow: scroll"]::-webkit-scrollbar-thumb {
+                display: block !important;
+                background: rgba(247, 243, 238, 0.16) !important;
+                border-radius: 99px !important;
+              }
+              div[style*="overflow-x: auto"]::-webkit-scrollbar-thumb:hover,
+              div[style*="overflow-x: scroll"]::-webkit-scrollbar-thumb:hover,
+              div[style*="overflow: auto"]::-webkit-scrollbar-thumb:hover,
+              div[style*="overflow: scroll"]::-webkit-scrollbar-thumb:hover {
+                background: rgba(247, 243, 238, 0.32) !important;
               }
             `,
           }}

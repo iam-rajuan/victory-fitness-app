@@ -120,13 +120,22 @@ export default function ClaudePlanBuildModal({
     if (stepIdx < 3) {
       setStepIdx((s) => s + 1);
     } else {
-      const goal = BUILD_STEPS[0].options[picks[0]]?.title || 'Get stronger';
-      const days = BUILD_STEPS[1].options[picks[1]]?.title || 'Mon, Wed, Fri';
+      const goalList = ['Get stronger', 'Lose weight and keep muscle', 'Move without pain', 'Stay consistent'];
+      const daysList = ['Mon, Wed, Fri', 'Mon, Tue, Thu, Fri', 'Five weekdays', 'Weekends only'];
+      const goal = goalList[picks[0]] || 'Get stronger';
+      const days = daysList[picks[1]] || 'Mon, Wed, Fri';
       const duration = BUILD_STEPS[2].options[picks[2]]?.title || '40 minutes';
       const kit = BUILD_STEPS[3].options[picks[3]]?.title || 'Home gym';
       const minsNum = duration.replace(' minutes', '').replace(' min', '');
-      const kitStr = kit.toLowerCase();
-      const line = `${goal} · ${days} · ${minsNum} min · built around ${kitStr}.`;
+
+      const kitPhrases: Record<string, string> = {
+        'Full gym': 'a full gym',
+        'Home gym': 'your home gym',
+        'Dumbbells only': 'one pair of dumbbells',
+        'Nothing at all': 'bodyweight only',
+      };
+      const kitPhrase = kitPhrases[kit] || `your ${kit.toLowerCase()}`;
+      const line = `${goal} · ${days} · ${minsNum} min · built around ${kitPhrase}.`;
 
       onPlanBuilt({
         goal,

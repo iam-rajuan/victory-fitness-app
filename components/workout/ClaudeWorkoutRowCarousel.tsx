@@ -96,6 +96,31 @@ export default function ClaudeWorkoutRowCarousel({
     isMouseDown.current = false;
   };
 
+  const getDomNode = () => {
+    return (
+      (scrollRef.current as any)?.getScrollResponder?.()?.getScrollableNode?.() ||
+      (scrollRef.current as any)
+    );
+  };
+
+  // Mouse wheel horizontal scroll handler for web
+  React.useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const node = getDomNode();
+    if (!node) return;
+
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaX) < Math.abs(e.deltaY) && e.deltaY !== 0) {
+        node.scrollLeft += e.deltaY * 0.8;
+      }
+    };
+
+    node.addEventListener('wheel', onWheel, { passive: true });
+    return () => {
+      node.removeEventListener('wheel', onWheel);
+    };
+  }, []);
+
   return (
     <View style={styles.section}>
       {/* Section Header */}
@@ -112,11 +137,11 @@ export default function ClaudeWorkoutRowCarousel({
         ) : null}
       </View>
 
-      {/* Horizontal Slideable Snap Scroll Area */}
+      {/* Horizontal Slideable Snap Scroll Area with native draggable 8px slidebar */}
       <ScrollView
         ref={scrollRef}
         horizontal
-        showsHorizontalScrollIndicator={false}
+        showsHorizontalScrollIndicator={true}
         decelerationRate="fast"
         snapToInterval={snapInterval}
         snapToAlignment="start"
@@ -129,7 +154,7 @@ export default function ClaudeWorkoutRowCarousel({
           onMouseUp: handleMouseUp,
           onMouseLeave: handleMouseUp,
         } : {})}
-        style={Platform.OS === 'web' ? ({ cursor: 'grab', userSelect: 'none' } as any) : undefined}
+        style={Platform.OS === 'web' ? ({ cursor: 'grab', userSelect: 'none', WebkitOverflowScrolling: 'touch' } as any) : undefined}
       >
         {type === 'programs' &&
           programs.map((p, idx) => (

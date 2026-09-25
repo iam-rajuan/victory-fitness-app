@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 
 import {
   AuthUser,
@@ -31,9 +31,11 @@ import {
   updateUserWeight,
 } from '../../lib/onboarding';
 import { fetchChallengeOverviewData } from '../../lib/screenData';
+import { getSavedPlanStatus, dismissFreshPlanBanner } from '../../lib/planStorage';
 
 import ClaudeHomeHeader from '../../components/home/ClaudeHomeHeader';
 import ClaudeInspirationCard from '../../components/home/ClaudeInspirationCard';
+import ClaudeFreshPlanBanner from '../../components/home/ClaudeFreshPlanBanner';
 import ClaudeTodayWorkoutCard from '../../components/home/ClaudeTodayWorkoutCard';
 import ClaudeChallengesCarousel, { ChallengeItem } from '../../components/home/ClaudeChallengesCarousel';
 import ClaudeFoodTodayCard from '../../components/home/ClaudeFoodTodayCard';
@@ -91,6 +93,38 @@ export default function HomeScreen() {
   const [weightPromptSaving, setWeightPromptSaving] = useState(false);
   const [weightDraft, setWeightDraft] = useState('');
   const [weightPromptUserId, setWeightPromptUserId] = useState('');
+
+  // Custom 6-week plan state (Claude Prototype VF Prototype.dc.html lines 188-199 & 3234-3243)
+  const [planBuilt, setPlanBuilt] = useState(false);
+  const [showFreshPlan, setShowFreshPlan] = useState(false);
+  const [planSummaryLine, setPlanSummaryLine] = useState('Get stronger · Mon, Wed, Fri · 40 min · built around your home gym.');
+  const [planKit, setPlanKit] = useState('Home gym');
+  const [planDuration, setPlanDuration] = useState('40 minutes');
+
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
+      const syncPlan = async () => {
+        const status = await getSavedPlanStatus();
+        if (isMounted) {
+          setPlanBuilt(status.planBuilt);
+          setShowFreshPlan(status.planBuilt && status.showFreshPlan);
+          if (status.planSummary) setPlanSummaryLine(status.planSummary);
+          if (status.planKit) setPlanKit(status.planKit);
+          if (status.planDuration) setPlanDuration(status.planDuration);
+        }
+      };
+      void syncPlan();
+      return () => {
+        isMounted = false;
+      };
+    }, [])
+  );
+
+  const handleDismissFreshPlan = useCallback(async () => {
+    setShowFreshPlan(false);
+    await dismissFreshPlanBanner();
+  }, []);
 
   const loadHomeData = useCallback(async () => {
     try {
@@ -388,13 +422,21 @@ export default function HomeScreen() {
           </View>
         ) : null}
 
-        {/* 4. Today's Workout Session Card (Adaptive by Tier) */}
+        {/* Fresh Plan Notification Banner (Claude Prototype VF Prototype.dc.html lines 188-199) */}
+        <ClaudeFreshPlanBanner
+          visible={showFreshPlan}
+          line={planSummaryLine}
+          onDismiss={handleDismissFreshPlan}
+        />
+
+        {/* 4. Today's Workout Session Card (Adaptive by Tier & Custom Built Plan) */}
         <ClaudeTodayWorkoutCard
           tier={tier}
           workoutTitle={currentUser?.workout_unlock_label || 'Upper Body Strength'}
-          durationMinutes={tier === 'SILVER' ? 38 : 40}
+          durationMinutes={Number(planDuration.replace(/[^0-9]/g, '')) || (tier === 'SILVER' ? 38 : 40)}
           exerciseCount={4}
-          equipment="DUMBBELLS"
+          equipment={planKit.toUpperCase()}
+          isPlanBuilt={planBuilt}
           onStartSession={() => {
             if (tier === 'SILVER') {
               setVimeoModalVisible(true);
