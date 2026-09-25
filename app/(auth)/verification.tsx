@@ -23,6 +23,10 @@ import { getPostAuthRoute } from '../../lib/access';
 import { markBiometricSessionUnlocked, maybeOfferBiometricUnlock } from '../../lib/biometricUnlock';
 import { formatAppError } from '../../lib/error';
 import { replaceRoute } from '../../lib/navigation';
+import {
+  ONBOARDING_ANSWERS_KEY,
+  ONBOARDING_STEP_KEY,
+} from '../../components/onboarding/ClaudeOnboardingFlow';
 
 // Claude Design Reference Palette
 const OBSIDIAN = '#0D0D0D';
@@ -115,6 +119,7 @@ export default function VerificationScreen() {
       await setAuthTokens(auth);
       markBiometricSessionUnlocked();
       void maybeOfferBiometricUnlock(auth.user);
+      await AsyncStorage.multiRemove([ONBOARDING_STEP_KEY, ONBOARDING_ANSWERS_KEY]).catch(() => {});
 
       const pendingChallengeId = params.challenge_id || (await AsyncStorage.getItem('@pending_challenge_id'));
       if (pendingChallengeId) {
@@ -122,7 +127,8 @@ export default function VerificationScreen() {
         replaceRoute(router, `/challenges/${pendingChallengeId}` as any);
         return;
       }
-      replaceRoute(router, getPostAuthRoute(auth.user));
+      const postAuthRoute = getPostAuthRoute(auth.user);
+      replaceRoute(router, postAuthRoute === '/onboarding' ? '/onboarding?step=2' : postAuthRoute);
     } catch (error) {
       setErrorDialog(formatAppError(error));
     } finally {

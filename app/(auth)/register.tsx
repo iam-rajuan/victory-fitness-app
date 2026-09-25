@@ -29,6 +29,10 @@ import { useLanguage } from '../../lib/i18n';
 import { detectCountryFromDeviceLocale } from '../../lib/localeCountry';
 import { pushRoute, replaceRoute } from '../../lib/navigation';
 import { isE164PhoneNumber } from '../../lib/phone';
+import {
+  ONBOARDING_ANSWERS_KEY,
+  ONBOARDING_STEP_KEY,
+} from '../../components/onboarding/ClaudeOnboardingFlow';
 
 type RegionKey = 'de' | 'gh' | 'in' | 'uk' | 'us';
 
@@ -149,6 +153,7 @@ export default function RegisterScreen() {
     setFieldErrors({});
     setLoading(true);
     try {
+      await AsyncStorage.multiRemove([ONBOARDING_STEP_KEY, ONBOARDING_ANSWERS_KEY]).catch(() => {});
       if (params.challenge_id) {
         await AsyncStorage.setItem('@pending_challenge_id', String(params.challenge_id));
       }
@@ -208,13 +213,15 @@ export default function RegisterScreen() {
       );
       return;
     }
+    await AsyncStorage.multiRemove([ONBOARDING_STEP_KEY, ONBOARDING_ANSWERS_KEY]).catch(() => {});
     const pendingChallengeId = params.challenge_id || (await AsyncStorage.getItem('@pending_challenge_id'));
     if (pendingChallengeId) {
       await AsyncStorage.removeItem('@pending_challenge_id');
       replaceRoute(router, `/challenges/${pendingChallengeId}` as any);
       return;
     }
-    replaceRoute(router, getPostAuthRoute(auth.user));
+    const postAuthRoute = getPostAuthRoute(auth.user);
+    replaceRoute(router, postAuthRoute === '/onboarding' ? '/onboarding?step=2' : postAuthRoute);
   };
 
   const handleGoogleRegister = async () => {

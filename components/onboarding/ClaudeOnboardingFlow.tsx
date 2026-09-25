@@ -1806,6 +1806,9 @@ export default function ClaudeOnboardingFlow({
 
                 {/* Reminder Settings */}
                 <View style={styles.nudgeBox}>
+                  <View style={styles.nudgeNewFeatureLabel}>
+                    <Text style={styles.nudgeNewFeatureLabelText}>NEW FEATURE — NOT IN AGREED REQUIREMENT</Text>
+                  </View>
                   <View style={styles.nudgeHeader}>
                     <Text style={styles.nudgeKicker}>WHERE SHOULD I NUDGE YOU?</Text>
                     <Text style={styles.nudgeSubKicker}>PICK ONE OR ALL</Text>
@@ -2965,6 +2968,23 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 18,
     marginBottom: 22,
+    borderWidth: 2,
+    borderColor: '#E53935',
+  },
+  nudgeNewFeatureLabel: {
+    backgroundColor: 'rgba(229,57,53,0.12)',
+    borderRadius: 6,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    marginBottom: 12,
+    alignSelf: 'flex-start',
+  },
+  nudgeNewFeatureLabelText: {
+    fontFamily: DMSANS,
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    color: '#E53935',
   },
   nudgeHeader: {
     flexDirection: 'row',
