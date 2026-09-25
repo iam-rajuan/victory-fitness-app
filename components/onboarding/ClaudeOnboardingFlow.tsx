@@ -37,6 +37,7 @@ import {
 import { getPostAuthRoute } from '../../lib/access';
 import { replaceRoute } from '../../lib/navigation';
 import { buildE164PhoneNumber, normalizeDialCode, splitE164PhoneNumber } from '../../lib/phone';
+import RequirementAuditBoundary from '../audit/RequirementAuditBoundary';
 import ClaudeInnerCircleApplyModal from '../profile/ClaudeInnerCircleApplyModal';
 
 export const ONBOARDING_STEP_KEY = '@vf_onboarding_current_step';
@@ -1106,7 +1107,13 @@ export default function ClaudeOnboardingFlow({
                 <View style={styles.progressBarTrack}>
                   <View style={[styles.progressBarFill, { width: `${questionBarPct}%` }]} />
                 </View>
-                <Text style={styles.questionKicker}>{`QUESTION ${step - 1} OF 4`}</Text>
+                <RequirementAuditBoundary
+                  auditId="APP-MISMATCH-003"
+                  status="mismatch"
+                  label="MISMATCH - DOCUMENT REQUIRES 5 ONBOARDING QUESTIONS"
+                >
+                  <Text style={styles.questionKicker}>{`QUESTION ${step - 1} OF 4`}</Text>
+                </RequirementAuditBoundary>
               </View>
             ) : null}
 
@@ -1647,11 +1654,17 @@ export default function ClaudeOnboardingFlow({
             {/* STEP 9: TIER SELECTION */}
             {step === 9 && (
               <View style={styles.stepContent}>
-                <Text style={styles.copperKicker}>21 DAY GOLD BETA</Text>
-                <Text style={styles.stepTitle}>Start where you think you belong</Text>
-                <Text style={styles.stepSubtitle}>
-                  Your plan is already built either way. Start with the 21-day beta, or choose the tier you want to keep.
-                </Text>
+                <RequirementAuditBoundary
+                  auditId="APP-MISMATCH-004"
+                  status="mismatch"
+                  label="MISMATCH - REQUIRED COPY IS TRY GOLD FREE FOR 5 DAYS"
+                >
+                  <Text style={styles.copperKicker}>21 DAY GOLD BETA</Text>
+                  <Text style={styles.stepTitle}>Start where you think you belong</Text>
+                  <Text style={styles.stepSubtitle}>
+                    Your plan is already built either way. Start with the 21-day beta, or choose the tier you want to keep.
+                  </Text>
+                </RequirementAuditBoundary>
 
                 {/* Billing Cycle Switch */}
                 <View style={styles.cycleSwitchTrack}>
@@ -1675,22 +1688,28 @@ export default function ClaudeOnboardingFlow({
 
                 {/* Tiers List */}
                 <View style={styles.optionsList}>
-                  <Pressable
-                    onPress={() => setTier(BETA_TIER_INDEX)}
-                    style={[styles.tierCard, styles.betaTierCard, isBetaTierSelected && styles.tierCardActive]}
+                  <RequirementAuditBoundary
+                    auditId="APP-MISMATCH-005"
+                    status="mismatch"
+                    label="MISMATCH - 21-DAY GOLD BETA IS NOT SECTION 19 TRIAL"
                   >
-                    <View style={styles.tierTopRow}>
-                      <Text style={[styles.tierName, isBetaTierSelected && styles.tierNameActive]}>21-Day Gold Beta</Text>
-                      <Text style={styles.tierPrice}>Free</Text>
-                    </View>
-                    <Text style={styles.tierDesc}>Gold access for 21 days. No card required, no charge today.</Text>
-                    <View style={styles.tierBottomRow}>
-                      <View style={styles.tierTag}>
-                        <Text style={styles.tierTagText}>21 DAY BETA</Text>
+                    <Pressable
+                      onPress={() => setTier(BETA_TIER_INDEX)}
+                      style={[styles.tierCard, styles.betaTierCard, isBetaTierSelected && styles.tierCardActive]}
+                    >
+                      <View style={styles.tierTopRow}>
+                        <Text style={[styles.tierName, isBetaTierSelected && styles.tierNameActive]}>21-Day Gold Beta</Text>
+                        <Text style={styles.tierPrice}>Free</Text>
                       </View>
-                      <Text style={styles.tierAlt}>No card required</Text>
-                    </View>
-                  </Pressable>
+                      <Text style={styles.tierDesc}>Gold access for 21 days. No card required, no charge today.</Text>
+                      <View style={styles.tierBottomRow}>
+                        <View style={styles.tierTag}>
+                          <Text style={styles.tierTagText}>21 DAY BETA</Text>
+                        </View>
+                        <Text style={styles.tierAlt}>No card required</Text>
+                      </View>
+                    </Pressable>
+                  </RequirementAuditBoundary>
 
                   {prices.map(([name, yearlyPrice, monthlyPrice, desc, tag], idx) => {
                     const isSelected = idx === tier;
@@ -1737,10 +1756,16 @@ export default function ClaudeOnboardingFlow({
                 <Pressable style={styles.ctaButton} onPress={handleNext} disabled={submitting}>
                   {submitting && isBetaTierSelected ? (
                     <ActivityIndicator color={OBSIDIAN} size="small" />
+                  ) : isBetaTierSelected ? (
+                    <RequirementAuditBoundary
+                      auditId="APP-MISMATCH-006"
+                      status="mismatch"
+                      label="MISMATCH - CTA MUST OFFER 5-DAY GOLD TRIAL"
+                    >
+                      <Text style={styles.ctaButtonText}>Start 21-Day Gold Beta</Text>
+                    </RequirementAuditBoundary>
                   ) : (
-                    <Text style={styles.ctaButtonText}>
-                      {isBetaTierSelected ? 'Start 21-Day Gold Beta' : `Continue with ${curTier[0]}`}
-                    </Text>
+                    <Text style={styles.ctaButtonText}>{`Continue with ${curTier[0]}`}</Text>
                   )}
                 </Pressable>
               </View>
@@ -1756,9 +1781,15 @@ export default function ClaudeOnboardingFlow({
                 <View style={styles.summaryCard}>
                   <View style={styles.summaryHeader}>
                     <Text style={styles.summaryTierTitle}>{`${curTier[0]} · ${yearly ? 'yearly' : 'monthly'}`}</Text>
-                    <View style={styles.freeBadge}>
-                      <Text style={styles.freeBadgeText}>21 DAY BETA</Text>
-                    </View>
+                    <RequirementAuditBoundary
+                      auditId="APP-MISMATCH-007"
+                      status="mismatch"
+                      label="MISMATCH - PAYMENT SUMMARY USES 21-DAY BETA"
+                    >
+                      <View style={styles.freeBadge}>
+                        <Text style={styles.freeBadgeText}>21 DAY BETA</Text>
+                      </View>
+                    </RequirementAuditBoundary>
                   </View>
                   <View style={styles.summaryLine}>
                     <Text style={styles.summaryLineLabel}>Today</Text>
@@ -1854,9 +1885,15 @@ export default function ClaudeOnboardingFlow({
                   )}
                 </Pressable>
 
-                <Text style={styles.payFinePrint}>
-                  {`${currentRegion.note} The 21-day Gold Beta uses the existing beta access system when selected; paid tiers continue through the normal billing flow.`}
-                </Text>
+                <RequirementAuditBoundary
+                  auditId="APP-MISMATCH-008"
+                  status="mismatch"
+                  label="MISMATCH - FINE PRINT REFERENCES 21-DAY BETA"
+                >
+                  <Text style={styles.payFinePrint}>
+                    {`${currentRegion.note} The 21-day Gold Beta uses the existing beta access system when selected; paid tiers continue through the normal billing flow.`}
+                  </Text>
+                </RequirementAuditBoundary>
               </View>
             )}
 
@@ -1867,7 +1904,17 @@ export default function ClaudeOnboardingFlow({
                   <Text style={styles.successCheckIcon}>✓</Text>
                 </View>
 
-                <Text style={styles.copperKicker}>{`${curTier[0].toUpperCase()} · ACTIVE`}</Text>
+                {isBetaTierSelected ? (
+                  <RequirementAuditBoundary
+                    auditId="APP-MISMATCH-009"
+                    status="mismatch"
+                    label="MISMATCH - COMPLETION BANNER USES 21-DAY BETA"
+                  >
+                    <Text style={styles.copperKicker}>{`${curTier[0].toUpperCase()} · ACTIVE`}</Text>
+                  </RequirementAuditBoundary>
+                ) : (
+                  <Text style={styles.copperKicker}>{`${curTier[0].toUpperCase()} · ACTIVE`}</Text>
+                )}
                 <Text style={styles.readyHeadline}>You're set up.{'\n'}Two minutes flat.</Text>
                 <Text style={styles.stepSubtitle}>
                   Your first session is waiting, your protein target is set, and your plan already knows what you own and
@@ -1882,73 +1929,79 @@ export default function ClaudeOnboardingFlow({
                 </View>
 
                 {/* Reminder Settings */}
-                <View style={styles.nudgeBox}>
-                  <View style={styles.nudgeHeader}>
-                    <Text style={styles.nudgeKicker}>WHERE SHOULD I NUDGE YOU?</Text>
-                    <Text style={styles.nudgeSubKicker}>PICK ONE OR ALL</Text>
-                  </View>
+                <RequirementAuditBoundary
+                  auditId="APP-EXTRA-003"
+                  status="extra"
+                  label="NEW FEATURE - ONBOARDING NUDGE CHANNEL SELECTOR NOT IN REQUIREMENT"
+                >
+                  <View style={styles.nudgeBox}>
+                    <View style={styles.nudgeHeader}>
+                      <Text style={styles.nudgeKicker}>WHERE SHOULD I NUDGE YOU?</Text>
+                      <Text style={styles.nudgeSubKicker}>PICK ONE OR ALL</Text>
+                    </View>
 
-                  <View style={styles.chipsRow}>
-                    {['Push', 'WhatsApp', 'Email'].map((channel) => {
-                      const isSelected = nudge.includes(channel);
-                      return (
-                        <Pressable
-                          key={channel}
-                          onPress={() => toggleNudge(channel)}
-                          style={[styles.segmentBtn, isSelected && styles.segmentBtnActive]}
-                        >
-                          <Text style={[styles.segmentBtnText, isSelected && styles.segmentBtnTextActive]}>
-                            {channel}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
+                    <View style={styles.chipsRow}>
+                      {['Push', 'WhatsApp', 'Email'].map((channel) => {
+                        const isSelected = nudge.includes(channel);
+                        return (
+                          <Pressable
+                            key={channel}
+                            onPress={() => toggleNudge(channel)}
+                            style={[styles.segmentBtn, isSelected && styles.segmentBtnActive]}
+                          >
+                            <Text style={[styles.segmentBtnText, isSelected && styles.segmentBtnTextActive]}>
+                              {channel}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
 
-                  {nudge.includes('WhatsApp') ? (
-                    <View style={styles.phoneInputRow}>
-                      <Text style={styles.phoneInputLabel}>MOBILE NUMBER</Text>
-                      <View style={styles.phoneInputFields}>
-                        <TextInput
-                          value={dialCode}
-                          onChangeText={normalizeDialCodeInput}
-                          placeholder={currentRegion.dial}
-                          placeholderTextColor="rgba(201,148,58,0.55)"
-                          keyboardType="phone-pad"
-                          style={styles.dialCodeInput}
-                        />
-                        <TextInput
-                          value={dialNumber}
-                          onChangeText={setDialNumber}
-                          placeholder={currentRegion.sample}
-                          placeholderTextColor="rgba(247,243,238,0.4)"
-                          keyboardType="phone-pad"
-                          style={styles.phoneNumberInput}
-                        />
+                    {nudge.includes('WhatsApp') ? (
+                      <View style={styles.phoneInputRow}>
+                        <Text style={styles.phoneInputLabel}>MOBILE NUMBER</Text>
+                        <View style={styles.phoneInputFields}>
+                          <TextInput
+                            value={dialCode}
+                            onChangeText={normalizeDialCodeInput}
+                            placeholder={currentRegion.dial}
+                            placeholderTextColor="rgba(201,148,58,0.55)"
+                            keyboardType="phone-pad"
+                            style={styles.dialCodeInput}
+                          />
+                          <TextInput
+                            value={dialNumber}
+                            onChangeText={setDialNumber}
+                            placeholder={currentRegion.sample}
+                            placeholderTextColor="rgba(247,243,238,0.4)"
+                            keyboardType="phone-pad"
+                            style={styles.phoneNumberInput}
+                          />
+                        </View>
+                        <Text style={styles.phoneInputFootnote}>
+                          {dialNumber
+                            ? 'Loaded from your registration number. You can edit it here.'
+                            : `Country code set from ${currentRegion.n}. You can edit it here.`}
+                        </Text>
                       </View>
-                      <Text style={styles.phoneInputFootnote}>
-                        {dialNumber
-                          ? 'Loaded from your registration number. You can edit it here.'
-                          : `Country code set from ${currentRegion.n}. You can edit it here.`}
+                    ) : null}
+
+                    <View style={styles.nudgeTimeRow}>
+                      <Text style={styles.nudgeTimeText}>
+                        {nudge.length === 1 && nudge[0] === 'Email'
+                          ? `One email a week, Monday 08:00 ${currentRegion.tz}`
+                          : `Evenings at ${currentRegion.zone}, only on days you planned to train`}
                       </Text>
                     </View>
-                  ) : null}
 
-                  <View style={styles.nudgeTimeRow}>
-                    <Text style={styles.nudgeTimeText}>
-                      {nudge.length === 1 && nudge[0] === 'Email'
-                        ? `One email a week, Monday 08:00 ${currentRegion.tz}`
-                        : `Evenings at ${currentRegion.zone}, only on days you planned to train`}
+                    <Text style={styles.nudgeZoneNote}>
+                      {currentRegion.nudge === 'WhatsApp'
+                        ? `WhatsApp is pre-selected for ${currentRegion.n} — it is where people actually read messages. `
+                        : ''}
+                      {`Reminders run on ${currentRegion.zone}, never on a day you did not plan to train.`}
                     </Text>
                   </View>
-
-                  <Text style={styles.nudgeZoneNote}>
-                    {currentRegion.nudge === 'WhatsApp'
-                      ? `WhatsApp is pre-selected for ${currentRegion.n} — it is where people actually read messages. `
-                      : ''}
-                    {`Reminders run on ${currentRegion.zone}, never on a day you did not plan to train.`}
-                  </Text>
-                </View>
+                </RequirementAuditBoundary>
 
                 <Pressable style={styles.ctaButton} onPress={handleNext} disabled={submitting}>
                   {submitting ? (

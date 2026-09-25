@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
+import RequirementAuditBoundary from '../audit/RequirementAuditBoundary';
 
 interface ClaudeWearablesCardProps {
   onOpenWearables: () => void;
@@ -24,6 +25,11 @@ export default function ClaudeWearablesCard({
   const { colors, isDark } = useTheme();
 
   return (
+    <RequirementAuditBoundary
+      auditId="APP-EXTRA-005"
+      status="extra"
+      label="NEW FEATURE - WEARABLE HEALTH DASHBOARD NOT IN REQUIREMENT"
+    >
     <View style={styles.container}>
       <Text style={[styles.sectionKicker, { color: colors.textMuted }]}>YOUR HEALTH · LAST 4 WEEKS</Text>
 
@@ -168,6 +174,7 @@ export default function ClaudeWearablesCard({
         <Text style={styles.chevron}>›</Text>
       </TouchableOpacity>
     </View>
+    </RequirementAuditBoundary>
   );
 }
 

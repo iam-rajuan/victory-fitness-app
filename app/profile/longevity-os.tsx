@@ -68,6 +68,7 @@ import {
 import type { RunLogEntry } from '../../lib/runLog';
 import { useLanguage } from '../../lib/i18n';
 import { useModuleAccessGuard } from '../../lib/useModuleAccessGuard';
+import RequirementAuditBoundary from '../../components/audit/RequirementAuditBoundary';
 
 const FALLBACK_CARD_IMAGE = 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=600&q=80';
 type TFunction = (key: string, params?: Record<string, string | number>) => string;
@@ -2194,6 +2195,11 @@ export default function LongevityOS() {
       <VictoryHeader />
       <Stack.Screen options={{ headerShown: false }} />
 
+      <RequirementAuditBoundary
+        auditId="APP-EXTRA-007"
+        status="extra"
+        label="NEW FEATURE - LONGEVITY OS ROUTE NOT IN REQUIREMENT"
+      >
       <View style={styles.container}>
         <View style={styles.header}>
           <Pressable style={styles.backButton} onPress={handleBack} hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}>
@@ -2233,6 +2239,7 @@ export default function LongevityOS() {
 
         <View style={styles.flex}>{renderTabContent()}</View>
       </View>
+      </RequirementAuditBoundary>
     </SafeAreaView>
   );
 }

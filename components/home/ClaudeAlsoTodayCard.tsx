@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { pushRoute } from '../../lib/navigation';
 import { useTheme } from '../../context/ThemeContext';
+import RequirementAuditBoundary from '../audit/RequirementAuditBoundary';
 
 interface ClaudeAlsoTodayCardProps {
   partnerName?: string;
@@ -89,32 +90,34 @@ export default function ClaudeAlsoTodayCard({
         </Pressable>
 
         {/* Row 2: Daily Journal */}
-        <Pressable
-          style={[
-            styles.itemRow,
-            styles.itemRowBorder,
-            { borderBottomColor: isDark ? 'rgba(247, 243, 238, 0.1)' : 'rgba(13, 43, 69, 0.08)' },
-          ]}
-          onPress={() => pushRoute(router, '/journal')}
-        >
-          <View style={[styles.dot, journalWrittenToday ? styles.dotGreen : styles.dotCopperRing]} />
+        <RequirementAuditBoundary auditId="APP-EXTRA-002" status="extra">
+          <Pressable
+            style={[
+              styles.itemRow,
+              styles.itemRowBorder,
+              { borderBottomColor: isDark ? 'rgba(247, 243, 238, 0.1)' : 'rgba(13, 43, 69, 0.08)' },
+            ]}
+            onPress={() => pushRoute(router, '/journal')}
+          >
+            <View style={[styles.dot, journalWrittenToday ? styles.dotGreen : styles.dotCopperRing]} />
 
-          <View style={styles.textCol}>
-            <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]}>
-              {journalWrittenToday ? 'Journal completed for today' : 'Journal not written yet'}
-            </Text>
-            <Text
-              style={[
-                styles.itemSub,
-                { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
-              ]}
-            >
-              One prompt a day · lives in your profile
-            </Text>
-          </View>
+            <View style={styles.textCol}>
+              <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]}>
+                {journalWrittenToday ? 'Journal completed for today' : 'Journal not written yet'}
+              </Text>
+              <Text
+                style={[
+                  styles.itemSub,
+                  { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
+                ]}
+              >
+                One prompt a day · lives in your profile
+              </Text>
+            </View>
 
-          <Text style={styles.arrowChevron}>›</Text>
-        </Pressable>
+            <Text style={styles.arrowChevron}>›</Text>
+          </Pressable>
+        </RequirementAuditBoundary>
 
         {/* Row 3: Weekly Target & Library */}
         <Pressable

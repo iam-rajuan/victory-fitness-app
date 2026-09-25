@@ -8,6 +8,7 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
+import RequirementAuditBoundary from '../audit/RequirementAuditBoundary';
 
 interface SetRecord {
   setNum: number;
@@ -173,19 +174,25 @@ export default function ClaudeActiveSessionModal({
 
           {/* Wearables HR zones */}
           {hasWear ? (
-            <View style={styles.wearableCard}>
-              <View style={styles.wearableTop}>
-                <Text style={styles.heartRate}>148</Text>
-                <Text style={styles.wearableMeta}>bpm · zone 3 · Garmin</Text>
+            <RequirementAuditBoundary
+              auditId="APP-EXTRA-006"
+              status="extra"
+              label="NEW FEATURE - LIVE WEARABLE HR ZONES NOT IN REQUIREMENT"
+            >
+              <View style={styles.wearableCard}>
+                <View style={styles.wearableTop}>
+                  <Text style={styles.heartRate}>148</Text>
+                  <Text style={styles.wearableMeta}>bpm · zone 3 · Garmin</Text>
+                </View>
+                <View style={styles.zoneBarsRow}>
+                  <View style={[styles.zoneBar, styles.zoneBarGreen]} />
+                  <View style={[styles.zoneBar, styles.zoneBarGreen]} />
+                  <View style={[styles.zoneBar, styles.zoneBarGold]} />
+                  <View style={styles.zoneBar} />
+                  <View style={styles.zoneBar} />
+                </View>
               </View>
-              <View style={styles.zoneBarsRow}>
-                <View style={[styles.zoneBar, styles.zoneBarGreen]} />
-                <View style={[styles.zoneBar, styles.zoneBarGreen]} />
-                <View style={[styles.zoneBar, styles.zoneBarGold]} />
-                <View style={styles.zoneBar} />
-                <View style={styles.zoneBar} />
-              </View>
-            </View>
+            </RequirementAuditBoundary>
           ) : null}
 
           {/* Exercise Info */}

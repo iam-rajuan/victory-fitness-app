@@ -25,6 +25,7 @@ import {
 } from '../lib/api';
 import { BillingCycle, PLAN_CARDS, SubscriptionTier } from '../lib/access';
 import { replaceRoute } from '../lib/navigation';
+import RequirementAuditBoundary from '../components/audit/RequirementAuditBoundary';
 
 const OBSIDIAN = '#0D0D0D';
 const NAVY = '#0D2B45';
@@ -277,11 +278,17 @@ export default function PlanSelectionScreen() {
             <Ionicons name="arrow-back" size={22} color={MUTED} />
           </TouchableOpacity>
 
-          <Text style={styles.kicker}>21 DAY GOLD BETA</Text>
-          <Text style={styles.title}>Start where you think you belong</Text>
-          <Text style={styles.subtitle}>
-            Your plan is already built either way. Start with the free beta, or choose the tier you want to keep.
-          </Text>
+          <RequirementAuditBoundary
+            auditId="APP-MISMATCH-001"
+            status="mismatch"
+            label="MISMATCH - DOCUMENT REQUIRES 5-DAY GOLD TRIAL"
+          >
+            <Text style={styles.kicker}>21 DAY GOLD BETA</Text>
+            <Text style={styles.title}>Start where you think you belong</Text>
+            <Text style={styles.subtitle}>
+              Your plan is already built either way. Start with the free beta, or choose the tier you want to keep.
+            </Text>
+          </RequirementAuditBoundary>
 
           <View style={styles.segmentTrack}>
             <TouchableOpacity
@@ -312,9 +319,8 @@ export default function PlanSelectionScreen() {
               const companionPrice = billingCycle === 'yearly' ? option.monthly : option.yearly;
               const accent = getTierAccent(option.tier);
 
-              return (
+              const card = (
                 <TouchableOpacity
-                  key={option.tier}
                   style={[
                     styles.planCard,
                     active && styles.planCardActive,
@@ -349,6 +355,21 @@ export default function PlanSelectionScreen() {
                   </View>
                 </TouchableOpacity>
               );
+
+              if (isBeta) {
+                return (
+                  <RequirementAuditBoundary
+                    key={option.tier}
+                    auditId="APP-MISMATCH-002"
+                    status="mismatch"
+                    label="MISMATCH - DOCUMENT REQUIRES 5-DAY GOLD TRIAL"
+                  >
+                    {card}
+                  </RequirementAuditBoundary>
+                );
+              }
+
+              return <React.Fragment key={option.tier}>{card}</React.Fragment>;
             })}
           </View>
 

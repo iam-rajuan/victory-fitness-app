@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { pushRoute } from '../../lib/navigation';
 import { useTheme } from '../../context/ThemeContext';
+import RequirementAuditBoundary from '../audit/RequirementAuditBoundary';
 
 interface ClaudeTierPerksCardProps {
   tier: 'SILVER' | 'GOLD' | 'GOLD_BETA' | 'PLATINUM' | 'INNER_CIRCLE' | 'NONE';
@@ -46,28 +47,34 @@ export default function ClaudeTierPerksCard({ tier }: ClaudeTierPerksCardProps) 
         ]}
       >
         {/* Row 1: Wearables sync */}
-        <Pressable
-          style={[
-            styles.itemRow,
-            styles.itemRowBorder,
-            { borderBottomColor: isDark ? 'rgba(247, 243, 238, 0.1)' : 'rgba(13, 43, 69, 0.08)' },
-          ]}
-          onPress={() => pushRoute(router, '/profile')}
+        <RequirementAuditBoundary
+          auditId="APP-EXTRA-004"
+          status="extra"
+          label="NEW FEATURE - WEARABLE SYNC PERK NOT IN REQUIREMENT"
         >
-          <View style={styles.syncedDot} />
-          <View style={styles.textCol}>
-            <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]}>Wearables synced</Text>
-            <Text
-              style={[
-                styles.itemSub,
-                { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
-              ]}
-            >
-              Resting HR, sleep, calories and heart-rate zones
-            </Text>
-          </View>
-          <Text style={styles.arrowChevron}>›</Text>
-        </Pressable>
+          <Pressable
+            style={[
+              styles.itemRow,
+              styles.itemRowBorder,
+              { borderBottomColor: isDark ? 'rgba(247, 243, 238, 0.1)' : 'rgba(13, 43, 69, 0.08)' },
+            ]}
+            onPress={() => pushRoute(router, '/profile')}
+          >
+            <View style={styles.syncedDot} />
+            <View style={styles.textCol}>
+              <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]}>Wearables synced</Text>
+              <Text
+                style={[
+                  styles.itemSub,
+                  { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
+                ]}
+              >
+                Resting HR, sleep, calories and heart-rate zones
+              </Text>
+            </View>
+            <Text style={styles.arrowChevron}>›</Text>
+          </Pressable>
+        </RequirementAuditBoundary>
 
         {/* Row 2: Human Coaching Session / Brief */}
         <Pressable
