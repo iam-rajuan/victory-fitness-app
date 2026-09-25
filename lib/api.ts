@@ -293,7 +293,31 @@ export type CoachingApplicationPayload = {
   commitment: string;
   injury: string;
   additional_notes?: string;
+  question_answers?: InnerCircleApplicationAnswer[];
   agreement_accepted: boolean;
+};
+
+export type InnerCircleApplicationQuestion = {
+  id: string;
+  order: number;
+  question: string;
+  hint: string;
+  active: boolean;
+};
+
+export type InnerCircleApplicationAnswer = {
+  id: string;
+  order: number;
+  question: string;
+  hint?: string;
+  answer: string;
+};
+
+export type InnerCircleApplicationQuestionsResponse = {
+  title: string;
+  subtitle: string;
+  questions: InnerCircleApplicationQuestion[];
+  updated_at?: string | null;
 };
 
 export type SupportMessagePayload = {
@@ -1380,6 +1404,10 @@ export async function submitCoachingApplication(payload: CoachingApplicationPayl
     method: 'POST',
     body: payload,
   });
+}
+
+export async function fetchInnerCircleApplicationQuestions() {
+  return apiRequest<InnerCircleApplicationQuestionsResponse>('/content/inner-circle/application-questions');
 }
 
 export async function submitSupportMessage(payload: SupportMessagePayload) {

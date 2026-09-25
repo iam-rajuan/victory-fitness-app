@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   StyleSheet,
@@ -11,7 +11,11 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import { submitCoachingApplication } from '../../lib/api';
+import {
+  fetchInnerCircleApplicationQuestions,
+  submitCoachingApplication,
+  type InnerCircleApplicationQuestion,
+} from '../../lib/api';
 
 interface ClaudeInnerCircleApplyModalProps {
   visible: boolean;
@@ -32,31 +36,41 @@ const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System'
 const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
 
-const QUESTIONS = [
+const FALLBACK_QUESTIONS: InnerCircleApplicationQuestion[] = [
   {
-    n: '1',
-    q: 'What have you tried in the last two years, and where did it break down?',
+    id: 'tried_before',
+    order: 1,
+    question: 'What have you tried in the last two years, and where did it break down?',
     hint: 'Be honest about routines that worked for three months and then slipped.',
+    active: true,
   },
   {
-    n: '2',
-    q: 'What does an average working week look like for you?',
+    id: 'working_week',
+    order: 2,
+    question: 'What does an average working week look like for you?',
     hint: 'Hours, travel, screen time, children or commitments that set your schedule.',
+    active: true,
   },
   {
-    n: '3',
-    q: 'What is your current training environment and kit?',
+    id: 'training_environment',
+    order: 3,
+    question: 'What is your current training environment and kit?',
     hint: 'Home gym, commercial gym, barbell, kettlebells, or travelling bodyweight.',
+    active: true,
   },
   {
-    n: '4',
-    q: 'What does success look like in 12 months, in one specific sentence?',
+    id: 'success_12_months',
+    order: 4,
+    question: 'What does success look like in 12 months, in one specific sentence?',
     hint: 'Not “feel better” — what will you actually be able to do or lift?',
+    active: true,
   },
   {
-    n: '5',
-    q: 'Why Victor, and why now?',
+    id: 'why_now',
+    order: 5,
+    question: 'Why Victor, and why now?',
     hint: 'What made you decide you need direct human coaching rather than an app?',
+    active: true,
   },
 ];
 
@@ -70,6 +84,34 @@ export default function ClaudeInnerCircleApplyModal({
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [questionTitle, setQuestionTitle] = useState('Victor reads every one of these himself');
+  const [questionSubtitle, setQuestionSubtitle] = useState(
+    "There is no checkout for Inner Circle. Answer these, and if it looks like a fit he'll call you to talk it through."
+  );
+  const [questions, setQuestions] = useState<InnerCircleApplicationQuestion[]>(FALLBACK_QUESTIONS);
+
+  useEffect(() => {
+    if (!visible) return;
+    let cancelled = false;
+    void fetchInnerCircleApplicationQuestions()
+      .then((res) => {
+        if (cancelled) return;
+        if (res.title) setQuestionTitle(res.title);
+        if (res.subtitle) setQuestionSubtitle(res.subtitle);
+        if (Array.isArray(res.questions) && res.questions.length) {
+          setQuestions(res.questions.filter((q) => q.active !== false).sort((a, b) => a.order - b.order));
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [visible]);
+
+  const normalizedQuestions = useMemo(
+    () => questions.filter((q) => q.active !== false).sort((a, b) => a.order - b.order),
+    [questions]
+  );
 
   const handleAnswerChange = (qIndex: string, text: string) => {
     setAnswers((prev) => ({ ...prev, [qIndex]: text }));
@@ -77,7 +119,7 @@ export default function ClaudeInnerCircleApplyModal({
 
   const handleSubmit = async () => {
     if (submitting) return;
-    const missing = QUESTIONS.find((q) => !String(answers[q.n] || '').trim());
+    const missing = normalizedQuestions.find((q) => !String(answers[q.id] || '').trim());
     if (missing) {
       Alert.alert('Answer needed', 'Please answer all five questions before sending your application.');
       return;
@@ -86,22 +128,32 @@ export default function ClaudeInnerCircleApplyModal({
     const nameParts = String(userName || '').trim().split(/\s+/).filter(Boolean);
     const firstName = nameParts[0] || 'Inner';
     const lastName = nameParts.slice(1).join(' ') || 'Circle';
-    const answerFor = (n: string, fallback: string) => String(answers[n] || fallback).trim().slice(0, 200);
-    const notes = QUESTIONS.map((q) => `${q.n}. ${q.q}\n${String(answers[q.n] || '').trim()}`).join('\n\n');
+    const safeEmail = String(userEmail || '').trim() || 'inner-circle-applicant@victory.local';
+    const questionAnswers = normalizedQuestions.map((q) => ({
+      id: q.id,
+      order: q.order,
+      question: q.question,
+      hint: q.hint,
+      answer: String(answers[q.id] || '').trim(),
+    }));
+    const answerForOrder = (order: number, fallback: string) =>
+      String(questionAnswers.find((item) => item.order === order)?.answer || fallback).trim().slice(0, 200);
+    const notes = questionAnswers.map((item) => `${item.order}. ${item.question}\n${item.answer}`).join('\n\n');
 
     setSubmitting(true);
     try {
       await submitCoachingApplication({
         first_name: firstName,
         last_name: lastName,
-        email: userEmail,
+        email: safeEmail,
         phone_number: userPhone,
-        goal: answerFor('4', 'Inner Circle coaching'),
-        obstacle: answerFor('2', 'Shared in Inner Circle answers'),
+        goal: answerForOrder(1, 'Inner Circle coaching'),
+        obstacle: answerForOrder(2, 'Shared in Inner Circle answers'),
         investment: 'Ready to discuss Inner Circle',
-        commitment: answerFor('3', 'Shared in Inner Circle answers'),
+        commitment: answerForOrder(3, 'Shared in Inner Circle answers'),
         injury: 'Shared in application notes',
         additional_notes: notes,
+        question_answers: questionAnswers,
         agreement_accepted: true,
       });
       setSubmitted(true);
@@ -142,28 +194,26 @@ export default function ClaudeInnerCircleApplyModal({
                 <Text style={styles.metaText}>APPLICATION · 5 QUESTIONS</Text>
               </View>
 
-              <Text style={styles.title}>Victor reads every one of these himself</Text>
-              <Text style={styles.sub}>
-                There is no checkout for Inner Circle. Answer these, and if it looks like a fit he'll call you to talk it through.
-              </Text>
+              <Text style={styles.title}>{questionTitle}</Text>
+              <Text style={styles.sub}>{questionSubtitle}</Text>
 
               {/* 5 Questions matching lines 1392-1403 */}
               <View style={styles.questionsList}>
-                {QUESTIONS.map((q) => (
-                  <View key={`q-${q.n}`} style={styles.qCard}>
+                {normalizedQuestions.map((q, index) => (
+                  <View key={`q-${q.id}`} style={styles.qCard}>
                     <View style={styles.qTopRow}>
                       <View style={styles.qNumCircle}>
-                        <Text style={styles.qNumText}>{q.n}</Text>
+                        <Text style={styles.qNumText}>{q.order || index + 1}</Text>
                       </View>
                       <View style={styles.qTextCol}>
-                        <Text style={styles.qTitle}>{q.q}</Text>
+                        <Text style={styles.qTitle}>{q.question}</Text>
                         <Text style={styles.qHint}>{q.hint}</Text>
                         <TextInput
                           style={styles.qInput}
                           placeholder="Type your answer…"
                           placeholderTextColor="rgba(247,243,238,0.35)"
-                          value={answers[q.n] || ''}
-                          onChangeText={(text) => handleAnswerChange(q.n, text)}
+                          value={answers[q.id] || ''}
+                          onChangeText={(text) => handleAnswerChange(q.id, text)}
                           multiline
                         />
                       </View>
