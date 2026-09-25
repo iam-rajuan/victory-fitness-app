@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { ChallengeItem } from './ClaudeChallengeDirectory';
 import RequirementAuditBoundary from '../audit/RequirementAuditBoundary';
+import { ClaudeInviteView } from './ClaudeInviteModal';
 
 interface ClaudeChallengeDetailModalProps {
   challenge: ChallengeItem | null;
@@ -18,6 +19,7 @@ interface ClaudeChallengeDetailModalProps {
   onJoin: (challenge: ChallengeItem) => void;
   onOpenCohort: () => void;
   onInvite?: () => void;
+  userName?: string;
 }
 
 const NAVY = '#0D2B45';
@@ -37,11 +39,25 @@ export default function ClaudeChallengeDetailModal({
   onJoin,
   onOpenCohort,
   onInvite,
+  userName = 'Michael',
 }: ClaudeChallengeDetailModalProps) {
+  const [showInvite, setShowInvite] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!visible) {
+      setShowInvite(false);
+    }
+  }, [visible]);
+
   if (!challenge) return null;
 
+  const handleClose = () => {
+    setShowInvite(false);
+    onClose();
+  };
+
   return (
-    <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={handleClose}>
       <View style={styles.container}>
         <ScrollView
           style={styles.scrollView}
@@ -112,7 +128,10 @@ export default function ClaudeChallengeDetailModal({
               <TouchableOpacity
                 style={styles.inviteOutlineBtn}
                 activeOpacity={0.8}
-                onPress={onInvite || onClose}
+                onPress={() => {
+                  setShowInvite(true);
+                  onInvite?.();
+                }}
               >
                 <Text style={styles.inviteOutlineBtnText}>Invite someone</Text>
               </TouchableOpacity>
@@ -154,6 +173,17 @@ export default function ClaudeChallengeDetailModal({
             Joining opens the cohort lobby so you start with the people already in it.
           </Text>
         </ScrollView>
+
+        {/* Invite Overlay matching lines 1461-1502 */}
+        {showInvite && (
+          <ClaudeInviteView
+            isOverlay
+            onClose={() => setShowInvite(false)}
+            challengeTitle={challenge.n}
+            challengeDays={challenge.d}
+            userName={userName}
+          />
+        )}
       </View>
     </Modal>
   );

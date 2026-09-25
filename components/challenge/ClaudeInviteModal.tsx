@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,13 +9,19 @@ import {
   Platform,
   Alert,
   Share,
+  Linking,
 } from 'react-native';
 
-interface ClaudeInviteModalProps {
-  visible: boolean;
+export interface ClaudeInviteViewProps {
   onClose: () => void;
   challengeTitle?: string;
+  challengeDays?: number;
   userName?: string;
+  isOverlay?: boolean;
+}
+
+export interface ClaudeInviteModalProps extends ClaudeInviteViewProps {
+  visible: boolean;
 }
 
 const OBSIDIAN = '#0D0D0D';
@@ -31,170 +37,222 @@ const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", de
 const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
-export default function ClaudeInviteModal({
-  visible,
+export function ClaudeInviteView({
   onClose,
   challengeTitle = '21-Day Warrior',
+  challengeDays = 21,
   userName = 'Michael',
-}: ClaudeInviteModalProps) {
-  const inviteMessage = `“Join ${userName}'s team for the ${challengeTitle} on Victory Fitness. We're in this together.”`;
+  isOverlay = false,
+}: ClaudeInviteViewProps) {
+  const [copied, setCopied] = useState(false);
+
+  const displayTitle = challengeTitle || '21-Day Warrior';
+  const displayDays = challengeDays || 21;
+  const inviteMessage = `“Join ${userName}'s team for the ${displayTitle} on Victory Fitness. We're in this together.”`;
   const inviteUrl = 'https://victoryfitness.app/join/CH-WARRIOR';
 
   const handleShareWhatsApp = async () => {
     try {
+      const shareText = `${inviteMessage}\n\n${inviteUrl}`;
+      const waUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
       if (Platform.OS === 'web') {
         if (typeof window !== 'undefined') {
-          window.open(
-            `https://wa.me/?text=${encodeURIComponent(`${inviteMessage}\n\n${inviteUrl}`)}`,
-            '_blank'
-          );
+          window.open(waUrl, '_blank');
         }
       } else {
-        await Share.share({
-          message: `${inviteMessage}\n\n${inviteUrl}`,
-        });
+        const canOpen = await Linking.canOpenURL(waUrl);
+        if (canOpen) {
+          await Linking.openURL(waUrl);
+        } else {
+          await Share.share({ message: shareText });
+        }
       }
     } catch {
       Alert.alert('Invite Link', `${inviteMessage}\n\n${inviteUrl}`);
     }
   };
 
-  const handleCopyLink = () => {
-    Alert.alert('Link Copied', `Guest invite link copied to clipboard:\n${inviteUrl}`);
+  const handleCopyLink = async () => {
+    try {
+      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(inviteUrl);
+      }
+    } catch {
+      // Fallback
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2200);
   };
 
   const handleEmail = () => {
+    const subject = `Join ${userName} for the ${displayTitle}`;
+    const body = `${inviteMessage}\n\n${inviteUrl}`;
+    const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      window.location.href = `mailto:?subject=${encodeURIComponent(
-        `Join ${userName} for the ${challengeTitle}`
-      )}&body=${encodeURIComponent(`${inviteMessage}\n\n${inviteUrl}`)}`;
+      window.location.href = mailtoUrl;
     } else {
-      Alert.alert('Email Invite', `Invite URL ready to send:\n${inviteUrl}`);
+      Linking.openURL(mailtoUrl).catch(() => {
+        Alert.alert('Email Invite', `Invite URL ready to send:\n${inviteUrl}`);
+      });
     }
   };
 
-  const handleInstagram = () => {
+  const handleInstagram = async () => {
+    try {
+      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(inviteUrl);
+      }
+    } catch {}
     Alert.alert(
-      'Share to Story / DM',
-      `Copy this link to share in your Instagram story or message:\n${inviteUrl}`
+      'Share to Instagram',
+      `Invite link copied to clipboard!\nOpen Instagram and paste it in your Story sticker or direct message.`
     );
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
-      <View style={styles.container}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header Row matching line 1463-1466 */}
-          <View style={styles.headerRow}>
-            <Text style={styles.kicker}>{`INVITE · ${challengeTitle.toUpperCase()}`}</Text>
-            <TouchableOpacity onPress={onClose} activeOpacity={0.7} style={styles.closeBtn}>
-              <Text style={styles.closeBtnText}>×</Text>
+    <View style={[styles.container, isOverlay && styles.overlayContainer]}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[styles.scrollContent, isOverlay && styles.overlayScrollContent]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header Row matching line 1463-1466 */}
+        <View style={styles.headerRow}>
+          <Text style={styles.kicker}>{`INVITE · ${displayTitle.toUpperCase()}`}</Text>
+          <TouchableOpacity
+            onPress={onClose}
+            activeOpacity={0.7}
+            style={styles.closeBtn}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Text style={styles.closeBtnText}>×</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Title and Subtitle matching lines 1467-1468 */}
+        <Text style={styles.title}>Ask someone who isn't in the app</Text>
+        <Text style={styles.subtitle}>
+          {`They run their own ${displayDays} days starting the day they join — so they get the full challenge, not the tail end of yours. You both appear on the same board.`}
+        </Text>
+
+        {/* What they will read matching lines 1469-1472 */}
+        <View style={styles.readCard}>
+          <Text style={styles.readKicker}>WHAT THEY'LL READ</Text>
+          <Text style={styles.readQuote}>{inviteMessage}</Text>
+        </View>
+
+        {/* SEND IT Section matching lines 1473-1481 */}
+        <Text style={styles.sendKicker}>SEND IT</Text>
+        <View style={styles.sendButtonsGroup}>
+          <TouchableOpacity
+            style={styles.whatsappBtn}
+            activeOpacity={0.85}
+            onPress={handleShareWhatsApp}
+          >
+            <Text style={styles.whatsappBtnText}>WhatsApp</Text>
+          </TouchableOpacity>
+
+          <View style={styles.secondaryButtonsRow}>
+            <TouchableOpacity
+              style={[styles.outlineBtn, copied && styles.outlineBtnCopied]}
+              activeOpacity={0.8}
+              onPress={handleCopyLink}
+            >
+              <Text style={[styles.outlineBtnText, copied && styles.outlineBtnTextCopied]}>
+                {copied ? '✓ Copied' : 'Copy link'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.outlineBtn}
+              activeOpacity={0.8}
+              onPress={handleEmail}
+            >
+              <Text style={styles.outlineBtnText}>Email</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Title and Subtitle matching lines 1467-1468 */}
-          <Text style={styles.title}>Ask someone who isn't in the app</Text>
-          <Text style={styles.subtitle}>
-            They run their own 21 days starting the day they join — so they get the full challenge,
-            not the tail end of yours. You both appear on the same board.
+          <TouchableOpacity
+            style={styles.outlineBtnWide}
+            activeOpacity={0.8}
+            onPress={handleInstagram}
+          >
+            <Text style={styles.outlineBtnText}>Share to Instagram</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Guest Mode Explainer Card matching lines 1482-1500 */}
+        <View style={styles.guestModeCard}>
+          <Text style={styles.guestModeKicker}>
+            {`GUEST MODE · THEIR OWN ${displayDays} DAYS`}
           </Text>
 
-          {/* What they will read matching lines 1469-1472 */}
-          <View style={styles.readCard}>
-            <Text style={styles.readKicker}>WHAT THEY'LL READ</Text>
-            <Text style={styles.readQuote}>{inviteMessage}</Text>
-          </View>
-
-          {/* SEND IT Section matching lines 1473-1481 */}
-          <Text style={styles.sendKicker}>SEND IT</Text>
-          <View style={styles.sendButtonsGroup}>
-            <TouchableOpacity
-              style={styles.whatsappBtn}
-              activeOpacity={0.85}
-              onPress={handleShareWhatsApp}
-            >
-              <Text style={styles.whatsappBtnText}>WhatsApp</Text>
-            </TouchableOpacity>
-
-            <View style={styles.secondaryButtonsRow}>
-              <TouchableOpacity
-                style={styles.outlineBtn}
-                activeOpacity={0.8}
-                onPress={handleCopyLink}
-              >
-                <Text style={styles.outlineBtnText}>Copy link</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.outlineBtn}
-                activeOpacity={0.8}
-                onPress={handleEmail}
-              >
-                <Text style={styles.outlineBtnText}>Email</Text>
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity
-              style={styles.outlineBtnWide}
-              activeOpacity={0.8}
-              onPress={handleInstagram}
-            >
-              <Text style={styles.outlineBtnText}>Share to Instagram</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Guest Mode Explainer Card matching lines 1482-1500 */}
-          <View style={styles.guestModeCard}>
-            <Text style={styles.guestModeKicker}>GUEST MODE · THEIR OWN 21 DAYS</Text>
-
-            {/* Progress Bars Comparison */}
-            <View style={styles.progressComparisonBox}>
-              <View style={styles.progressRow}>
-                <Text style={styles.userLabelYou}>YOU</Text>
-                <View style={styles.progressBarTrack}>
-                  <View style={[styles.progressBarFill, { width: '86%', backgroundColor: GOLD }]} />
-                </View>
-                <Text style={styles.dayLabel}>day 18</Text>
+          {/* Progress Bars Comparison */}
+          <View style={styles.progressComparisonBox}>
+            <View style={styles.progressRow}>
+              <Text style={styles.userLabelYou}>YOU</Text>
+              <View style={styles.progressBarTrack}>
+                <View style={[styles.progressBarFill, { width: '86%', backgroundColor: GOLD }]} />
               </View>
+              <Text style={styles.dayLabel}>
+                {displayDays > 5 ? 'day 18' : `day ${Math.max(1, displayDays - 1)}`}
+              </Text>
+            </View>
 
-              <View style={[styles.progressRow, { marginTop: 9 }]}>
-                <Text style={styles.userLabelThem}>THEM</Text>
-                <View style={styles.progressBarTrack}>
-                  <View style={[styles.progressBarFill, { width: '5%', backgroundColor: EMERALD }]} />
-                </View>
-                <Text style={styles.dayLabel}>day 1</Text>
+            <View style={[styles.progressRow, { marginTop: 9 }]}>
+              <Text style={styles.userLabelThem}>THEM</Text>
+              <View style={styles.progressBarTrack}>
+                <View style={[styles.progressBarFill, { width: '5%', backgroundColor: EMERALD }]} />
               </View>
-
-              <Text style={styles.comparisonNote}>
-                Different days, same board. You finish first — then cheer them through the rest.
-              </Text>
+              <Text style={styles.dayLabel}>day 1</Text>
             </View>
 
-            {/* Bullets matching lines 1497-1498 */}
-            <View style={styles.bulletRow}>
-              <View style={styles.greenDot} />
-              <Text style={styles.bulletTextPrimary}>
-                The challenge, their daily tick, your leaderboard
-              </Text>
-            </View>
-
-            <View style={styles.bulletRow}>
-              <View style={styles.emptyDot} />
-              <Text style={styles.bulletTextSecondary}>
-                No workout library, no coach, no nutrition
-              </Text>
-            </View>
-
-            <Text style={styles.conversionNote}>
-              On their day 21 they see how they finished, and that is the moment they're asked to subscribe.
+            <Text style={styles.comparisonNote}>
+              Different days, same board. You finish first — then cheer them through the rest.
             </Text>
           </View>
-        </ScrollView>
-      </View>
+
+          {/* Bullets matching lines 1497-1498 */}
+          <View style={styles.bulletRow}>
+            <View style={styles.greenDot} />
+            <Text style={styles.bulletTextPrimary}>
+              The challenge, their daily tick, your leaderboard
+            </Text>
+          </View>
+
+          <View style={styles.bulletRow}>
+            <View style={styles.emptyDot} />
+            <Text style={styles.bulletTextSecondary}>
+              No workout library, no coach, no nutrition
+            </Text>
+          </View>
+
+          <Text style={styles.conversionNote}>
+            {`On their day ${displayDays} they see how they finished, and that is the moment they're asked to subscribe.`}
+          </Text>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+export default function ClaudeInviteModal({
+  visible,
+  onClose,
+  challengeTitle = '21-Day Warrior',
+  challengeDays = 21,
+  userName = 'Michael',
+}: ClaudeInviteModalProps) {
+  if (!visible) return null;
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
+      <ClaudeInviteView
+        onClose={onClose}
+        challengeTitle={challengeTitle}
+        challengeDays={challengeDays}
+        userName={userName}
+      />
     </Modal>
   );
 }
@@ -204,11 +262,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: OBSIDIAN,
   },
+  overlayContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 100,
+    backgroundColor: 'rgba(13, 13, 13, 0.98)',
+  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'web' ? 24 : 54,
+    paddingBottom: 48,
+  },
+  overlayScrollContent: {
     paddingTop: Platform.OS === 'web' ? 24 : 54,
     paddingBottom: 48,
   },
@@ -226,11 +297,13 @@ const styles = StyleSheet.create({
     color: COPPER,
   },
   closeBtn: {
-    padding: 4,
+    padding: 6,
+    cursor: 'pointer' as any,
   },
   closeBtnText: {
     fontFamily: DMSANS,
     fontSize: 22,
+    lineHeight: 22,
     fontWeight: '500',
     color: 'rgba(247, 243, 238, 0.5)',
   },
@@ -288,6 +361,7 @@ const styles = StyleSheet.create({
     backgroundColor: GREEN,
     alignItems: 'center',
     justifyContent: 'center',
+    cursor: 'pointer' as any,
   },
   whatsappBtnText: {
     fontFamily: DMSANS,
@@ -307,6 +381,14 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(247, 243, 238, 0.24)',
     alignItems: 'center',
     justifyContent: 'center',
+    cursor: 'pointer' as any,
+  },
+  outlineBtnCopied: {
+    borderColor: GREEN,
+    backgroundColor: 'rgba(26, 122, 74, 0.15)',
+  },
+  outlineBtnTextCopied: {
+    color: EMERALD,
   },
   outlineBtnWide: {
     height: 48,
@@ -315,6 +397,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(247, 243, 238, 0.24)',
     alignItems: 'center',
     justifyContent: 'center',
+    cursor: 'pointer' as any,
   },
   outlineBtnText: {
     fontFamily: DMSANS,

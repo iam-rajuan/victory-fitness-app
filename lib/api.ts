@@ -1935,10 +1935,14 @@ export async function recordAnalyticsEvent(
   eventType: string,
   details: Record<string, unknown> = {}
 ) {
-  return apiRequest<{ status: string }>('/analytics-events', {
-    method: 'POST',
-    body: { event_type: eventType, details },
-  });
+  try {
+    return await apiRequest<{ status: string }>('/analytics-events', {
+      method: 'POST',
+      body: { event_type: eventType, details },
+    });
+  } catch {
+    return { status: 'ignored' };
+  }
 }
 
 export async function streamCoachVictorMessage(

@@ -117,6 +117,7 @@ export default function ChallengeScreen() {
         visible={showDetailModal}
         onClose={() => setShowDetailModal(false)}
         onJoin={handleJoinChallenge}
+        userName={userName}
         onInvite={handleInviteSomeone}
         onOpenCohort={() => {
           setShowDetailModal(false);
@@ -128,7 +129,10 @@ export default function ChallengeScreen() {
       <ClaudeCohortModal
         visible={showCohortModal}
         onClose={() => setShowCohortModal(false)}
-        onInvite={handleInviteSomeone}
+        onInvite={() => {
+          setShowCohortModal(false);
+          setShowInviteModal(true);
+        }}
         challengeTitle={selectedChallenge?.n || '21-Day Warrior'}
       />
 
@@ -137,6 +141,7 @@ export default function ChallengeScreen() {
         visible={showInviteModal}
         onClose={() => setShowInviteModal(false)}
         challengeTitle={selectedChallenge?.n || '21-Day Warrior'}
+        challengeDays={selectedChallenge?.d || 21}
         userName={userName}
       />
     </View>

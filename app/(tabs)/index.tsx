@@ -49,6 +49,7 @@ import ClaudeActiveSessionModal from '../../components/workout/ClaudeActiveSessi
 import ClaudeSessionCompleteModal from '../../components/workout/ClaudeSessionCompleteModal';
 import ClaudeChallengeDetailModal from '../../components/challenge/ClaudeChallengeDetailModal';
 import ClaudeCohortModal from '../../components/challenge/ClaudeCohortModal';
+import ClaudeInviteModal from '../../components/challenge/ClaudeInviteModal';
 
 const OBSIDIAN = '#0D0D0D';
 const NAVY = '#0D2B45';
@@ -86,6 +87,7 @@ export default function HomeScreen() {
   const [challengeDetailVisible, setChallengeDetailVisible] = useState(false);
   const [cohortModalVisible, setCohortModalVisible] = useState(false);
   const [selectedChallengeDetail, setSelectedChallengeDetail] = useState<any | null>(null);
+  const [inviteModalVisible, setInviteModalVisible] = useState(false);
 
   // Weight check-in prompt
   const [weightPromptVisible, setWeightPromptVisible] = useState(false);
@@ -253,21 +255,9 @@ export default function HomeScreen() {
     router.push('/(tabs)/challenge');
   }, [router]);
 
-  const handleInviteSomeone = useCallback(async () => {
-    const inviteText = `Join Michael's team for the 21-Day Warrior on Victory Fitness. We're in this together.\nhttps://victory-fitness-app.vercel.app/challenges/ch-warrior-21?inviter_id=${currentUser?.id || 'guest'}`;
-    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
-      try {
-        await navigator.share({
-          title: '21-Day Warrior Challenge',
-          text: inviteText,
-        });
-        return;
-      } catch {
-        // Fallback silently
-      }
-    }
-    Alert.alert('Invite · 21-Day Warrior', inviteText);
-  }, [currentUser?.id]);
+  const handleInviteSomeone = useCallback(() => {
+    setInviteModalVisible(true);
+  }, []);
 
   if (checkingAccess) {
     return (
@@ -560,6 +550,7 @@ export default function HomeScreen() {
         challenge={selectedChallengeDetail}
         visible={challengeDetailVisible}
         onClose={() => setChallengeDetailVisible(false)}
+        userName={currentUser?.name || 'Michael'}
         onJoin={() => {
           setChallengeDetailVisible(false);
           setCohortModalVisible(true);
@@ -577,6 +568,15 @@ export default function HomeScreen() {
         onClose={() => setCohortModalVisible(false)}
         onInvite={handleInviteSomeone}
         challengeTitle={selectedChallengeDetail?.n || '21-Day Warrior'}
+      />
+
+      {/* Guest Mode Invite Modal matching lines 1461-1502 */}
+      <ClaudeInviteModal
+        visible={inviteModalVisible}
+        onClose={() => setInviteModalVisible(false)}
+        challengeTitle={selectedChallengeDetail?.n || '21-Day Warrior'}
+        challengeDays={selectedChallengeDetail?.d ? parseInt(String(selectedChallengeDetail.d).replace(/\D/g, ''), 10) || 21 : 21}
+        userName={currentUser?.name || 'Michael'}
       />
     </View>
   );

@@ -34,6 +34,7 @@ import ClaudePlanDetailModal from '../../components/workout/ClaudePlanDetailModa
 import ClaudeActiveSessionModal from '../../components/workout/ClaudeActiveSessionModal';
 import ClaudeSessionCompleteModal from '../../components/workout/ClaudeSessionCompleteModal';
 import ClaudePlanBuildModal from '../../components/workout/ClaudePlanBuildModal';
+import ClaudeWorkoutDetailModal from '../../components/workout/ClaudeWorkoutDetailModal';
 import { getSavedPlanStatus, savePlanBuiltData } from '../../lib/planStorage';
 
 const OBSIDIAN = '#0D0D0D';
@@ -95,6 +96,7 @@ export default function WorkoutScreen() {
   const [planSummaryLine, setPlanSummaryLine] = useState('Get stronger · Mon, Wed, Fri · 40 min · built around dumbbells.');
 
   // Modals State
+  const [workoutDetailModalVisible, setWorkoutDetailModalVisible] = useState(false);
   const [vimeoModalVisible, setVimeoModalVisible] = useState(false);
   const [planDetailVisible, setPlanDetailVisible] = useState(false);
   const [activeSessionVisible, setActiveSessionVisible] = useState(false);
@@ -174,16 +176,17 @@ export default function WorkoutScreen() {
   // Actions
   const handleStartWorkout = (w: GridWorkoutItem) => {
     setSelectedWorkout(w);
-    setVimeoModalVisible(true);
+    setWorkoutDetailModalVisible(true);
+  };
+
+  const handleStartWorkoutFromDetail = () => {
+    setWorkoutDetailModalVisible(false);
+    setActiveSessionVisible(true);
   };
 
   const handleResumeSession = () => {
-    setSelectedWorkout(PROTOTYPE_LIB[5]); // Full Body Strength / Upper Body
-    if (hasCoach) {
-      setActiveSessionVisible(true);
-    } else {
-      setVimeoModalVisible(true);
-    }
+    setSelectedWorkout(PROTOTYPE_LIB[5]); // Full Body Strength
+    setWorkoutDetailModalVisible(true);
   };
 
   const handlePlanBannerPress = () => {
@@ -208,7 +211,7 @@ export default function WorkoutScreen() {
     void recordAnalyticsEvent('workout_completed', {
       workout_id: selectedWorkout?.id || 'session_64',
       tier,
-    });
+    }).catch(() => undefined);
   };
 
   const handlePlanBuilt = async (summary: {
@@ -342,6 +345,17 @@ export default function WorkoutScreen() {
       </ScrollView>
 
       {/* Modals */}
+      {/* 0. Claude Workout Detail Modal (Exact parity with VF Prototype.dc.html lines 1538-1565) */}
+      <ClaudeWorkoutDetailModal
+        visible={workoutDetailModalVisible}
+        onClose={() => setWorkoutDetailModalVisible(false)}
+        onStartWorkout={handleStartWorkoutFromDetail}
+        workoutTitle={selectedWorkout?.name || 'Full Body Strength'}
+        kicker={selectedWorkout?.meta ? selectedWorkout.meta.toUpperCase() : 'STRENGTH · DUMBBELLS · INTERMEDIATE'}
+        durationBadge={selectedWorkout?.badge || '38:00'}
+        vimeoId={selectedWorkout?.vimeoId || '912440323'}
+      />
+
       {/* 1. Vimeo Player Modal */}
       <ClaudeVimeoPlayerModal
         visible={vimeoModalVisible}
