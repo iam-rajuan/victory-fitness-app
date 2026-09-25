@@ -1,6 +1,14 @@
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { OnboardingAnamnese, OnboardingData, OnboardingPersonalProfile, OnboardingSuggestion } from './onboarding';
+import type {
+  OnboardingAnamnese,
+  OnboardingCalculations,
+  OnboardingData,
+  OnboardingPersonalProfile,
+  OnboardingPlanPreview,
+  OnboardingPreferences,
+  OnboardingSuggestion,
+} from './onboarding';
 import { clearAllCachedResources, fetchCachedResource, getCachedResourceSnapshot, primeCachedResource } from './resourceCache';
 import {
   getLongevityDashboardCacheKey,
@@ -1099,6 +1107,9 @@ function normalizeOnboardingState(state: OnboardingState): OnboardingState {
   const personalProfile = (state.personalProfile || {}) as Partial<OnboardingPersonalProfile>;
   const anamnese = (state.anamnese || {}) as Partial<OnboardingAnamnese>;
   const suggestion = state.suggestion as OnboardingSuggestion | null | undefined;
+  const preferences = (state.preferences || {}) as Partial<OnboardingPreferences>;
+  const calculations = (state.calculations || {}) as Partial<OnboardingCalculations>;
+  const planPreview = (state.planPreview || {}) as Partial<OnboardingPlanPreview>;
 
   return {
     userId: String(state.userId || '').trim(),
@@ -1131,6 +1142,33 @@ function normalizeOnboardingState(state: OnboardingState): OnboardingState {
       reason: String(suggestion.reason || '').trim(),
       note: String(suggestion.note || '').trim() || undefined,
     } : null,
+    preferences: {
+      billingCycle: String(preferences.billingCycle || 'year').trim() === 'month' ? 'month' : 'year',
+      region: String(preferences.region || '').trim(),
+      paymentMethodIndex: Math.max(Number(preferences.paymentMethodIndex || 0) || 0, 0),
+      paymentMethodName: String(preferences.paymentMethodName || '').trim(),
+      nudgeChannels: Array.isArray(preferences.nudgeChannels) ? preferences.nudgeChannels.map((item) => String(item).trim()).filter(Boolean) : [],
+      dialCode: String(preferences.dialCode || '').trim(),
+      dialNumber: String(preferences.dialNumber || '').trim(),
+      contactNumber: String(preferences.contactNumber || '').trim(),
+      selectedKit: Array.isArray(preferences.selectedKit) ? preferences.selectedKit.map((item) => String(item).trim()).filter(Boolean) : [],
+    },
+    calculations: {
+      proteinGrams: Math.max(Number(calculations.proteinGrams || 0) || 0, 0),
+      caloriesKcal: Math.max(Number(calculations.caloriesKcal || 0) || 0, 0),
+      carbsGrams: Math.max(Number(calculations.carbsGrams || 0) || 0, 0),
+      waterLiters: Math.max(Number(calculations.waterLiters || 0) || 0, 0),
+      workoutsMatched: Math.max(Number(calculations.workoutsMatched || 0) || 0, 0),
+      weeklyMinutes: Math.max(Number(calculations.weeklyMinutes || 0) || 0, 0),
+      proteinFormula: String(calculations.proteinFormula || '').trim(),
+    },
+    planPreview: {
+      planName: String(planPreview.planName || '').trim(),
+      firstSession: String(planPreview.firstSession || '').trim(),
+      kitShort: String(planPreview.kitShort || '').trim(),
+      weekNote: String(planPreview.weekNote || '').trim(),
+      victorLine: String(planPreview.victorLine || '').trim(),
+    },
     updatedAt: String(state.updatedAt || '').trim() || null,
     completed: Boolean(state.completed),
   };
@@ -1151,6 +1189,9 @@ export async function updateCurrentUserOnboarding(payload: {
   personalProfile?: OnboardingPersonalProfile;
   anamnese?: OnboardingAnamnese;
   suggestion?: OnboardingSuggestion | null;
+  preferences?: OnboardingPreferences;
+  calculations?: OnboardingCalculations;
+  planPreview?: OnboardingPlanPreview;
   completed?: boolean;
 }) {
   const response = await apiRequest<OnboardingState>('/me/onboarding', {

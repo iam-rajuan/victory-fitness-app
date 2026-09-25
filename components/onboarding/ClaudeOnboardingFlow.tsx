@@ -399,6 +399,13 @@ export default function ClaudeOnboardingFlow({
             if (matchedKits.length) setKit(matchedKits);
           }
 
+          const storedKit = Array.isArray(realOnboarding.preferences?.selectedKit)
+            ? realOnboarding.preferences.selectedKit.filter((k: string) => KITS.some((kitDef) => kitDef[0] === k))
+            : [];
+          if (storedKit.length) {
+            setKit(storedKit);
+          }
+
           const parsedDays = Number(realOnboarding.anamnese?.daysPerWeek);
           if (!isNaN(parsedDays) && parsedDays >= 1 && parsedDays <= 7) setDays(parsedDays);
 
@@ -430,19 +437,54 @@ export default function ClaudeOnboardingFlow({
           else if (cc === 'de') setRegion('de');
           else if (cc === 'gh') setRegion('gh');
           else if (cc === 'in') setRegion('in');
+
+          const storedRegion = String(realOnboarding.preferences?.region || '').trim();
+          if (storedRegion && REGIONS[storedRegion]) {
+            setRegion(storedRegion);
+          }
+
+          const storedCycle = String(realOnboarding.preferences?.billingCycle || '').trim();
+          if (storedCycle === 'year' || storedCycle === 'month') {
+            setCycle(storedCycle);
+          }
+
+          const storedMethod = Number(realOnboarding.preferences?.paymentMethodIndex);
+          if (!isNaN(storedMethod) && storedMethod >= 0) {
+            setMethod(storedMethod);
+          }
+
+          if (Array.isArray(realOnboarding.preferences?.nudgeChannels) && realOnboarding.preferences.nudgeChannels.length) {
+            setNudge(realOnboarding.preferences.nudgeChannels);
+          }
+
+          const storedSuggestionTitle = String(realOnboarding.suggestion?.title || '').toLowerCase();
+          if (storedSuggestionTitle.includes('21-day gold beta')) {
+            setTier(BETA_TIER_INDEX);
+          } else if (storedSuggestionTitle) {
+            const tierIndex = prices.findIndex((price) => String(price[0]).toLowerCase() === storedSuggestionTitle);
+            if (tierIndex >= 0) setTier(tierIndex);
+          }
         }
 
-        const profileContactNumber = activeUser?.contact_number || (activeUser as any)?.contactNumber || '';
+        const storedPreferenceContactNumber = realOnboarding?.preferences?.contactNumber || '';
+        const profileContactNumber = activeUser?.contact_number || (activeUser as any)?.contactNumber || storedPreferenceContactNumber || '';
         const hydratedPhoneFromProfile = !cancelled && hydratePhoneNumber(profileContactNumber);
         if (!hydratedPhoneFromProfile && !cancelled) {
-          const fallbackCountryCode = String(realOnboarding?.countryCode || activeUser?.country_code || '').toLowerCase();
-          const fallbackRegion =
-            fallbackCountryCode === 'gb' || fallbackCountryCode === 'uk'
-              ? 'uk'
-              : fallbackCountryCode === 'us' || fallbackCountryCode === 'de' || fallbackCountryCode === 'gh' || fallbackCountryCode === 'in'
-                ? fallbackCountryCode
-                : region;
-          setDialCode(REGIONS[fallbackRegion]?.dial || '+49');
+          const storedDialCode = String(realOnboarding?.preferences?.dialCode || '').trim();
+          const storedDialNumber = String(realOnboarding?.preferences?.dialNumber || '').trim();
+          if (storedDialCode || storedDialNumber) {
+            if (storedDialCode) setDialCode(storedDialCode);
+            if (storedDialNumber) setDialNumber(storedDialNumber);
+          } else {
+            const fallbackCountryCode = String(realOnboarding?.countryCode || activeUser?.country_code || '').toLowerCase();
+            const fallbackRegion =
+              fallbackCountryCode === 'gb' || fallbackCountryCode === 'uk'
+                ? 'uk'
+                : fallbackCountryCode === 'us' || fallbackCountryCode === 'de' || fallbackCountryCode === 'gh' || fallbackCountryCode === 'in'
+                  ? fallbackCountryCode
+                  : region;
+            setDialCode(REGIONS[fallbackRegion]?.dial || '+49');
+          }
         }
 
         // Check if user profile has motivation_statement
@@ -788,13 +830,6 @@ export default function ClaudeOnboardingFlow({
     ? `You are saving ${saving(curTier[1], curTier[2])}% against ${money(curTier[2])} a month — ${money(curTier[2] * 12 - curTier[1])} a year.`
     : `Switching to yearly costs ${money(curTier[1])} and saves you ${money(curTier[2] * 12 - curTier[1])} — ${saving(curTier[1], curTier[2])}%.`;
 
-  // Calculated beta end date (21 days from today)
-  const trialEndDate = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 21);
-    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-  }, []);
-
   // Kit toggler
   const toggleKit = (n: string) => {
     setKit((prev) => (prev.includes(n) ? prev.filter((x) => x !== n) : [...prev, n]));
@@ -812,60 +847,91 @@ export default function ClaudeOnboardingFlow({
 
   // Sync state to backend API on milestones
   const persistOnboardingAnswers = async (markComplete = false) => {
-    try {
-      const countryCode = region === 'uk' ? 'GB' : region.toUpperCase();
-      await updateCurrentUserOnboarding({
-        currentStep: step,
-        country: currentRegion.n,
-        countryCode,
-        motivationStatement: GOALS[goal][0],
-        identityStatement: identity.trim() || 'I am someone who trains even when it is hard',
-        personalProfile: {
-          age: String(age),
-          gender: 'Prefer not to say',
-          height: String(height),
-          heightUnit: 'cm',
-          weight: String(weight),
-          weightUnit: 'kg',
-        },
-        anamnese: {
-          primaryGoal: GOALS[goal][0],
-          activityLevel: 'Moderately active',
-          healthConcerns: [],
-          healthNotes: isHomeGym && kit.length > 0 ? `Home gym kit: ${kit.join(', ')}` : '',
-          daysPerWeek: String(days),
-          timePerSession: String(mins),
-          equipmentAccess: PLACES[place][0],
-        },
-        suggestion: {
-          tier: String(curTier[0]).toUpperCase() as 'SILVER' | 'GOLD' | 'PLATINUM',
-          title: String(curTier[0]),
-          reason: String(curTier[3]),
-        },
-        completed: markComplete,
-      }).catch(() => {});
+    const countryCode = region === 'uk' ? 'GB' : region.toUpperCase();
+    const contactNumber = buildE164PhoneNumber(dialCode, dialNumber);
+    const selectedTierTitle = String(curTier[0]);
 
-      await updateCurrentUserProfile({
-        daily_protein_target: protein,
-        motivation_statement: GOALS[goal][0],
-        identity_statement: identity.trim() || 'I am someone who trains even when it is hard',
-        country: currentRegion.n,
-        country_code: countryCode,
-        contact_number: buildE164PhoneNumber(dialCode, dialNumber) || undefined,
-        training_trigger_action: `${days} sessions of ${mins} minutes`,
-        workout_unlock_label: firstSession,
-        onboarding_completed: markComplete ? true : undefined,
-      }).catch(() => {});
-
-      await updateCurrentUserBodyMetrics({
+    await updateCurrentUserOnboarding({
+      currentStep: step,
+      country: currentRegion.n,
+      countryCode,
+      motivationStatement: GOALS[goal][0],
+      identityStatement: identity.trim() || 'I am someone who trains even when it is hard',
+      personalProfile: {
         age: String(age),
-        height: String(height),
-        weight: String(weight),
         gender: 'Prefer not to say',
-      }).catch(() => {});
-    } catch {
-      // Keep going even if offline or session expires
-    }
+        height: String(height),
+        heightUnit: 'cm',
+        weight: String(weight),
+        weightUnit: 'kg',
+      },
+      anamnese: {
+        primaryGoal: GOALS[goal][0],
+        activityLevel: 'Moderately active',
+        healthConcerns: [],
+        healthNotes: isHomeGym && kit.length > 0 ? `Home gym kit: ${kit.join(', ')}` : '',
+        daysPerWeek: String(days),
+        timePerSession: String(mins),
+        equipmentAccess: PLACES[place][0],
+      },
+      suggestion: {
+        tier: selectedTierTitle.toUpperCase().includes('PLATINUM')
+          ? 'PLATINUM'
+          : selectedTierTitle.toUpperCase().includes('SILVER')
+            ? 'SILVER'
+            : 'GOLD',
+        title: selectedTierTitle,
+        reason: String(curTier[3]),
+        note: isBetaTierSelected ? '21-Day Gold Beta selected by default' : undefined,
+      },
+      preferences: {
+        billingCycle: cycle,
+        region,
+        paymentMethodIndex: method,
+        paymentMethodName: currentRegion.methods[method]?.[0] || '',
+        nudgeChannels: nudge,
+        dialCode,
+        dialNumber,
+        contactNumber,
+        selectedKit: kit,
+      },
+      calculations: {
+        proteinGrams: protein,
+        caloriesKcal: Number(kcal),
+        carbsGrams: Number(carbs),
+        waterLiters: Number(water),
+        workoutsMatched: kitFit,
+        weeklyMinutes: totalMins,
+        proteinFormula: proteinMath,
+      },
+      planPreview: {
+        planName,
+        firstSession,
+        kitShort,
+        weekNote,
+        victorLine,
+      },
+      completed: markComplete,
+    });
+
+    await updateCurrentUserProfile({
+      daily_protein_target: protein,
+      motivation_statement: GOALS[goal][0],
+      identity_statement: identity.trim() || 'I am someone who trains even when it is hard',
+      country: currentRegion.n,
+      country_code: countryCode,
+      contact_number: contactNumber || undefined,
+      training_trigger_action: `${days} sessions of ${mins} minutes`,
+      workout_unlock_label: firstSession,
+      onboarding_completed: markComplete ? true : undefined,
+    });
+
+    await updateCurrentUserBodyMetrics({
+      age: String(age),
+      height: String(height),
+      weight: String(weight),
+      gender: 'Prefer not to say',
+    });
   };
 
   // Activate trial or subscription with fallback for Phase 1 Beta
@@ -903,8 +969,15 @@ export default function ClaudeOnboardingFlow({
   const handleNext = async () => {
     if (step === 5) {
       // Moving to Building step
-      void persistOnboardingAnswers(false);
-      goToStep(6);
+      setSubmitting(true);
+      try {
+        await persistOnboardingAnswers(false);
+        goToStep(6);
+      } catch (error) {
+        console.warn('Failed to save onboarding progress', error);
+      } finally {
+        setSubmitting(false);
+      }
       return;
     }
 
@@ -931,9 +1004,11 @@ export default function ClaudeOnboardingFlow({
       try {
         await activateTrialOrSubscription();
         await persistOnboardingAnswers(false);
+        goToStep(11);
+      } catch (error) {
+        console.warn('Failed to activate onboarding access', error);
       } finally {
         setSubmitting(false);
-        goToStep(11);
       }
       return;
     }
@@ -958,8 +1033,6 @@ export default function ClaudeOnboardingFlow({
             window.history.replaceState(null, '', url.pathname);
           } catch {}
         }
-      } finally {
-        setSubmitting(false);
         if (onComplete) {
           onComplete();
         } else {
@@ -973,6 +1046,10 @@ export default function ClaudeOnboardingFlow({
             }, 300);
           }
         }
+      } catch (error) {
+        console.warn('Failed to complete onboarding', error);
+      } finally {
+        setSubmitting(false);
       }
       return;
     }
@@ -1688,7 +1765,7 @@ export default function ClaudeOnboardingFlow({
                     <Text style={styles.summaryLineGreen}>{`${currentRegion.cur}0`}</Text>
                   </View>
                   <View style={styles.summaryLine}>
-                    <Text style={styles.summaryLineLabel}>{`${trialEndDate}, when the beta ends`}</Text>
+                    <Text style={styles.summaryLineLabel}>After trial</Text>
                     <Text style={styles.summaryLineWhite}>{payAmount}</Text>
                   </View>
                   <View style={styles.summaryLineLast}>
@@ -1790,7 +1867,7 @@ export default function ClaudeOnboardingFlow({
                   <Text style={styles.successCheckIcon}>✓</Text>
                 </View>
 
-                <Text style={styles.copperKicker}>{`${curTier[0].toUpperCase()} TRIAL · DAY 1 OF 5`}</Text>
+                <Text style={styles.copperKicker}>{`${curTier[0].toUpperCase()} · ACTIVE`}</Text>
                 <Text style={styles.readyHeadline}>You're set up.{'\n'}Two minutes flat.</Text>
                 <Text style={styles.stepSubtitle}>
                   Your first session is waiting, your protein target is set, and your plan already knows what you own and
@@ -1806,9 +1883,6 @@ export default function ClaudeOnboardingFlow({
 
                 {/* Reminder Settings */}
                 <View style={styles.nudgeBox}>
-                  <View style={styles.nudgeNewFeatureLabel}>
-                    <Text style={styles.nudgeNewFeatureLabelText}>NEW FEATURE — NOT IN AGREED REQUIREMENT</Text>
-                  </View>
                   <View style={styles.nudgeHeader}>
                     <Text style={styles.nudgeKicker}>WHERE SHOULD I NUDGE YOU?</Text>
                     <Text style={styles.nudgeSubKicker}>PICK ONE OR ALL</Text>
@@ -2970,21 +3044,6 @@ const styles = StyleSheet.create({
     marginBottom: 22,
     borderWidth: 2,
     borderColor: '#E53935',
-  },
-  nudgeNewFeatureLabel: {
-    backgroundColor: 'rgba(229,57,53,0.12)',
-    borderRadius: 6,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    marginBottom: 12,
-    alignSelf: 'flex-start',
-  },
-  nudgeNewFeatureLabelText: {
-    fontFamily: DMSANS,
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 1.2,
-    color: '#E53935',
   },
   nudgeHeader: {
     flexDirection: 'row',

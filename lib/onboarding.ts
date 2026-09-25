@@ -30,6 +30,36 @@ export type OnboardingSuggestion = {
   note?: string;
 };
 
+export type OnboardingPreferences = {
+  billingCycle: 'year' | 'month';
+  region: string;
+  paymentMethodIndex: number;
+  paymentMethodName: string;
+  nudgeChannels: string[];
+  dialCode: string;
+  dialNumber: string;
+  contactNumber: string;
+  selectedKit: string[];
+};
+
+export type OnboardingCalculations = {
+  proteinGrams: number;
+  caloriesKcal: number;
+  carbsGrams: number;
+  waterLiters: number;
+  workoutsMatched: number;
+  weeklyMinutes: number;
+  proteinFormula: string;
+};
+
+export type OnboardingPlanPreview = {
+  planName: string;
+  firstSession: string;
+  kitShort: string;
+  weekNote: string;
+  victorLine: string;
+};
+
 export type OnboardingData = {
   userId: string;
   currentStep: number;
@@ -41,6 +71,9 @@ export type OnboardingData = {
   personalProfile: OnboardingPersonalProfile;
   anamnese: OnboardingAnamnese;
   suggestion: OnboardingSuggestion | null;
+  preferences: OnboardingPreferences;
+  calculations: OnboardingCalculations;
+  planPreview: OnboardingPlanPreview;
   updatedAt: string | null;
 };
 
@@ -67,6 +100,36 @@ const EMPTY_ANAMNESE: OnboardingAnamnese = {
   daysPerWeek: '',
   timePerSession: '',
   equipmentAccess: '',
+};
+
+const EMPTY_PREFERENCES: OnboardingPreferences = {
+  billingCycle: 'year',
+  region: '',
+  paymentMethodIndex: 0,
+  paymentMethodName: '',
+  nudgeChannels: [],
+  dialCode: '',
+  dialNumber: '',
+  contactNumber: '',
+  selectedKit: [],
+};
+
+const EMPTY_CALCULATIONS: OnboardingCalculations = {
+  proteinGrams: 0,
+  caloriesKcal: 0,
+  carbsGrams: 0,
+  waterLiters: 0,
+  workoutsMatched: 0,
+  weeklyMinutes: 0,
+  proteinFormula: '',
+};
+
+const EMPTY_PLAN_PREVIEW: OnboardingPlanPreview = {
+  planName: '',
+  firstSession: '',
+  kitShort: '',
+  weekNote: '',
+  victorLine: '',
 };
 
 function canUseLocalStorage() {
@@ -114,6 +177,37 @@ function normalizeOnboardingData(raw: unknown): OnboardingData | null {
           note: String((source.suggestion as Record<string, unknown>).note ?? '').trim() || undefined,
         }
       : null,
+    preferences: {
+      billingCycle: String((source.preferences as Record<string, unknown> | undefined)?.billingCycle ?? 'year').trim() === 'month' ? 'month' : 'year',
+      region: String((source.preferences as Record<string, unknown> | undefined)?.region ?? '').trim(),
+      paymentMethodIndex: Math.max(Number((source.preferences as Record<string, unknown> | undefined)?.paymentMethodIndex ?? 0) || 0, 0),
+      paymentMethodName: String((source.preferences as Record<string, unknown> | undefined)?.paymentMethodName ?? '').trim(),
+      nudgeChannels: Array.isArray((source.preferences as Record<string, unknown> | undefined)?.nudgeChannels)
+        ? ((source.preferences as Record<string, unknown>).nudgeChannels as unknown[]).map((item) => String(item).trim()).filter(Boolean)
+        : [],
+      dialCode: String((source.preferences as Record<string, unknown> | undefined)?.dialCode ?? '').trim(),
+      dialNumber: String((source.preferences as Record<string, unknown> | undefined)?.dialNumber ?? '').trim(),
+      contactNumber: String((source.preferences as Record<string, unknown> | undefined)?.contactNumber ?? '').trim(),
+      selectedKit: Array.isArray((source.preferences as Record<string, unknown> | undefined)?.selectedKit)
+        ? ((source.preferences as Record<string, unknown>).selectedKit as unknown[]).map((item) => String(item).trim()).filter(Boolean)
+        : [],
+    },
+    calculations: {
+      proteinGrams: Math.max(Number((source.calculations as Record<string, unknown> | undefined)?.proteinGrams ?? 0) || 0, 0),
+      caloriesKcal: Math.max(Number((source.calculations as Record<string, unknown> | undefined)?.caloriesKcal ?? 0) || 0, 0),
+      carbsGrams: Math.max(Number((source.calculations as Record<string, unknown> | undefined)?.carbsGrams ?? 0) || 0, 0),
+      waterLiters: Math.max(Number((source.calculations as Record<string, unknown> | undefined)?.waterLiters ?? 0) || 0, 0),
+      workoutsMatched: Math.max(Number((source.calculations as Record<string, unknown> | undefined)?.workoutsMatched ?? 0) || 0, 0),
+      weeklyMinutes: Math.max(Number((source.calculations as Record<string, unknown> | undefined)?.weeklyMinutes ?? 0) || 0, 0),
+      proteinFormula: String((source.calculations as Record<string, unknown> | undefined)?.proteinFormula ?? '').trim(),
+    },
+    planPreview: {
+      planName: String((source.planPreview as Record<string, unknown> | undefined)?.planName ?? '').trim(),
+      firstSession: String((source.planPreview as Record<string, unknown> | undefined)?.firstSession ?? '').trim(),
+      kitShort: String((source.planPreview as Record<string, unknown> | undefined)?.kitShort ?? '').trim(),
+      weekNote: String((source.planPreview as Record<string, unknown> | undefined)?.weekNote ?? '').trim(),
+      victorLine: String((source.planPreview as Record<string, unknown> | undefined)?.victorLine ?? '').trim(),
+    },
     updatedAt: String(source.updatedAt ?? '').trim() || null,
   };
 }
@@ -130,6 +224,9 @@ function buildEmptyOnboardingData(userId: string): OnboardingData {
     personalProfile: { ...EMPTY_PERSONAL_PROFILE },
     anamnese: { ...EMPTY_ANAMNESE },
     suggestion: null,
+    preferences: { ...EMPTY_PREFERENCES },
+    calculations: { ...EMPTY_CALCULATIONS },
+    planPreview: { ...EMPTY_PLAN_PREVIEW },
     updatedAt: null,
   };
 }
