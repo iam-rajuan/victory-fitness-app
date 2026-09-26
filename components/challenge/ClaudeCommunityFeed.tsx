@@ -9,7 +9,9 @@ import {
   ScrollView,
   Platform,
   Alert,
+  Image,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../context/ThemeContext';
 
 export interface CommunityPost {
@@ -21,20 +23,34 @@ export interface CommunityPost {
   body: string;
   react: string;
   cheerCount: number;
+  commentCount?: number;
   hasCheered?: boolean;
   hasPhoto?: boolean;
   photoNote?: string;
+  imageUrl?: string;
   hasVideo?: boolean;
   videoTitle?: string;
   videoMeta?: string;
+  videoUrl?: string;
 }
+
+export type CommunityPostDraft = {
+  content: string;
+  kind: 'Text only' | 'Photo' | 'YouTube link';
+  audience: 'auto' | 'tier' | 'all';
+  imageBase64?: string;
+  imageMimeType?: string;
+  imageFileName?: string;
+  externalVideoUrl?: string;
+};
 
 interface ClaudeCommunityFeedProps {
   userTier?: string;
   userInitials?: string;
   posts?: CommunityPost[];
-  onPublishPost?: (content: string, kind: 'Text only' | 'Photo' | 'YouTube link') => Promise<void>;
+  onPublishPost?: (draft: CommunityPostDraft) => Promise<void>;
   onToggleCheer?: (postId: string) => Promise<void>;
+  onScopeChange?: (scope: 'auto' | 'tier' | 'all') => void;
 }
 
 const OBSIDIAN = '#0D0D0D';
@@ -54,6 +70,7 @@ export default function ClaudeCommunityFeed({
   posts = [],
   onPublishPost,
   onToggleCheer,
+  onScopeChange,
 }: ClaudeCommunityFeedProps) {
   const { colors, isDark } = useTheme();
 
@@ -92,28 +109,35 @@ export default function ClaudeCommunityFeed({
   const [postKind, setPostKind] = useState<'Text only' | 'Photo' | 'YouTube link'>('Photo');
   const [postDraft, setPostDraft] = useState('');
   const [postScope, setPostScope] = useState<'auto' | 'tier' | 'all'>('auto');
-  const [hasAttachedPhoto, setHasAttachedPhoto] = useState(false);
+  const [attachedPhoto, setAttachedPhoto] = useState<{
+    uri: string;
+    base64: string;
+    mimeType: string;
+    fileName: string;
+  } | null>(null);
+  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [isPublishing, setIsPublishing] = useState(false);
 
   // Feed scope titles matching lines 3398-3407
   const feedScopeTitle =
     scope === 'auto'
-      ? 'Your circle · 9 people'
+      ? `Your circle · ${feed.length} ${feed.length === 1 ? 'post' : 'posts'}`
       : scope === 'all'
-      ? 'Everyone on Victory Fitness'
+      ? `Everyone on Victory Fitness · ${feed.length} ${feed.length === 1 ? 'post' : 'posts'}`
       : cleanTier === 'silver'
-      ? 'Silver members'
+      ? `Silver members · ${feed.length} ${feed.length === 1 ? 'post' : 'posts'}`
       : cleanTier === 'gold'
-      ? 'Gold and Silver members'
+      ? `Gold and Silver members · ${feed.length} ${feed.length === 1 ? 'post' : 'posts'}`
       : cleanTier === 'platinum'
-      ? 'Platinum, Gold and Silver'
-      : 'Every tier, including Inner Circle';
+      ? `Platinum, Gold and Silver · ${feed.length} ${feed.length === 1 ? 'post' : 'posts'}`
+      : `Every tier, including Inner Circle · ${feed.length} ${feed.length === 1 ? 'post' : 'posts'}`;
 
   const feedScopeNote =
     scope === 'auto'
-      ? '6 of 9 trained today. You are one of them.'
+      ? 'Showing posts returned by your backend community circle.'
       : scope === 'all'
-      ? 'Busier, and nobody is hidden from you.'
-      : 'Your tier and everything below it.';
+      ? 'Showing backend posts available to your account.'
+      : 'Showing backend posts for your selected tier audience.';
 
   // Post audience descriptions matching lines 3396-3397
   const postAudience =
@@ -131,12 +155,12 @@ export default function ClaudeCommunityFeed({
       prev.map((p) => {
         if (p.id === postId) {
           const nextCheered = !p.hasCheered;
-          const nextCount = nextCheered ? p.cheerCount + 1 : p.cheerCount - 1;
+          const nextCount = Math.max(0, nextCheered ? p.cheerCount + 1 : p.cheerCount - 1);
           return {
             ...p,
             hasCheered: nextCheered,
             cheerCount: nextCount,
-            react: `${nextCount} cheers · 3 comments`,
+            react: `${nextCount} cheers · ${Math.max(0, Number(p.commentCount || 0))} comments`,
           };
         }
         return p;
@@ -163,18 +187,66 @@ export default function ClaudeCommunityFeed({
   };
 
   const handlePublishPost = async () => {
-    if (!postDraft.trim() && !hasAttachedPhoto && postKind !== 'YouTube link') {
+    if (!postDraft.trim() && !attachedPhoto && !(postKind === 'YouTube link' && youtubeUrl.trim())) {
       Alert.alert('Empty Post', 'Please write something to share with your circle.');
       return;
     }
+    setIsPublishing(true);
     try {
-      await onPublishPost?.(postDraft.trim(), postKind);
+      await onPublishPost?.({
+        content: postDraft.trim(),
+        kind: postKind,
+        audience: postScope,
+        imageBase64: attachedPhoto?.base64,
+        imageMimeType: attachedPhoto?.mimeType,
+        imageFileName: attachedPhoto?.fileName,
+        externalVideoUrl: postKind === 'YouTube link' ? youtubeUrl.trim() : undefined,
+      });
       setPostDraft('');
-      setHasAttachedPhoto(false);
+      setAttachedPhoto(null);
+      setYoutubeUrl('');
       setShowPostModal(false);
       Alert.alert('Posted', `Your post has been published to ${postAudienceShort}.`);
     } catch (error: any) {
       Alert.alert('Post failed', error?.message || 'Please try again.');
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  const selectPhoto = async (source: 'camera' | 'library') => {
+    try {
+      const permission = source === 'camera'
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (permission.status !== 'granted') {
+        Alert.alert('Permission needed', source === 'camera' ? 'Please allow camera access to take a photo.' : 'Please allow photo library access to upload a photo.');
+        return;
+      }
+      const result = source === 'camera'
+        ? await ImagePicker.launchCameraAsync({
+            mediaTypes: ['images'],
+            quality: 0.78,
+            base64: true,
+          })
+        : await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            quality: 0.78,
+            base64: true,
+          });
+      if (result.canceled || !result.assets?.[0]?.base64) return;
+      const asset = result.assets[0];
+      const base64 = asset.base64;
+      if (!base64) return;
+      setAttachedPhoto({
+        uri: asset.uri,
+        base64,
+        mimeType: asset.mimeType || 'image/jpeg',
+        fileName: asset.fileName || `community-photo-${Date.now()}.jpg`,
+      });
+      setPostKind('Photo');
+    } catch (error: any) {
+      Alert.alert('Photo failed', error?.message || 'Please try again.');
     }
   };
 
@@ -226,7 +298,10 @@ export default function ClaudeCommunityFeed({
                   on ? styles.scopeChipActive : styles.scopeChipInactive,
                 ]}
                 activeOpacity={0.8}
-                onPress={() => setScope(c.id)}
+                onPress={() => {
+                  setScope(c.id);
+                  onScopeChange?.(c.id);
+                }}
               >
                 <Text
                   style={[
@@ -314,6 +389,7 @@ export default function ClaudeCommunityFeed({
             {/* Photo attachment if present matching lines 938-942 */}
             {p.hasPhoto && (
               <View style={styles.photoContainer}>
+                {p.imageUrl ? <Image source={{ uri: p.imageUrl }} style={styles.photoImage} resizeMode="cover" /> : null}
                 <Text style={styles.photoTag}>{p.photoNote || 'workout logged'}</Text>
               </View>
             )}
@@ -328,7 +404,7 @@ export default function ClaudeCommunityFeed({
                 </View>
                 <View style={styles.videoMetaWrap}>
                   <Text style={styles.videoTitleText}>{p.videoTitle}</Text>
-                  <Text style={styles.videoMetaText}>{p.videoMeta}</Text>
+                  <Text style={styles.videoMetaText}>{p.videoMeta || p.videoUrl}</Text>
                 </View>
               </View>
             )}
@@ -432,21 +508,22 @@ export default function ClaudeCommunityFeed({
               <View style={styles.photoSlotCard}>
                 <View style={styles.photoPlaceholderBox}>
                   <Text style={styles.photoPlaceholderText}>
-                    {hasAttachedPhoto ? 'photo ready to publish' : 'your photo appears here'}
+                    {attachedPhoto ? 'photo ready to publish' : 'your photo appears here'}
                   </Text>
+                  {attachedPhoto ? <Image source={{ uri: attachedPhoto.uri }} style={styles.photoPreviewImage} resizeMode="cover" /> : null}
                 </View>
                 <View style={styles.photoActionButtonsRow}>
                   <TouchableOpacity
                     style={styles.photoPrimaryBtn}
                     activeOpacity={0.85}
-                    onPress={() => setHasAttachedPhoto(true)}
+                    onPress={() => void selectPhoto('camera')}
                   >
                     <Text style={styles.photoPrimaryBtnText}>Take a photo</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.photoOutlineBtn}
                     activeOpacity={0.8}
-                    onPress={() => setHasAttachedPhoto(true)}
+                    onPress={() => void selectPhoto('library')}
                   >
                     <Text style={styles.photoOutlineBtnText}>Upload</Text>
                   </TouchableOpacity>
@@ -458,16 +535,28 @@ export default function ClaudeCommunityFeed({
             {postKind === 'YouTube link' && (
               <View style={styles.videoSlotCard}>
                 <Text style={styles.videoSlotKicker}>YOUTUBE LINK</Text>
-                <Text style={styles.videoSlotUrl}>youtu.be/dQw4w9WgXcQ</Text>
-                <View style={styles.videoPreviewSnippet}>
-                  <View style={styles.videoMiniThumb}>
-                    <View style={styles.miniPlayTriangle} />
-                  </View>
-                  <View style={styles.videoMiniInfo}>
-                    <Text style={styles.videoMiniTitle}>Preview loaded</Text>
-                    <Text style={styles.videoMiniSub}>Plays inside the feed · 4:12</Text>
-                  </View>
+                <View style={styles.videoUrlInputWrap}>
+                  <TextInput
+                    style={styles.videoUrlInput}
+                    placeholder="Paste YouTube or Vimeo link..."
+                    placeholderTextColor="rgba(247,243,238,0.38)"
+                    value={youtubeUrl}
+                    onChangeText={setYoutubeUrl}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
                 </View>
+                {youtubeUrl.trim() ? (
+                  <View style={styles.videoPreviewSnippet}>
+                    <View style={styles.videoMiniThumb}>
+                      <View style={styles.miniPlayTriangle} />
+                    </View>
+                    <View style={styles.videoMiniInfo}>
+                      <Text style={styles.videoMiniTitle}>Preview ready</Text>
+                      <Text style={styles.videoMiniSub}>Publishes from the linked video</Text>
+                    </View>
+                  </View>
+                ) : null}
               </View>
             )}
 
@@ -509,8 +598,9 @@ export default function ClaudeCommunityFeed({
               style={styles.modalSubmitBtn}
               activeOpacity={0.85}
               onPress={handlePublishPost}
+              disabled={isPublishing}
             >
-              <Text style={styles.modalSubmitBtnText}>{`Post to ${postAudienceShort}`}</Text>
+              <Text style={styles.modalSubmitBtnText}>{isPublishing ? 'Posting...' : `Post to ${postAudienceShort}`}</Text>
             </TouchableOpacity>
 
             <Text style={styles.modalFootnote}>
@@ -708,6 +798,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#0a2439',
     justifyContent: 'flex-end',
     padding: 12,
+    overflow: 'hidden',
+  },
+  photoImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
   },
   photoTag: {
     alignSelf: 'flex-start',
@@ -937,6 +1033,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
+    overflow: 'hidden',
+  },
+  photoPreviewImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
   },
   photoPlaceholderText: {
     fontFamily: MONO,
@@ -1001,6 +1103,19 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(247, 243, 238, 0.22)',
     marginBottom: 12,
+  },
+  videoUrlInputWrap: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(247, 243, 238, 0.22)',
+    marginBottom: 12,
+  },
+  videoUrlInput: {
+    fontFamily: MONO,
+    fontSize: 13,
+    fontWeight: '500',
+    color: IVORY,
+    paddingVertical: 0,
+    paddingBottom: 10,
   },
   videoPreviewSnippet: {
     flexDirection: 'row',

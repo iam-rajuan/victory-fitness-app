@@ -17,7 +17,7 @@ import ClaudeChallengeDirectory, { ChallengeItem } from '../../components/challe
 import ClaudeChallengeDetailModal from '../../components/challenge/ClaudeChallengeDetailModal';
 import ClaudeCohortModal from '../../components/challenge/ClaudeCohortModal';
 import ClaudeInviteModal from '../../components/challenge/ClaudeInviteModal';
-import ClaudeCommunityFeed, { CommunityPost } from '../../components/challenge/ClaudeCommunityFeed';
+import ClaudeCommunityFeed, { CommunityPost, CommunityPostDraft } from '../../components/challenge/ClaudeCommunityFeed';
 import { useTheme } from '../../context/ThemeContext';
 
 const OBSIDIAN = '#0D0D0D';
@@ -111,12 +111,15 @@ function mapCommunityPost(raw: Record<string, any>): CommunityPost {
     body: String(raw.content || '').trim(),
     react: `${likeCount} cheers · ${commentCount} comments`,
     cheerCount: likeCount,
+    commentCount,
     hasCheered: Boolean(raw.viewer_has_liked),
     hasPhoto: Boolean(imageUrl),
-    photoNote: imageUrl ? 'photo attached' : undefined,
+    photoNote: imageUrl ? (raw.is_workout_share ? 'workout logged' : 'photo attached') : undefined,
+    imageUrl,
     hasVideo: Boolean(videoUrl),
     videoTitle: videoUrl ? 'Community video' : undefined,
-    videoMeta: videoUrl ? 'Opens from the community feed' : undefined,
+    videoMeta: videoUrl ? 'Linked from the backend feed' : undefined,
+    videoUrl,
   };
 }
 
@@ -130,6 +133,7 @@ export default function ChallengeScreen() {
   const [activeChallenge, setActiveChallenge] = useState<ChallengeItem | null>(null);
   const [isLoadingChallenges, setIsLoadingChallenges] = useState(true);
   const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([]);
+  const [communityScope, setCommunityScope] = useState<'auto' | 'tier' | 'all'>('auto');
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showCohortModal, setShowCohortModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -197,14 +201,25 @@ export default function ChallengeScreen() {
     }
   }, []);
 
-  const loadCommunityPosts = useCallback(async () => {
+  const loadCommunityPosts = useCallback(async (scope: 'auto' | 'tier' | 'all' = communityScope) => {
     try {
-      const response = await apiRequest<{ posts?: Array<Record<string, any>> }>('/community/posts?limit=50');
+      const params = new URLSearchParams({ limit: '50' });
+      if (scope === 'tier') {
+        const normalizedTier = userTier.includes('PLATINUM')
+          ? 'PLATINUM'
+          : userTier.includes('INNER')
+          ? 'INNER_CIRCLE'
+          : userTier.includes('SILVER')
+          ? 'SILVER'
+          : 'GOLD';
+        params.set('audience', normalizedTier);
+      }
+      const response = await apiRequest<{ posts?: Array<Record<string, any>> }>(`/community/posts?${params.toString()}`);
       setCommunityPosts((response.posts || []).map(mapCommunityPost).filter((post) => post.id));
     } catch {
       setCommunityPosts([]);
     }
-  }, []);
+  }, [communityScope, userTier]);
 
   useEffect(() => {
     void loadChallenges();
@@ -247,14 +262,20 @@ export default function ChallengeScreen() {
     setShowInviteModal(true);
   };
 
-  const handlePublishCommunityPost = useCallback(async (content: string, kind: 'Text only' | 'Photo' | 'YouTube link') => {
+  const handlePublishCommunityPost = useCallback(async (draft: CommunityPostDraft) => {
+    const audience = draft.audience === 'all' ? 'ALL' : draft.audience === 'tier' ? 'TIER' : 'AUTO';
     await apiRequest('/community/posts', {
       method: 'POST',
       body: {
-        content: content || (kind === 'Photo' ? 'Shared a training photo.' : 'Shared a community update.'),
+        content: draft.content || (draft.kind === 'Photo' ? 'Shared a training photo.' : 'Shared a community update.'),
+        audience,
+        image_base64: draft.kind === 'Photo' ? draft.imageBase64 : undefined,
+        external_video_url: draft.kind === 'YouTube link' ? draft.externalVideoUrl : undefined,
+        mime_type: draft.imageMimeType || 'image/jpeg',
+        file_name: draft.imageFileName,
       },
     });
-    await loadCommunityPosts();
+    await loadCommunityPosts(draft.audience);
   }, [loadCommunityPosts]);
 
   const handleToggleCommunityCheer = useCallback(async (postId: string) => {
@@ -368,6 +389,10 @@ export default function ChallengeScreen() {
             posts={communityPosts}
             onPublishPost={handlePublishCommunityPost}
             onToggleCheer={handleToggleCommunityCheer}
+            onScopeChange={(scope) => {
+              setCommunityScope(scope);
+              void loadCommunityPosts(scope);
+            }}
           />
         )}
       </ScrollView>
