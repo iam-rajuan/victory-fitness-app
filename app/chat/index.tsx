@@ -55,6 +55,128 @@ const QUICK_PROMPTS = [
   'Swap dinner from my week plan.',
 ];
 
+function parseInlineMarkdown(text: string, baseStyle: any, keyPrefix: string) {
+  if (!text) return null;
+  const regex = /(\*\*.*?\*\*|\*.*?\*|`.*?`)/g;
+  const parts = text.split(regex);
+
+  return parts.map((part, idx) => {
+    if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
+      return (
+        <Text key={`${keyPrefix}-b-${idx}`} style={[baseStyle, styles.inlineBold]}>
+          {part.slice(2, -2)}
+        </Text>
+      );
+    }
+    if (part.startsWith('*') && part.endsWith('*') && part.length >= 2) {
+      return (
+        <Text key={`${keyPrefix}-i-${idx}`} style={[baseStyle, styles.inlineItalic]}>
+          {part.slice(1, -1)}
+        </Text>
+      );
+    }
+    if (part.startsWith('`') && part.endsWith('`') && part.length >= 2) {
+      return (
+        <Text key={`${keyPrefix}-c-${idx}`} style={[baseStyle, styles.inlineCode]}>
+          {part.slice(1, -1)}
+        </Text>
+      );
+    }
+    return (
+      <Text key={`${keyPrefix}-t-${idx}`} style={baseStyle}>
+        {part}
+      </Text>
+    );
+  });
+}
+
+function FormattedCoachMessage({ text }: { text: string }) {
+  if (!text) return null;
+
+  const lines = text.split('\n');
+
+  return (
+    <View style={styles.formattedCoachWrap}>
+      {lines.map((rawLine, lineIdx) => {
+        const trimmed = rawLine.trim();
+
+        // Empty line -> spacer
+        if (!trimmed) {
+          return <View key={`sp-${lineIdx}`} style={styles.lineSpacer} />;
+        }
+
+        // Markdown headings: ### / ## / #
+        if (/^#{1,3}\s+/.test(trimmed)) {
+          const headingText = trimmed.replace(/^#{1,3}\s+/, '');
+          return (
+            <Text key={`hd-${lineIdx}`} style={styles.coachHeadingText}>
+              {parseInlineMarkdown(headingText, styles.coachHeadingText, `hd-${lineIdx}`)}
+            </Text>
+          );
+        }
+
+        // Section header wrapped in bold: **Heading:** or **Heading**
+        const boldHeaderMatch = trimmed.match(/^\*\*(.+?)\*\*:?$/);
+        if (boldHeaderMatch) {
+          return (
+            <View key={`sh-${lineIdx}`} style={styles.coachSectionHeader}>
+              <Text style={styles.coachSectionHeaderText}>
+                {boldHeaderMatch[1]}
+              </Text>
+            </View>
+          );
+        }
+
+        // Numbered list item: 1. Item or 1. **Title** description
+        const numberedMatch = rawLine.match(/^(\s*)(\d+)\.\s+(.*)$/);
+        if (numberedMatch) {
+          const num = numberedMatch[2];
+          const content = numberedMatch[3];
+          return (
+            <View key={`num-${lineIdx}`} style={styles.numberedRow}>
+              <View style={styles.numberBadge}>
+                <Text style={styles.numberBadgeText}>{num}</Text>
+              </View>
+              <View style={styles.numberedContentWrap}>
+                <Text style={styles.numberedContentText}>
+                  {parseInlineMarkdown(content, styles.coachBubbleText, `num-${lineIdx}`)}
+                </Text>
+              </View>
+            </View>
+          );
+        }
+
+        // Bullet item: - item or * item or • item (with possible indentation)
+        const bulletMatch = rawLine.match(/^(\s*)(?:[-*•])\s+(.*)$/);
+        if (bulletMatch) {
+          const isIndented = bulletMatch[1].length >= 2;
+          const content = bulletMatch[2];
+          return (
+            <View
+              key={`bul-${lineIdx}`}
+              style={[styles.bulletRow, isIndented && styles.bulletRowIndented]}
+            >
+              <Text style={styles.bulletDot}>•</Text>
+              <View style={styles.bulletContentWrap}>
+                <Text style={styles.bulletContentText}>
+                  {parseInlineMarkdown(content, styles.coachBubbleText, `bul-${lineIdx}`)}
+                </Text>
+              </View>
+            </View>
+          );
+        }
+
+        // Regular paragraph
+        return (
+          <Text key={`p-${lineIdx}`} style={styles.paragraph}>
+            {parseInlineMarkdown(rawLine, styles.coachBubbleText, `p-${lineIdx}`)}
+          </Text>
+        );
+      })}
+    </View>
+  );
+}
+
 export default function ClaudeCoachScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{
@@ -77,6 +199,64 @@ export default function ClaudeCoachScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+
+  // Horizontal mouse-drag and wheel scrolling for Quick Prompts
+  const promptScrollRef = useRef<ScrollView>(null);
+  const isPromptMouseDown = useRef(false);
+  const promptStartX = useRef(0);
+  const promptScrollStartLeft = useRef(0);
+  const promptHasDragged = useRef(false);
+
+  const getPromptDomNode = () => {
+    return (
+      (promptScrollRef.current as any)?.getScrollResponder?.()?.getScrollableNode?.() ||
+      (promptScrollRef.current as any)
+    );
+  };
+
+  const handlePromptMouseDown = (e: any) => {
+    if (Platform.OS !== 'web') return;
+    isPromptMouseDown.current = true;
+    promptHasDragged.current = false;
+    promptStartX.current = e.nativeEvent?.pageX ?? e.pageX ?? 0;
+    const node = getPromptDomNode();
+    promptScrollStartLeft.current = node?.scrollLeft || 0;
+  };
+
+  const handlePromptMouseMove = (e: any) => {
+    if (Platform.OS !== 'web' || !isPromptMouseDown.current) return;
+    const currentX = e.nativeEvent?.pageX ?? e.pageX ?? 0;
+    const diff = currentX - promptStartX.current;
+    if (Math.abs(diff) > 4) {
+      promptHasDragged.current = true;
+    }
+    const node = getPromptDomNode();
+    if (node) {
+      node.scrollLeft = promptScrollStartLeft.current - diff;
+    }
+  };
+
+  const handlePromptMouseUp = () => {
+    if (Platform.OS !== 'web') return;
+    isPromptMouseDown.current = false;
+  };
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const node = getPromptDomNode();
+    if (!node) return;
+
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaX) < Math.abs(e.deltaY) && e.deltaY !== 0) {
+        node.scrollLeft += e.deltaY * 0.8;
+      }
+    };
+
+    node.addEventListener('wheel', onWheel, { passive: true });
+    return () => {
+      node.removeEventListener('wheel', onWheel);
+    };
+  }, []);
 
   useEffect(() => {
     void fetchCurrentUser().then((u) => {
@@ -300,9 +480,13 @@ export default function ClaudeCoachScreen() {
                   isUser ? styles.userBubble : styles.coachBubble,
                 ]}
               >
-                <Text style={[styles.bubbleText, isUser ? styles.userBubbleText : styles.coachBubbleText]}>
-                  {m.text}
-                </Text>
+                {isUser ? (
+                  <Text style={[styles.bubbleText, styles.userBubbleText]}>
+                    {m.text}
+                  </Text>
+                ) : (
+                  <FormattedCoachMessage text={m.text} />
+                )}
 
                 {/* Prescription Card */}
                 {m.prescriptionCard ? (
@@ -338,14 +522,42 @@ export default function ClaudeCoachScreen() {
 
       {/* Quick Prompt Pills */}
       <View style={styles.quickPromptsRow}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.promptsScroll}>
+        <ScrollView
+          ref={promptScrollRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.promptsScroll}
+          style={
+            Platform.OS === 'web'
+              ? ({
+                  cursor: 'grab',
+                  userSelect: 'none',
+                  WebkitOverflowScrolling: 'touch',
+                  overflowX: 'auto',
+                } as any)
+              : undefined
+          }
+          {...(Platform.OS === 'web'
+            ? {
+                onMouseDown: handlePromptMouseDown,
+                onMouseMove: handlePromptMouseMove,
+                onMouseUp: handlePromptMouseUp,
+                onMouseLeave: handlePromptMouseUp,
+              }
+            : {})}
+        >
           {QUICK_PROMPTS.map((p, idx) => (
             <Pressable
               key={idx}
               style={styles.promptPill}
-              onPress={() => void handleSendText(p)}
+              onPress={() => {
+                if (promptHasDragged.current) return;
+                void handleSendText(p);
+              }}
             >
-              <Text style={styles.promptPillText}>{p}</Text>
+              <Text style={styles.promptPillText} numberOfLines={1}>
+                {p}
+              </Text>
             </Pressable>
           ))}
         </ScrollView>
@@ -529,10 +741,13 @@ const styles = StyleSheet.create({
   },
   quickPromptsRow: {
     paddingVertical: 8,
+    width: '100%',
   },
   promptsScroll: {
     paddingHorizontal: 20,
     gap: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   promptPill: {
     borderWidth: 1,
@@ -541,12 +756,123 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 14,
     backgroundColor: 'rgba(247, 243, 238, 0.03)',
+    flexShrink: 0,
   },
   promptPillText: {
     fontFamily: DMSANS,
     fontSize: 12.5,
     fontWeight: '500',
     color: IVORY,
+  },
+  formattedCoachWrap: {
+    width: '100%',
+  },
+  coachHeadingText: {
+    fontFamily: CLASH,
+    fontSize: 16,
+    fontWeight: '700',
+    color: GOLD,
+    lineHeight: 22,
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  coachSectionHeader: {
+    marginTop: 10,
+    marginBottom: 6,
+    paddingBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(201, 148, 58, 0.22)',
+  },
+  coachSectionHeaderText: {
+    fontFamily: DMSANS,
+    fontSize: 15,
+    fontWeight: '700',
+    color: GOLD,
+    lineHeight: 21,
+    letterSpacing: 0.1,
+  },
+  numberedRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 6,
+    marginBottom: 3,
+  },
+  numberBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(201, 148, 58, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(201, 148, 58, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 9,
+    marginTop: 2,
+    flexShrink: 0,
+  },
+  numberBadgeText: {
+    fontFamily: MONO,
+    fontSize: 11,
+    fontWeight: '700',
+    color: GOLD,
+  },
+  numberedContentWrap: {
+    flex: 1,
+  },
+  numberedContentText: {
+    fontFamily: INTER,
+    fontSize: 14.5,
+    lineHeight: 22,
+    color: 'rgba(247, 243, 238, 0.95)',
+  },
+  bulletRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginVertical: 2,
+    paddingLeft: 4,
+  },
+  bulletRowIndented: {
+    paddingLeft: 20,
+  },
+  bulletDot: {
+    fontSize: 14,
+    lineHeight: 21,
+    color: GOLD,
+    marginRight: 8,
+  },
+  bulletContentWrap: {
+    flex: 1,
+  },
+  bulletContentText: {
+    fontFamily: INTER,
+    fontSize: 14,
+    lineHeight: 21,
+    color: 'rgba(247, 243, 238, 0.88)',
+  },
+  paragraph: {
+    fontFamily: INTER,
+    fontSize: 14.5,
+    lineHeight: 23,
+    color: 'rgba(247, 243, 238, 0.92)',
+    marginVertical: 2,
+  },
+  lineSpacer: {
+    height: 8,
+  },
+  inlineBold: {
+    fontFamily: DMSANS,
+    fontWeight: '700',
+    color: IVORY,
+  },
+  inlineItalic: {
+    fontStyle: 'italic',
+    color: 'rgba(247, 243, 238, 0.95)',
+  },
+  inlineCode: {
+    fontFamily: MONO,
+    backgroundColor: 'rgba(247, 243, 238, 0.1)',
+    fontSize: 12.5,
+    color: GOLD,
   },
   inputContainer: {
     paddingHorizontal: 20,
