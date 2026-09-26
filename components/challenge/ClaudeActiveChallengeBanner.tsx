@@ -40,7 +40,7 @@ export default function ClaudeActiveChallengeBanner({
   const currentDay = Math.min(daysTotal, doneTo + 1);
   const daysLeft = Math.max(0, Number(challenge.daysLeft || daysTotal - doneTo));
   const unreadCount = Math.max(0, Number(challenge.unreadCount || 0));
-  const kickerText = isJoined ? `YOU'RE IN · DAY ${currentDay} OF ${daysTotal}` : `ACTIVE NOW · ${daysTotal} DAYS`;
+  const kickerText = isJoined ? `YOU'RE IN · DAY ${currentDay} OF ${daysTotal}` : `FEATURED · ${daysTotal} DAYS`;
 
   return (
     <View style={styles.container}>
@@ -127,7 +127,7 @@ export default function ClaudeActiveChallengeBanner({
                 { color: isCompleted ? IVORY : '#0D0D0D' },
               ]}
             >
-              {isCompleted ? 'Challenge complete' : isJoined ? `Open day ${currentDay}` : 'Join this challenge'}
+              {isCompleted ? 'Challenge complete' : isJoined ? `Day ${currentDay} in progress` : 'Join this challenge'}
             </Text>
             <Text
               style={[
@@ -139,7 +139,7 @@ export default function ClaudeActiveChallengeBanner({
                 ? daysLeft > 0
                   ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} left. Continue from your challenge hub.`
                   : 'Your challenge progress is saved.'
-                : challenge.desc || 'Started from the admin dashboard. Tap to see details.'}
+                : challenge.desc || 'Featured from the admin dashboard. Tap to see details.'}
             </Text>
           </View>
         </TouchableOpacity>

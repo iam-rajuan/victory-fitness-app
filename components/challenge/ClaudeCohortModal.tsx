@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,7 +8,9 @@ import {
   TouchableOpacity,
   TextInput,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
+import { apiRequest } from '../../lib/api';
 
 interface CohortMessage {
   id: string;
@@ -23,8 +25,27 @@ interface ClaudeCohortModalProps {
   visible: boolean;
   onClose: () => void;
   onInvite: () => void;
+  challengeId?: string;
   challengeTitle?: string;
+  challengeDays?: number;
 }
+
+type ChallengeChatMessage = {
+  id: string;
+  author_name: string;
+  author_role: string;
+  content: string;
+  created_at: string;
+  can_edit?: boolean;
+  is_deleted?: boolean;
+};
+
+type ChallengeChatThread = {
+  title?: string;
+  duration_days?: number;
+  participant_count?: number;
+  messages?: ChallengeChatMessage[];
+};
 
 const OBSIDIAN = '#0D0D0D';
 const NAVY = '#0D2B45';
@@ -40,36 +61,82 @@ export default function ClaudeCohortModal({
   visible,
   onClose,
   onInvite,
+  challengeId,
   challengeTitle = 'Challenge',
+  challengeDays,
 }: ClaudeCohortModalProps) {
   const [messages, setMessages] = useState<CohortMessage[]>([]);
   const [inputText, setInputText] = useState('');
+  const [thread, setThread] = useState<ChallengeChatThread | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+
+  const title = thread?.title || challengeTitle;
+  const days = Math.max(1, Number(thread?.duration_days || challengeDays || 1));
+  const participantCount = Math.max(0, Number(thread?.participant_count || 0));
+  const headerSub = `${participantCount} ${participantCount === 1 ? 'person' : 'people'} · ${days} ${days === 1 ? 'day' : 'days'}`;
+
+  const loadThread = useCallback(async () => {
+    if (!challengeId) {
+      setMessages([]);
+      setThread(null);
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const response = await apiRequest<ChallengeChatThread>(`/challenges/${encodeURIComponent(challengeId)}/chat`, {
+        skipResponseCache: true,
+      });
+      setThread(response);
+      setMessages((response.messages || []).filter((message) => !message.is_deleted).map(mapChatMessage));
+    } finally {
+      setIsLoading(false);
+    }
+  }, [challengeId]);
+
+  useEffect(() => {
+    if (visible) {
+      void loadThread();
+    } else {
+      setInputText('');
+    }
+  }, [loadThread, visible]);
+
+  const sendMessage = useCallback(async (text: string) => {
+    const content = text.trim();
+    if (!content || isSending) return;
+    setIsSending(true);
+    try {
+      if (challengeId) {
+        const created = await apiRequest<ChallengeChatMessage>(
+          `/challenges/${encodeURIComponent(challengeId)}/chat/messages`,
+          {
+            method: 'POST',
+            body: { content },
+          }
+        );
+        setMessages((prev) => [...prev, mapChatMessage(created)]);
+      } else {
+        setMessages((prev) => [...prev, buildLocalMessage(content)]);
+      }
+      setInputText('');
+    } finally {
+      setIsSending(false);
+    }
+  }, [challengeId, isSending]);
 
   const handleSend = () => {
-    if (!inputText.trim()) return;
-    const newMsg: CohortMessage = {
-      id: `cm-${Date.now()}`,
-      n: 'You',
-      i: 'ME',
-      t: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
-      m: inputText.trim(),
-      isMe: true,
-    };
-    setMessages((prev) => [...prev, newMsg]);
-    setInputText('');
+    void sendMessage(inputText);
   };
 
   const handleQuickSend = (text: string) => {
-    const newMsg: CohortMessage = {
-      id: `cm-${Date.now()}`,
-      n: 'You',
-      i: 'ME',
-      t: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
-      m: text,
-      isMe: true,
-    };
-    setMessages((prev) => [...prev, newMsg]);
+    void sendMessage(text);
   };
+
+  const emptyText = useMemo(() => {
+    if (isLoading) return 'Loading cohort lobby...';
+    return 'No messages yet. Start the lobby.';
+  }, [isLoading]);
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
@@ -80,8 +147,8 @@ export default function ClaudeCohortModal({
             <Text style={styles.backArrow}>←</Text>
           </TouchableOpacity>
           <View style={styles.headerTextCol}>
-            <Text style={styles.headerTitle}>{`${challengeTitle} · lobby`}</Text>
-            <Text style={styles.headerSub}>Challenge lobby</Text>
+            <Text style={styles.headerTitle}>{`${title} · lobby`}</Text>
+            <Text style={styles.headerSub}>{headerSub}</Text>
           </View>
           <TouchableOpacity onPress={onInvite} activeOpacity={0.7}>
             <Text style={styles.inviteLink}>Invite</Text>
@@ -94,7 +161,16 @@ export default function ClaudeCohortModal({
           contentContainerStyle={styles.messageContent}
           showsVerticalScrollIndicator={false}
         >
-          {messages.map((m) => {
+          {isLoading && messages.length === 0 ? (
+            <View style={styles.emptyState}>
+              <ActivityIndicator color={GOLD} />
+              <Text style={styles.emptyText}>{emptyText}</Text>
+            </View>
+          ) : messages.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>{emptyText}</Text>
+            </View>
+          ) : messages.map((m) => {
             if (m.isMe) {
               return (
                 <View key={m.id} style={styles.myBubbleWrap}>
@@ -153,8 +229,8 @@ export default function ClaudeCohortModal({
               onSubmitEditing={handleSend}
             />
             {inputText.trim().length > 0 && (
-              <TouchableOpacity style={styles.sendBtn} activeOpacity={0.8} onPress={handleSend}>
-                <Text style={styles.sendBtnText}>Send</Text>
+              <TouchableOpacity style={[styles.sendBtn, isSending && styles.sendBtnDisabled]} activeOpacity={0.8} onPress={handleSend}>
+                <Text style={styles.sendBtnText}>{isSending ? '...' : 'Send'}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -166,6 +242,43 @@ export default function ClaudeCohortModal({
       </View>
     </Modal>
   );
+}
+
+function getInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  return (parts[0] || 'VF').slice(0, 2).toUpperCase();
+}
+
+function formatMessageTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
+
+function mapChatMessage(message: ChallengeChatMessage): CohortMessage {
+  const authorName = String(message.author_name || 'Member').trim();
+  return {
+    id: String(message.id || `cm-${Date.now()}`),
+    n: message.can_edit ? 'You' : authorName,
+    i: message.can_edit ? 'ME' : getInitials(authorName),
+    t: formatMessageTime(String(message.created_at || '')),
+    m: String(message.content || '').trim(),
+    isMe: Boolean(message.can_edit),
+  };
+}
+
+function buildLocalMessage(content: string): CohortMessage {
+  return {
+    id: `cm-${Date.now()}`,
+    n: 'You',
+    i: 'ME',
+    t: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+    m: content,
+    isMe: true,
+  };
 }
 
 const styles = StyleSheet.create({
@@ -221,6 +334,17 @@ const styles = StyleSheet.create({
     paddingTop: 18,
     paddingBottom: 18,
     gap: 14,
+  },
+  emptyState: {
+    minHeight: 160,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  emptyText: {
+    fontFamily: INTER,
+    fontSize: 13,
+    color: 'rgba(247, 243, 238, 0.48)',
   },
   otherMessageRow: {
     flexDirection: 'row',
@@ -338,6 +462,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 6,
+  },
+  sendBtnDisabled: {
+    opacity: 0.65,
   },
   sendBtnText: {
     fontFamily: DMSANS,

@@ -168,7 +168,7 @@ export default function ClaudeChallengeDetailModal({
           >
             <Text style={styles.mainJoinBtnText}>
               {challenge.status === 'active'
-                ? 'Open challenge'
+                ? 'Open cohort chat'
                 : challenge.status === 'completed'
                 ? 'View completed challenge'
                 : challenge.canStart === false
@@ -179,10 +179,10 @@ export default function ClaudeChallengeDetailModal({
 
           <Text style={styles.joinFootnote}>
             {challenge.status === 'active'
-              ? 'Your progress and cohort are saved in the challenge hub.'
+              ? 'Your cohort lobby is ready.'
               : challenge.status === 'completed'
               ? 'Completed challenge history stays available from your challenge hub.'
-              : 'Joining opens the challenge hub and cohort for this challenge.'}
+              : 'Joining opens the cohort lobby so you start with the people already in it.'}
           </Text>
         </ScrollView>
 

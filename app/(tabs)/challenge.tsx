@@ -213,7 +213,12 @@ export default function ChallengeScreen() {
     const challengeId = c.challengeId || c.id;
     if (!challengeId) return;
     setShowDetailModal(false);
-    if (c.status === 'active' || c.status === 'completed') {
+    if (c.status === 'active') {
+      setSelectedChallenge(c);
+      setShowCohortModal(true);
+      return;
+    }
+    if (c.status === 'completed') {
       router.push(`/challenges/${challengeId}` as any);
       return;
     }
@@ -223,8 +228,9 @@ export default function ChallengeScreen() {
     }
     try {
       await apiRequest(`/challenges/${encodeURIComponent(challengeId)}/start`, { method: 'POST' });
+      setSelectedChallenge({ ...c, status: 'active', canStart: false });
+      setShowCohortModal(true);
       await loadChallenges({ forceRefresh: true });
-      router.push(`/challenges/${challengeId}` as any);
     } catch (error: any) {
       Alert.alert('Failed to start challenge', error?.message || 'Please try again.');
     }
@@ -266,25 +272,16 @@ export default function ChallengeScreen() {
 
   const openFeaturedChallenge = useCallback(() => {
     if (!featuredChallenge) return;
-    if (featuredChallenge.status === 'active' || featuredChallenge.status === 'completed') {
-      const challengeId = featuredChallenge.challengeId || featuredChallenge.id;
-      if (challengeId) {
-        router.push(`/challenges/${challengeId}` as any);
-      }
-      return;
-    }
     handleSelectChallenge(featuredChallenge);
-  }, [featuredChallenge, router]);
+  }, [featuredChallenge]);
 
   const openCohortForSelected = useCallback(() => {
     const challenge = selectedChallenge || activeChallenge;
-    const challengeId = challenge?.challengeId || challenge?.id;
-    if (challengeId) {
-      router.push(`/challenges/chat/${challengeId}` as any);
-      return;
+    if (challenge) {
+      setSelectedChallenge(challenge);
     }
     setShowCohortModal(true);
-  }, [activeChallenge, router, selectedChallenge]);
+  }, [activeChallenge, selectedChallenge]);
 
   const inviteChallenge = useMemo(() => selectedChallenge || activeChallenge, [activeChallenge, selectedChallenge]);
 
@@ -345,6 +342,10 @@ export default function ChallengeScreen() {
         userName={userName}
         onInvite={handleInviteSomeone}
         onOpenCohort={() => {
+          if (selectedChallenge && selectedChallenge.status !== 'active') {
+            void handleJoinChallenge(selectedChallenge);
+            return;
+          }
           setShowDetailModal(false);
           openCohortForSelected();
         }}
@@ -358,7 +359,9 @@ export default function ChallengeScreen() {
           setShowCohortModal(false);
           setShowInviteModal(true);
         }}
+        challengeId={inviteChallenge?.challengeId || inviteChallenge?.id}
         challengeTitle={inviteChallenge?.n || 'Challenge'}
+        challengeDays={inviteChallenge?.d || 1}
       />
 
       {/* Guest Mode Invite Modal matching lines 1461-1502 */}
