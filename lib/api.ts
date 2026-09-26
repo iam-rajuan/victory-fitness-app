@@ -1304,8 +1304,8 @@ export async function createWorkoutLog(payload: {
   movements?: Array<Record<string, unknown>>;
   status: string;
   market?: string;
-}): Promise<{ id: string; status: string }> {
-  return apiRequest<{ id: string; status: string }>('/workout-logs', {
+}): Promise<{ id: string; status: string; workout_id?: string; title?: string }> {
+  return apiRequest<{ id: string; status: string; workout_id?: string; title?: string }>('/workout-logs', {
     method: 'POST',
     body: payload,
   });

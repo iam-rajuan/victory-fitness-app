@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
   fetchCurrentUser,
@@ -42,6 +43,7 @@ import { fetchWorkoutLibrary, WorkoutLibraryCategory, WorkoutLibraryItem } from 
 
 const OBSIDIAN = '#0D0D0D';
 const GOLD = '#C9943A';
+const COMPLETED_WORKOUT_IDS_KEY = '@victory_completed_workout_ids';
 
 function formatDurationBadge(seconds: number, minutes: number) {
   if (seconds > 0) {
@@ -74,7 +76,30 @@ function formatCompletionDate() {
   }).toUpperCase();
 }
 
-function mapLibraryWorkout(workout: WorkoutLibraryItem, completedWorkoutIds: Set<string> = new Set()): GridWorkoutItem {
+async function readLocalCompletedWorkoutIds() {
+  try {
+    const raw = await AsyncStorage.getItem(COMPLETED_WORKOUT_IDS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(parsed) ? parsed.map((id) => String(id).trim()).filter(Boolean) : []);
+  } catch {
+    return new Set<string>();
+  }
+}
+
+async function saveLocalCompletedWorkoutId(workoutId: string) {
+  const id = String(workoutId || '').trim();
+  if (!id) return;
+  const ids = await readLocalCompletedWorkoutIds();
+  ids.add(id);
+  await AsyncStorage.setItem(COMPLETED_WORKOUT_IDS_KEY, JSON.stringify([...ids]));
+}
+
+function mapLibraryWorkout(
+  workout: WorkoutLibraryItem,
+  completedWorkoutIds: Set<string> = new Set(),
+  completedWorkoutTitles: Set<string> = new Set()
+): GridWorkoutItem {
+  const titleKey = normalizeWords(workout.title);
   return {
     id: workout.id,
     name: workout.title,
@@ -90,7 +115,7 @@ function mapLibraryWorkout(workout: WorkoutLibraryItem, completedWorkoutIds: Set
     durationSeconds: workout.durationSeconds,
     thumbnail: workout.thumbnail,
     dateAdded: workout.dateAdded,
-    completed: completedWorkoutIds.has(workout.id),
+    completed: completedWorkoutIds.has(workout.id) || completedWorkoutTitles.has(titleKey),
     movements: workout.movements,
   };
 }
@@ -231,10 +256,11 @@ export default function WorkoutScreen() {
       const user = await fetchCurrentUser();
       if (user) setCurrentUser(user);
 
-      const [library, completedLogs, onboarding] = await Promise.all([
+      const [library, completedLogs, onboarding, localCompletedIds] = await Promise.all([
         fetchWorkoutLibrary(),
         fetchWorkoutLogs(1, 200, 'completed').catch(() => ({ items: [] })),
         fetchCurrentUserOnboarding().catch(() => null),
+        readLocalCompletedWorkoutIds(),
       ]);
       const selectedKit = onboarding?.preferences?.selectedKit || [];
       const equipmentAccess = onboarding?.anamnese?.equipmentAccess || '';
@@ -261,8 +287,14 @@ export default function WorkoutScreen() {
           .map((log) => String(log.workout_id || '').trim())
           .filter(Boolean)
       );
+      const completedWorkoutTitles = new Set(
+        completedLogs.items
+          .map((log) => normalizeWords(log.title))
+          .filter(Boolean)
+      );
+      localCompletedIds.forEach((id) => completedWorkoutIds.add(id));
       completedWorkoutIdsRef.current.forEach((id) => completedWorkoutIds.add(id));
-      const mappedWorkouts = library.workouts.map((workout) => mapLibraryWorkout(workout, completedWorkoutIds));
+      const mappedWorkouts = library.workouts.map((workout) => mapLibraryWorkout(workout, completedWorkoutIds, completedWorkoutTitles));
       setLibraryWorkouts(mappedWorkouts);
       setLibraryPrograms(library.categories.map(mapLibraryCategory));
       setSelectedWorkout((existing) => {
@@ -392,6 +424,7 @@ export default function WorkoutScreen() {
     if (selectedWorkout?.id) {
       const completedId = selectedWorkout.id;
       completedWorkoutIdsRef.current.add(completedId);
+      void saveLocalCompletedWorkoutId(completedId);
       setLibraryWorkouts((items) =>
         items.map((item) => (item.id === completedId ? { ...item, completed: true } : item))
       );
