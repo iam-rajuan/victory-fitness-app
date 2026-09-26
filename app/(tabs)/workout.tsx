@@ -413,6 +413,38 @@ export default function WorkoutScreen() {
     }
   };
 
+  const handleAskCoach = () => {
+    const suggestion = filteredWorkouts[0] || libraryWorkouts[0] || null;
+    const timeText = selectedDuration !== 'Any'
+      ? `${selectedDuration} minutes`
+      : preferredMinutes > 0
+        ? `${preferredMinutes} minutes`
+        : 'limited time';
+    const kitText = selectedKit !== 'Any'
+      ? selectedKit
+      : preferredKitWords[0]
+        ? preferredKitWords[0]
+        : 'my available kit';
+    const purposeText = selectedPurpose !== 'All' ? selectedPurpose : 'today';
+    const prompt = [
+      `I need a workout for ${purposeText}.`,
+      `I have ${timeText} and ${kitText}.`,
+      suggestion
+        ? `Use the app workout "${suggestion.name}" if it fits, or suggest the closest better option from my library.`
+        : 'Suggest the closest option from my workout library.',
+    ].join(' ');
+
+    pushRoute(router, {
+      pathname: '/chat',
+      params: {
+        initialPrompt: prompt,
+        prescriptionTitle: suggestion?.name || 'Workout library',
+        prescriptionMeta: suggestion?.meta || `${timeText} · ${kitText}`,
+        contextNote: 'used your workout filters, library and profile',
+      },
+    });
+  };
+
   const handleFinishSession = (
     stats?: { minutes: number; setsLogged: number; volumeKg: number; durationSeconds?: number },
     stepMode: 'feedback' | 'complete' = 'complete'
@@ -601,7 +633,7 @@ export default function WorkoutScreen() {
           workouts={filteredWorkouts}
           hasCoach={hasCoach}
           onSelectWorkout={handleStartWorkout}
-          onAskCoach={() => pushRoute(router, '/chat')}
+          onAskCoach={handleAskCoach}
         />
       </ScrollView>
 

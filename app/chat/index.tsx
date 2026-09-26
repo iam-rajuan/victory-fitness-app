@@ -10,7 +10,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Colors } from '../../constants/Colors';
 import {
   fetchCurrentUser,
@@ -49,41 +49,21 @@ const QUICK_PROMPTS = [
   'Swap dinner from my week plan.',
 ];
 
-const CONTEXT_REPLY: Record<string, string> = {
-  'I only have 25 minutes tonight and no equipment.':
-    "Twenty-five is plenty. I've built you a bodyweight circuit that keeps tonight's upper-body focus and skips anything that needs a dumbbell.",
-  'My lower back is tight today.':
-    "Let's protect your lumbar. We'll swap heavy hinges for hip thrusts, add 90/90 breathing, and keep the volume sub-maximal.",
-  'What should I eat before training?':
-    "Target 30 g fast carbs and 20 g protein 45 minutes out — think banana with whey or skyr with honey.",
-  'Swap dinner from my week plan.':
-    "Done. Swapped salmon for chicken breast and roasted sweet potatoes to hit your 112 g protein target without extra fat.",
-};
-
 export default function ClaudeCoachScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{
+    initialPrompt?: string;
+    prescriptionTitle?: string;
+    prescriptionMeta?: string;
+    contextNote?: string;
+  }>();
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
+  const autoPromptSentRef = useRef(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'msg-1',
-      sender: 'user',
-      text: 'I only have 25 minutes tonight and no equipment.',
-    },
-    {
-      id: 'msg-2',
-      sender: 'coach',
-      text: "Twenty-five is plenty. I've built you a bodyweight circuit that keeps tonight's upper-body focus and skips anything that needs a dumbbell.\n\nKids in bed already? Then this is your trigger — start now and your podcast is waiting.",
-      prescriptionCard: {
-        title: 'Upper Body · No Kit',
-        meta: '25 min · 5 exercises · bodyweight',
-      },
-      contextNote: 'used your identity, unlock & trigger',
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
 
   useEffect(() => {
     void fetchCurrentUser().then((u) => {
@@ -102,7 +82,14 @@ export default function ClaudeCoachScreen() {
     ? 'PRIORITY RESPONSES · FRONT OF QUEUE'
     : 'UNLIMITED · REPLIES IN ~2S';
 
-  const handleSendText = async (textToSend: string) => {
+  const handleSendText = async (
+    textToSend: string,
+    options?: {
+      prescriptionTitle?: string;
+      prescriptionMeta?: string;
+      contextNote?: string;
+    }
+  ) => {
     const text = textToSend.trim();
     if (!text || sending) return;
 
@@ -122,22 +109,23 @@ export default function ClaudeCoachScreen() {
 
     // Call live backend or smart fallback
     try {
-      let assistantText = CONTEXT_REPLY[text] || '';
-      if (!assistantText) {
-        // Stream / call real backend
+      let assistantText = '';
+      await new Promise<void>(async (resolve) => {
         await streamCoachVictorMessage(
           text,
           (chunk) => {
             assistantText += chunk;
           },
-          () => {
-            // Completed
+          (fullReply) => {
+            assistantText = fullReply || assistantText;
+            resolve();
           },
           (err) => {
             console.warn('Coach stream error:', err);
+            resolve();
           }
         );
-      }
+      });
 
       if (!assistantText) {
         assistantText = `I hear you, ${currentUser?.name ? currentUser.name.split(' ')[0] : 'friend'}. Based on your target of ${currentUser?.daily_protein_target || 112} g protein and your training consistency, let's keep showing up. How does that sound?`;
@@ -147,7 +135,13 @@ export default function ClaudeCoachScreen() {
         id: `coach-${Date.now()}`,
         sender: 'coach',
         text: assistantText,
-        contextNote: 'used your identity statement & habit data',
+        prescriptionCard: options?.prescriptionTitle
+          ? {
+              title: options.prescriptionTitle,
+              meta: options.prescriptionMeta || '',
+            }
+          : undefined,
+        contextNote: options?.contextNote || 'used your identity statement & habit data',
       };
 
       setMessages((prev) => [...prev, coachReply]);
@@ -166,6 +160,17 @@ export default function ClaudeCoachScreen() {
       }, 100);
     }
   };
+
+  useEffect(() => {
+    const initialPrompt = typeof params.initialPrompt === 'string' ? params.initialPrompt.trim() : '';
+    if (!hasCoach || !currentUser || !initialPrompt || autoPromptSentRef.current) return;
+    autoPromptSentRef.current = true;
+    void handleSendText(initialPrompt, {
+      prescriptionTitle: typeof params.prescriptionTitle === 'string' ? params.prescriptionTitle : undefined,
+      prescriptionMeta: typeof params.prescriptionMeta === 'string' ? params.prescriptionMeta : undefined,
+      contextNote: typeof params.contextNote === 'string' ? params.contextNote : 'used your workout filters and profile',
+    });
+  }, [currentUser, hasCoach, params.contextNote, params.initialPrompt, params.prescriptionMeta, params.prescriptionTitle]);
 
   // If Silver tier, show the locked paywall teaser per prototype
   if (!hasCoach) {

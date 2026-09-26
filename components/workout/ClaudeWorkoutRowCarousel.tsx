@@ -262,7 +262,7 @@ export default function ClaudeWorkoutRowCarousel({
                 <View style={styles.playCircle}>
                   <View style={styles.playArrow} />
                 </View>
-                {w.completed ? <Text style={styles.completedBadge}>Completed</Text> : null}
+                {w.completed ? <Text style={styles.completedBadge}>✓ Done</Text> : null}
                 <Text style={styles.workoutBadge}>{w.t}</Text>
               </View>
               <Text style={styles.workoutName}>{w.n}</Text>
@@ -437,13 +437,15 @@ const styles = StyleSheet.create({
     top: 8,
     left: 8,
     fontFamily: MONO,
-    fontSize: 9,
-    fontWeight: '900',
+    fontSize: 8.5,
+    fontWeight: '800',
     color: IVORY,
-    backgroundColor: 'rgba(26, 122, 74, 0.92)',
+    backgroundColor: 'rgba(13, 13, 13, 0.78)',
+    borderWidth: 1,
+    borderColor: 'rgba(95, 196, 142, 0.85)',
     borderRadius: 999,
     paddingVertical: 3,
-    paddingHorizontal: 7,
+    paddingHorizontal: 6,
     overflow: 'hidden',
     textTransform: 'uppercase',
   },

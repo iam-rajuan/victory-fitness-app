@@ -124,7 +124,7 @@ export default function ClaudeResumeSessionCard({
 
           {/* Time remaining pill badge */}
           <Text style={styles.timeBadge}>{minutesLeft}</Text>
-          {completed ? <Text style={styles.completedBadge}>Completed</Text> : null}
+          {completed ? <Text style={styles.completedBadge}>✓ Done</Text> : null}
 
           {/* Bottom progress bar */}
           <View style={styles.progressTrack}>
@@ -226,13 +226,15 @@ const styles = StyleSheet.create({
     top: 12,
     left: 14,
     fontFamily: MONO,
-    fontSize: 10,
-    fontWeight: '900',
+    fontSize: 9.5,
+    fontWeight: '800',
     color: IVORY,
-    backgroundColor: 'rgba(26, 122, 74, 0.92)',
+    backgroundColor: 'rgba(13, 13, 13, 0.78)',
+    borderWidth: 1,
+    borderColor: 'rgba(95, 196, 142, 0.85)',
     borderRadius: 999,
-    paddingVertical: 5,
-    paddingHorizontal: 9,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
     overflow: 'hidden',
     textTransform: 'uppercase',
   },
