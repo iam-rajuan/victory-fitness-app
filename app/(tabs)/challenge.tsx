@@ -17,7 +17,7 @@ import ClaudeChallengeDirectory, { ChallengeItem } from '../../components/challe
 import ClaudeChallengeDetailModal from '../../components/challenge/ClaudeChallengeDetailModal';
 import ClaudeCohortModal from '../../components/challenge/ClaudeCohortModal';
 import ClaudeInviteModal from '../../components/challenge/ClaudeInviteModal';
-import ClaudeCommunityFeed, { CommunityPost, CommunityPostDraft } from '../../components/challenge/ClaudeCommunityFeed';
+import ClaudeCommunityFeed, { CommunityComment, CommunityPost, CommunityPostDraft } from '../../components/challenge/ClaudeCommunityFeed';
 import { useTheme } from '../../context/ThemeContext';
 
 const OBSIDIAN = '#0D0D0D';
@@ -96,6 +96,19 @@ function formatRelativeTime(value: unknown) {
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
+function mapCommunityComment(raw: Record<string, any>): CommunityComment {
+  const authorName = String(raw.author_name || 'Victory member').trim();
+  return {
+    id: String(raw.id || ''),
+    postId: String(raw.post_id || ''),
+    authorName,
+    authorInitials: initialsFromName(authorName),
+    authorRole: String(raw.author_role || 'member').trim().toUpperCase(),
+    content: String(raw.content || '').trim(),
+    when: formatRelativeTime(raw.created_at),
+  };
+}
+
 function mapCommunityPost(raw: Record<string, any>): CommunityPost {
   const likeCount = Math.max(0, Number(raw.like_count || 0));
   const commentCount = Math.max(0, Number(raw.comment_count || 0));
@@ -120,6 +133,9 @@ function mapCommunityPost(raw: Record<string, any>): CommunityPost {
     videoTitle: videoUrl ? 'Community video' : undefined,
     videoMeta: videoUrl ? 'Linked from the backend feed' : undefined,
     videoUrl,
+    comments: Array.isArray(raw.comments)
+      ? raw.comments.map(mapCommunityComment).filter((comment) => comment.id)
+      : [],
   };
 }
 
@@ -201,7 +217,7 @@ export default function ChallengeScreen() {
     }
   }, []);
 
-  const loadCommunityPosts = useCallback(async (scope: 'auto' | 'tier' | 'all' = communityScope) => {
+  const loadCommunityPosts = useCallback(async (scope: 'auto' | 'tier' | 'all') => {
     try {
       const params = new URLSearchParams({ limit: '50' });
       if (scope === 'tier') {
@@ -219,12 +235,15 @@ export default function ChallengeScreen() {
     } catch {
       setCommunityPosts([]);
     }
-  }, [communityScope, userTier]);
+  }, [userTier]);
 
   useEffect(() => {
     void loadChallenges();
-    void loadCommunityPosts();
-  }, [loadChallenges, loadCommunityPosts]);
+  }, [loadChallenges]);
+
+  useEffect(() => {
+    void loadCommunityPosts(communityScope);
+  }, [communityScope, loadCommunityPosts]);
 
   const handleSelectChallenge = (c: ChallengeItem) => {
     setSelectedChallenge(c);
@@ -264,17 +283,20 @@ export default function ChallengeScreen() {
 
   const handlePublishCommunityPost = useCallback(async (draft: CommunityPostDraft) => {
     const audience = draft.audience === 'all' ? 'ALL' : draft.audience === 'tier' ? 'TIER' : 'AUTO';
+    const hasImage = draft.kind === 'Photo' && Boolean(draft.imageBase64);
+    const hasVideoLink = draft.kind === 'YouTube link' && Boolean(draft.externalVideoUrl);
     await apiRequest('/community/posts', {
       method: 'POST',
       body: {
         content: draft.content || (draft.kind === 'Photo' ? 'Shared a training photo.' : 'Shared a community update.'),
         audience,
-        image_base64: draft.kind === 'Photo' ? draft.imageBase64 : undefined,
-        external_video_url: draft.kind === 'YouTube link' ? draft.externalVideoUrl : undefined,
-        mime_type: draft.imageMimeType || 'image/jpeg',
-        file_name: draft.imageFileName,
+        image_base64: hasImage ? draft.imageBase64 : undefined,
+        external_video_url: hasVideoLink ? draft.externalVideoUrl : undefined,
+        mime_type: hasImage ? (draft.imageMimeType || 'image/jpeg') : undefined,
+        file_name: hasImage ? draft.imageFileName : undefined,
       },
     });
+    setCommunityScope(draft.audience);
     await loadCommunityPosts(draft.audience);
   }, [loadCommunityPosts]);
 
@@ -282,12 +304,39 @@ export default function ChallengeScreen() {
     await apiRequest(`/community/posts/${encodeURIComponent(postId)}/reactions/toggle`, { method: 'POST' });
   }, []);
 
+  const handleLoadCommunityComments = useCallback(async (postId: string) => {
+    const response = await apiRequest<Array<Record<string, any>>>(`/community/posts/${encodeURIComponent(postId)}/comments`);
+    return (response || []).map(mapCommunityComment).filter((comment) => comment.id);
+  }, []);
+
+  const handleAddCommunityComment = useCallback(async (postId: string, content: string) => {
+    const response = await apiRequest<Record<string, any>>(`/community/posts/${encodeURIComponent(postId)}/comments`, {
+      method: 'POST',
+      body: { content },
+    });
+    const created = mapCommunityComment(response || {});
+    setCommunityPosts((prev) =>
+      prev.map((post) => {
+        if (post.id !== postId) return post;
+        const comments = [...(post.comments || []), created].filter((comment) => comment.id);
+        const commentCount = Math.max(Number(post.commentCount || 0) + 1, comments.length);
+        return {
+          ...post,
+          comments,
+          commentCount,
+          react: `${post.cheerCount} cheers · ${commentCount} comments`,
+        };
+      })
+    );
+    return created;
+  }, []);
+
   const refreshScreen = useCallback(async () => {
     await Promise.all([
       loadChallenges({ forceRefresh: true }),
-      loadCommunityPosts(),
+      loadCommunityPosts(communityScope),
     ]);
-  }, [loadChallenges, loadCommunityPosts]);
+  }, [communityScope, loadChallenges, loadCommunityPosts]);
 
   const featuredChallenge = useMemo(() => {
     return (
@@ -389,6 +438,8 @@ export default function ChallengeScreen() {
             posts={communityPosts}
             onPublishPost={handlePublishCommunityPost}
             onToggleCheer={handleToggleCommunityCheer}
+            onLoadComments={handleLoadCommunityComments}
+            onAddComment={handleAddCommunityComment}
             onScopeChange={(scope) => {
               setCommunityScope(scope);
               void loadCommunityPosts(scope);

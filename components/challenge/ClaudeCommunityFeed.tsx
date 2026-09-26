@@ -33,6 +33,17 @@ export interface CommunityPost {
   videoTitle?: string;
   videoMeta?: string;
   videoUrl?: string;
+  comments?: CommunityComment[];
+}
+
+export interface CommunityComment {
+  id: string;
+  postId: string;
+  authorName: string;
+  authorInitials: string;
+  authorRole: string;
+  content: string;
+  when: string;
 }
 
 export type CommunityPostDraft = {
@@ -51,6 +62,8 @@ interface ClaudeCommunityFeedProps {
   posts?: CommunityPost[];
   onPublishPost?: (draft: CommunityPostDraft) => Promise<void>;
   onToggleCheer?: (postId: string) => Promise<void>;
+  onLoadComments?: (postId: string) => Promise<CommunityComment[]>;
+  onAddComment?: (postId: string, content: string) => Promise<CommunityComment>;
   onScopeChange?: (scope: 'auto' | 'tier' | 'all') => void;
 }
 
@@ -95,6 +108,36 @@ function buildCommunityVideoHtml(videoUrl: string) {
     }
   </body>
 </html>`;
+}
+
+function normalizePickedImageMimeType(asset: ImagePicker.ImagePickerAsset) {
+  const rawMime = String(asset.mimeType || '').trim().toLowerCase();
+  if (['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif'].includes(rawMime)) {
+    return rawMime;
+  }
+
+  const sourceName = `${asset.fileName || ''} ${asset.uri || ''}`.toLowerCase();
+  if (sourceName.includes('.png')) return 'image/png';
+  if (sourceName.includes('.webp')) return 'image/webp';
+  if (sourceName.includes('.gif')) return 'image/gif';
+  if (sourceName.includes('.heic')) return 'image/heic';
+  if (sourceName.includes('.heif')) return 'image/heif';
+  return 'image/jpeg';
+}
+
+function normalizePickedImageFileName(asset: ImagePicker.ImagePickerAsset, mimeType: string) {
+  const existingName = String(asset.fileName || '').trim();
+  if (existingName) {
+    return existingName;
+  }
+  const extensionByMime: Record<string, string> = {
+    'image/png': 'png',
+    'image/webp': 'webp',
+    'image/gif': 'gif',
+    'image/heic': 'heic',
+    'image/heif': 'heif',
+  };
+  return `community-photo-${Date.now()}.${extensionByMime[mimeType] || 'jpg'}`;
 }
 
 function CommunityVideoPlayer({ videoUrl }: { videoUrl?: string }) {
@@ -150,6 +193,8 @@ export default function ClaudeCommunityFeed({
   posts = [],
   onPublishPost,
   onToggleCheer,
+  onLoadComments,
+  onAddComment,
   onScopeChange,
 }: ClaudeCommunityFeedProps) {
   const { colors, isDark } = useTheme();
@@ -179,6 +224,10 @@ export default function ClaudeCommunityFeed({
 
   const [scope, setScope] = useState<'auto' | 'tier' | 'all'>('auto');
   const [feed, setFeed] = useState<CommunityPost[]>(posts);
+  const [openCommentsFor, setOpenCommentsFor] = useState<string | null>(null);
+  const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
+  const [loadingCommentsFor, setLoadingCommentsFor] = useState<string | null>(null);
+  const [sendingCommentFor, setSendingCommentFor] = useState<string | null>(null);
 
   React.useEffect(() => {
     setFeed(posts);
@@ -266,8 +315,73 @@ export default function ClaudeCommunityFeed({
     }
   };
 
+  const handleToggleComments = async (postId: string) => {
+    const isOpening = openCommentsFor !== postId;
+    setOpenCommentsFor(isOpening ? postId : null);
+    if (!isOpening) return;
+
+    const currentPost = feed.find((p) => p.id === postId);
+    if (currentPost?.comments && currentPost.comments.length >= Math.max(0, Number(currentPost.commentCount || 0))) {
+      return;
+    }
+
+    setLoadingCommentsFor(postId);
+    try {
+      const comments = await onLoadComments?.(postId);
+      if (comments) {
+        setFeed((prev) =>
+          prev.map((p) =>
+            p.id === postId
+              ? {
+                  ...p,
+                  comments,
+                  commentCount: comments.length,
+                  react: `${p.cheerCount} cheers · ${comments.length} comments`,
+                }
+              : p
+          )
+        );
+      }
+    } catch {
+      Alert.alert('Could not load comments', 'Please try again.');
+    } finally {
+      setLoadingCommentsFor(null);
+    }
+  };
+
+  const handleSubmitComment = async (postId: string) => {
+    const content = String(commentDrafts[postId] || '').trim();
+    if (!content) return;
+    setSendingCommentFor(postId);
+    try {
+      const created = await onAddComment?.(postId, content);
+      if (created) {
+        setFeed((prev) =>
+          prev.map((p) => {
+            if (p.id !== postId) return p;
+            const comments = [...(p.comments || []), created];
+            return {
+              ...p,
+              comments,
+              commentCount: Math.max(Number(p.commentCount || 0) + 1, comments.length),
+              react: `${p.cheerCount} cheers · ${Math.max(Number(p.commentCount || 0) + 1, comments.length)} comments`,
+            };
+          })
+        );
+      }
+      setCommentDrafts((prev) => ({ ...prev, [postId]: '' }));
+    } catch (error: any) {
+      Alert.alert('Comment failed', error?.message || 'Please try again.');
+    } finally {
+      setSendingCommentFor(null);
+    }
+  };
+
   const handlePublishPost = async () => {
-    if (!postDraft.trim() && !attachedPhoto && !(postKind === 'YouTube link' && youtubeUrl.trim())) {
+    const hasActivePhoto = postKind === 'Photo' && Boolean(attachedPhoto?.base64);
+    const hasActiveVideo = postKind === 'YouTube link' && Boolean(youtubeUrl.trim());
+
+    if (!postDraft.trim() && !hasActivePhoto && !hasActiveVideo) {
       Alert.alert('Empty Post', 'Please write something to share with your circle.');
       return;
     }
@@ -275,16 +389,17 @@ export default function ClaudeCommunityFeed({
     try {
       await onPublishPost?.({
         content: postDraft.trim(),
-        kind: postKind,
+        kind: hasActivePhoto || hasActiveVideo ? postKind : 'Text only',
         audience: postScope,
-        imageBase64: attachedPhoto?.base64,
-        imageMimeType: attachedPhoto?.mimeType,
-        imageFileName: attachedPhoto?.fileName,
-        externalVideoUrl: postKind === 'YouTube link' ? youtubeUrl.trim() : undefined,
+        imageBase64: hasActivePhoto ? attachedPhoto?.base64 : undefined,
+        imageMimeType: hasActivePhoto ? attachedPhoto?.mimeType : undefined,
+        imageFileName: hasActivePhoto ? attachedPhoto?.fileName : undefined,
+        externalVideoUrl: hasActiveVideo ? youtubeUrl.trim() : undefined,
       });
       setPostDraft('');
       setAttachedPhoto(null);
       setYoutubeUrl('');
+      setScope(postScope);
       setShowPostModal(false);
       Alert.alert('Posted', `Your post has been published to ${postAudienceShort}.`);
     } catch (error: any) {
@@ -318,15 +433,26 @@ export default function ClaudeCommunityFeed({
       const asset = result.assets[0];
       const base64 = asset.base64;
       if (!base64) return;
+      const mimeType = normalizePickedImageMimeType(asset);
       setAttachedPhoto({
         uri: asset.uri,
         base64,
-        mimeType: asset.mimeType || 'image/jpeg',
-        fileName: asset.fileName || `community-photo-${Date.now()}.jpg`,
+        mimeType,
+        fileName: normalizePickedImageFileName(asset, mimeType),
       });
       setPostKind('Photo');
     } catch (error: any) {
       Alert.alert('Photo failed', error?.message || 'Please try again.');
+    }
+  };
+
+  const selectPostKind = (kind: CommunityPostDraft['kind']) => {
+    setPostKind(kind);
+    if (kind !== 'Photo') {
+      setAttachedPhoto(null);
+    }
+    if (kind !== 'YouTube link') {
+      setYoutubeUrl('');
     }
   };
 
@@ -488,13 +614,62 @@ export default function ClaudeCommunityFeed({
             )}
 
             <View style={styles.postFooter}>
-              <Text style={styles.postReactText}>{p.react}</Text>
+              <TouchableOpacity activeOpacity={0.7} onPress={() => void handleToggleComments(p.id)}>
+                <Text style={styles.postReactText}>{p.react}</Text>
+              </TouchableOpacity>
               <TouchableOpacity activeOpacity={0.7} onPress={() => handleCheer(p.id)}>
                 <Text style={[styles.cheerBtnText, p.hasCheered && styles.cheerBtnTextActive]}>
                   {p.hasCheered ? 'Cheered ✓' : 'Cheer'}
                 </Text>
               </TouchableOpacity>
             </View>
+
+            {openCommentsFor === p.id && (
+              <View style={styles.commentsPanel}>
+                {loadingCommentsFor === p.id ? (
+                  <Text style={styles.commentMuted}>Loading comments...</Text>
+                ) : (p.comments || []).length > 0 ? (
+                  (p.comments || []).map((comment) => (
+                    <View key={comment.id} style={styles.commentRow}>
+                      <View style={styles.commentAvatar}>
+                        <Text style={styles.commentAvatarText}>{comment.authorInitials}</Text>
+                      </View>
+                      <View style={styles.commentBody}>
+                        <View style={styles.commentMetaRow}>
+                          <Text style={styles.commentAuthor}>{comment.authorName}</Text>
+                          <Text style={styles.commentWhen}>{comment.when}</Text>
+                        </View>
+                        <Text style={styles.commentText}>{comment.content}</Text>
+                      </View>
+                    </View>
+                  ))
+                ) : (
+                  <Text style={styles.commentMuted}>No comments yet.</Text>
+                )}
+
+                <View style={styles.commentComposer}>
+                  <TextInput
+                    style={styles.commentInput}
+                    placeholder="Write a comment..."
+                    placeholderTextColor="rgba(247,243,238,0.38)"
+                    value={commentDrafts[p.id] || ''}
+                    onChangeText={(text) => setCommentDrafts((prev) => ({ ...prev, [p.id]: text }))}
+                    multiline
+                  />
+                  <TouchableOpacity
+                    style={[
+                      styles.commentSendBtn,
+                      (!String(commentDrafts[p.id] || '').trim() || sendingCommentFor === p.id) && styles.commentSendBtnDisabled,
+                    ]}
+                    activeOpacity={0.82}
+                    disabled={!String(commentDrafts[p.id] || '').trim() || sendingCommentFor === p.id}
+                    onPress={() => void handleSubmitComment(p.id)}
+                  >
+                    <Text style={styles.commentSendText}>{sendingCommentFor === p.id ? '...' : 'Send'}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
           </View>
         ))}
       </View>
@@ -566,7 +741,7 @@ export default function ClaudeCommunityFeed({
                       on ? styles.kindChipActive : styles.kindChipInactive,
                     ]}
                     activeOpacity={0.8}
-                    onPress={() => setPostKind(kind)}
+                    onPress={() => selectPostKind(kind)}
                   >
                     <Text
                       style={[
@@ -612,7 +787,7 @@ export default function ClaudeCommunityFeed({
             {/* Video slot if YouTube link selected */}
             {postKind === 'YouTube link' && (
               <View style={styles.videoSlotCard}>
-                <Text style={styles.videoSlotKicker}>YOUTUBE LINK</Text>
+                <Text style={styles.videoSlotKicker}>VIDEO LINK</Text>
                 <View style={styles.videoUrlInputWrap}>
                   <TextInput
                     style={styles.videoUrlInput}
@@ -969,6 +1144,106 @@ const styles = StyleSheet.create({
   },
   cheerBtnTextActive: {
     color: '#1A7A4A',
+  },
+  commentsPanel: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(247, 243, 238, 0.12)',
+    gap: 10,
+  },
+  commentRow: {
+    flexDirection: 'row',
+    gap: 9,
+  },
+  commentAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 99,
+    backgroundColor: 'rgba(201, 148, 58, 0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  commentAvatarText: {
+    fontFamily: DMSANS,
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: GOLD,
+  },
+  commentBody: {
+    flex: 1,
+    backgroundColor: 'rgba(247, 243, 238, 0.06)',
+    borderRadius: 12,
+    paddingHorizontal: 11,
+    paddingVertical: 9,
+  },
+  commentMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 3,
+  },
+  commentAuthor: {
+    flex: 1,
+    fontFamily: DMSANS,
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: IVORY,
+  },
+  commentWhen: {
+    fontFamily: MONO,
+    fontSize: 10,
+    color: 'rgba(247, 243, 238, 0.42)',
+  },
+  commentText: {
+    fontFamily: INTER,
+    fontSize: 13,
+    lineHeight: 18,
+    color: 'rgba(247, 243, 238, 0.82)',
+  },
+  commentMuted: {
+    fontFamily: INTER,
+    fontSize: 12.5,
+    color: 'rgba(247, 243, 238, 0.48)',
+  },
+  commentComposer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 8,
+    backgroundColor: 'rgba(13, 13, 13, 0.24)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(247, 243, 238, 0.12)',
+    padding: 8,
+  },
+  commentInput: {
+    flex: 1,
+    minHeight: 34,
+    maxHeight: 86,
+    fontFamily: INTER,
+    fontSize: 13,
+    color: IVORY,
+    paddingVertical: 6,
+    textAlignVertical: 'top',
+  },
+  commentSendBtn: {
+    minWidth: 56,
+    height: 34,
+    borderRadius: 9,
+    backgroundColor: GOLD,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  commentSendBtnDisabled: {
+    opacity: 0.45,
+  },
+  commentSendText: {
+    fontFamily: DMSANS,
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#0D0D0D',
   },
   moderationFootnote: {
     fontFamily: INTER,
