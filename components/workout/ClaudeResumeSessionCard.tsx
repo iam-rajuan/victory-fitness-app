@@ -1,12 +1,16 @@
 import React from 'react';
-import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
+import { Image, StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
+import CrossPlatformWebView from '../CrossPlatformWebView';
 
 interface ClaudeResumeSessionCardProps {
   sessionTitle?: string;
   sessionLine?: string;
   minutesLeft?: string;
   progressPct?: number;
+  thumbnail?: string;
+  videoUrl?: string;
+  videoSource?: string;
   onResume?: () => void;
 }
 
@@ -19,11 +23,23 @@ const CLASH = Platform.select({ web: 'Clash Display', default: 'ClashDisplay-Bol
 const DMSANS = Platform.select({ web: 'DM Sans', default: 'DMSans-SemiBold' });
 const MONO = Platform.select({ web: 'JetBrains Mono', default: 'JetBrainsMono-Bold' });
 
+function isDirectVideoUrl(value?: string) {
+  return /\.(mp4|mov|m4v|webm)(\?.*)?$/i.test(String(value || '').trim());
+}
+
+function buildVideoPreviewHtml(videoUrl: string) {
+  const escapedUrl = videoUrl.replace(/"/g, '&quot;');
+  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;height:100%;background:#0D2B45;overflow:hidden}video{width:100%;height:100%;object-fit:cover;display:block}</style></head><body><video src="${escapedUrl}" muted playsinline preload="metadata"></video></body></html>`;
+}
+
 export default function ClaudeResumeSessionCard({
   sessionTitle = 'Upper Body Strength',
   sessionLine = 'exercise 3 of 7 · Strong at 45+ · week 2',
   minutesLeft = '18 min left',
   progressPct = 43,
+  thumbnail = '',
+  videoUrl = '',
+  videoSource = '',
   onResume,
 }: ClaudeResumeSessionCardProps) {
   const { colors, isDark } = useTheme();
@@ -49,6 +65,38 @@ export default function ClaudeResumeSessionCard({
       >
         {/* Top media container */}
         <View style={styles.mediaWrap}>
+          {thumbnail ? (
+            <Image source={{ uri: thumbnail }} style={styles.mediaImage} resizeMode="cover" />
+          ) : videoUrl && (videoSource === 'UPLOAD' || isDirectVideoUrl(videoUrl)) ? (
+            Platform.OS === 'web' ? (
+              React.createElement('video', {
+                src: videoUrl,
+                muted: true,
+                playsInline: true,
+                preload: 'metadata',
+                style: {
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  backgroundColor: OBSIDIAN,
+                  pointerEvents: 'none',
+                },
+              })
+            ) : (
+              <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+              <CrossPlatformWebView
+                source={{ html: buildVideoPreviewHtml(videoUrl) }}
+                style={StyleSheet.absoluteFill}
+                scrollEnabled={false}
+                javaScriptEnabled
+                allowsInlineMediaPlayback
+                mediaPlaybackRequiresUserAction={false}
+              />
+              </View>
+            )
+          ) : null}
           {/* Radial gradient background */}
           <View
             style={[
@@ -62,6 +110,7 @@ export default function ClaudeResumeSessionCard({
                 },
               }),
             ]}
+            pointerEvents="none"
           />
 
           {/* Big gold play circle */}
@@ -129,6 +178,11 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(247, 243, 238, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  mediaImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
   },
   playCircle: {
     width: 60,

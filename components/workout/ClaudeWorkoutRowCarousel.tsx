@@ -1,6 +1,7 @@
 import React from 'react';
 import { Image, StyleSheet, Text, View, ScrollView, Pressable, Platform } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
+import CrossPlatformWebView from '../CrossPlatformWebView';
 
 export interface ProgramCardItem {
   n: string;
@@ -16,8 +17,19 @@ export interface WorkoutRowItem {
   m: string;
   t: string;
   v?: string;
+  videoUrl?: string;
+  videoSource?: string;
   thumbnail?: string;
   item?: any;
+}
+
+function isDirectVideoUrl(value?: string) {
+  return /\.(mp4|mov|m4v|webm)(\?.*)?$/i.test(String(value || '').trim());
+}
+
+function buildVideoPreviewHtml(videoUrl: string) {
+  const escapedUrl = videoUrl.replace(/"/g, '&quot;');
+  return `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;height:100%;background:#0D2B45;overflow:hidden}video{width:100%;height:100%;object-fit:cover;display:block}</style></head><body><video src="${escapedUrl}" muted playsinline preload="metadata"></video></body></html>`;
 }
 
 interface ClaudeWorkoutRowCarouselProps {
@@ -215,8 +227,37 @@ export default function ClaudeWorkoutRowCarousel({
               <View style={styles.workoutMedia}>
                 {w.thumbnail ? (
                   <Image source={{ uri: w.thumbnail }} style={styles.mediaImage} resizeMode="cover" />
+                ) : w.videoUrl && (w.videoSource === 'UPLOAD' || isDirectVideoUrl(w.videoUrl)) ? (
+                  Platform.OS === 'web' ? (
+                    React.createElement('video', {
+                      src: w.videoUrl,
+                      muted: true,
+                      playsInline: true,
+                      preload: 'metadata',
+                      style: {
+                        position: 'absolute',
+                        inset: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        backgroundColor: NAVY,
+                        pointerEvents: 'none',
+                      },
+                    })
+                  ) : (
+                    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+                    <CrossPlatformWebView
+                      source={{ html: buildVideoPreviewHtml(w.videoUrl) }}
+                      style={StyleSheet.absoluteFill}
+                      scrollEnabled={false}
+                      javaScriptEnabled
+                      allowsInlineMediaPlayback
+                      mediaPlaybackRequiresUserAction={false}
+                    />
+                    </View>
+                  )
                 ) : null}
-                {w.thumbnail ? <View style={styles.workoutImageOverlay} /> : null}
+                {w.thumbnail || w.videoUrl ? <View style={styles.workoutImageOverlay} pointerEvents="none" /> : null}
                 <View style={styles.playCircle}>
                   <View style={styles.playArrow} />
                 </View>

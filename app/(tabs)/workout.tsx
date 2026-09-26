@@ -41,7 +41,7 @@ const OBSIDIAN = '#0D0D0D';
 const GOLD = '#C9943A';
 
 function formatDurationBadge(minutes: number) {
-  if (!minutes || minutes <= 0) return '00:00';
+  if (!minutes || minutes <= 0) return 'Not set';
   return `${minutes}:00`;
 }
 
@@ -76,6 +76,8 @@ function mapRowWorkout(workout: GridWorkoutItem, badge: string): WorkoutRowItem 
     m: workout.meta,
     t: badge,
     v: workout.vimeoId,
+    videoUrl: workout.videoUrl,
+    videoSource: workout.videoSource,
     thumbnail: workout.thumbnail,
     item: workout,
   } as WorkoutRowItem & { item: GridWorkoutItem };
@@ -338,6 +340,9 @@ export default function WorkoutScreen() {
           sessionTitle={selectedWorkout?.name || 'No published workout yet'}
           sessionLine={selectedWorkout?.meta || 'Publish workouts in the dashboard to start training here'}
           minutesLeft={selectedWorkout?.durationMinutes ? `${selectedWorkout.durationMinutes} min` : 'Not set'}
+          thumbnail={selectedWorkout?.thumbnail || ''}
+          videoUrl={selectedWorkout?.videoUrl || ''}
+          videoSource={selectedWorkout?.videoSource || ''}
           progressPct={0}
           onResume={handleResumeSession}
         />
@@ -423,7 +428,7 @@ export default function WorkoutScreen() {
             ? `${selectedWorkout.movements.length} movements. Follow the admin-programmed session and video for this workout.`
             : 'Follow the workout video. Add movements in the admin dashboard to show the full member session here.'
         }
-        durationBadge={selectedWorkout?.badge || '00:00'}
+        durationBadge={selectedWorkout?.badge || 'Not set'}
         vimeoId={selectedWorkout?.vimeoId || ''}
         videoUrl={selectedWorkout?.videoUrl || ''}
         exercises={selectedExercises}
