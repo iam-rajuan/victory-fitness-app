@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -100,6 +100,89 @@ const ALL_CHALLENGES: ChallengeItem[] = CLAUDE_CHALLENGES;
 const DAY_FILTERS = ['All', '3', '5', '7', '14', '21'];
 const CAT_FILTERS = ['All', 'Physical', 'Mental', 'Relational'];
 
+function useHorizontalWebScroll() {
+  const scrollRef = useRef<ScrollView>(null);
+  const isMouseDown = useRef(false);
+  const startX = useRef(0);
+  const scrollStartLeft = useRef(0);
+  const hasDragged = useRef(false);
+
+  const getDomNode = () => {
+    return (
+      (scrollRef.current as any)?.getScrollResponder?.()?.getScrollableNode?.() ||
+      (scrollRef.current as any)
+    );
+  };
+
+  const handleMouseDown = (e: any) => {
+    if (Platform.OS !== 'web') return;
+    isMouseDown.current = true;
+    hasDragged.current = false;
+    startX.current = e.nativeEvent?.pageX ?? e.pageX ?? 0;
+    const node = getDomNode();
+    scrollStartLeft.current = node?.scrollLeft || 0;
+  };
+
+  const handleMouseMove = (e: any) => {
+    if (Platform.OS !== 'web' || !isMouseDown.current) return;
+    const currentX = e.nativeEvent?.pageX ?? e.pageX ?? 0;
+    const diff = currentX - startX.current;
+    if (Math.abs(diff) > 4) {
+      hasDragged.current = true;
+    }
+    const node = getDomNode();
+    if (node) {
+      node.scrollLeft = scrollStartLeft.current - diff;
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (Platform.OS !== 'web') return;
+    isMouseDown.current = false;
+    setTimeout(() => {
+      hasDragged.current = false;
+    }, 100);
+  };
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const node = getDomNode();
+    if (!node) return;
+
+    const onWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaX) < Math.abs(e.deltaY) && e.deltaY !== 0) {
+        node.scrollLeft += e.deltaY * 0.8;
+      }
+    };
+
+    node.addEventListener('wheel', onWheel, { passive: true });
+    return () => {
+      node.removeEventListener('wheel', onWheel);
+    };
+  }, []);
+
+  const webProps = Platform.OS === 'web' ? {
+    onMouseDown: handleMouseDown,
+    onMouseMove: handleMouseMove,
+    onMouseUp: handleMouseUp,
+    onMouseLeave: handleMouseUp,
+  } : {};
+
+  const webStyle = Platform.OS === 'web' ? ({
+    cursor: 'grab',
+    userSelect: 'none',
+    WebkitOverflowScrolling: 'touch',
+  } as any) : undefined;
+
+  return {
+    scrollRef,
+    hasDragged,
+    getDomNode,
+    webProps,
+    webStyle,
+  };
+}
+
 export default function ClaudeChallengeDirectory({
   onSelectChallenge,
   onOpenInviteGuest,
@@ -107,17 +190,29 @@ export default function ClaudeChallengeDirectory({
   const { colors, isDark } = useTheme();
   const [selectedDay, setSelectedDay] = useState('All');
   const [selectedCat, setSelectedCat] = useState('All');
-  const railScrollRef = useRef<ScrollView>(null);
+  const railScroll = useHorizontalWebScroll();
+  const daysScroll = useHorizontalWebScroll();
+  const catScroll = useHorizontalWebScroll();
   const [railOffset, setRailOffset] = useState(0);
 
   const handleSlideRail = () => {
-    if (railScrollRef.current) {
-      // 176px card width + 12px gap = 188px step
-      const maxOffset = (RAIL_CHALLENGES.length - 1) * 188;
-      const nextOffset = railOffset >= maxOffset ? 0 : railOffset + 188;
-      railScrollRef.current.scrollTo({ x: nextOffset, animated: true });
-      setRailOffset(nextOffset);
+    const node = railScroll.getDomNode();
+    const currentX = node ? node.scrollLeft : railOffset;
+    // 176px card width + 12px gap = 188px step
+    const maxOffset = (RAIL_CHALLENGES.length - 1) * 188;
+    const nextOffset = currentX >= maxOffset - 10 ? 0 : currentX + 188;
+
+    if (railScroll.scrollRef.current?.scrollTo) {
+      railScroll.scrollRef.current.scrollTo({ x: nextOffset, animated: true });
     }
+    if (node) {
+      if (node.scrollTo) {
+        node.scrollTo({ left: nextOffset, behavior: 'smooth' });
+      } else {
+        node.scrollLeft = nextOffset;
+      }
+    }
+    setRailOffset(nextOffset);
   };
 
   const filteredChallenges = ALL_CHALLENGES.filter((ch) => {
@@ -142,7 +237,7 @@ export default function ClaudeChallengeDirectory({
       </View>
 
       <ScrollView
-        ref={railScrollRef}
+        ref={railScroll.scrollRef}
         horizontal
         showsHorizontalScrollIndicator={false}
         decelerationRate="fast"
@@ -153,6 +248,8 @@ export default function ClaudeChallengeDirectory({
         onScroll={(e) => setRailOffset(e.nativeEvent.contentOffset.x)}
         scrollEventThrottle={16}
         contentContainerStyle={styles.railScroll}
+        style={railScroll.webStyle}
+        {...railScroll.webProps}
       >
         {RAIL_CHALLENGES.map((c) => (
           <TouchableOpacity
@@ -171,7 +268,10 @@ export default function ClaudeChallengeDirectory({
               },
             ]}
             activeOpacity={0.85}
-            onPress={() => onSelectChallenge(c)}
+            onPress={() => {
+              if (railScroll.hasDragged.current) return;
+              onSelectChallenge(c);
+            }}
           >
             <View style={styles.railCardTop}>
               <Text style={[styles.railCardDays, { color: isDark ? IVORY : NAVY }]}>{c.d}</Text>
@@ -208,9 +308,12 @@ export default function ClaudeChallengeDirectory({
       <View style={styles.filterSection}>
         <Text style={[styles.filterLabel, { color: colors.textMuted }]}>HOW MANY DAYS?</Text>
         <ScrollView
+          ref={daysScroll.scrollRef}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.chipRow}
+          style={daysScroll.webStyle}
+          {...daysScroll.webProps}
         >
           {DAY_FILTERS.map((d) => {
             const isCircle = d !== 'All';
@@ -226,7 +329,10 @@ export default function ClaudeChallengeDirectory({
                   },
                 ]}
                 activeOpacity={0.8}
-                onPress={() => setSelectedDay(d)}
+                onPress={() => {
+                  if (daysScroll.hasDragged.current) return;
+                  setSelectedDay(d);
+                }}
               >
                 <Text
                   style={[
@@ -247,9 +353,12 @@ export default function ClaudeChallengeDirectory({
       <View style={styles.filterSectionSmall}>
         <Text style={[styles.filterLabel, { color: colors.textMuted }]}>WHAT KIND?</Text>
         <ScrollView
+          ref={catScroll.scrollRef}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.chipRow}
+          style={catScroll.webStyle}
+          {...catScroll.webProps}
         >
           {CAT_FILTERS.map((cat) => {
             const isSelected = selectedCat === cat;
@@ -264,7 +373,10 @@ export default function ClaudeChallengeDirectory({
                   },
                 ]}
                 activeOpacity={0.8}
-                onPress={() => setSelectedCat(cat)}
+                onPress={() => {
+                  if (catScroll.hasDragged.current) return;
+                  setSelectedCat(cat);
+                }}
               >
                 <Text
                   style={[
