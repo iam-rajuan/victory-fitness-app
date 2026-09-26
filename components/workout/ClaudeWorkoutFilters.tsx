@@ -51,7 +51,19 @@ export default function ClaudeWorkoutFilters({
       {/* Search Input */}
       <View style={styles.searchBox}>
         <TextInput
-          style={styles.searchInput}
+          style={[
+            styles.searchInput,
+            Platform.select({
+              web: {
+                outlineStyle: 'none',
+                outlineWidth: 0,
+                outlineColor: 'transparent',
+                borderWidth: 0,
+                borderColor: 'transparent',
+                boxShadow: 'none',
+              } as any,
+            }),
+          ]}
           placeholder="Search by name, muscle or kit…"
           placeholderTextColor="rgba(247, 243, 238, 0.45)"
           value={searchQuery}
@@ -252,6 +264,12 @@ const styles = StyleSheet.create({
     fontSize: 14.5,
     color: IVORY,
     padding: 0,
+    borderWidth: 0,
+    borderColor: 'transparent',
+    backgroundColor: 'transparent',
+    outlineStyle: 'none' as any,
+    outlineWidth: 0 as any,
+    outlineColor: 'transparent' as any,
   },
   filterRow: {
     paddingTop: 16,

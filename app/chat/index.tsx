@@ -27,6 +27,12 @@ interface ChatMessage {
   prescriptionCard?: {
     title: string;
     meta: string;
+    workoutId?: string;
+    workoutTitle?: string;
+    vimeoId?: string;
+    videoUrl?: string;
+    tag?: string;
+    thumbnail?: string;
   };
   contextNote?: string;
 }
@@ -53,14 +59,21 @@ export default function ClaudeCoachScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{
     initialPrompt?: string;
+    autoSend?: string;
     prescriptionTitle?: string;
     prescriptionMeta?: string;
+    prescriptionWorkoutId?: string;
+    prescriptionWorkoutTitle?: string;
+    prescriptionVimeoId?: string;
+    prescriptionVideoUrl?: string;
+    prescriptionTag?: string;
+    prescriptionThumbnail?: string;
     contextNote?: string;
   }>();
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
-  const autoPromptSentRef = useRef(false);
+  const autoPromptHandledRef = useRef(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -87,6 +100,12 @@ export default function ClaudeCoachScreen() {
     options?: {
       prescriptionTitle?: string;
       prescriptionMeta?: string;
+      prescriptionWorkoutId?: string;
+      prescriptionWorkoutTitle?: string;
+      prescriptionVimeoId?: string;
+      prescriptionVideoUrl?: string;
+      prescriptionTag?: string;
+      prescriptionThumbnail?: string;
       contextNote?: string;
     }
   ) => {
@@ -139,6 +158,12 @@ export default function ClaudeCoachScreen() {
           ? {
               title: options.prescriptionTitle,
               meta: options.prescriptionMeta || '',
+              workoutId: options.prescriptionWorkoutId,
+              workoutTitle: options.prescriptionWorkoutTitle,
+              vimeoId: options.prescriptionVimeoId,
+              videoUrl: options.prescriptionVideoUrl,
+              tag: options.prescriptionTag,
+              thumbnail: options.prescriptionThumbnail,
             }
           : undefined,
         contextNote: options?.contextNote || 'used your identity statement & habit data',
@@ -163,14 +188,42 @@ export default function ClaudeCoachScreen() {
 
   useEffect(() => {
     const initialPrompt = typeof params.initialPrompt === 'string' ? params.initialPrompt.trim() : '';
-    if (!hasCoach || !currentUser || !initialPrompt || autoPromptSentRef.current) return;
-    autoPromptSentRef.current = true;
-    void handleSendText(initialPrompt, {
-      prescriptionTitle: typeof params.prescriptionTitle === 'string' ? params.prescriptionTitle : undefined,
-      prescriptionMeta: typeof params.prescriptionMeta === 'string' ? params.prescriptionMeta : undefined,
-      contextNote: typeof params.contextNote === 'string' ? params.contextNote : 'used your workout filters and profile',
+    if (!hasCoach || !currentUser || !initialPrompt || autoPromptHandledRef.current) return;
+    autoPromptHandledRef.current = true;
+    setInputText(initialPrompt);
+    if (params.autoSend === '1') {
+      void handleSendText(initialPrompt, buildPrescriptionOptionsFromParams());
+    }
+  }, [currentUser, hasCoach, params.autoSend, params.initialPrompt]);
+
+  const buildPrescriptionOptionsFromParams = () => ({
+    prescriptionTitle: typeof params.prescriptionTitle === 'string' ? params.prescriptionTitle : undefined,
+    prescriptionMeta: typeof params.prescriptionMeta === 'string' ? params.prescriptionMeta : undefined,
+    prescriptionWorkoutId: typeof params.prescriptionWorkoutId === 'string' ? params.prescriptionWorkoutId : undefined,
+    prescriptionWorkoutTitle: typeof params.prescriptionWorkoutTitle === 'string' ? params.prescriptionWorkoutTitle : undefined,
+    prescriptionVimeoId: typeof params.prescriptionVimeoId === 'string' ? params.prescriptionVimeoId : undefined,
+    prescriptionVideoUrl: typeof params.prescriptionVideoUrl === 'string' ? params.prescriptionVideoUrl : undefined,
+    prescriptionTag: typeof params.prescriptionTag === 'string' ? params.prescriptionTag : undefined,
+    prescriptionThumbnail: typeof params.prescriptionThumbnail === 'string' ? params.prescriptionThumbnail : undefined,
+    contextNote: typeof params.contextNote === 'string' ? params.contextNote : 'used your workout filters and profile',
+  });
+
+  const handleOpenPrescriptionWorkout = (card: NonNullable<ChatMessage['prescriptionCard']>) => {
+    if (!card.workoutId) return;
+    pushRoute(router, {
+      pathname: '/workout',
+      params: {
+        workoutId: card.workoutId,
+        open: '1',
+      },
     });
-  }, [currentUser, hasCoach, params.contextNote, params.initialPrompt, params.prescriptionMeta, params.prescriptionTitle]);
+  };
+
+  const handleSubmitInput = () => {
+    const initialPrompt = typeof params.initialPrompt === 'string' ? params.initialPrompt.trim() : '';
+    const shouldAttachPrescription = Boolean(initialPrompt && inputText.trim() === initialPrompt);
+    void handleSendText(inputText, shouldAttachPrescription ? buildPrescriptionOptionsFromParams() : undefined);
+  };
 
   // If Silver tier, show the locked paywall teaser per prototype
   if (!hasCoach) {
@@ -253,10 +306,17 @@ export default function ClaudeCoachScreen() {
 
                 {/* Prescription Card */}
                 {m.prescriptionCard ? (
-                  <View style={styles.prescriptionCard}>
+                  <Pressable
+                    style={styles.prescriptionCard}
+                    onPress={() => handleOpenPrescriptionWorkout(m.prescriptionCard!)}
+                    disabled={!m.prescriptionCard.workoutId}
+                  >
                     <Text style={styles.prescriptionTitle}>{m.prescriptionCard.title}</Text>
                     <Text style={styles.prescriptionMeta}>{m.prescriptionCard.meta}</Text>
-                  </View>
+                    {m.prescriptionCard.workoutId ? (
+                      <Text style={styles.prescriptionOpenHint}>Open workout</Text>
+                    ) : null}
+                  </Pressable>
                 ) : null}
               </View>
 
@@ -295,18 +355,30 @@ export default function ClaudeCoachScreen() {
       <View style={styles.inputContainer}>
         <View style={styles.inputBox}>
           <TextInput
-            style={styles.textInput}
+            style={[
+              styles.textInput,
+              Platform.select({
+                web: {
+                  outlineStyle: 'none',
+                  outlineWidth: 0,
+                  outlineColor: 'transparent',
+                  borderWidth: 0,
+                  borderColor: 'transparent',
+                  boxShadow: 'none',
+                } as any,
+              }),
+            ]}
             placeholder="Ask anything…"
             placeholderTextColor="rgba(247, 243, 238, 0.45)"
             value={inputText}
             onChangeText={setInputText}
-            onSubmitEditing={() => void handleSendText(inputText)}
+            onSubmitEditing={handleSubmitInput}
             returnKeyType="send"
           />
           <Pressable
             style={[styles.sendBtn, !inputText.trim() && styles.sendBtnDisabled]}
             disabled={!inputText.trim() || sending}
-            onPress={() => void handleSendText(inputText)}
+            onPress={handleSubmitInput}
           >
             <View style={styles.sendArrow} />
           </Pressable>
@@ -427,6 +499,14 @@ const styles = StyleSheet.create({
     color: 'rgba(247, 243, 238, 0.6)',
     marginTop: 3,
   },
+  prescriptionOpenHint: {
+    fontFamily: MONO,
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: GOLD,
+    marginTop: 8,
+    textTransform: 'uppercase',
+  },
   contextFootnote: {
     fontFamily: MONO,
     fontSize: 11.5,
@@ -491,7 +571,14 @@ const styles = StyleSheet.create({
     fontFamily: INTER,
     fontSize: 14,
     color: IVORY,
-    padding: 0,
+    paddingVertical: 6,
+    paddingHorizontal: 0,
+    borderWidth: 0,
+    borderColor: 'transparent',
+    backgroundColor: 'transparent',
+    outlineStyle: 'none' as any,
+    outlineWidth: 0 as any,
+    outlineColor: 'transparent' as any,
   },
   sendBtn: {
     width: 32,

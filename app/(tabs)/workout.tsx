@@ -6,7 +6,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
@@ -206,8 +206,10 @@ function formatRestTime(seconds: number | undefined) {
 
 export default function WorkoutScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ workoutId?: string; open?: string }>();
   const checkingAccess = useModuleAccessGuard('/workout');
   const { isDark, colors } = useTheme();
+  const openedParamWorkoutRef = useRef('');
 
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -301,6 +303,15 @@ export default function WorkoutScreen() {
         if (!existing?.id) return mappedWorkouts[0] || existing || null;
         return mappedWorkouts.find((workout) => workout.id === existing.id) || existing;
       });
+      const requestedWorkoutId = typeof params.workoutId === 'string' ? params.workoutId : '';
+      if (params.open === '1' && requestedWorkoutId && openedParamWorkoutRef.current !== requestedWorkoutId) {
+        const requestedWorkout = mappedWorkouts.find((workout) => workout.id === requestedWorkoutId);
+        if (requestedWorkout) {
+          openedParamWorkoutRef.current = requestedWorkoutId;
+          setSelectedWorkout(requestedWorkout);
+          setWorkoutDetailModalVisible(true);
+        }
+      }
 
       const status = await getSavedPlanStatus();
       if (status.planBuilt) {
@@ -313,6 +324,16 @@ export default function WorkoutScreen() {
   useEffect(() => {
     void loadData();
   }, []);
+
+  useEffect(() => {
+    const requestedWorkoutId = typeof params.workoutId === 'string' ? params.workoutId : '';
+    if (params.open !== '1' || !requestedWorkoutId || openedParamWorkoutRef.current === requestedWorkoutId) return;
+    const requestedWorkout = libraryWorkouts.find((workout) => workout.id === requestedWorkoutId);
+    if (!requestedWorkout) return;
+    openedParamWorkoutRef.current = requestedWorkoutId;
+    setSelectedWorkout(requestedWorkout);
+    setWorkoutDetailModalVisible(true);
+  }, [libraryWorkouts, params.open, params.workoutId]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -440,6 +461,12 @@ export default function WorkoutScreen() {
         initialPrompt: prompt,
         prescriptionTitle: suggestion?.name || 'Workout library',
         prescriptionMeta: suggestion?.meta || `${timeText} · ${kitText}`,
+        prescriptionWorkoutId: suggestion?.id || '',
+        prescriptionWorkoutTitle: suggestion?.name || '',
+        prescriptionVimeoId: suggestion?.vimeoId || '',
+        prescriptionVideoUrl: suggestion?.videoUrl || '',
+        prescriptionTag: suggestion?.tag || '',
+        prescriptionThumbnail: suggestion?.thumbnail || '',
         contextNote: 'used your workout filters, library and profile',
       },
     });
