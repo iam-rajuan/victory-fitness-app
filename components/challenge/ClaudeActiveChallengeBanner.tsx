@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Platform, Alert } from 'react-native';
+import React from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
+import { ChallengeItem } from './ClaudeChallengeDirectory';
 
 interface ClaudeActiveChallengeBannerProps {
+  challenge?: ChallengeItem | null;
   onOpenCohort: () => void;
   onInvite: () => void;
+  onOpenChallenge?: () => void;
 }
 
 const NAVY = '#0D2B45';
@@ -18,16 +21,23 @@ const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", defau
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 export default function ClaudeActiveChallengeBanner({
+  challenge,
   onOpenCohort,
   onInvite,
+  onOpenChallenge,
 }: ClaudeActiveChallengeBannerProps) {
   const { isDark } = useTheme();
-  const [checkedToday, setCheckedToday] = useState(false);
 
-  // 21-day warrior pips: doneTo is 18 when checked, 17 when unchecked
-  const daysTotal = 21;
-  const doneTo = checkedToday ? 18 : 17;
-  const barWidth = checkedToday ? 86 : 81;
+  if (!challenge) {
+    return null;
+  }
+
+  const daysTotal = Math.max(1, challenge.d || 1);
+  const progressPct = Math.max(0, Math.min(100, Math.round(Number(challenge.progress || 0) * 100)));
+  const doneTo = Math.max(0, Math.min(daysTotal, Math.round(daysTotal * (progressPct / 100))));
+  const currentDay = Math.min(daysTotal, doneTo + 1);
+  const daysLeft = Math.max(0, Number(challenge.daysLeft || daysTotal - doneTo));
+  const unreadCount = Math.max(0, Number(challenge.unreadCount || 0));
 
   return (
     <View style={styles.container}>
@@ -47,11 +57,11 @@ export default function ClaudeActiveChallengeBanner({
         ]}
       >
         <View style={styles.headerRow}>
-          <Text style={[styles.kicker, { color: GOLD }]}>YOU'RE IN · DAY 18 OF 21</Text>
-          <Text style={styles.pointsBadge}>800 PTS AT STAKE</Text>
+          <Text style={[styles.kicker, { color: GOLD }]}>{`YOU'RE IN · DAY ${currentDay} OF ${daysTotal}`}</Text>
+          <Text style={styles.pointsBadge}>{challenge.p}</Text>
         </View>
 
-        <Text style={[styles.title, { color: isDark ? IVORY : NAVY }]}>21-Day Warrior</Text>
+        <Text style={[styles.title, { color: isDark ? IVORY : NAVY }]}>{challenge.n}</Text>
 
         {/* Progress Bar matching line 2914 */}
         <View
@@ -62,14 +72,14 @@ export default function ClaudeActiveChallengeBanner({
             },
           ]}
         >
-          <View style={[styles.progressBarFill, { width: `${barWidth}%` }]} />
+          <View style={[styles.progressBarFill, { width: `${progressPct}%` }]} />
         </View>
 
         {/* 21 Day Pips matching line 2915-2922 */}
         <View style={styles.pipsRow}>
           {Array.from({ length: daysTotal }).map((_, i) => {
             const isDone = i < doneTo;
-            const isToday = i === 17;
+            const isToday = i === currentDay - 1;
             const pipBg = isDone
               ? GOLD
               : isToday
@@ -94,37 +104,35 @@ export default function ClaudeActiveChallengeBanner({
         <TouchableOpacity
           style={[
             styles.checkCard,
-            checkedToday ? styles.checkCardDone : styles.checkCardPending,
+            challenge.status === 'completed' ? styles.checkCardDone : styles.checkCardPending,
           ]}
           activeOpacity={0.85}
-          onPress={() => setCheckedToday((prev) => !prev)}
+          onPress={onOpenChallenge || onOpenCohort}
         >
           <View
             style={[
               styles.checkBox,
-              checkedToday ? styles.checkBoxDone : styles.checkBoxPending,
+              challenge.status === 'completed' ? styles.checkBoxDone : styles.checkBoxPending,
             ]}
           >
-            {checkedToday && <View style={styles.checkTick} />}
+            {challenge.status === 'completed' && <View style={styles.checkTick} />}
           </View>
           <View style={styles.checkTextWrap}>
             <Text
               style={[
                 styles.checkTitle,
-                { color: checkedToday ? IVORY : '#0D0D0D' },
+                { color: challenge.status === 'completed' ? IVORY : '#0D0D0D' },
               ]}
             >
-              {checkedToday ? 'Day 18 done' : 'Mark day 18 done'}
+              {challenge.status === 'completed' ? 'Challenge complete' : `Open day ${currentDay}`}
             </Text>
             <Text
               style={[
                 styles.checkNote,
-                { color: checkedToday ? 'rgba(247, 243, 238, 0.7)' : '#2A2218' },
+                { color: challenge.status === 'completed' ? 'rgba(247, 243, 238, 0.7)' : '#2A2218' },
               ]}
             >
-              {checkedToday
-                ? 'Logged at 20:41. Three days to go — tap to undo.'
-                : 'Five sessions this week, progressive difficulty. Tap when today is finished.'}
+              {daysLeft > 0 ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} left. Continue from your challenge hub.` : 'Your challenge progress is saved.'}
             </Text>
           </View>
         </TouchableOpacity>
@@ -133,9 +141,11 @@ export default function ClaudeActiveChallengeBanner({
         <View style={styles.actionsRow}>
           <TouchableOpacity style={styles.cohortBtn} activeOpacity={0.8} onPress={onOpenCohort}>
             <Text style={styles.cohortBtnText}>Cohort chat</Text>
-            <View style={styles.unreadBadge}>
-              <Text style={styles.unreadBadgeText}>3</Text>
-            </View>
+            {unreadCount > 0 && (
+              <View style={styles.unreadBadge}>
+                <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.inviteBtn} activeOpacity={0.8} onPress={onInvite}>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -6,16 +6,18 @@ import {
   ScrollView,
   Platform,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { fetchCurrentUser } from '../../lib/api';
+import { apiRequest, fetchCurrentUser } from '../../lib/api';
+import { fetchChallengeOverviewData } from '../../lib/screenData';
 import ClaudeChallengeTabs, { ChallengeTabType } from '../../components/challenge/ClaudeChallengeTabs';
 import ClaudeActiveChallengeBanner from '../../components/challenge/ClaudeActiveChallengeBanner';
 import ClaudeChallengeDirectory, { ChallengeItem } from '../../components/challenge/ClaudeChallengeDirectory';
 import ClaudeChallengeDetailModal from '../../components/challenge/ClaudeChallengeDetailModal';
 import ClaudeCohortModal from '../../components/challenge/ClaudeCohortModal';
 import ClaudeInviteModal from '../../components/challenge/ClaudeInviteModal';
-import ClaudeCommunityFeed from '../../components/challenge/ClaudeCommunityFeed';
+import ClaudeCommunityFeed, { CommunityPost } from '../../components/challenge/ClaudeCommunityFeed';
 import { useTheme } from '../../context/ThemeContext';
 
 const OBSIDIAN = '#0D0D0D';
@@ -23,18 +25,112 @@ const IVORY = '#F7F3EE';
 
 const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
 
+type ChallengeOverviewPayload = {
+  active_chats?: Array<{
+    challenge_id?: string;
+    unread_count?: number;
+  }>;
+  active_challenges?: Array<Record<string, any>>;
+  completed_challenges?: Array<Record<string, any>>;
+  ready_to_start?: Array<Record<string, any>>;
+};
+
+function formatCategory(value: unknown) {
+  return String(value || 'Challenge').trim().toUpperCase();
+}
+
+function formatPoints(value: unknown) {
+  const points = Math.max(0, Number(value || 0));
+  return points > 0 ? `${points} pts` : '0 pts';
+}
+
+function formatJoined(value: unknown) {
+  const joined = Math.max(0, Number(value || 0));
+  return `${joined} joined`;
+}
+
+function buildChallengeItem(raw: Record<string, any>, status: ChallengeItem['status'], unreadCount = 0): ChallengeItem {
+  const challengeId = String(raw.challenge_id || raw.id || '').trim();
+  const points = status === 'completed' ? raw.earned_points : raw.points;
+  return {
+    id: challengeId,
+    challengeId,
+    n: String(raw.title || 'Untitled challenge').trim(),
+    d: Math.max(1, Number(raw.duration_days || raw.total_days || 1)),
+    c: formatCategory(raw.type || raw.category),
+    p: formatPoints(points),
+    joined: formatJoined(raw.participants),
+    faces: [],
+    desc: String(raw.description || '').trim(),
+    why: String(raw.why_it_matters || '').trim(),
+    status,
+    canStart: Boolean(raw.can_start),
+    progress: Math.max(0, Math.min(1, Number(raw.progress || (status === 'completed' ? 1 : 0)))),
+    daysLeft: Math.max(0, Number(raw.days_left || 0)),
+    unreadCount,
+  };
+}
+
+function initialsFromName(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  return (parts[0] || 'VF').slice(0, 2).toUpperCase();
+}
+
+function formatRelativeTime(value: unknown) {
+  const date = new Date(String(value || ''));
+  if (Number.isNaN(date.getTime())) return '';
+  const diffMs = Date.now() - date.getTime();
+  const minutes = Math.max(0, Math.floor(diffMs / 60000));
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function mapCommunityPost(raw: Record<string, any>): CommunityPost {
+  const likeCount = Math.max(0, Number(raw.like_count || 0));
+  const commentCount = Math.max(0, Number(raw.comment_count || 0));
+  const videoUrl = String(raw.video_url || '').trim();
+  const imageUrl = String(raw.image_url || '').trim();
+  const authorName = String(raw.author_name || 'Victory member').trim();
+  return {
+    id: String(raw.id || ''),
+    name: authorName,
+    tier: String(raw.author_tier || raw.author_role || 'MEMBER').trim().toUpperCase(),
+    i: initialsFromName(authorName),
+    when: formatRelativeTime(raw.created_at),
+    body: String(raw.content || '').trim(),
+    react: `${likeCount} cheers · ${commentCount} comments`,
+    cheerCount: likeCount,
+    hasCheered: Boolean(raw.viewer_has_liked),
+    hasPhoto: Boolean(imageUrl),
+    photoNote: imageUrl ? 'photo attached' : undefined,
+    hasVideo: Boolean(videoUrl),
+    videoTitle: videoUrl ? 'Community video' : undefined,
+    videoMeta: videoUrl ? 'Opens from the community feed' : undefined,
+  };
+}
+
 export default function ChallengeScreen() {
   const router = useRouter();
   const { isDark, colors } = useTheme();
 
   const [activeTab, setActiveTab] = useState<ChallengeTabType>('challenges');
   const [selectedChallenge, setSelectedChallenge] = useState<ChallengeItem | null>(null);
+  const [challengeItems, setChallengeItems] = useState<ChallengeItem[]>([]);
+  const [activeChallenge, setActiveChallenge] = useState<ChallengeItem | null>(null);
+  const [isLoadingChallenges, setIsLoadingChallenges] = useState(true);
+  const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([]);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showCohortModal, setShowCohortModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [userTier, setUserTier] = useState('GOLD');
-  const [userName, setUserName] = useState('Michael');
-  const [userInitials, setUserInitials] = useState('MK');
+  const [userName, setUserName] = useState('Member');
+  const [userInitials, setUserInitials] = useState('ME');
 
   useEffect(() => {
     let cancelled = false;
@@ -64,19 +160,118 @@ export default function ChallengeScreen() {
     };
   }, []);
 
+  const loadChallenges = useCallback(async ({ forceRefresh = false } = {}) => {
+    setIsLoadingChallenges(true);
+    try {
+      const overview = (await fetchChallengeOverviewData({ forceRefresh })) as ChallengeOverviewPayload;
+      const unreadByChallenge = new Map<string, number>();
+      (overview.active_chats || []).forEach((chat) => {
+        const id = String(chat.challenge_id || '').trim();
+        if (id) unreadByChallenge.set(id, Math.max(0, Number(chat.unread_count || 0)));
+      });
+
+      const active = (overview.active_challenges || []).map((item) => {
+        const id = String(item.challenge_id || item.id || '').trim();
+        return buildChallengeItem(item, 'active', unreadByChallenge.get(id) || 0);
+      });
+      const ready = (overview.ready_to_start || []).map((item) => buildChallengeItem(item, 'ready'));
+      const completed = (overview.completed_challenges || []).map((item) => buildChallengeItem(item, 'completed'));
+      const combined = [...active, ...ready, ...completed].filter((item) => item.challengeId);
+
+      setActiveChallenge(active[0] || null);
+      setChallengeItems(combined);
+    } catch (error: any) {
+      setActiveChallenge(null);
+      setChallengeItems([]);
+      Alert.alert('Failed to load challenges', error?.message || 'Please try again.');
+    } finally {
+      setIsLoadingChallenges(false);
+    }
+  }, []);
+
+  const loadCommunityPosts = useCallback(async () => {
+    try {
+      const response = await apiRequest<{ posts?: Array<Record<string, any>> }>('/community/posts?limit=50');
+      setCommunityPosts((response.posts || []).map(mapCommunityPost).filter((post) => post.id));
+    } catch {
+      setCommunityPosts([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadChallenges();
+    void loadCommunityPosts();
+  }, [loadChallenges, loadCommunityPosts]);
+
   const handleSelectChallenge = (c: ChallengeItem) => {
     setSelectedChallenge(c);
     setShowDetailModal(true);
   };
 
-  const handleJoinChallenge = (c: ChallengeItem) => {
+  const handleJoinChallenge = async (c: ChallengeItem) => {
+    const challengeId = c.challengeId || c.id;
+    if (!challengeId) return;
     setShowDetailModal(false);
-    setShowCohortModal(true);
+    if (c.status === 'active' || c.status === 'completed') {
+      router.push(`/challenges/${challengeId}` as any);
+      return;
+    }
+    if (c.canStart === false) {
+      Alert.alert('Challenge limit reached', 'Finish or leave another active challenge before starting this one.');
+      return;
+    }
+    try {
+      await apiRequest(`/challenges/${encodeURIComponent(challengeId)}/start`, { method: 'POST' });
+      await loadChallenges({ forceRefresh: true });
+      router.push(`/challenges/${challengeId}` as any);
+    } catch (error: any) {
+      Alert.alert('Failed to start challenge', error?.message || 'Please try again.');
+    }
   };
 
   const handleInviteSomeone = () => {
     setShowInviteModal(true);
   };
+
+  const handlePublishCommunityPost = useCallback(async (content: string, kind: 'Text only' | 'Photo' | 'YouTube link') => {
+    await apiRequest('/community/posts', {
+      method: 'POST',
+      body: {
+        content: content || (kind === 'Photo' ? 'Shared a training photo.' : 'Shared a community update.'),
+      },
+    });
+    await loadCommunityPosts();
+  }, [loadCommunityPosts]);
+
+  const handleToggleCommunityCheer = useCallback(async (postId: string) => {
+    await apiRequest(`/community/posts/${encodeURIComponent(postId)}/reactions/toggle`, { method: 'POST' });
+  }, []);
+
+  const refreshScreen = useCallback(async () => {
+    await Promise.all([
+      loadChallenges({ forceRefresh: true }),
+      loadCommunityPosts(),
+    ]);
+  }, [loadChallenges, loadCommunityPosts]);
+
+  const openActiveChallenge = useCallback(() => {
+    const challengeId = activeChallenge?.challengeId || activeChallenge?.id;
+    if (challengeId) {
+      router.push(`/challenges/${challengeId}` as any);
+    }
+  }, [activeChallenge, router]);
+
+  const openCohortForSelected = useCallback(() => {
+    const challenge = selectedChallenge || activeChallenge;
+    const challengeId = challenge?.challengeId || challenge?.id;
+    if (challengeId) {
+      router.push(`/challenges/chat/${challengeId}` as any);
+      return;
+    }
+    setShowCohortModal(true);
+  }, [activeChallenge, router, selectedChallenge]);
+
+  const inviteChallenge = useMemo(() => selectedChallenge || activeChallenge, [activeChallenge, selectedChallenge]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -84,6 +279,13 @@ export default function ChallengeScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoadingChallenges}
+            onRefresh={refreshScreen}
+            tintColor="#C9943A"
+          />
+        }
       >
         {/* Screen Title matching line 824 */}
         <Text style={[styles.screenTitle, { color: colors.text }]}>Challenges</Text>
@@ -93,21 +295,29 @@ export default function ChallengeScreen() {
 
         {activeTab === 'challenges' ? (
           <>
-            {/* Active Challenge Card: 21-Day Warrior matching lines 831-850 */}
             <ClaudeActiveChallengeBanner
-              onOpenCohort={() => setShowCohortModal(true)}
+              challenge={activeChallenge}
+              onOpenChallenge={openActiveChallenge}
+              onOpenCohort={openCohortForSelected}
               onInvite={handleInviteSomeone}
             />
 
-            {/* Directory with rails, filters, count line, and 35 challenges matching lines 851-912 */}
             <ClaudeChallengeDirectory
+              challenges={challengeItems}
+              isLoading={isLoadingChallenges}
               onSelectChallenge={handleSelectChallenge}
               onOpenInviteGuest={handleInviteSomeone}
             />
           </>
         ) : (
           /* Community Feed matching lines 915-963 */
-          <ClaudeCommunityFeed userTier={userTier} userInitials={userInitials} />
+          <ClaudeCommunityFeed
+            userTier={userTier}
+            userInitials={userInitials}
+            posts={communityPosts}
+            onPublishPost={handlePublishCommunityPost}
+            onToggleCheer={handleToggleCommunityCheer}
+          />
         )}
       </ScrollView>
 
@@ -121,7 +331,7 @@ export default function ChallengeScreen() {
         onInvite={handleInviteSomeone}
         onOpenCohort={() => {
           setShowDetailModal(false);
-          setShowCohortModal(true);
+          openCohortForSelected();
         }}
       />
 
@@ -133,15 +343,15 @@ export default function ChallengeScreen() {
           setShowCohortModal(false);
           setShowInviteModal(true);
         }}
-        challengeTitle={selectedChallenge?.n || '21-Day Warrior'}
+        challengeTitle={inviteChallenge?.n || 'Challenge'}
       />
 
       {/* Guest Mode Invite Modal matching lines 1461-1502 */}
       <ClaudeInviteModal
         visible={showInviteModal}
         onClose={() => setShowInviteModal(false)}
-        challengeTitle={selectedChallenge?.n || '21-Day Warrior'}
-        challengeDays={selectedChallenge?.d || 21}
+        challengeTitle={inviteChallenge?.n || 'Challenge'}
+        challengeDays={inviteChallenge?.d || 1}
         userName={userName}
       />
     </View>

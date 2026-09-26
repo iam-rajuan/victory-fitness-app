@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 
-interface CommunityPost {
+export interface CommunityPost {
   id: string;
   name: string;
   tier: string;
@@ -32,6 +32,9 @@ interface CommunityPost {
 interface ClaudeCommunityFeedProps {
   userTier?: string;
   userInitials?: string;
+  posts?: CommunityPost[];
+  onPublishPost?: (content: string, kind: 'Text only' | 'Photo' | 'YouTube link') => Promise<void>;
+  onToggleCheer?: (postId: string) => Promise<void>;
 }
 
 const OBSIDIAN = '#0D0D0D';
@@ -45,57 +48,12 @@ const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", de
 const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
-const INITIAL_FEED: CommunityPost[] = [
-  {
-    id: 'post-1',
-    name: 'Marcus Vance',
-    tier: 'PLATINUM',
-    i: 'MV',
-    when: '24m ago · Upper Body session',
-    body: 'Hit 40kg dumbbell bench press for 4x8 today. The coach feedback suggested pinning scapulae harder before un-racking, and shoulder stability was night and day.',
-    react: '14 cheers · 3 comments',
-    cheerCount: 14,
-    hasPhoto: true,
-    photoNote: 'workout logged · 20:41',
-  },
-  {
-    id: 'post-2',
-    name: 'Elena Rostova',
-    tier: 'GOLD',
-    i: 'ER',
-    when: '1h ago · Week plan prep',
-    body: 'Prepped the Sunday roasted salmon and sweet potato mash from the week plan. 112g of protein hit seamlessly before 20:00.',
-    react: '22 cheers · 5 comments',
-    cheerCount: 22,
-  },
-  {
-    id: 'post-3',
-    name: 'Dominik S.',
-    tier: 'SILVER',
-    i: 'DS',
-    when: '2h ago · 21-Day Warrior',
-    body: 'Victor’s cue on hip hinge mechanics completely took the load off my lower back on today’s deadlifts. Dropping the clip below for anyone in the cohort.',
-    react: '31 cheers · 7 comments',
-    cheerCount: 31,
-    hasVideo: true,
-    videoTitle: 'Form check · Hinge vs Squat pattern',
-    videoMeta: 'Plays inside the feed · 3:45',
-  },
-  {
-    id: 'post-4',
-    name: 'David Adeleke',
-    tier: 'INNER CIRCLE',
-    i: 'DA',
-    when: '3h ago · 21-Day Warrior',
-    body: 'Day 18 complete. When fatigue set in at 21:00, the habit trigger did the heavy lifting. Never underestimate setting your gym kit out before work.',
-    react: '38 cheers · 8 comments',
-    cheerCount: 38,
-  },
-];
-
 export default function ClaudeCommunityFeed({
   userTier = 'gold',
   userInitials = 'ME',
+  posts = [],
+  onPublishPost,
+  onToggleCheer,
 }: ClaudeCommunityFeedProps) {
   const { colors, isDark } = useTheme();
 
@@ -123,7 +81,11 @@ export default function ClaudeCommunityFeed({
     .join(' + ');
 
   const [scope, setScope] = useState<'auto' | 'tier' | 'all'>('auto');
-  const [feed, setFeed] = useState<CommunityPost[]>(INITIAL_FEED);
+  const [feed, setFeed] = useState<CommunityPost[]>(posts);
+
+  React.useEffect(() => {
+    setFeed(posts);
+  }, [posts]);
 
   // New Post Modal State
   const [showPostModal, setShowPostModal] = useState(false);
@@ -164,7 +126,7 @@ export default function ClaudeCommunityFeed({
   const postAudienceShort =
     postScope === 'auto' ? 'my circle' : postScope === 'all' ? 'everyone' : 'my tier';
 
-  const handleCheer = (postId: string) => {
+  const handleCheer = async (postId: string) => {
     setFeed((prev) =>
       prev.map((p) => {
         if (p.id === postId) {
@@ -180,36 +142,40 @@ export default function ClaudeCommunityFeed({
         return p;
       })
     );
+    try {
+      await onToggleCheer?.(postId);
+    } catch {
+      setFeed((prev) =>
+        prev.map((p) => {
+          if (p.id !== postId) return p;
+          const nextCheered = !p.hasCheered;
+          const nextCount = nextCheered ? p.cheerCount + 1 : Math.max(0, p.cheerCount - 1);
+          return {
+            ...p,
+            hasCheered: nextCheered,
+            cheerCount: nextCount,
+            react: `${nextCount} cheers · ${Math.max(0, Number((p.react.match(/(\d+)\s+comments/) || [])[1] || 0))} comments`,
+          };
+        })
+      );
+      Alert.alert('Could not update cheer', 'Please try again.');
+    }
   };
 
-  const handlePublishPost = () => {
+  const handlePublishPost = async () => {
     if (!postDraft.trim() && !hasAttachedPhoto && postKind !== 'YouTube link') {
       Alert.alert('Empty Post', 'Please write something to share with your circle.');
       return;
     }
-
-    const newPost: CommunityPost = {
-      id: `post-${Date.now()}`,
-      name: 'You',
-      tier: tierNames[cleanTier].toUpperCase(),
-      i: userInitials,
-      when: 'Just now · 21-Day Warrior',
-      body: postDraft.trim() || (postKind === 'Photo' ? 'Logged a training photo today.' : 'Shared a video clip.'),
-      react: '1 cheer · 0 comments',
-      cheerCount: 1,
-      hasCheered: true,
-      hasPhoto: postKind === 'Photo',
-      photoNote: postKind === 'Photo' ? 'photo logged · just now' : undefined,
-      hasVideo: postKind === 'YouTube link',
-      videoTitle: postKind === 'YouTube link' ? 'Form check · Hinge vs Squat pattern' : undefined,
-      videoMeta: postKind === 'YouTube link' ? 'Plays inside the feed · 4:12' : undefined,
-    };
-
-    setFeed([newPost, ...feed]);
-    setPostDraft('');
-    setHasAttachedPhoto(false);
-    setShowPostModal(false);
-    Alert.alert('Posted', `Your post has been published to ${postAudienceShort}.`);
+    try {
+      await onPublishPost?.(postDraft.trim(), postKind);
+      setPostDraft('');
+      setHasAttachedPhoto(false);
+      setShowPostModal(false);
+      Alert.alert('Posted', `Your post has been published to ${postAudienceShort}.`);
+    } catch (error: any) {
+      Alert.alert('Post failed', error?.message || 'Please try again.');
+    }
   };
 
   return (
@@ -304,6 +270,12 @@ export default function ClaudeCommunityFeed({
 
       {/* Feed Posts matching lines 931-960 */}
       <View style={styles.postsList}>
+        {feed.length === 0 && (
+          <View style={[styles.emptyPostCard, { backgroundColor: isDark ? NAVY : '#FFFFFF' }]}>
+            <Text style={[styles.emptyPostTitle, { color: isDark ? IVORY : NAVY }]}>No community posts yet</Text>
+            <Text style={styles.emptyPostBody}>Posts from the backend community feed will appear here.</Text>
+          </View>
+        )}
         {feed.map((p) => (
           <View
             key={p.id}
@@ -653,6 +625,24 @@ const styles = StyleSheet.create({
   postsList: {
     paddingHorizontal: 20,
     gap: 10,
+  },
+  emptyPostCard: {
+    backgroundColor: NAVY,
+    borderRadius: 18,
+    padding: 16,
+  },
+  emptyPostTitle: {
+    fontFamily: CLASH,
+    fontSize: 17,
+    fontWeight: '600',
+    color: IVORY,
+  },
+  emptyPostBody: {
+    fontFamily: INTER,
+    fontSize: 13,
+    lineHeight: 19,
+    color: 'rgba(247, 243, 238, 0.55)',
+    marginTop: 5,
   },
   postCard: {
     backgroundColor: NAVY,

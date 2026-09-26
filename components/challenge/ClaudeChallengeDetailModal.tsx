@@ -39,7 +39,7 @@ export default function ClaudeChallengeDetailModal({
   onJoin,
   onOpenCohort,
   onInvite,
-  userName = 'Michael',
+  userName = 'Member',
 }: ClaudeChallengeDetailModalProps) {
   const [showInvite, setShowInvite] = React.useState(false);
 
@@ -166,11 +166,23 @@ export default function ClaudeChallengeDetailModal({
             activeOpacity={0.85}
             onPress={() => onJoin(challenge)}
           >
-            <Text style={styles.mainJoinBtnText}>Join this challenge</Text>
+            <Text style={styles.mainJoinBtnText}>
+              {challenge.status === 'active'
+                ? 'Open challenge'
+                : challenge.status === 'completed'
+                ? 'View completed challenge'
+                : challenge.canStart === false
+                ? 'Limit reached'
+                : 'Join this challenge'}
+            </Text>
           </TouchableOpacity>
 
           <Text style={styles.joinFootnote}>
-            Joining opens the cohort lobby so you start with the people already in it.
+            {challenge.status === 'active'
+              ? 'Your progress and cohort are saved in the challenge hub.'
+              : challenge.status === 'completed'
+              ? 'Completed challenge history stays available from your challenge hub.'
+              : 'Joining opens the challenge hub and cohort for this challenge.'}
           </Text>
         </ScrollView>
 

@@ -36,45 +36,13 @@ const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", de
 const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
-const INITIAL_MESSAGES: CohortMessage[] = [
-  {
-    id: 'cm-1',
-    n: 'Anna R.',
-    i: 'AR',
-    t: '09:12',
-    m: 'Day 18 done. Anyone else feel the shoulders today?',
-  },
-  {
-    id: 'cm-2',
-    n: 'Dominik S.',
-    i: 'DS',
-    t: '09:40',
-    m: 'Both shoulders. Worth it.',
-  },
-  {
-    id: 'cm-3',
-    n: 'Victor Akko',
-    i: 'VA',
-    t: '10:05',
-    m: 'Three days left. Do not let the last stretch be the one you skip.',
-  },
-  {
-    id: 'cm-4',
-    n: 'You',
-    i: 'MK',
-    t: '10:14',
-    m: 'Day 18 done here too. Three to go.',
-    isMe: true,
-  },
-];
-
 export default function ClaudeCohortModal({
   visible,
   onClose,
   onInvite,
-  challengeTitle = '21-Day Warrior',
+  challengeTitle = 'Challenge',
 }: ClaudeCohortModalProps) {
-  const [messages, setMessages] = useState<CohortMessage[]>(INITIAL_MESSAGES);
+  const [messages, setMessages] = useState<CohortMessage[]>([]);
   const [inputText, setInputText] = useState('');
 
   const handleSend = () => {
@@ -113,7 +81,7 @@ export default function ClaudeCohortModal({
           </TouchableOpacity>
           <View style={styles.headerTextCol}>
             <Text style={styles.headerTitle}>{`${challengeTitle} · lobby`}</Text>
-            <Text style={styles.headerSub}>9 people · started 21 April · 3 days left</Text>
+            <Text style={styles.headerSub}>Challenge lobby</Text>
           </View>
           <TouchableOpacity onPress={onInvite} activeOpacity={0.7}>
             <Text style={styles.inviteLink}>Invite</Text>

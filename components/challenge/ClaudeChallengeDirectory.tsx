@@ -11,6 +11,7 @@ import { useTheme } from '../../context/ThemeContext';
 
 export interface ChallengeItem {
   id: string;
+  challengeId?: string;
   n: string; // name
   d: number; // days
   c: string; // category
@@ -19,9 +20,16 @@ export interface ChallengeItem {
   faces: { i: string }[];
   desc?: string;
   why?: string;
+  status?: 'ready' | 'active' | 'completed' | 'upcoming' | string;
+  canStart?: boolean;
+  progress?: number;
+  daysLeft?: number;
+  unreadCount?: number;
 }
 
 interface ClaudeChallengeDirectoryProps {
+  challenges: ChallengeItem[];
+  isLoading?: boolean;
   onSelectChallenge: (challenge: ChallengeItem) => void;
   onOpenInviteGuest: () => void;
 }
@@ -35,67 +43,6 @@ const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system,
 const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
-
-const CLAUDE_CHALLENGES: ChallengeItem[] = [
-  {
-    id: 'ch-cold-start',
-    d: 3,
-    n: 'Cold Start',
-    c: 'PHYSICAL',
-    p: '75 pts',
-    joined: '312 joined',
-    faces: [{ i: 'AR' }, { i: 'DS' }, { i: 'LM' }],
-    desc: 'Finish every shower with 60 seconds of cold water for 3 consecutive days.',
-    why: 'Each icy shock teaches your nervous system that discomfort is survivable — and suddenly every hard thing feels smaller.',
-  },
-  {
-    id: 'ch-sleep-lock',
-    d: 5,
-    n: 'Sleep Lock',
-    c: 'MENTAL',
-    p: '120 pts',
-    joined: '268 joined',
-    faces: [{ i: 'AR' }, { i: 'DS' }, { i: 'LM' }],
-    desc: 'Go to bed at the same time and wake at the same time for 5 days straight.',
-    why: 'Every elite performer guards their sleep schedule like a secret weapon. Five days builds the rhythm that fuels everything else.',
-  },
-  {
-    id: 'ch-week-strength',
-    d: 7,
-    n: 'Week of Strength',
-    c: 'PHYSICAL',
-    p: '250 pts',
-    joined: '204 joined',
-    faces: [{ i: 'AR' }, { i: 'DS' }, { i: 'LM' }],
-    desc: 'Complete all 7 scheduled workouts in a single week — zero skipped sessions.',
-    why: 'A perfect workout week is not about fitness. It is about proving to yourself that you keep your word to yourself.',
-  },
-  {
-    id: 'ch-deep-connection',
-    d: 14,
-    n: 'Deep Connection',
-    c: 'RELATIONAL',
-    p: '420 pts',
-    joined: '187 joined',
-    faces: [{ i: 'AR' }, { i: 'DS' }, { i: 'LM' }],
-    desc: 'One meaningful, uninterrupted conversation per day — no phones on the table.',
-    why: 'Fourteen real conversations do more for your wellbeing than a hundred casual exchanges. Deep connection is the one thing no app can replace.',
-  },
-  {
-    id: 'ch-warrior-21',
-    d: 21,
-    n: '21-Day Warrior',
-    c: 'PHYSICAL',
-    p: '800 pts',
-    joined: '312 joined',
-    faces: [{ i: 'AR' }, { i: 'DS' }, { i: 'LM' }],
-    desc: 'Five sessions a week, progressive difficulty, for a full 21 days without missing one.',
-    why: 'Twenty-one days is the threshold where behaviour becomes identity. Finish this and you are no longer someone who tries to train — you are someone who trains.',
-  },
-];
-
-const RAIL_CHALLENGES: ChallengeItem[] = CLAUDE_CHALLENGES.slice(0, 4);
-const ALL_CHALLENGES: ChallengeItem[] = CLAUDE_CHALLENGES;
 
 const DAY_FILTERS = ['All', '3', '5', '7', '14', '21'];
 const CAT_FILTERS = ['All', 'Physical', 'Mental', 'Relational'];
@@ -184,6 +131,8 @@ function useHorizontalWebScroll() {
 }
 
 export default function ClaudeChallengeDirectory({
+  challenges,
+  isLoading = false,
   onSelectChallenge,
   onOpenInviteGuest,
 }: ClaudeChallengeDirectoryProps) {
@@ -195,11 +144,18 @@ export default function ClaudeChallengeDirectory({
   const catScroll = useHorizontalWebScroll();
   const [railOffset, setRailOffset] = useState(0);
 
+  const allChallenges = Array.isArray(challenges) ? challenges : [];
+  const railChallenges = allChallenges
+    .slice()
+    .sort((a, b) => parseInt(b.joined, 10) - parseInt(a.joined, 10))
+    .slice(0, 4);
+
   const handleSlideRail = () => {
+    if (railChallenges.length <= 1) return;
     const node = railScroll.getDomNode();
     const currentX = node ? node.scrollLeft : railOffset;
     // 176px card width + 12px gap = 188px step
-    const maxOffset = (RAIL_CHALLENGES.length - 1) * 188;
+    const maxOffset = (railChallenges.length - 1) * 188;
     const nextOffset = currentX >= maxOffset - 10 ? 0 : currentX + 188;
 
     if (railScroll.scrollRef.current?.scrollTo) {
@@ -215,7 +171,7 @@ export default function ClaudeChallengeDirectory({
     setRailOffset(nextOffset);
   };
 
-  const filteredChallenges = ALL_CHALLENGES.filter((ch) => {
+  const filteredChallenges = allChallenges.filter((ch) => {
     if (selectedDay !== 'All') {
       const targetDays = parseInt(selectedDay, 10);
       if (ch.d !== targetDays) return false;
@@ -251,7 +207,7 @@ export default function ClaudeChallengeDirectory({
         style={railScroll.webStyle}
         {...railScroll.webProps}
       >
-        {RAIL_CHALLENGES.map((c) => (
+        {railChallenges.map((c) => (
           <TouchableOpacity
             key={c.id}
             style={[
@@ -395,11 +351,19 @@ export default function ClaudeChallengeDirectory({
 
       {/* Count Line matching line 889 & 3354 */}
       <Text style={[styles.countLine, { color: GOLD }]}>
-        {`${filteredChallenges.length} of 35 challenges${selectedDay === 'All' ? ' · 3 to 21 days' : ` · ${selectedDay} days`}`}
+        {isLoading
+          ? 'Loading challenges...'
+          : `${filteredChallenges.length} of ${allChallenges.length} challenges${selectedDay === 'All' ? ' · from backend' : ` · ${selectedDay} days`}`}
       </Text>
 
       {/* Challenge List matching lines 891-906 */}
       <View style={styles.challengeList}>
+        {!isLoading && filteredChallenges.length === 0 && (
+          <View style={[styles.emptyCard, { backgroundColor: isDark ? NAVY : '#FFFFFF' }]}>
+            <Text style={[styles.emptyTitle, { color: isDark ? IVORY : NAVY }]}>No challenges available</Text>
+            <Text style={styles.emptyBody}>Active challenges from the dashboard will appear here.</Text>
+          </View>
+        )}
         {filteredChallenges.map((c) => (
           <TouchableOpacity
             key={c.id}
@@ -453,7 +417,9 @@ export default function ClaudeChallengeDirectory({
               activeOpacity={0.85}
               onPress={() => onSelectChallenge(c)}
             >
-              <Text style={styles.joinBtnText}>Join</Text>
+              <Text style={styles.joinBtnText}>
+                {c.status === 'active' ? 'Open' : c.status === 'completed' ? 'Done' : 'Join'}
+              </Text>
             </TouchableOpacity>
           </TouchableOpacity>
         ))}
@@ -644,6 +610,24 @@ const styles = StyleSheet.create({
   challengeList: {
     paddingHorizontal: 20,
     gap: 9,
+  },
+  emptyCard: {
+    backgroundColor: NAVY,
+    borderRadius: 16,
+    padding: 18,
+  },
+  emptyTitle: {
+    fontFamily: CLASH,
+    fontSize: 17,
+    fontWeight: '600',
+    color: IVORY,
+  },
+  emptyBody: {
+    fontFamily: INTER,
+    fontSize: 13,
+    lineHeight: 19,
+    color: 'rgba(247, 243, 238, 0.55)',
+    marginTop: 5,
   },
   challengeCard: {
     backgroundColor: NAVY,

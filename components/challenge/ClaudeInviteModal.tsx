@@ -39,15 +39,15 @@ const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Jet
 
 export function ClaudeInviteView({
   onClose,
-  challengeTitle = '21-Day Warrior',
-  challengeDays = 21,
-  userName = 'Michael',
+  challengeTitle = 'Challenge',
+  challengeDays = 1,
+  userName = 'Member',
   isOverlay = false,
 }: ClaudeInviteViewProps) {
   const [copied, setCopied] = useState(false);
 
-  const displayTitle = challengeTitle || '21-Day Warrior';
-  const displayDays = challengeDays || 21;
+  const displayTitle = challengeTitle || 'Challenge';
+  const displayDays = challengeDays || 1;
   const inviteMessage = `“Join ${userName}'s team for the ${displayTitle} on Victory Fitness. We're in this together.”`;
   const inviteUrl = 'https://victoryfitness.app/join/CH-WARRIOR';
 
@@ -239,9 +239,9 @@ export function ClaudeInviteView({
 export default function ClaudeInviteModal({
   visible,
   onClose,
-  challengeTitle = '21-Day Warrior',
-  challengeDays = 21,
-  userName = 'Michael',
+  challengeTitle = 'Challenge',
+  challengeDays = 1,
+  userName = 'Member',
 }: ClaudeInviteModalProps) {
   if (!visible) return null;
 
