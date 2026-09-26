@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
   fetchCurrentUser,
@@ -36,46 +35,79 @@ import ClaudeSessionCompleteModal from '../../components/workout/ClaudeSessionCo
 import ClaudePlanBuildModal from '../../components/workout/ClaudePlanBuildModal';
 import ClaudeWorkoutDetailModal from '../../components/workout/ClaudeWorkoutDetailModal';
 import { getSavedPlanStatus, savePlanBuiltData } from '../../lib/planStorage';
+import { fetchWorkoutLibrary, WorkoutLibraryCategory, WorkoutLibraryItem } from '../../lib/workouts';
 
 const OBSIDIAN = '#0D0D0D';
 const GOLD = '#C9943A';
 
-// Full 170 Workouts Library Catalog from Claude Design Reference
-const PROTOTYPE_LIB: GridWorkoutItem[] = [
-  { id: '1', name: 'Ten-Minute Reset', meta: '10 min · Mobility · No kit', badge: '10:00', lvl: 'All levels', vimeoId: '912440318' },
-  { id: '2', name: 'Desk Neck & Shoulders', meta: '8 min · Mobility · No kit', badge: '8:00', lvl: 'Beginner', vimeoId: '912440319' },
-  { id: '3', name: 'Core Every Day', meta: '15 min · Core · Mat', badge: '15:00', lvl: 'All levels', vimeoId: '912440320' },
-  { id: '4', name: 'Upper Body · No Kit', meta: '25 min · Strength · No kit', badge: '25:00', lvl: 'Intermediate', vimeoId: '912440321' },
-  { id: '5', name: 'Push Pull Legs · A', meta: '42 min · Hypertrophy · Dumbbells', badge: '42:00', lvl: 'Intermediate', vimeoId: '912440322' },
-  { id: '6', name: 'Full Body Strength', meta: '38 min · Strength · Dumbbells', badge: '38:00', lvl: 'Intermediate', vimeoId: '912440323' },
-  { id: '7', name: 'Band Shoulder Build', meta: '22 min · Hypertrophy · Bands', badge: '22:00', lvl: 'Beginner', vimeoId: '912440324' },
-  { id: '8', name: 'Conditioning Ladder', meta: '30 min · Conditioning · No kit', badge: '30:00', lvl: 'Advanced', vimeoId: '912440325' },
-  { id: '9', name: 'Legs & Glutes', meta: '45 min · Hypertrophy · Dumbbells', badge: '45:00', lvl: 'Intermediate', vimeoId: '912440326' },
-  { id: '10', name: 'Sunday Recovery Flow', meta: '20 min · Recovery · Mat', badge: '20:00', lvl: 'All levels', vimeoId: '912440327' },
-  { id: '11', name: 'Long Endurance Build', meta: '60 min · Conditioning · Mat', badge: '60:00', lvl: 'Advanced', vimeoId: '912440328' },
-  { id: '12', name: 'Hip & Lower Back Care', meta: '14 min · Recovery · Mat', badge: '14:00', lvl: 'Beginner', vimeoId: '912440329' },
-];
+function formatDurationBadge(minutes: number) {
+  if (!minutes || minutes <= 0) return '00:00';
+  return `${minutes}:00`;
+}
 
-const PROGRAMS: ProgramCardItem[] = [
-  { n: 'Strong at 45+', m: '8 weeks · 4 a week', t: 'STRENGTH', c: '2 148 training now', rank: 1 },
-  { n: 'Home Body Reset', m: '6 weeks · 3 a week', t: 'NO KIT', c: '1 878 training now', rank: 2 },
-  { n: 'Dumbbell Only', m: '10 weeks · 4 a week', t: 'HYPERTROPHY', c: '1 460 training now', rank: 3 },
-  { n: 'Back & Knees Care', m: '4 weeks · 5 a week', t: 'RECOVERY', c: '1 205 training now', rank: 4 },
-  { n: 'Lean & Conditioned', m: '8 weeks · 4 a week', t: 'CONDITIONING', c: '980 training now', rank: 5 },
-];
+function formatWorkoutMeta(workout: WorkoutLibraryItem) {
+  const duration = workout.durationMinutes > 0 ? `${workout.durationMinutes} min` : 'Duration not set';
+  const tag = workout.tag || 'Workout';
+  const equipment = workout.equipment || 'Kit not set';
+  return `${duration} · ${tag} · ${equipment}`;
+}
 
-const FORYOU: WorkoutRowItem[] = [
-  { n: 'Upper Body · No Kit', m: '25 min · bodyweight', t: 'FITS YOUR KIT', v: '912440321' },
-  { n: 'Ten-Minute Reset', m: '10 min · mobility', t: 'SHORT ON TIME', v: '912440318' },
-  { n: 'Core Every Day', m: '15 min · mat', t: 'YOUR CHALLENGE', v: '912440320' },
-  { n: 'Sunday Recovery Flow', m: '20 min · mat', t: 'AFTER LEG DAY', v: '912440327' },
-];
+function mapLibraryWorkout(workout: WorkoutLibraryItem): GridWorkoutItem {
+  return {
+    id: workout.id,
+    name: workout.title,
+    meta: formatWorkoutMeta(workout),
+    badge: formatDurationBadge(workout.durationMinutes),
+    lvl: workout.level || 'All levels',
+    vimeoId: workout.vimeoId,
+    videoUrl: workout.videoUrl,
+    videoSource: workout.videoSource,
+    tag: workout.tag,
+    equipment: workout.equipment,
+    durationMinutes: workout.durationMinutes,
+    thumbnail: workout.thumbnail,
+    movements: workout.movements,
+  };
+}
 
-const NEWIN: WorkoutRowItem[] = [
-  { n: 'Kettlebell Foundations', m: '32 min · new', t: 'ADDED FRIDAY', v: '912440323' },
-  { n: 'Desk Neck & Shoulders', m: '8 min · new', t: 'ADDED FRIDAY', v: '912440319' },
-  { n: 'Band Shoulder Build', m: '22 min · new', t: 'ADDED LAST WEEK', v: '912440324' },
-];
+function mapRowWorkout(workout: GridWorkoutItem, badge: string): WorkoutRowItem {
+  return {
+    n: workout.name,
+    m: workout.meta,
+    t: badge,
+    v: workout.vimeoId,
+    thumbnail: workout.thumbnail,
+    item: workout,
+  } as WorkoutRowItem & { item: GridWorkoutItem };
+}
+
+function mapLibraryCategory(category: WorkoutLibraryCategory, idx: number): ProgramCardItem {
+  return {
+    n: category.name,
+    m: `${category.count} workout${category.count === 1 ? '' : 's'}`,
+    t: category.name.toUpperCase(),
+    c: `${category.count} available`,
+    rank: idx + 1,
+    image: category.image,
+  };
+}
+
+function parsePositiveInt(value: unknown, fallback: number) {
+  const parsed = parseInt(String(value ?? '').replace(/[^\d]/g, ''), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function parseWeightKg(value: unknown) {
+  const parsed = parseFloat(String(value ?? '').replace(/[^\d.]/g, ''));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+function formatRestTime(seconds: number | undefined) {
+  const total = Math.max(0, Number(seconds || 0));
+  const mins = Math.floor(total / 60);
+  const secs = total % 60;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
 
 export default function WorkoutScreen() {
   const router = useRouter();
@@ -84,6 +116,8 @@ export default function WorkoutScreen() {
 
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [libraryWorkouts, setLibraryWorkouts] = useState<GridWorkoutItem[]>([]);
+  const [libraryPrograms, setLibraryPrograms] = useState<ProgramCardItem[]>([]);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
@@ -122,6 +156,12 @@ export default function WorkoutScreen() {
       const user = await fetchCurrentUser();
       if (user) setCurrentUser(user);
 
+      const library = await fetchWorkoutLibrary();
+      const mappedWorkouts = library.workouts.map(mapLibraryWorkout);
+      setLibraryWorkouts(mappedWorkouts);
+      setLibraryPrograms(library.categories.map(mapLibraryCategory));
+      setSelectedWorkout((existing) => existing || mappedWorkouts[0] || null);
+
       const status = await getSavedPlanStatus();
       if (status.planBuilt) {
         setPlanBuilt(true);
@@ -142,7 +182,7 @@ export default function WorkoutScreen() {
 
   // Filtered workouts
   const filteredWorkouts = useMemo(() => {
-    return PROTOTYPE_LIB.filter((w) => {
+    return libraryWorkouts.filter((w) => {
       // Search
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -166,10 +206,33 @@ export default function WorkoutScreen() {
       }
       return true;
     });
-  }, [searchQuery, selectedPurpose, selectedKit, selectedDuration]);
+  }, [libraryWorkouts, searchQuery, selectedPurpose, selectedKit, selectedDuration]);
 
-  const shownCount = Math.max(1, Math.round((170 * filteredWorkouts.length) / PROTOTYPE_LIB.length));
-  const resultCountText = `${shownCount} of 170 workouts · shortest first`;
+  const resultCountText = `${filteredWorkouts.length} of ${libraryWorkouts.length} workouts · shortest first`;
+  const forYouWorkouts = useMemo(() => filteredWorkouts.slice(0, 4).map((workout, idx) => {
+    const badges = ['FITS YOUR FILTERS', 'FROM THE LIBRARY', 'READY TO START', 'PUBLISHED'];
+    return mapRowWorkout(workout, badges[idx] || 'WORKOUT');
+  }), [filteredWorkouts]);
+  const newWorkouts = useMemo(() => libraryWorkouts.slice(0, 6).map((workout) => mapRowWorkout(workout, 'NEW FROM DASHBOARD')), [libraryWorkouts]);
+  const selectedExercises = useMemo(() => {
+    return (selectedWorkout?.movements || []).map((movement, idx) => {
+      const setText = movement.sets ? `${movement.sets} sets` : '';
+      const repText = movement.reps ? `${movement.reps} reps` : '';
+      const loadText = movement.load || movement.equipment || '';
+      return {
+        n: movement.name,
+        s: [movement.sets, movement.load, movement.reps].filter(Boolean).join(' × ') || movement.notes || '',
+        id: movement.id || `${idx}`,
+        name: movement.name,
+        note: [movement.notes, movement.equipment].filter(Boolean).join(' · ') || [setText, repText, loadText].filter(Boolean).join(' · '),
+        targetSets: parsePositiveInt(movement.sets, 1),
+        targetReps: /max/i.test(String(movement.reps)) ? 'max' as const : parsePositiveInt(movement.reps, 1),
+        defaultKg: parseWeightKg(movement.load),
+        restTime: formatRestTime(movement.restSeconds),
+        isHold: /hold|max/i.test(`${movement.name} ${movement.reps}`),
+      };
+    });
+  }, [selectedWorkout?.movements]);
 
   const [completeInitialStep, setCompleteInitialStep] = useState<'feedback' | 'complete'>('complete');
 
@@ -181,11 +244,15 @@ export default function WorkoutScreen() {
 
   const handleStartWorkoutFromDetail = () => {
     setWorkoutDetailModalVisible(false);
-    setActiveSessionVisible(true);
+    if (selectedWorkout?.videoUrl || selectedWorkout?.vimeoId) {
+      setVimeoModalVisible(true);
+    } else {
+      setActiveSessionVisible(true);
+    }
   };
 
   const handleResumeSession = () => {
-    setSelectedWorkout(PROTOTYPE_LIB[5]); // Full Body Strength
+    setSelectedWorkout(libraryWorkouts[0] || null);
     setWorkoutDetailModalVisible(true);
   };
 
@@ -254,7 +321,7 @@ export default function WorkoutScreen() {
       >
         {/* 1. Header: Train, 215 workouts */}
         <ClaudeTrainHeader
-          totalWorkouts={215}
+          totalWorkouts={libraryWorkouts.length}
           onPressFilter={() => {}}
         />
 
@@ -268,37 +335,36 @@ export default function WorkoutScreen() {
 
         {/* 3. Pick Up Where You Left Off */}
         <ClaudeResumeSessionCard
-          sessionTitle={selectedWorkout?.name || 'Upper Body Strength'}
-          sessionLine="exercise 1 of 4 · strong at 45+ · week 2"
-          minutesLeft="48 min left"
-          progressPct={35}
+          sessionTitle={selectedWorkout?.name || 'No published workout yet'}
+          sessionLine={selectedWorkout?.meta || 'Publish workouts in the dashboard to start training here'}
+          minutesLeft={selectedWorkout?.durationMinutes ? `${selectedWorkout.durationMinutes} min` : 'Not set'}
+          progressPct={0}
           onResume={handleResumeSession}
         />
 
-        {/* 4. Most trained programmes */}
+        {/* 4. Workout categories */}
         <ClaudeWorkoutRowCarousel
-          title="Most trained programmes"
+          title="Workout categories"
           actionText="All ›"
           onActionPress={() => {}}
           type="programs"
-          programs={PROGRAMS}
+          programs={libraryPrograms}
           onSelectProgram={(p) => {
-            handleStartWorkout({
-              name: p.n,
-              meta: p.m,
-              badge: p.t,
+            const matchingWorkout = libraryWorkouts.find((workout) => {
+              return (workout.tag || '').toLowerCase() === p.n.toLowerCase();
             });
+            if (matchingWorkout) handleStartWorkout(matchingWorkout);
           }}
         />
 
         {/* 5. Because of how you train */}
         <ClaudeWorkoutRowCarousel
           title="Because of how you train"
-          subtitle="Home gym, 40 minutes, four evenings a week"
+          subtitle="Published workouts from your dashboard"
           type="workouts"
-          workouts={FORYOU}
+          workouts={forYouWorkouts}
           onSelectWorkout={(w) => {
-            handleStartWorkout({
+            handleStartWorkout(w.item || {
               name: w.n,
               meta: w.m,
               badge: w.t,
@@ -311,9 +377,9 @@ export default function WorkoutScreen() {
         <ClaudeWorkoutRowCarousel
           title="New from Victor"
           type="workouts"
-          workouts={NEWIN}
+          workouts={newWorkouts}
           onSelectWorkout={(w) => {
-            handleStartWorkout({
+            handleStartWorkout(w.item || {
               name: w.n,
               meta: w.m,
               badge: w.t,
@@ -350,27 +416,48 @@ export default function WorkoutScreen() {
         visible={workoutDetailModalVisible}
         onClose={() => setWorkoutDetailModalVisible(false)}
         onStartWorkout={handleStartWorkoutFromDetail}
-        workoutTitle={selectedWorkout?.name || 'Full Body Strength'}
-        kicker={selectedWorkout?.meta ? selectedWorkout.meta.toUpperCase() : 'STRENGTH · DUMBBELLS · INTERMEDIATE'}
-        durationBadge={selectedWorkout?.badge || '38:00'}
-        vimeoId={selectedWorkout?.vimeoId || '912440323'}
+        workoutTitle={selectedWorkout?.name || 'Workout'}
+        kicker={selectedWorkout?.meta ? selectedWorkout.meta.toUpperCase() : 'WORKOUT'}
+        description={
+          selectedWorkout?.movements?.length
+            ? `${selectedWorkout.movements.length} movements. Follow the admin-programmed session and video for this workout.`
+            : 'Follow the workout video. Add movements in the admin dashboard to show the full member session here.'
+        }
+        durationBadge={selectedWorkout?.badge || '00:00'}
+        vimeoId={selectedWorkout?.vimeoId || ''}
+        videoUrl={selectedWorkout?.videoUrl || ''}
+        exercises={selectedExercises}
       />
 
       {/* 1. Vimeo Player Modal */}
       <ClaudeVimeoPlayerModal
         visible={vimeoModalVisible}
         onClose={() => setVimeoModalVisible(false)}
-        workoutTitle={selectedWorkout?.name || 'Upper Body Strength'}
+        workoutTitle={selectedWorkout?.name || 'Workout'}
         workoutMeta={selectedWorkout?.meta || 'FROM THE LIBRARY · 40 MIN'}
-        vimeoId={selectedWorkout?.vimeoId || '912440318'}
-        onFinishSession={() => handleFinishSession(undefined, 'complete')}
+        workoutDesc={
+          selectedWorkout?.movements?.length
+            ? `${selectedWorkout.movements.length} programmed movements from the admin dashboard.`
+            : 'Follow the video for this workout.'
+        }
+        vimeoId={selectedWorkout?.vimeoId || ''}
+        videoUrl={selectedWorkout?.videoUrl || ''}
+        chapters={selectedExercises.map((exercise, idx) => ({
+          at: idx === 0 ? '00:00' : '',
+          n: exercise.name,
+          active: idx === 0,
+        }))}
+        onFinishSession={() => {
+          setVimeoModalVisible(false);
+          setActiveSessionVisible(true);
+        }}
       />
 
       {/* 2. Plan Detail Modal ("Start my session" screen) */}
       <ClaudePlanDetailModal
         visible={planDetailVisible}
         onClose={() => setPlanDetailVisible(false)}
-        planTitle={selectedWorkout?.name || 'Upper Body Strength'}
+        planTitle={selectedWorkout?.name || 'Workout'}
         dayKicker="DAY 3 OF WEEK 2 · PUSH DAY"
         planSource={hasCoach ? 'BUILT BY YOUR COACH' : 'TODAY’S WORKOUT'}
         onBeginSession={() => {
@@ -388,8 +475,9 @@ export default function WorkoutScreen() {
         visible={activeSessionVisible}
         onClose={() => setActiveSessionVisible(false)}
         tier={tier}
-        workoutTitle={selectedWorkout?.name || 'Upper Body Strength'}
+        workoutTitle={selectedWorkout?.name || 'Workout'}
         unlockNote={currentUser?.identity_statement || 'Your unlock is ready — your true-crime podcast is yours for this workout.'}
+        exercises={selectedExercises}
         onEndSession={(stats) => handleFinishSession(stats, 'feedback')}
       />
 
@@ -398,7 +486,7 @@ export default function WorkoutScreen() {
         visible={completeModalVisible}
         onClose={() => setCompleteModalVisible(false)}
         initialStep={completeInitialStep}
-        workoutTitle={selectedWorkout?.name || 'Upper Body Strength'}
+        workoutTitle={selectedWorkout?.name || 'Workout'}
         minutes={completedStats.minutes}
         setsLogged={completedStats.setsLogged}
         volumeKg={completedStats.volumeKg}

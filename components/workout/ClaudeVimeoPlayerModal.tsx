@@ -8,6 +8,7 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
+import CrossPlatformWebView from '../CrossPlatformWebView';
 
 interface ChapterItem {
   at: string;
@@ -22,6 +23,7 @@ interface ClaudeVimeoPlayerModalProps {
   workoutMeta?: string;
   workoutDesc?: string;
   vimeoId?: string;
+  videoUrl?: string;
   chapters?: ChapterItem[];
   onFinishSession: () => void;
 }
@@ -36,22 +38,15 @@ const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", de
 const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
-const DEFAULT_CHAPTERS: ChapterItem[] = [
-  { at: '00:00', n: 'Warm-up and shoulder prep', active: true },
-  { at: '04:30', n: 'Overhead press' },
-  { at: '13:10', n: 'Incline press and rows' },
-  { at: '24:00', n: 'Shoulders and arms' },
-  { at: '33:20', n: 'Cool-down and stretch' },
-];
-
 export default function ClaudeVimeoPlayerModal({
   visible,
   onClose,
-  workoutTitle = 'Upper Body Strength',
+  workoutTitle = 'Workout',
   workoutMeta = 'FROM THE LIBRARY · 40 MIN',
-  workoutDesc = 'Follow along with Victor as he coaches dumbbell upper body strength focusing on strict form, tempo and posture control.',
-  vimeoId = '912440318',
-  chapters = DEFAULT_CHAPTERS,
+  workoutDesc = 'Follow along with the workout video.',
+  vimeoId = '',
+  videoUrl = '',
+  chapters = [],
   onFinishSession,
 }: ClaudeVimeoPlayerModalProps) {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -71,7 +66,7 @@ export default function ClaudeVimeoPlayerModal({
     .toString()
     .padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
 
-  const vimeoEmbedUrl = `https://player.vimeo.com/video/${vimeoId}?autoplay=1&title=0&byline=0&portrait=0`;
+  const resolvedVideoUrl = videoUrl || (vimeoId ? `https://player.vimeo.com/video/${encodeURIComponent(vimeoId)}?autoplay=1&title=0&byline=0&portrait=0&playsinline=1` : '');
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false}>
@@ -96,23 +91,30 @@ export default function ClaudeVimeoPlayerModal({
           {/* Vimeo / Video Container */}
           <View style={styles.videoCard}>
             <View style={styles.videoPlayer}>
-              {Platform.OS === 'web' && isPlaying ? (
-                React.createElement('iframe', {
-                  src: vimeoEmbedUrl,
-                  style: { width: '100%', height: '100%', border: 0 },
-                  allow: 'autoplay; fullscreen',
-                  allowFullScreen: true,
-                })
+              {isPlaying && resolvedVideoUrl ? (
+                <CrossPlatformWebView
+                  source={{ uri: resolvedVideoUrl }}
+                  style={StyleSheet.absoluteFill}
+                  javaScriptEnabled
+                  domStorageEnabled
+                  allowsInlineMediaPlayback
+                  mediaPlaybackRequiresUserAction={false}
+                  scrollEnabled={false}
+                />
               ) : (
                 <View style={styles.posterWrap}>
                   <View style={styles.radialBackdrop} />
                   <Pressable
                     style={styles.playCircle}
-                    onPress={() => setIsPlaying(true)}
+                    onPress={() => {
+                      if (resolvedVideoUrl) setIsPlaying(true);
+                    }}
                   >
                     <View style={styles.playArrow} />
                   </Pressable>
-                  <Text style={styles.vimeoBadge}>VIMEO · 360p ON 3G</Text>
+                  <Text style={styles.vimeoBadge}>
+                    {resolvedVideoUrl ? 'VIDEO · 360p ON 3G' : 'VIDEO NOT SET'}
+                  </Text>
                 </View>
               )}
             </View>

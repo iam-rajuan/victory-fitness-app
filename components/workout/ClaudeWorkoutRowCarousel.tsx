@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, ScrollView, Pressable, Platform } from 'react-native';
+import { Image, StyleSheet, Text, View, ScrollView, Pressable, Platform } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 
 export interface ProgramCardItem {
@@ -8,6 +8,7 @@ export interface ProgramCardItem {
   t: string;
   c?: string;
   rank?: number | string;
+  image?: string;
 }
 
 export interface WorkoutRowItem {
@@ -15,6 +16,8 @@ export interface WorkoutRowItem {
   m: string;
   t: string;
   v?: string;
+  thumbnail?: string;
+  item?: any;
 }
 
 interface ClaudeWorkoutRowCarouselProps {
@@ -167,6 +170,9 @@ export default function ClaudeWorkoutRowCarousel({
               }}
             >
               <View style={styles.programMedia}>
+                {p.image ? (
+                  <Image source={{ uri: p.image }} style={styles.mediaImage} resizeMode="cover" />
+                ) : null}
                 {/* Gradient overlay from prototype: linear-gradient(180deg, rgba(201,148,58,.14) 0%, rgba(13,43,69,0) 55%) */}
                 <View
                   style={[
@@ -207,6 +213,10 @@ export default function ClaudeWorkoutRowCarousel({
               }}
             >
               <View style={styles.workoutMedia}>
+                {w.thumbnail ? (
+                  <Image source={{ uri: w.thumbnail }} style={styles.mediaImage} resizeMode="cover" />
+                ) : null}
+                {w.thumbnail ? <View style={styles.workoutImageOverlay} /> : null}
                 <View style={styles.playCircle}>
                   <View style={styles.playArrow} />
                 </View>
@@ -284,6 +294,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: 'rgba(247, 243, 238, 0.22)',
   },
+  mediaImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+  },
   programTag: {
     position: 'absolute',
     top: 12,
@@ -333,6 +348,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
+  },
+  workoutImageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(13, 13, 13, 0.18)',
   },
   playCircle: {
     width: 38,

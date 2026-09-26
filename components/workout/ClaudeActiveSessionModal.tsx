@@ -27,6 +27,7 @@ interface ClaudeActiveSessionModalProps {
   tier?: string;
   workoutTitle?: string;
   unlockNote?: string;
+  exercises?: ActiveExerciseItem[];
   onEndSession: (stats: { minutes: number; setsLogged: number; volumeKg: number }) => void;
 }
 
@@ -42,53 +43,13 @@ const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", de
 const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
-// 4 Exercises matching prototype (planFor(1) 40-minute push workout)
-const PROTOTYPE_EXERCISES: ActiveExerciseItem[] = [
-  {
-    id: '1',
-    name: 'Barbell overhead press',
-    note: 'Compound · 2 min rest · 2.5 kg up from Monday',
-    targetSets: 4,
-    targetReps: 5,
-    defaultKg: 12,
-    restTime: '2:00',
-  },
-  {
-    id: '2',
-    name: 'Incline bench press',
-    note: 'Compound · 2 min rest · Chest to the bar, no bounce',
-    targetSets: 3,
-    targetReps: 6,
-    defaultKg: 14,
-    restTime: '2:00',
-  },
-  {
-    id: '3',
-    name: 'Single-arm row',
-    note: 'Compound · 2 min rest · Slow on the way back',
-    targetSets: 3,
-    targetReps: 8,
-    defaultKg: 14,
-    restTime: '2:00',
-  },
-  {
-    id: '4',
-    name: 'Dead hang',
-    note: 'Accessory · 45 sec rest · As long as you can hold',
-    targetSets: 2,
-    targetReps: 'max',
-    defaultKg: 0,
-    restTime: '0:45',
-    isHold: true,
-  },
-];
-
 export default function ClaudeActiveSessionModal({
   visible,
   onClose,
   tier = 'GOLD',
-  workoutTitle = 'Upper Body Strength',
+  workoutTitle = 'Workout',
   unlockNote = 'Your unlock is ready — your true-crime podcast is yours for this workout.',
+  exercises = [],
   onEndSession,
 }: ClaudeActiveSessionModalProps) {
   const [seconds, setSeconds] = useState(14 * 60 + 22);
@@ -96,18 +57,24 @@ export default function ClaudeActiveSessionModal({
   const [currentSetIdx, setCurrentSetIdx] = useState(0);
   const [loggedSets, setLoggedSets] = useState<Record<string, string>>({});
 
-  const currentExercise = PROTOTYPE_EXERCISES[currentExIdx] || PROTOTYPE_EXERCISES[0];
-  const [weightKg, setWeightKg] = useState(currentExercise.defaultKg);
-  const [reps, setReps] = useState<number | 'max'>(currentExercise.targetReps);
+  const currentExercise = exercises[currentExIdx] || null;
+  const [weightKg, setWeightKg] = useState(currentExercise?.defaultKg || 0);
+  const [reps, setReps] = useState<number | 'max'>(currentExercise?.targetReps || 1);
 
   const normalizedTier = (tier || 'GOLD').toLowerCase();
   const hasHabit = normalizedTier !== 'silver' && normalizedTier !== 'none';
   const hasWear = normalizedTier === 'platinum' || normalizedTier === 'ic' || normalizedTier === 'inner_circle' || normalizedTier === 'inner circle';
 
+  useEffect(() => {
+    setCurrentExIdx(0);
+    setCurrentSetIdx(0);
+    setLoggedSets({});
+  }, [workoutTitle, exercises]);
+
   // Synchronize exercise weight & reps when moving between exercises
   useEffect(() => {
-    setWeightKg(currentExercise.defaultKg);
-    setReps(currentExercise.targetReps);
+    setWeightKg(currentExercise?.defaultKg || 0);
+    setReps(currentExercise?.targetReps || 1);
   }, [currentExIdx, currentExercise]);
 
   // Session clock timer
@@ -122,6 +89,11 @@ export default function ClaudeActiveSessionModal({
   const clockString = `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}`;
 
   const handleLogSet = () => {
+    if (!currentExercise) {
+      handleFinish();
+      return;
+    }
+
     const key = `${currentExIdx}:${currentSetIdx}`;
     const entry = currentExercise.isHold
       ? 'bodyweight × max'
@@ -133,7 +105,7 @@ export default function ClaudeActiveSessionModal({
     // If more sets remain in this exercise
     if (currentSetIdx < currentExercise.targetSets - 1) {
       setCurrentSetIdx((prev) => prev + 1);
-    } else if (currentExIdx < PROTOTYPE_EXERCISES.length - 1) {
+    } else if (currentExIdx < exercises.length - 1) {
       // Advance to next exercise
       setCurrentExIdx((prev) => prev + 1);
       setCurrentSetIdx(0);
@@ -145,29 +117,30 @@ export default function ClaudeActiveSessionModal({
 
   const handleFinish = (finalLogged = loggedSets) => {
     const totalLoggedCount = Object.keys(finalLogged).length;
-    const volume = Math.max(840, totalLoggedCount * weightKg * (typeof reps === 'number' ? reps : 5));
+    const volume = totalLoggedCount * weightKg * (typeof reps === 'number' ? reps : 5);
     onEndSession({
       minutes: Math.max(1, Math.round(seconds / 60)),
-      setsLogged: Math.max(totalLoggedCount, 6),
-      volumeKg: volume,
+      setsLogged: totalLoggedCount,
+      volumeKg: Math.max(0, volume),
     });
   };
 
   // Button text matching prototype
   const setCtaText =
-    currentSetIdx >= currentExercise.targetSets - 1
-      ? currentExIdx >= PROTOTYPE_EXERCISES.length - 1
+    !currentExercise
+      ? 'Finish workout'
+      : currentSetIdx >= currentExercise.targetSets - 1
+      ? currentExIdx >= exercises.length - 1
         ? 'Finish workout'
         : 'Next exercise'
       : `Log set ${currentSetIdx + 1}`;
 
-  // Total sets calculation for progress bar (matching prototype line 539: 43% on initial exercise)
-  const totalWorkoutSets = PROTOTYPE_EXERCISES.reduce((acc, e) => acc + e.targetSets, 0);
+  const totalWorkoutSets = exercises.reduce((acc, e) => acc + e.targetSets, 0);
   const setsDoneCount = Object.keys(loggedSets).length;
   const progressPct =
-    setsDoneCount === 0
-      ? 43
-      : Math.min(100, Math.max(15, Math.round(((setsDoneCount + 1) / totalWorkoutSets) * 100)));
+    totalWorkoutSets <= 0
+      ? 0
+      : Math.min(100, Math.max(8, Math.round((setsDoneCount / totalWorkoutSets) * 100)));
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
@@ -227,15 +200,19 @@ export default function ClaudeActiveSessionModal({
           {/* Exercise Info matching lines 563-567 */}
           <View style={styles.exerciseHeader}>
             <Text style={styles.exerciseKicker}>
-              {`EXERCISE ${currentExIdx + 1} OF ${PROTOTYPE_EXERCISES.length}`}
+              {currentExercise ? `EXERCISE ${currentExIdx + 1} OF ${exercises.length}` : 'NO MOVEMENTS ADDED'}
             </Text>
-            <Text style={styles.exerciseName}>{currentExercise.name}</Text>
-            <Text style={styles.exerciseNote}>{currentExercise.note}</Text>
+            <Text style={styles.exerciseName}>
+              {currentExercise?.name || 'Follow the workout video'}
+            </Text>
+            <Text style={styles.exerciseNote}>
+              {currentExercise?.note || 'This workout has no admin-programmed movements yet.'}
+            </Text>
           </View>
 
           {/* Set Rows matching lines 570-577 & lines 3083-3102 */}
           <View style={styles.setRowsContainer}>
-            {Array.from({ length: currentExercise.targetSets }).map((_, idx) => {
+            {Array.from({ length: currentExercise?.targetSets || 0 }).map((_, idx) => {
               const key = `${currentExIdx}:${idx}`;
               const doneVal = loggedSets[key];
               const isLive = idx === currentSetIdx;
@@ -295,6 +272,7 @@ export default function ClaudeActiveSessionModal({
           </View>
 
           {/* Record Set Box matching lines 579-613 */}
+          {currentExercise ? (
           <View style={styles.recordBox}>
             <View style={styles.recordHeader}>
               <Text style={styles.recordTitle}>{`RECORD SET ${currentSetIdx + 1}`}</Text>
@@ -378,12 +356,13 @@ export default function ClaudeActiveSessionModal({
               </View>
             </View>
           </View>
+          ) : null}
         </ScrollView>
 
         {/* Bottom CTA & Rest Box matching lines 615-618 */}
         <View style={styles.bottomBar}>
           <View style={styles.restBox}>
-            <Text style={styles.restTime}>{currentExercise.restTime}</Text>
+            <Text style={styles.restTime}>{currentExercise?.restTime || '--'}</Text>
             <Text style={styles.restLabel}>REST</Text>
           </View>
 

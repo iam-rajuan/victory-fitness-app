@@ -8,8 +8,24 @@ export type WorkoutLibraryItem = {
   videoUrl: string;
   videoSource: 'VIMEO' | 'YOUTUBE' | 'UPLOAD' | string;
   tag: string;
+  equipment: string;
+  level: string;
+  durationMinutes: number;
   thumbnail: string;
+  movements: WorkoutMovementItem[];
   dateAdded: string;
+};
+
+export type WorkoutMovementItem = {
+  id: string;
+  name: string;
+  sets: string;
+  reps: string;
+  load: string;
+  equipment: string;
+  restSeconds: number;
+  notes: string;
+  order: number;
 };
 
 export type WorkoutLibraryCategory = {
@@ -48,8 +64,36 @@ function normalizeWorkoutItem(value: unknown): WorkoutLibraryItem | null {
     videoUrl: String(item.videoUrl ?? ''),
     videoSource: String(item.videoSource ?? 'VIMEO'),
     tag: String(item.tag ?? 'Workout'),
+    equipment: String(item.equipment ?? ''),
+    level: String(item.level ?? ''),
+    durationMinutes: Math.max(Number(item.durationMinutes ?? 0) || 0, 0),
     thumbnail: String(item.thumbnail ?? ''),
+    movements: Array.isArray(item.movements)
+      ? item.movements.map(normalizeWorkoutMovement).filter((movement): movement is WorkoutMovementItem => Boolean(movement))
+      : [],
     dateAdded: String(item.dateAdded ?? ''),
+  };
+}
+
+function normalizeWorkoutMovement(value: unknown): WorkoutMovementItem | null {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+  const movement = value as Record<string, unknown>;
+  const name = String(movement.name ?? '').trim();
+  if (!name) {
+    return null;
+  }
+  return {
+    id: String(movement.id ?? ''),
+    name,
+    sets: String(movement.sets ?? ''),
+    reps: String(movement.reps ?? ''),
+    load: String(movement.load ?? ''),
+    equipment: String(movement.equipment ?? ''),
+    restSeconds: Math.max(Number(movement.restSeconds ?? 0) || 0, 0),
+    notes: String(movement.notes ?? ''),
+    order: Math.max(Number(movement.order ?? 0) || 0, 0),
   };
 }
 

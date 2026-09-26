@@ -8,6 +8,7 @@ import {
   Modal,
   Platform,
 } from 'react-native';
+import CrossPlatformWebView from '../CrossPlatformWebView';
 
 export interface WorkoutDetailExercise {
   n: string;
@@ -23,6 +24,7 @@ export interface ClaudeWorkoutDetailModalProps {
   description?: string;
   durationBadge?: string;
   vimeoId?: string;
+  videoUrl?: string;
   exercises?: WorkoutDetailExercise[];
 }
 
@@ -37,29 +39,21 @@ const DMSANS = Platform.select({ web: 'DM Sans', default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: 'Inter', default: 'Inter-Regular' });
 const MONO = Platform.select({ web: 'JetBrains Mono', default: 'JetBrainsMono-Bold' });
 
-const DEFAULT_EXERCISES: WorkoutDetailExercise[] = [
-  { n: 'Barbell overhead press', s: '4 × 12 kg × 5' },
-  { n: 'Incline bench press', s: '3 × 12 kg × 6' },
-  { n: 'Single-arm row', s: '3 × 12 kg × 8' },
-  { n: 'Dead hang', s: '2 × bodyweight × max' },
-  { n: 'Face pull', s: '3 × 15 · band' },
-  { n: 'Dead bug', s: '3 × 10 each' },
-  { n: 'Hollow hold', s: '3 × 30 s' },
-];
-
 export default function ClaudeWorkoutDetailModal({
   visible,
   onClose,
   onStartWorkout,
-  workoutTitle = 'Full Body Strength',
+  workoutTitle = 'Workout',
   kicker = 'STRENGTH · DUMBBELLS · INTERMEDIATE',
   description = 'Seven movements, three rounds. Victor demonstrates each one before you start it, and the video pauses itself between sets.',
   durationBadge = '38:00',
-  vimeoId = '912440323',
-  exercises = DEFAULT_EXERCISES,
+  vimeoId = '',
+  videoUrl = '',
+  exercises = [],
 }: ClaudeWorkoutDetailModalProps) {
   const [isSaved, setIsSaved] = useState(false);
   const [isDownloaded, setIsDownloaded] = useState(false);
+  const resolvedVideoUrl = videoUrl || (vimeoId ? `https://player.vimeo.com/video/${encodeURIComponent(vimeoId)}?title=0&byline=0&portrait=0&playsinline=1&dnt=1` : '');
 
   return (
     <Modal
@@ -75,10 +69,21 @@ export default function ClaudeWorkoutDetailModal({
         >
           {/* 1. Header Media / Player Area matching VF Prototype.dc.html lines 1540-1545 */}
           <View style={styles.mediaContainer}>
-            {/* Center Play Button */}
-            <Pressable style={styles.playCircle} onPress={onStartWorkout}>
-              <View style={styles.playArrow} />
-            </Pressable>
+            {resolvedVideoUrl ? (
+              <CrossPlatformWebView
+                source={{ uri: resolvedVideoUrl }}
+                style={StyleSheet.absoluteFill}
+                javaScriptEnabled
+                domStorageEnabled
+                allowsInlineMediaPlayback
+                mediaPlaybackRequiresUserAction={false}
+                scrollEnabled={false}
+              />
+            ) : (
+              <Pressable style={styles.playCircle} onPress={onStartWorkout}>
+                <View style={styles.playArrow} />
+              </Pressable>
+            )}
 
             {/* Back button ← Train */}
             <Pressable style={styles.backBtn} onPress={onClose} hitSlop={12}>
@@ -86,7 +91,7 @@ export default function ClaudeWorkoutDetailModal({
             </Pressable>
 
             {/* Bottom info row */}
-            <Text style={styles.mediaMeta}>vimeo · 1080p · steps down on 3G</Text>
+            <Text style={styles.mediaMeta}>{vimeoId ? 'vimeo' : 'video'} · 1080p · steps down on 3G</Text>
             <View style={styles.durationBadge}>
               <Text style={styles.durationText}>{durationBadge}</Text>
             </View>
@@ -124,17 +129,27 @@ export default function ClaudeWorkoutDetailModal({
             </View>
 
             {/* 4. Movements List */}
-            <Text style={styles.movementsTitle}>THE SEVEN MOVEMENTS</Text>
+            <Text style={styles.movementsTitle}>
+              {exercises.length > 0 ? `THE ${exercises.length} MOVEMENTS` : 'MOVEMENTS'}
+            </Text>
             <View style={styles.movementsList}>
-              {exercises.map((e, idx) => (
-                <View key={idx} style={styles.movementRow}>
-                  <View style={styles.movementThumb}>
-                    <View style={styles.movementPlayArrow} />
+              {exercises.length > 0 ? (
+                exercises.map((e, idx) => (
+                  <View key={idx} style={styles.movementRow}>
+                    <View style={styles.movementThumb}>
+                      <View style={styles.movementPlayArrow} />
+                    </View>
+                    <Text style={styles.movementName}>{e.n}</Text>
+                    <Text style={styles.movementSets}>{e.s}</Text>
                   </View>
-                  <Text style={styles.movementName}>{e.n}</Text>
-                  <Text style={styles.movementSets}>{e.s}</Text>
+                ))
+              ) : (
+                <View style={styles.emptyMovementRow}>
+                  <Text style={styles.emptyMovementText}>
+                    No movements have been added for this workout yet.
+                  </Text>
                 </View>
-              ))}
+              )}
             </View>
           </View>
         </ScrollView>
@@ -294,6 +309,17 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   movementsList: {},
+  emptyMovementRow: {
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(247, 243, 238, 0.09)',
+  },
+  emptyMovementText: {
+    fontFamily: INTER,
+    fontSize: 13,
+    lineHeight: 19,
+    color: 'rgba(247, 243, 238, 0.5)',
+  },
   movementRow: {
     flexDirection: 'row',
     alignItems: 'center',

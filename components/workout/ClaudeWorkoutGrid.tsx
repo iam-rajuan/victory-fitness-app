@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
+import { Image, StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 
 export interface GridWorkoutItem {
@@ -9,6 +9,23 @@ export interface GridWorkoutItem {
   badge: string;
   lvl?: string;
   vimeoId?: string;
+  videoUrl?: string;
+  videoSource?: string;
+  tag?: string;
+  equipment?: string;
+  durationMinutes?: number;
+  thumbnail?: string;
+  movements?: Array<{
+    id?: string;
+    name: string;
+    sets?: string;
+    reps?: string;
+    load?: string;
+    equipment?: string;
+    restSeconds?: number;
+    notes?: string;
+    order?: number;
+  }>;
 }
 
 interface ClaudeWorkoutGridProps {
@@ -46,6 +63,14 @@ export default function ClaudeWorkoutGrid({
             onPress={() => onSelectWorkout(w)}
           >
             <View style={styles.mediaWrap}>
+              {w.thumbnail ? (
+                <Image
+                  source={{ uri: w.thumbnail }}
+                  style={styles.thumbnail}
+                  resizeMode="cover"
+                />
+              ) : null}
+              {w.thumbnail ? <View style={styles.thumbnailOverlay} /> : null}
               <View style={styles.playCircle}>
                 <View style={styles.playArrow} />
               </View>
@@ -108,6 +133,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'relative',
     overflow: 'hidden',
+  },
+  thumbnail: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+  },
+  thumbnailOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(13, 13, 13, 0.18)',
   },
   playCircle: {
     width: 32,
