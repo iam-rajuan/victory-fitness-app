@@ -18,6 +18,7 @@ interface ActiveExerciseItem {
   targetReps: number | 'max';
   defaultKg: number;
   restTime: string;
+  restSeconds: number;
   isHold?: boolean;
 }
 
@@ -56,6 +57,7 @@ export default function ClaudeActiveSessionModal({
   const [currentExIdx, setCurrentExIdx] = useState(0);
   const [currentSetIdx, setCurrentSetIdx] = useState(0);
   const [loggedSets, setLoggedSets] = useState<Record<string, string>>({});
+  const [restRemainingSeconds, setRestRemainingSeconds] = useState(0);
 
   const currentExercise = exercises[currentExIdx] || null;
   const [weightKg, setWeightKg] = useState(currentExercise?.defaultKg || 0);
@@ -69,6 +71,7 @@ export default function ClaudeActiveSessionModal({
     setCurrentExIdx(0);
     setCurrentSetIdx(0);
     setLoggedSets({});
+    setRestRemainingSeconds(0);
   }, [workoutTitle, exercises]);
 
   // Synchronize exercise weight & reps when moving between exercises
@@ -86,7 +89,18 @@ export default function ClaudeActiveSessionModal({
     return () => clearInterval(interval);
   }, [visible]);
 
+  useEffect(() => {
+    if (!visible || restRemainingSeconds <= 0) return;
+    const interval = setInterval(() => {
+      setRestRemainingSeconds((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [visible, restRemainingSeconds]);
+
   const clockString = `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}`;
+  const restClockString = (restRemainingSeconds > 0 ? restRemainingSeconds : 0) > 0
+    ? `${Math.floor(restRemainingSeconds / 60)}:${(restRemainingSeconds % 60).toString().padStart(2, '0')}`
+    : currentExercise?.restTime || '--';
 
   const handleLogSet = () => {
     if (!currentExercise) {
@@ -101,6 +115,7 @@ export default function ClaudeActiveSessionModal({
 
     const newLogged = { ...loggedSets, [key]: entry };
     setLoggedSets(newLogged);
+    setRestRemainingSeconds(currentExercise.restSeconds || 0);
 
     // If more sets remain in this exercise
     if (currentSetIdx < currentExercise.targetSets - 1) {
@@ -112,6 +127,43 @@ export default function ClaudeActiveSessionModal({
     } else {
       // Completed last exercise
       handleFinish(newLogged);
+    }
+  };
+
+  const handlePreviousStep = () => {
+    if (!currentExercise) return;
+
+    const currentKey = `${currentExIdx}:${currentSetIdx}`;
+    if (loggedSets[currentKey]) {
+      const nextLogged = { ...loggedSets };
+      delete nextLogged[currentKey];
+      setLoggedSets(nextLogged);
+      setRestRemainingSeconds(0);
+      return;
+    }
+
+    if (currentSetIdx > 0) {
+      const previousSetIdx = currentSetIdx - 1;
+      const previousKey = `${currentExIdx}:${previousSetIdx}`;
+      const nextLogged = { ...loggedSets };
+      delete nextLogged[previousKey];
+      setLoggedSets(nextLogged);
+      setRestRemainingSeconds(0);
+      setCurrentSetIdx(previousSetIdx);
+      return;
+    }
+
+    if (currentExIdx > 0) {
+      const previousExerciseIdx = currentExIdx - 1;
+      const previousExercise = exercises[previousExerciseIdx];
+      const previousSetIdx = Math.max((previousExercise?.targetSets || 1) - 1, 0);
+      const previousKey = `${previousExerciseIdx}:${previousSetIdx}`;
+      const nextLogged = { ...loggedSets };
+      delete nextLogged[previousKey];
+      setLoggedSets(nextLogged);
+      setRestRemainingSeconds(0);
+      setCurrentExIdx(previousExerciseIdx);
+      setCurrentSetIdx(previousSetIdx);
     }
   };
 
@@ -141,6 +193,7 @@ export default function ClaudeActiveSessionModal({
     totalWorkoutSets <= 0
       ? 0
       : Math.min(100, Math.max(8, Math.round((setsDoneCount / totalWorkoutSets) * 100)));
+  const canGoBack = currentSetIdx > 0 || currentExIdx > 0 || Boolean(loggedSets[`${currentExIdx}:${currentSetIdx}`]);
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
@@ -361,8 +414,18 @@ export default function ClaudeActiveSessionModal({
 
         {/* Bottom CTA & Rest Box matching lines 615-618 */}
         <View style={styles.bottomBar}>
+          <Pressable
+            style={[styles.previousBtn, !canGoBack && styles.previousBtnDisabled]}
+            onPress={handlePreviousStep}
+            disabled={!canGoBack}
+          >
+            <Text style={[styles.previousBtnText, !canGoBack && styles.previousBtnTextDisabled]}>Back</Text>
+          </Pressable>
+
           <View style={styles.restBox}>
-            <Text style={styles.restTime}>{currentExercise?.restTime || '--'}</Text>
+            <Text style={[styles.restTime, restRemainingSeconds > 0 && styles.restTimeActive]}>
+              {restClockString}
+            </Text>
             <Text style={styles.restLabel}>REST</Text>
           </View>
 
@@ -705,6 +768,27 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
+  previousBtn: {
+    width: 62,
+    height: 54,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(247, 243, 238, 0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previousBtnDisabled: {
+    opacity: 0.42,
+  },
+  previousBtnText: {
+    fontFamily: DMSANS,
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: IVORY,
+  },
+  previousBtnTextDisabled: {
+    color: 'rgba(247, 243, 238, 0.5)',
+  },
   restBox: {
     width: 62,
     height: 54,
@@ -719,6 +803,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: IVORY,
+  },
+  restTimeActive: {
+    color: GOLD,
   },
   restLabel: {
     fontFamily: DMSANS,

@@ -242,6 +242,7 @@ export default function WorkoutScreen() {
         targetReps: /max/i.test(String(movement.reps)) ? 'max' as const : parsePositiveInt(movement.reps, 1),
         defaultKg: parseWeightKg(movement.load),
         restTime: formatRestTime(movement.restSeconds),
+        restSeconds: Math.max(0, Number(movement.restSeconds || 0)),
         isHold: /hold|max/i.test(`${movement.name} ${movement.reps}`),
       };
     });
@@ -258,6 +259,11 @@ export default function WorkoutScreen() {
   const handleStartWorkoutFromDetail = () => {
     setWorkoutDetailModalVisible(false);
     setActiveSessionVisible(true);
+  };
+
+  const handlePauseActiveSession = () => {
+    setActiveSessionVisible(false);
+    setWorkoutDetailModalVisible(true);
   };
 
   const handleResumeSession = () => {
@@ -488,7 +494,7 @@ export default function WorkoutScreen() {
       {/* 3. Active Session Tracker Modal */}
       <ClaudeActiveSessionModal
         visible={activeSessionVisible}
-        onClose={() => setActiveSessionVisible(false)}
+        onClose={handlePauseActiveSession}
         tier={tier}
         workoutTitle={selectedWorkout?.name || 'Workout'}
         unlockNote={currentUser?.identity_statement || 'Your unlock is ready — your true-crime podcast is yours for this workout.'}
