@@ -12,6 +12,7 @@ import {
   fetchCurrentUser,
   AuthUser,
   createWorkoutLog,
+  fetchCurrentUserOnboarding,
   fetchWorkoutLogs,
   recordAnalyticsEvent,
 } from '../../lib/api';
@@ -88,6 +89,7 @@ function mapLibraryWorkout(workout: WorkoutLibraryItem, completedWorkoutIds: Set
     durationMinutes: workout.durationMinutes,
     durationSeconds: workout.durationSeconds,
     thumbnail: workout.thumbnail,
+    dateAdded: workout.dateAdded,
     completed: completedWorkoutIds.has(workout.id),
     movements: workout.movements,
   };
@@ -105,6 +107,48 @@ function mapRowWorkout(workout: GridWorkoutItem, badge: string): WorkoutRowItem 
     completed: workout.completed,
     item: workout,
   } as WorkoutRowItem & { item: GridWorkoutItem };
+}
+
+function normalizeWords(value: unknown) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function matchesWorkoutEquipment(workout: GridWorkoutItem, kitWords: string[]) {
+  if (!kitWords.length) return false;
+  const haystack = normalizeWords(`${workout.equipment || ''} ${workout.meta || ''}`);
+  return kitWords.some((kit) => {
+    if (!kit) return false;
+    if ((kit.includes('bodyweight') || kit.includes('no kit') || kit.includes('no equipment')) && /bodyweight|no kit|no equipment/.test(haystack)) {
+      return true;
+    }
+    return haystack.includes(kit);
+  });
+}
+
+function buildWorkoutReason(workout: GridWorkoutItem, kitWords: string[], targetMinutes: number) {
+  if (matchesWorkoutEquipment(workout, kitWords)) return 'Fits your kit';
+  const minutes = workout.durationMinutes || Math.round((workout.durationSeconds || 0) / 60);
+  if (targetMinutes > 0 && minutes > 0 && minutes <= targetMinutes) return 'Fits your time';
+  if (minutes > 0 && minutes <= 15) return 'Short on time';
+  if (workout.tag) return workout.tag;
+  return 'For you';
+}
+
+function formatAddedBadge(dateValue?: string) {
+  if (!dateValue) return 'New';
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return 'New';
+  const now = new Date();
+  const diffDays = Math.floor((now.getTime() - date.getTime()) / 86400000);
+  if (diffDays <= 0) return 'Added today';
+  if (diffDays === 1) return 'Added yesterday';
+  if (diffDays < 7) {
+    return `Added ${date.toLocaleDateString(undefined, { weekday: 'short' })}`;
+  }
+  return `Added ${date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`;
 }
 
 function mapLibraryCategory(category: WorkoutLibraryCategory, idx: number): ProgramCardItem {
@@ -155,6 +199,9 @@ export default function WorkoutScreen() {
   // Plan Build State
   const [planBuilt, setPlanBuilt] = useState(false);
   const [planSummaryLine, setPlanSummaryLine] = useState('Get stronger · Mon, Wed, Fri · 40 min · built around dumbbells.');
+  const [trainingContextLine, setTrainingContextLine] = useState('Workouts matched to your kit and time');
+  const [preferredKitWords, setPreferredKitWords] = useState<string[]>([]);
+  const [preferredMinutes, setPreferredMinutes] = useState(0);
 
   // Modals State
   const [workoutDetailModalVisible, setWorkoutDetailModalVisible] = useState(false);
@@ -184,10 +231,31 @@ export default function WorkoutScreen() {
       const user = await fetchCurrentUser();
       if (user) setCurrentUser(user);
 
-      const [library, completedLogs] = await Promise.all([
+      const [library, completedLogs, onboarding] = await Promise.all([
         fetchWorkoutLibrary(),
         fetchWorkoutLogs(1, 200, 'completed').catch(() => ({ items: [] })),
+        fetchCurrentUserOnboarding().catch(() => null),
       ]);
+      const selectedKit = onboarding?.preferences?.selectedKit || [];
+      const equipmentAccess = onboarding?.anamnese?.equipmentAccess || '';
+      const daysPerWeek = onboarding?.anamnese?.daysPerWeek || '';
+      const durationLabel = onboarding?.anamnese?.timePerSession || '';
+      const durationMatch = String(durationLabel).match(/\d+/);
+      const daysMatch = String(daysPerWeek).match(/\d+/);
+      const weeklyMinutes = Math.max(Number(onboarding?.calculations?.weeklyMinutes || 0) || 0, 0);
+      const calculatedSessionMinutes = weeklyMinutes > 0 && daysMatch ? Math.round(weeklyMinutes / Math.max(1, Number(daysMatch[0]))) : 0;
+      const nextPreferredMinutes = durationMatch ? Number(durationMatch[0]) : calculatedSessionMinutes;
+      const nextKitWords = [...selectedKit, equipmentAccess]
+        .map(normalizeWords)
+        .filter(Boolean);
+      setPreferredKitWords(nextKitWords);
+      setPreferredMinutes(nextPreferredMinutes);
+      const kitLabel = selectedKit.length
+        ? selectedKit.join(', ')
+        : equipmentAccess || 'Your kit';
+      const durationText = nextPreferredMinutes > 0 ? `${nextPreferredMinutes} minutes` : 'your time';
+      const daysText = daysPerWeek ? `, ${daysPerWeek}` : '';
+      setTrainingContextLine(`${kitLabel}, ${durationText}${daysText}`);
       const completedWorkoutIds = new Set(
         completedLogs.items
           .map((log) => String(log.workout_id || '').trim())
@@ -249,10 +317,18 @@ export default function WorkoutScreen() {
 
   const resultCountText = `${filteredWorkouts.length} of ${libraryWorkouts.length} workouts · shortest first`;
   const forYouWorkouts = useMemo(() => filteredWorkouts.slice(0, 4).map((workout, idx) => {
-    const badges = ['FITS YOUR FILTERS', 'FROM THE LIBRARY', 'READY TO START', 'PUBLISHED'];
-    return mapRowWorkout(workout, badges[idx] || 'WORKOUT');
-  }), [filteredWorkouts]);
-  const newWorkouts = useMemo(() => libraryWorkouts.slice(0, 6).map((workout) => mapRowWorkout(workout, 'NEW FROM DASHBOARD')), [libraryWorkouts]);
+    return mapRowWorkout(workout, buildWorkoutReason(workout, preferredKitWords, preferredMinutes));
+  }), [filteredWorkouts, preferredKitWords, preferredMinutes]);
+  const newWorkouts = useMemo(() => {
+    return [...libraryWorkouts]
+      .sort((a, b) => {
+        const aTime = a.dateAdded ? new Date(a.dateAdded).getTime() : 0;
+        const bTime = b.dateAdded ? new Date(b.dateAdded).getTime() : 0;
+        return bTime - aTime;
+      })
+      .slice(0, 6)
+      .map((workout) => mapRowWorkout(workout, formatAddedBadge(workout.dateAdded)));
+  }, [libraryWorkouts]);
   const selectedExercises = useMemo(() => {
     return (selectedWorkout?.movements || []).map((movement, idx) => {
       const setText = movement.sets ? `${movement.sets} sets` : '';
@@ -446,7 +522,7 @@ export default function WorkoutScreen() {
         {/* 5. Because of how you train */}
         <ClaudeWorkoutRowCarousel
           title="Because of how you train"
-          subtitle="Published workouts from your dashboard"
+          subtitle={trainingContextLine}
           type="workouts"
           workouts={forYouWorkouts}
           onSelectWorkout={(w) => {

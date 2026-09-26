@@ -17,6 +17,7 @@ export interface GridWorkoutItem {
   durationMinutes?: number;
   durationSeconds?: number;
   thumbnail?: string;
+  dateAdded?: string;
   completed?: boolean;
   movements?: Array<{
     id?: string;
@@ -121,7 +122,6 @@ export default function ClaudeWorkoutGrid({
 
             <Text style={[styles.workoutName, { color: colors.text }]}>{w.name}</Text>
             <Text style={[styles.workoutMeta, { color: colors.textMuted }]}>{w.meta}</Text>
-            {w.completed ? <Text style={styles.completedText}>Completed before · can repeat</Text> : null}
           </Pressable>
         ))}
       </View>
@@ -247,15 +247,6 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: 'rgba(247, 243, 238, 0.5)',
     marginTop: 3,
-  },
-  completedText: {
-    marginTop: 3,
-    fontFamily: MONO,
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 0.4,
-    color: '#1A7A4A',
-    textTransform: 'uppercase',
   },
   footnote: {
     fontFamily: INTER,

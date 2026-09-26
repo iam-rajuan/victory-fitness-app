@@ -18,7 +18,7 @@ export default function ClaudeTrainHeader({
 
   return (
     <View style={styles.headerRow}>
-      <Text style={[styles.title, { color: isDark ? '#F7F3EE' : '#0D0D0D' }]}>Train</Text>
+      <Text style={[styles.title, { color: isDark ? '#F7F3EE' : '#0D0D0D' }]}>Workout</Text>
       <View style={styles.rightGroup}>
         <Text style={[styles.countText, { color: isDark ? 'rgba(247, 243, 238, 0.45)' : 'rgba(13, 43, 69, 0.45)' }]}>
           {`${totalWorkouts} workouts`}
@@ -88,4 +88,3 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
 });
-

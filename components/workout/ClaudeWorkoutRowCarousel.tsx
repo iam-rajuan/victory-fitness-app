@@ -267,7 +267,6 @@ export default function ClaudeWorkoutRowCarousel({
               </View>
               <Text style={styles.workoutName}>{w.n}</Text>
               <Text style={styles.workoutMeta}>{w.m}</Text>
-              {w.completed ? <Text style={styles.completedText}>Completed before</Text> : null}
             </Pressable>
           ))}
       </ScrollView>
@@ -418,17 +417,20 @@ const styles = StyleSheet.create({
   },
   workoutBadge: {
     position: 'absolute',
-    top: 10,
-    left: 11,
-    fontFamily: DMSANS,
-    fontSize: 8.5,
+    bottom: 8,
+    left: 8,
+    maxWidth: 122,
+    fontFamily: MONO,
+    fontSize: 7.5,
     fontWeight: '700',
-    letterSpacing: 1.0,
+    letterSpacing: 0.5,
     color: GOLD,
-    backgroundColor: 'rgba(13, 13, 13, 0.7)',
-    borderRadius: 3,
+    backgroundColor: 'rgba(13, 13, 13, 0.82)',
+    borderRadius: 999,
     paddingVertical: 3,
-    paddingHorizontal: 6,
+    paddingHorizontal: 7,
+    overflow: 'hidden',
+    textTransform: 'uppercase',
   },
   completedBadge: {
     position: 'absolute',
@@ -458,14 +460,5 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: 'rgba(247, 243, 238, 0.5)',
     marginTop: 3,
-  },
-  completedText: {
-    marginTop: 4,
-    fontFamily: MONO,
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 0.4,
-    color: '#1A7A4A',
-    textTransform: 'uppercase',
   },
 });
