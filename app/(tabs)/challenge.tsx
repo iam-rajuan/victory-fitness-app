@@ -68,6 +68,7 @@ function buildChallengeItem(raw: Record<string, any>, status: ChallengeItem['sta
     progress: Math.max(0, Math.min(1, Number(raw.progress || (status === 'completed' ? 1 : 0)))),
     daysLeft: Math.max(0, Number(raw.days_left || 0)),
     unreadCount,
+    featured: Boolean(raw.featured),
   };
 }
 
@@ -254,12 +255,26 @@ export default function ChallengeScreen() {
     ]);
   }, [loadChallenges, loadCommunityPosts]);
 
-  const openActiveChallenge = useCallback(() => {
-    const challengeId = activeChallenge?.challengeId || activeChallenge?.id;
-    if (challengeId) {
-      router.push(`/challenges/${challengeId}` as any);
+  const featuredChallenge = useMemo(() => {
+    return (
+      challengeItems.find((item) => item.featured && (item.status === 'active' || item.status === 'ready')) ||
+      activeChallenge ||
+      challengeItems.find((item) => item.status === 'ready') ||
+      null
+    );
+  }, [activeChallenge, challengeItems]);
+
+  const openFeaturedChallenge = useCallback(() => {
+    if (!featuredChallenge) return;
+    if (featuredChallenge.status === 'active' || featuredChallenge.status === 'completed') {
+      const challengeId = featuredChallenge.challengeId || featuredChallenge.id;
+      if (challengeId) {
+        router.push(`/challenges/${challengeId}` as any);
+      }
+      return;
     }
-  }, [activeChallenge, router]);
+    handleSelectChallenge(featuredChallenge);
+  }, [featuredChallenge, router]);
 
   const openCohortForSelected = useCallback(() => {
     const challenge = selectedChallenge || activeChallenge;
@@ -296,8 +311,8 @@ export default function ChallengeScreen() {
         {activeTab === 'challenges' ? (
           <>
             <ClaudeActiveChallengeBanner
-              challenge={activeChallenge}
-              onOpenChallenge={openActiveChallenge}
+              challenge={featuredChallenge}
+              onOpenChallenge={openFeaturedChallenge}
               onOpenCohort={openCohortForSelected}
               onInvite={handleInviteSomeone}
             />

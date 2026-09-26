@@ -25,6 +25,7 @@ export interface ChallengeItem {
   progress?: number;
   daysLeft?: number;
   unreadCount?: number;
+  featured?: boolean;
 }
 
 interface ClaudeChallengeDirectoryProps {

@@ -33,11 +33,14 @@ export default function ClaudeActiveChallengeBanner({
   }
 
   const daysTotal = Math.max(1, challenge.d || 1);
+  const isJoined = challenge.status === 'active' || challenge.status === 'completed';
+  const isCompleted = challenge.status === 'completed';
   const progressPct = Math.max(0, Math.min(100, Math.round(Number(challenge.progress || 0) * 100)));
   const doneTo = Math.max(0, Math.min(daysTotal, Math.round(daysTotal * (progressPct / 100))));
   const currentDay = Math.min(daysTotal, doneTo + 1);
   const daysLeft = Math.max(0, Number(challenge.daysLeft || daysTotal - doneTo));
   const unreadCount = Math.max(0, Number(challenge.unreadCount || 0));
+  const kickerText = isJoined ? `YOU'RE IN · DAY ${currentDay} OF ${daysTotal}` : `ACTIVE NOW · ${daysTotal} DAYS`;
 
   return (
     <View style={styles.container}>
@@ -57,7 +60,7 @@ export default function ClaudeActiveChallengeBanner({
         ]}
       >
         <View style={styles.headerRow}>
-          <Text style={[styles.kicker, { color: GOLD }]}>{`YOU'RE IN · DAY ${currentDay} OF ${daysTotal}`}</Text>
+          <Text style={[styles.kicker, { color: GOLD }]}>{kickerText}</Text>
           <Text style={styles.pointsBadge}>{challenge.p}</Text>
         </View>
 
@@ -104,7 +107,7 @@ export default function ClaudeActiveChallengeBanner({
         <TouchableOpacity
           style={[
             styles.checkCard,
-            challenge.status === 'completed' ? styles.checkCardDone : styles.checkCardPending,
+            isCompleted ? styles.checkCardDone : styles.checkCardPending,
           ]}
           activeOpacity={0.85}
           onPress={onOpenChallenge || onOpenCohort}
@@ -112,35 +115,39 @@ export default function ClaudeActiveChallengeBanner({
           <View
             style={[
               styles.checkBox,
-              challenge.status === 'completed' ? styles.checkBoxDone : styles.checkBoxPending,
+              isCompleted ? styles.checkBoxDone : styles.checkBoxPending,
             ]}
           >
-            {challenge.status === 'completed' && <View style={styles.checkTick} />}
+            {isCompleted && <View style={styles.checkTick} />}
           </View>
           <View style={styles.checkTextWrap}>
             <Text
               style={[
                 styles.checkTitle,
-                { color: challenge.status === 'completed' ? IVORY : '#0D0D0D' },
+                { color: isCompleted ? IVORY : '#0D0D0D' },
               ]}
             >
-              {challenge.status === 'completed' ? 'Challenge complete' : `Open day ${currentDay}`}
+              {isCompleted ? 'Challenge complete' : isJoined ? `Open day ${currentDay}` : 'Join this challenge'}
             </Text>
             <Text
               style={[
                 styles.checkNote,
-                { color: challenge.status === 'completed' ? 'rgba(247, 243, 238, 0.7)' : '#2A2218' },
+                { color: isCompleted ? 'rgba(247, 243, 238, 0.7)' : '#2A2218' },
               ]}
             >
-              {daysLeft > 0 ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} left. Continue from your challenge hub.` : 'Your challenge progress is saved.'}
+              {isJoined
+                ? daysLeft > 0
+                  ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} left. Continue from your challenge hub.`
+                  : 'Your challenge progress is saved.'
+                : challenge.desc || 'Started from the admin dashboard. Tap to see details.'}
             </Text>
           </View>
         </TouchableOpacity>
 
         {/* Action Buttons matching lines 845-848 */}
         <View style={styles.actionsRow}>
-          <TouchableOpacity style={styles.cohortBtn} activeOpacity={0.8} onPress={onOpenCohort}>
-            <Text style={styles.cohortBtnText}>Cohort chat</Text>
+          <TouchableOpacity style={styles.cohortBtn} activeOpacity={0.8} onPress={isJoined ? onOpenCohort : onOpenChallenge}>
+            <Text style={styles.cohortBtnText}>{isJoined ? 'Cohort chat' : 'Details'}</Text>
             {unreadCount > 0 && (
               <View style={styles.unreadBadge}>
                 <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
