@@ -134,6 +134,7 @@ export default function ChallengeScreen() {
   const [showCohortModal, setShowCohortModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [completingChallengeId, setCompletingChallengeId] = useState<string | null>(null);
+  const [userId, setUserId] = useState('');
   const [userTier, setUserTier] = useState('GOLD');
   const [userName, setUserName] = useState('Member');
   const [userInitials, setUserInitials] = useState('ME');
@@ -146,6 +147,7 @@ export default function ChallengeScreen() {
         const user = await fetchCurrentUser();
         if (cancelled || !user) return;
         const u = user as any;
+        setUserId(String(u.id || u._id || '').trim());
         const tier = (u.tier || u.membership_tier || 'gold').toUpperCase();
         setUserTier(tier);
         if (u.name) {
@@ -377,6 +379,7 @@ export default function ChallengeScreen() {
         onClose={() => setShowDetailModal(false)}
         onJoin={handleJoinChallenge}
         userName={userName}
+        inviterId={userId}
         onInvite={handleInviteSomeone}
         onOpenCohort={() => {
           if (selectedChallenge && selectedChallenge.status !== 'active') {
@@ -405,9 +408,11 @@ export default function ChallengeScreen() {
       <ClaudeInviteModal
         visible={showInviteModal}
         onClose={() => setShowInviteModal(false)}
+        challengeId={inviteChallenge?.challengeId || inviteChallenge?.id}
         challengeTitle={inviteChallenge?.n || 'Challenge'}
         challengeDays={inviteChallenge?.d || 1}
         userName={userName}
+        inviterId={userId}
       />
     </View>
   );

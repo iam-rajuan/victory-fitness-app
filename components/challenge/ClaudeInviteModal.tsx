@@ -11,12 +11,16 @@ import {
   Share,
   Linking,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import { apiRequest } from '../../lib/api';
 
 export interface ClaudeInviteViewProps {
   onClose: () => void;
+  challengeId?: string;
   challengeTitle?: string;
   challengeDays?: number;
   userName?: string;
+  inviterId?: string;
   isOverlay?: boolean;
 }
 
@@ -39,21 +43,57 @@ const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Jet
 
 export function ClaudeInviteView({
   onClose,
+  challengeId,
   challengeTitle = 'Challenge',
   challengeDays = 1,
   userName = 'Member',
+  inviterId,
   isOverlay = false,
 }: ClaudeInviteViewProps) {
   const [copied, setCopied] = useState(false);
+  const [inviteState, setInviteState] = useState<{ id: string; url: string } | null>(null);
+  const [isPreparingInvite, setIsPreparingInvite] = useState(false);
 
   const displayTitle = challengeTitle || 'Challenge';
   const displayDays = challengeDays || 1;
   const inviteMessage = `“Join ${userName}'s team for the ${displayTitle} on Victory Fitness. We're in this together.”`;
-  const inviteUrl = 'https://victoryfitness.app/join/CH-WARRIOR';
+  const fallbackInviteUrl = buildChallengeInviteUrl({ challengeId, inviterId });
+  const inviteUrl = inviteState?.url || fallbackInviteUrl;
+
+  const prepareInvite = async () => {
+    if (inviteState) return inviteState;
+    setIsPreparingInvite(true);
+    try {
+      const response = await apiRequest<{
+        id?: string;
+        invite_id?: string;
+        inviter_id?: string | null;
+        challenge_id?: string | null;
+      }>('/invites', {
+        method: 'POST',
+        body: {
+          challenge_id: challengeId || undefined,
+          source: challengeId ? 'challenge_invite' : 'challenge_guest_invite',
+        },
+      });
+      const inviteId = String(response.invite_id || response.id || '').trim();
+      const resolvedUrl = buildChallengeInviteUrl({
+        challengeId: String(response.challenge_id || challengeId || '').trim(),
+        inviterId: String(response.inviter_id || inviterId || '').trim(),
+        inviteId,
+      });
+      const next = { id: inviteId, url: resolvedUrl };
+      setInviteState(next);
+      return next;
+    } finally {
+      setIsPreparingInvite(false);
+    }
+  };
 
   const handleShareWhatsApp = async () => {
     try {
-      const shareText = `${inviteMessage}\n\n${inviteUrl}`;
+      const invite = await prepareInvite();
+      const shareText = `${inviteMessage}\n\n${invite.url}`;
       const waUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
       if (Platform.OS === 'web') {
         if (typeof window !== 'undefined') {
@@ -74,19 +114,24 @@ export function ClaudeInviteView({
 
   const handleCopyLink = async () => {
     try {
+      const invite = await prepareInvite();
       if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(inviteUrl);
+        await navigator.clipboard.writeText(invite.url);
+      } else {
+        await Clipboard.setStringAsync(invite.url);
       }
     } catch {
-      // Fallback
+      Alert.alert('Invite Link', inviteUrl);
+      return;
     }
     setCopied(true);
     setTimeout(() => setCopied(false), 2200);
   };
 
-  const handleEmail = () => {
+  const handleEmail = async () => {
+    const invite = await prepareInvite();
     const subject = `Join ${userName} for the ${displayTitle}`;
-    const body = `${inviteMessage}\n\n${inviteUrl}`;
+    const body = `${inviteMessage}\n\n${invite.url}`;
     const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       window.location.href = mailtoUrl;
@@ -99,8 +144,11 @@ export function ClaudeInviteView({
 
   const handleInstagram = async () => {
     try {
+      const invite = await prepareInvite();
       if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(inviteUrl);
+        await navigator.clipboard.writeText(invite.url);
+      } else {
+        await Clipboard.setStringAsync(invite.url);
       }
     } catch {}
     Alert.alert(
@@ -159,7 +207,7 @@ export function ClaudeInviteView({
               onPress={handleCopyLink}
             >
               <Text style={[styles.outlineBtnText, copied && styles.outlineBtnTextCopied]}>
-                {copied ? '✓ Copied' : 'Copy link'}
+                {isPreparingInvite ? 'Preparing...' : copied ? '✓ Copied' : 'Copy link'}
               </Text>
             </TouchableOpacity>
 
@@ -239,9 +287,11 @@ export function ClaudeInviteView({
 export default function ClaudeInviteModal({
   visible,
   onClose,
+  challengeId,
   challengeTitle = 'Challenge',
   challengeDays = 1,
   userName = 'Member',
+  inviterId,
 }: ClaudeInviteModalProps) {
   if (!visible) return null;
 
@@ -249,12 +299,34 @@ export default function ClaudeInviteModal({
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
       <ClaudeInviteView
         onClose={onClose}
+        challengeId={challengeId}
         challengeTitle={challengeTitle}
         challengeDays={challengeDays}
         userName={userName}
+        inviterId={inviterId}
       />
     </Modal>
   );
+}
+
+function buildChallengeInviteUrl({
+  challengeId,
+  inviterId,
+  inviteId,
+}: {
+  challengeId?: string;
+  inviterId?: string;
+  inviteId?: string;
+}) {
+  const baseUrl = Platform.OS === 'web' && typeof window !== 'undefined'
+    ? window.location.origin
+    : 'https://victoryfitnessapp.com';
+  const params = new URLSearchParams();
+  if (challengeId) params.set('challenge_id', challengeId);
+  if (inviterId) params.set('inviter_id', inviterId);
+  if (inviteId) params.set('invite_id', inviteId);
+  params.set('source', 'challenge_invite');
+  return `${baseUrl}/register?${params.toString()}`;
 }
 
 const styles = StyleSheet.create({

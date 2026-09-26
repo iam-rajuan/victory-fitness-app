@@ -20,6 +20,7 @@ interface ClaudeChallengeDetailModalProps {
   onOpenCohort: () => void;
   onInvite?: () => void;
   userName?: string;
+  inviterId?: string;
 }
 
 const NAVY = '#0D2B45';
@@ -40,6 +41,7 @@ export default function ClaudeChallengeDetailModal({
   onOpenCohort,
   onInvite,
   userName = 'Member',
+  inviterId,
 }: ClaudeChallengeDetailModalProps) {
   const [showInvite, setShowInvite] = React.useState(false);
 
@@ -191,9 +193,11 @@ export default function ClaudeChallengeDetailModal({
           <ClaudeInviteView
             isOverlay
             onClose={() => setShowInvite(false)}
+            challengeId={challenge.challengeId || challenge.id}
             challengeTitle={challenge.n}
             challengeDays={challenge.d}
             userName={userName}
+            inviterId={inviterId}
           />
         )}
       </View>
