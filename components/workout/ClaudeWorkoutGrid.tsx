@@ -15,6 +15,7 @@ export interface GridWorkoutItem {
   tag?: string;
   equipment?: string;
   durationMinutes?: number;
+  durationSeconds?: number;
   thumbnail?: string;
   movements?: Array<{
     id?: string;

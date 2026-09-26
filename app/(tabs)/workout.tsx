@@ -40,13 +40,24 @@ import { fetchWorkoutLibrary, WorkoutLibraryCategory, WorkoutLibraryItem } from 
 const OBSIDIAN = '#0D0D0D';
 const GOLD = '#C9943A';
 
-function formatDurationBadge(minutes: number) {
+function formatDurationBadge(seconds: number, minutes: number) {
+  if (seconds > 0) {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
   if (!minutes || minutes <= 0) return 'Not set';
   return `${minutes}:00`;
 }
 
+function formatDurationText(seconds: number, minutes: number) {
+  if (seconds > 0) return formatDurationBadge(seconds, minutes);
+  if (minutes > 0) return `${minutes} min`;
+  return 'Duration not set';
+}
+
 function formatWorkoutMeta(workout: WorkoutLibraryItem) {
-  const duration = workout.durationMinutes > 0 ? `${workout.durationMinutes} min` : 'Duration not set';
+  const duration = formatDurationText(workout.durationSeconds, workout.durationMinutes);
   const tag = workout.tag || 'Workout';
   const equipment = workout.equipment || 'Kit not set';
   return `${duration} · ${tag} · ${equipment}`;
@@ -57,7 +68,7 @@ function mapLibraryWorkout(workout: WorkoutLibraryItem): GridWorkoutItem {
     id: workout.id,
     name: workout.title,
     meta: formatWorkoutMeta(workout),
-    badge: formatDurationBadge(workout.durationMinutes),
+    badge: formatDurationBadge(workout.durationSeconds, workout.durationMinutes),
     lvl: workout.level || 'All levels',
     vimeoId: workout.vimeoId,
     videoUrl: workout.videoUrl,
@@ -65,6 +76,7 @@ function mapLibraryWorkout(workout: WorkoutLibraryItem): GridWorkoutItem {
     tag: workout.tag,
     equipment: workout.equipment,
     durationMinutes: workout.durationMinutes,
+    durationSeconds: workout.durationSeconds,
     thumbnail: workout.thumbnail,
     movements: workout.movements,
   };
@@ -203,8 +215,7 @@ export default function WorkoutScreen() {
       // Duration
       if (selectedDuration !== 'Any') {
         const maxMins = parseInt(selectedDuration, 10);
-        const matchMin = w.meta.match(/(\d+)\s*min/);
-        if (matchMin && parseInt(matchMin[1], 10) > maxMins) return false;
+        if ((w.durationMinutes || 0) > maxMins) return false;
       }
       return true;
     });
@@ -339,7 +350,11 @@ export default function WorkoutScreen() {
         <ClaudeResumeSessionCard
           sessionTitle={selectedWorkout?.name || 'No published workout yet'}
           sessionLine={selectedWorkout?.meta || 'Publish workouts in the dashboard to start training here'}
-          minutesLeft={selectedWorkout?.durationMinutes ? `${selectedWorkout.durationMinutes} min` : 'Not set'}
+          minutesLeft={
+            selectedWorkout
+              ? formatDurationBadge(selectedWorkout.durationSeconds || 0, selectedWorkout.durationMinutes || 0)
+              : 'Not set'
+          }
           thumbnail={selectedWorkout?.thumbnail || ''}
           videoUrl={selectedWorkout?.videoUrl || ''}
           videoSource={selectedWorkout?.videoSource || ''}

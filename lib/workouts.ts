@@ -11,6 +11,7 @@ export type WorkoutLibraryItem = {
   equipment: string;
   level: string;
   durationMinutes: number;
+  durationSeconds: number;
   thumbnail: string;
   movements: WorkoutMovementItem[];
   dateAdded: string;
@@ -67,6 +68,7 @@ function normalizeWorkoutItem(value: unknown): WorkoutLibraryItem | null {
     equipment: String(item.equipment ?? ''),
     level: String(item.level ?? ''),
     durationMinutes: Math.max(Number(item.durationMinutes ?? 0) || 0, 0),
+    durationSeconds: Math.max(Number(item.durationSeconds ?? 0) || 0, 0),
     thumbnail: String(item.thumbnail ?? ''),
     movements: Array.isArray(item.movements)
       ? item.movements.map(normalizeWorkoutMovement).filter((movement): movement is WorkoutMovementItem => Boolean(movement))
