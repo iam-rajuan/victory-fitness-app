@@ -11,30 +11,35 @@ type RequirementAuditBoundaryProps = {
   style?: ViewStyle;
 };
 
-function isAuditModeEnabled() {
-  const envEnabled = process.env.EXPO_PUBLIC_REQUIREMENT_AUDIT === 'true';
-  if (envEnabled) {
+function isAuditModeEnabled(): boolean {
+  if (process.env.EXPO_PUBLIC_REQUIREMENT_AUDIT === 'true') {
     return true;
   }
 
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    return new URLSearchParams(window.location.search).get('requirementAudit') === '1';
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.get('requirementAudit') === '1') {
+      return true;
+    }
+    if (window.localStorage && window.localStorage.getItem('requirementAudit') === '1') {
+      return true;
+    }
   }
 
   return false;
 }
 
-function getLabel(status: AuditStatus, label?: string) {
+function getLabel(status: AuditStatus, label?: string): string {
   if (label) {
     return label;
   }
   if (status === 'uncertain') {
-    return 'REVIEW - REQUIREMENT UNCLEAR';
+    return 'REVIEW — REQUIREMENT UNCLEAR';
   }
   if (status === 'mismatch') {
-    return 'MISMATCH - CHECK REQUIREMENT';
+    return 'MISMATCH — DOES NOT MATCH REQUIREMENT';
   }
-  return 'NEW FEATURE - NOT IN REQUIREMENT';
+  return 'NEW FEATURE — NOT IN REQUIREMENT';
 }
 
 export default function RequirementAuditBoundary({
@@ -60,8 +65,14 @@ export default function RequirementAuditBoundary({
         style,
       ]}
     >
-      <View style={[styles.label, isUncertain && styles.uncertainLabel, isMismatch && styles.mismatchLabel]}>
-        <Text style={styles.labelText}>{`${auditId} - ${getLabel(status, label)}`}</Text>
+      <View
+        style={[
+          styles.label,
+          isUncertain && styles.uncertainLabel,
+          isMismatch && styles.mismatchLabel,
+        ]}
+      >
+        <Text style={styles.labelText}>{`${auditId} · ${getLabel(status, label)}`}</Text>
       </View>
       {children}
     </View>
@@ -70,37 +81,44 @@ export default function RequirementAuditBoundary({
 
 const styles = StyleSheet.create({
   boundary: {
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: '#E53935',
     borderStyle: 'solid',
     borderRadius: 10,
     padding: 4,
     position: 'relative',
+    marginVertical: 4,
   },
   uncertain: {
+    borderWidth: 3,
+    borderColor: '#E53935',
     borderStyle: 'dashed',
   },
   mismatch: {
+    borderWidth: 3,
     borderColor: '#F59E0B',
+    borderStyle: 'solid',
   },
   label: {
     alignSelf: 'flex-start',
     backgroundColor: '#E53935',
-    borderRadius: 5,
-    marginBottom: 4,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
+    borderRadius: 4,
+    marginBottom: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    zIndex: 999,
   },
   uncertainLabel: {
     backgroundColor: '#B42318',
   },
   mismatchLabel: {
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#D97706',
   },
   labelText: {
     color: '#FFFFFF',
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '800',
-    letterSpacing: 0.3,
+    letterSpacing: 0.4,
+    fontFamily: Platform.select({ web: "'DM Sans', sans-serif", default: 'System' }),
   },
 });

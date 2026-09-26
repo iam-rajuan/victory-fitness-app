@@ -8,6 +8,7 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
+import RequirementAuditBoundary from '../audit/RequirementAuditBoundary';
 
 interface OptionWithNote {
   title: string;
@@ -151,76 +152,78 @@ export default function ClaudePlanBuildModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
-      <View style={styles.container}>
-        {/* Top Header */}
-        <View style={styles.topBar}>
-          <Pressable
-            onPress={() => {
-              if (stepIdx > 0) setStepIdx((s) => s - 1);
-              else onClose();
-            }}
-            hitSlop={10}
-          >
-            <Text style={styles.backBtn}>{stepIdx > 0 ? '← Back' : 'Cancel'}</Text>
-          </Pressable>
+      <RequirementAuditBoundary auditId="APP-EXTRA-008" status="extra" style={{ flex: 1 }}>
+        <View style={styles.container}>
+          {/* Top Header */}
+          <View style={styles.topBar}>
+            <Pressable
+              onPress={() => {
+                if (stepIdx > 0) setStepIdx((s) => s - 1);
+                else onClose();
+              }}
+              hitSlop={10}
+            >
+              <Text style={styles.backBtn}>{stepIdx > 0 ? '← Back' : 'Cancel'}</Text>
+            </Pressable>
 
-          <Text style={styles.stepIndicator}>PLAN BUILDER</Text>
-          <View style={{ width: 44 }} />
-        </View>
-
-        {/* Progress Bar (4 steps) */}
-        <View style={styles.progressRow}>
-          {[0, 1, 2, 3].map((s) => (
-            <View
-              key={s}
-              style={[
-                styles.progressSegment,
-                s <= stepIdx && styles.progressSegmentActive,
-              ]}
-            />
-          ))}
-        </View>
-
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <Text style={styles.kicker}>{currentStep.kicker}</Text>
-          <Text style={styles.headline}>{currentStep.title}</Text>
-          <Text style={styles.subheadline}>{currentStep.sub}</Text>
-
-          {/* Options List matching prototype lines 3215-3228 */}
-          <View style={styles.optionsList}>
-            {currentStep.options.map((opt, i) => {
-              const on = i === currentPick;
-              return (
-                <Pressable
-                  key={i}
-                  style={[styles.optCard, on && styles.optCardActive]}
-                  onPress={() => handleSelectOption(i)}
-                >
-                  <View style={[styles.radioCircle, on && styles.radioCircleActive]} />
-                  <View style={styles.optContent}>
-                    <Text style={[styles.optName, on && styles.optNameActive]}>{opt.title}</Text>
-                    <Text style={styles.optNote}>{opt.note}</Text>
-                  </View>
-                </Pressable>
-              );
-            })}
+            <Text style={styles.stepIndicator}>PLAN BUILDER</Text>
+            <View style={{ width: 44 }} />
           </View>
 
-          {/* Fine text below options */}
-          <Text style={styles.fineText}>
-            {stepIdx === 3
-              ? 'You can change any session afterwards, and the plan adapts when your sleep or recovery moves.'
-              : 'Nothing here is permanent. Your coach re-reads these answers every week.'}
-          </Text>
-        </ScrollView>
+          {/* Progress Bar (4 steps) */}
+          <View style={styles.progressRow}>
+            {[0, 1, 2, 3].map((s) => (
+              <View
+                key={s}
+                style={[
+                  styles.progressSegment,
+                  s <= stepIdx && styles.progressSegmentActive,
+                ]}
+              />
+            ))}
+          </View>
 
-        {/* Bottom CTA */}
-        <View style={styles.bottomBar}>
-          <Pressable style={styles.ctaBtn} onPress={handleNext}>
-            <Text style={styles.ctaBtnText}>{currentStep.cta}</Text>
-          </Pressable>
+          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            <Text style={styles.kicker}>{currentStep.kicker}</Text>
+            <Text style={styles.headline}>{currentStep.title}</Text>
+            <Text style={styles.subheadline}>{currentStep.sub}</Text>
+
+            {/* Options List matching prototype lines 3215-3228 */}
+            <View style={styles.optionsList}>
+              {currentStep.options.map((opt, i) => {
+                const on = i === currentPick;
+                return (
+                  <Pressable
+                    key={i}
+                    style={[styles.optCard, on && styles.optCardActive]}
+                    onPress={() => handleSelectOption(i)}
+                  >
+                    <View style={[styles.radioCircle, on && styles.radioCircleActive]} />
+                    <View style={styles.optContent}>
+                      <Text style={[styles.optName, on && styles.optNameActive]}>{opt.title}</Text>
+                      <Text style={styles.optNote}>{opt.note}</Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {/* Fine text below options */}
+            <Text style={styles.fineText}>
+              {stepIdx === 3
+                ? 'You can change any session afterwards, and the plan adapts when your sleep or recovery moves.'
+                : 'Nothing here is permanent. Your coach re-reads these answers every week.'}
+            </Text>
+          </ScrollView>
+
+          {/* Bottom CTA */}
+          <View style={styles.bottomBar}>
+            <Pressable style={styles.ctaBtn} onPress={handleNext}>
+              <Text style={styles.ctaBtnText}>{currentStep.cta}</Text>
+            </Pressable>
+          </View>
         </View>
-      </View>
+      </RequirementAuditBoundary>
     </Modal>
   );
 }

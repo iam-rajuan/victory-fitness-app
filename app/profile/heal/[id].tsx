@@ -7,6 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Colors } from '../../../constants/Colors';
+import RequirementAuditBoundary from '../../../components/audit/RequirementAuditBoundary';
 import { fetchCurrentUser, fetchLongevityDashboard, type LongevityDashboard, type LongevityWeeklyPlanSection } from '../../../lib/api';
 import { canAccessFeature } from '../../../lib/access';
 import { useLanguage } from '../../../lib/i18n';
@@ -248,17 +249,18 @@ export default function HealPlanDetailScreen() {
     <SafeAreaView style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={0.86}>
-          <Ionicons name="arrow-back" size={22} color="#fff" />
-        </TouchableOpacity>
-        <View style={styles.headerCopy}>
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            {healCategory?.label || t('Health Card')}
-          </Text>
+      <RequirementAuditBoundary auditId="APP-EXTRA-010" status="extra" style={{ flex: 1 }}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={0.86}>
+            <Ionicons name="arrow-back" size={22} color="#fff" />
+          </TouchableOpacity>
+          <View style={styles.headerCopy}>
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              {healCategory?.label || t('Health Card')}
+            </Text>
+          </View>
+          <View style={styles.headerSpacer} />
         </View>
-        <View style={styles.headerSpacer} />
-      </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {dashboard?.weekly_plan ? (
@@ -359,6 +361,7 @@ export default function HealPlanDetailScreen() {
           </View>
         ) : null}
       </ScrollView>
+      </RequirementAuditBoundary>
     </SafeAreaView>
   );
 }

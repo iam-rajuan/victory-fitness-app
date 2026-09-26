@@ -21,6 +21,7 @@ import { ErrorPopupModal } from '../../components/ErrorPopupModal';
 import { apiRequest } from '../../lib/api';
 import { formatAppError } from '../../lib/error';
 import { useLanguage } from '../../lib/i18n';
+import RequirementAuditBoundary from '../../components/audit/RequirementAuditBoundary';
 import { ScreenState } from '../../components/ScreenState';
 import { useAsyncScreenData } from '../../hooks/useAsyncScreenData';
 import { fetchJournalEntries, JOURNAL_ENTRIES_CACHE_KEY, JournalEntry } from '../../lib/screenData';
@@ -270,12 +271,13 @@ export default function JournalHistoryScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ErrorPopupModal
-        visible={Boolean(errorDialog)}
-        title={errorDialog?.title ?? t('Error')}
-        message={errorDialog?.message ?? ''}
-        onClose={() => setErrorDialog(null)}
-      />
+      <RequirementAuditBoundary auditId="APP-EXTRA-011" status="extra" style={{ flex: 1 }}>
+        <ErrorPopupModal
+          visible={Boolean(errorDialog)}
+          title={errorDialog?.title ?? t('Error')}
+          message={errorDialog?.message ?? ''}
+          onClose={() => setErrorDialog(null)}
+        />
       <Modal
         visible={Boolean(selectedEntry)}
         transparent
@@ -532,6 +534,7 @@ export default function JournalHistoryScreen() {
           }
         />
       )}
+      </RequirementAuditBoundary>
     </SafeAreaView>
   );
 }

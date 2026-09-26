@@ -23,6 +23,7 @@ import { ErrorPopupModal } from '../../../components/ErrorPopupModal';
 import { formatAppError } from '../../../lib/error';
 import { useLanguage } from '../../../lib/i18n';
 import { pushRoute } from '../../../lib/navigation';
+import RequirementAuditBoundary from '../../../components/audit/RequirementAuditBoundary';
 import { getCachedResourceSnapshot } from '../../../lib/resourceCache';
 import { fetchChallengeChatData, getChallengeChatCacheKey } from '../../../lib/screenData';
 
@@ -582,6 +583,7 @@ export default function ChallengeChatScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <Stack.Screen options={{ headerShown: false }} />
+      <RequirementAuditBoundary auditId="APP-EXTRA-014" status="extra" style={{ flex: 1 }}>
       <ErrorPopupModal
         visible={Boolean(errorDialog)}
           title={errorDialog?.title ?? t('Error')}
@@ -711,6 +713,7 @@ export default function ChallengeChatScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+      </RequirementAuditBoundary>
     </SafeAreaView>
   );
 }

@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
+import RequirementAuditBoundary from '../audit/RequirementAuditBoundary';
 
 interface ClaudePlanBuildBannerProps {
   planBuilt?: boolean;
@@ -32,20 +33,22 @@ export default function ClaudePlanBuildBanner({
 
   return (
     <View style={styles.container}>
-      <Pressable
-        style={[
-          styles.banner,
-          hasCoach ? styles.bannerCoach : styles.bannerDashed,
-        ]}
-        onPress={onPress}
-      >
-        <View style={styles.textCol}>
-          <Text style={styles.kicker}>{kicker}</Text>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.note}>{note}</Text>
-        </View>
-        <Text style={styles.arrow}>›</Text>
-      </Pressable>
+      <RequirementAuditBoundary auditId="APP-EXTRA-008" status="extra">
+        <Pressable
+          style={[
+            styles.banner,
+            hasCoach ? styles.bannerCoach : styles.bannerDashed,
+          ]}
+          onPress={onPress}
+        >
+          <View style={styles.textCol}>
+            <Text style={styles.kicker}>{kicker}</Text>
+            <Text style={styles.title}>{title}</Text>
+            <Text style={styles.note}>{note}</Text>
+          </View>
+          <Text style={styles.arrow}>›</Text>
+        </Pressable>
+      </RequirementAuditBoundary>
     </View>
   );
 }

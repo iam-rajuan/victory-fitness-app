@@ -9,6 +9,7 @@ import {
   Platform,
   Alert,
 } from 'react-native';
+import RequirementAuditBoundary from '../audit/RequirementAuditBoundary';
 
 interface DeviceItem {
   id: string;
@@ -68,12 +69,13 @@ export default function ClaudeWearablesModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
-      <View style={styles.container}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
+      <RequirementAuditBoundary auditId="APP-EXTRA-012" status="extra" style={{ flex: 1 }}>
+        <View style={styles.container}>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
           {/* Top Bar matching lines 1436-1439 */}
           <View style={styles.topBar}>
             <TouchableOpacity onPress={onClose} activeOpacity={0.7}>
@@ -154,7 +156,8 @@ export default function ClaudeWearablesModal({
           </Text>
         </ScrollView>
       </View>
-    </Modal>
+    </RequirementAuditBoundary>
+  </Modal>
   );
 }
 

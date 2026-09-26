@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
+import RequirementAuditBoundary from '../audit/RequirementAuditBoundary';
 
 interface ActionItem {
   id: string;
@@ -79,7 +80,8 @@ export default function ClaudeTodayFiveActions({ onActionToggle }: ClaudeTodayFi
 
   return (
     <View style={styles.container}>
-      <View style={styles.headerRow}>
+      <RequirementAuditBoundary auditId="APP-EXTRA-015" status="extra">
+        <View style={styles.headerRow}>
         <Text style={styles.kicker}>TODAY'S FIVE ACTIONS</Text>
         <Text style={styles.trackBadge}>{`${doneCount} of 5 done`}</Text>
       </View>
@@ -137,6 +139,7 @@ export default function ClaudeTodayFiveActions({ onActionToggle }: ClaudeTodayFi
       <Text style={styles.footnote}>
         Written each morning from the meals you have logged before — not a generic checklist. Do three and you land on target.
       </Text>
+      </RequirementAuditBoundary>
     </View>
   );
 }

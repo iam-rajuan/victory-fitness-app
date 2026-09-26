@@ -13,6 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import { apiRequest } from '../../lib/api';
 import { JournalEntry } from '../../lib/screenData';
+import RequirementAuditBoundary from '../../components/audit/RequirementAuditBoundary';
 
 const OBSIDIAN = '#0D0D0D';
 const NAVY = '#0D2B45';
@@ -136,12 +137,13 @@ export default function JournalScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+    <RequirementAuditBoundary auditId="APP-EXTRA-011" status="extra" style={{ flex: 1 }}>
+      <View style={styles.container}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
         {/* Top Header matching lines 1506-1509 */}
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={handleSkipToday} activeOpacity={0.7} style={{ marginBottom: 12 }}>
@@ -244,6 +246,7 @@ export default function JournalScreen() {
         </View>
       </ScrollView>
     </View>
+  </RequirementAuditBoundary>
   );
 }
 

@@ -22,6 +22,7 @@ import { formatAppError } from '../../lib/error';
 import { createStrengthWorkoutPlan } from '../../lib/workout-plans';
 import { useModuleAccessGuard } from '../../lib/useModuleAccessGuard';
 import { useLanguage } from '../../lib/i18n';
+import RequirementAuditBoundary from '../../components/audit/RequirementAuditBoundary';
 
 const TOTAL_STEPS = 9;
 
@@ -507,7 +508,8 @@ export default function StrengthWizard() {
       <VictoryHeader />
       <Stack.Screen options={{ headerShown: false }} />
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+      <RequirementAuditBoundary auditId="APP-EXTRA-013" status="extra" style={{ flex: 1 }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         {/* Step Header */}
         {!loading && (
           <View style={[styles.header, { paddingHorizontal: contentPadding, paddingBottom: isCompactWidth ? 18 : 24 }]}>
@@ -574,7 +576,8 @@ export default function StrengthWizard() {
             </TouchableOpacity>
           </View>
         )}
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </RequirementAuditBoundary>
     </SafeAreaView>
   );
 }

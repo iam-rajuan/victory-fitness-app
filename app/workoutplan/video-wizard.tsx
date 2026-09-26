@@ -20,6 +20,7 @@ import VictoryHeader from '../../components/VictoryHeader';
 import { createVideoWorkoutPlan } from '../../lib/workout-plans';
 import { useModuleAccessGuard } from '../../lib/useModuleAccessGuard';
 import { useLanguage } from '../../lib/i18n';
+import RequirementAuditBoundary from '../../components/audit/RequirementAuditBoundary';
 
 const TOTAL_STEPS = 8;
 
@@ -294,6 +295,7 @@ export default function WorkoutVideoWizard() {
       <VictoryHeader />
       <Stack.Screen options={{ headerShown: false }} />
 
+      <RequirementAuditBoundary auditId="APP-EXTRA-013" status="extra" style={{ flex: 1 }}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
@@ -335,6 +337,7 @@ export default function WorkoutVideoWizard() {
           </View>
         )}
       </KeyboardAvoidingView>
+      </RequirementAuditBoundary>
     </SafeAreaView>
   );
 }

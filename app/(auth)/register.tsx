@@ -20,6 +20,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../../constants/Colors';
 import { Fonts } from '../../constants/Typography';
 import { ErrorPopupModal } from '../../components/ErrorPopupModal';
+import RequirementAuditBoundary from '../../components/audit/RequirementAuditBoundary';
 import { apiRequest, AuthResponse, clearAuthTokens, setAuthTokens } from '../../lib/api';
 import { getPostAuthRoute, isAdminRestrictedFromApp } from '../../lib/access';
 import { markBiometricSessionUnlocked, maybeOfferBiometricUnlock } from '../../lib/biometricUnlock';
@@ -484,19 +485,21 @@ export default function RegisterScreen() {
             </View>
 
             {/* Marketing & Terms Consent Checkbox */}
-            <Pressable
-              style={styles.consentRow}
-              onPress={() => setMarketingConsent((prev) => !prev)}
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: marketingConsent }}
-            >
-              <View style={[styles.checkbox, marketingConsent && styles.checkboxChecked]}>
-                {marketingConsent ? <Text style={styles.checkmark}>✓</Text> : null}
-              </View>
-              <Text style={styles.consentText}>
-                I agree to receive occasional updates about my plan, training tips, and offers. I can opt out anytime.
-              </Text>
-            </Pressable>
+            <RequirementAuditBoundary auditId="APP-MISMATCH-010" status="mismatch">
+              <Pressable
+                style={styles.consentRow}
+                onPress={() => setMarketingConsent((prev) => !prev)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: marketingConsent }}
+              >
+                <View style={[styles.checkbox, marketingConsent && styles.checkboxChecked]}>
+                  {marketingConsent ? <Text style={styles.checkmark}>✓</Text> : null}
+                </View>
+                <Text style={styles.consentText}>
+                  I agree to receive occasional updates about my plan, training tips, and offers. I can opt out anytime.
+                </Text>
+              </Pressable>
+            </RequirementAuditBoundary>
 
             {/* Primary Continue CTA */}
             <TouchableOpacity
