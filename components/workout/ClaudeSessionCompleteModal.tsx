@@ -21,10 +21,12 @@ interface ClaudeSessionCompleteModalProps {
   onClose: () => void;
   initialStep?: 'feedback' | 'complete';
   workoutTitle?: string;
+  sessionNumber?: number;
   minutes?: number;
   setsLogged?: number;
   volumeKg?: number;
   streakDays?: number;
+  exercises?: Array<{ n?: string; name?: string; s?: string; cardN?: string }>;
   identityStatement?: string;
   motivationStatement?: string;
   coachName?: string;
@@ -57,35 +59,22 @@ const RPE_OPTS = [
 
 const PAIN_CHIPS = ['Shoulder', 'Lower back', 'Knee', 'Wrist', 'Nothing hurt'];
 
-const DEFAULT_EXERCISES = [
-  { n: 'Barbell overhead press', s: '4 × 12 kg × 5', cardN: 'BARBELL OVERHEAD PRESS' },
-  { n: 'Incline bench press', s: '3 × 12 kg × 6', cardN: 'INCLINE BENCH PRESS' },
-  { n: 'Single-arm row', s: '3 × 12 kg × 8', cardN: 'SINGLE-ARM ROW' },
-  { n: 'Dead hang', s: '2 × bodyweight × max', cardN: 'DEAD HANG' },
-];
-
-const SILVER_VID_CHAPTERS = [
-  { n: 'Barbell overhead press', at: '08:14' },
-  { n: 'Incline bench press', at: '16:30' },
-  { n: 'Single-arm row', at: '24:10' },
-  { n: 'Dead hang', at: '32:00' },
-  { n: 'Cool down & mobility', at: '38:00' },
-];
-
 export default function ClaudeSessionCompleteModal({
   visible,
   onClose,
   initialStep = 'feedback',
-  workoutTitle = 'Upper Body Strength',
+  workoutTitle = 'Workout',
+  sessionNumber,
   minutes = 40,
   setsLogged = 12,
   volumeKg = 744,
   streakDays = 13,
+  exercises = [],
   identityStatement,
   motivationStatement,
-  coachName = 'MICHAEL KRAUSE',
-  userName = 'Michael Krause',
-  dateStr = 'FRI 8 MAY · TODAY',
+  coachName = 'VICTOR AKKO',
+  userName = 'there',
+  dateStr,
   tier = 'GOLD',
   onDoneHome,
   onUpgrade,
@@ -110,6 +99,28 @@ export default function ClaudeSessionCompleteModal({
   const showUpsell = (isSilver || normalizedTier === 'gold') && !upsellDismissed;
 
   const userStatement = identityStatement || motivationStatement || 'I am someone who trains even when it is hard.';
+  const completedExercises = React.useMemo(() => {
+    return exercises
+      .map((exercise) => {
+        const name = String(exercise.name || exercise.n || '').trim();
+        if (!name) return null;
+        const summary = String(exercise.s || '').trim();
+        return {
+          n: name,
+          s: summary,
+          cardN: String(exercise.cardN || name).trim().toUpperCase(),
+        };
+      })
+      .filter((exercise): exercise is { n: string; s: string; cardN: string } => Boolean(exercise));
+  }, [exercises]);
+  const sessionLabel = `SESSION ${Math.max(1, Number(sessionNumber || 1))} COMPLETE`;
+  const displayDate = dateStr || new Date().toLocaleDateString(undefined, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  }).toUpperCase();
+  const headlineTitle = workoutTitle.trim() || 'Workout';
+  const storyTitle = headlineTitle.toUpperCase();
 
   const handleTogglePain = (p: string) => {
     if (p === 'Nothing hurt') {
@@ -404,7 +415,10 @@ function generateStoryCardCanvas(data: {
   }
 }
 
-  const shareMessage = `YOUR VICTORY · UPPER BODY STRENGTH\n\n• BARBELL OVERHEAD PRESS\n• INCLINE BENCH PRESS\n• SINGLE-ARM ROW\n• DEAD HANG\n\nStreak: ${streakDays} days | Intensity: Strong | Time: ${minutes} min\n\n“Thirteen days straight. That is not motivation any more — that is who you are.” — Michael Krause\n\nhttps://victory-fitness.app`;
+  const shareExerciseLines = completedExercises.length
+    ? completedExercises.map((exercise) => `• ${exercise.cardN}`).join('\n')
+    : '• WORKOUT COMPLETED';
+  const shareMessage = `YOUR VICTORY · ${storyTitle}\n\n${shareExerciseLines}\n\nStreak: ${streakDays} days | Time: ${minutes} min | Sets: ${setsLogged}\n\n${userStatement}\n\nhttps://victory-fitness.app`;
 
   const handleShareLinkedIn = async () => {
     if (Platform.OS === 'web') {
@@ -430,9 +444,9 @@ function generateStoryCardCanvas(data: {
         workoutTitle,
         minutes,
         streakDays,
-        dateStr,
+        dateStr: displayDate,
         coachName,
-        exercises: DEFAULT_EXERCISES,
+        exercises: completedExercises,
       });
 
       if (dataUrl) {
@@ -586,12 +600,11 @@ function generateStoryCardCanvas(data: {
               <View style={styles.badgeCircle}>
                 <View style={styles.badgeCheckTick} />
               </View>
-              <Text style={styles.statusLabel}>SESSION 64 COMPLETE</Text>
+              <Text style={styles.statusLabel}>{sessionLabel}</Text>
             </View>
 
-            {/* Title: Upper Body Strength */}
             <Text style={styles.workoutHeadline}>
-              {'Upper Body\nStrength'}
+              {headlineTitle}
             </Text>
 
             {/* 4 Metric Stats: MINUTES, SETS, KG LIFTED, STREAK */}
@@ -633,25 +646,33 @@ function generateStoryCardCanvas(data: {
             {hasCoach ? (
               <View style={styles.whatYouDidSection}>
                 <Text style={styles.sectionKicker}>WHAT YOU DID</Text>
-                {DEFAULT_EXERCISES.map((e, idx) => (
-                  <View key={idx} style={styles.exerciseRow}>
+                {completedExercises.length > 0 ? (
+                  completedExercises.map((e, idx) => (
+                    <View key={`${e.n}-${idx}`} style={styles.exerciseRow}>
+                      <View style={styles.exerciseGreenDot} />
+                      <Text style={styles.exerciseName}>{e.n}</Text>
+                      <Text style={styles.exerciseSets}>{e.s}</Text>
+                    </View>
+                  ))
+                ) : (
+                  <View style={styles.exerciseRow}>
                     <View style={styles.exerciseGreenDot} />
-                    <Text style={styles.exerciseName}>{e.n}</Text>
-                    <Text style={styles.exerciseSets}>{e.s}</Text>
+                    <Text style={styles.exerciseName}>{headlineTitle}</Text>
+                    <Text style={styles.exerciseSets}>{`${setsLogged} sets`}</Text>
                   </View>
-                ))}
+                )}
               </View>
             ) : (
               <View style={styles.whatYouDidSection}>
                 <Text style={styles.sectionKicker}>WHAT YOU FOLLOWED</Text>
                 <View style={styles.silverChaptersBox}>
-                  {SILVER_VID_CHAPTERS.map((c, idx) => (
-                    <View key={idx} style={styles.silverChapterRow}>
+                  {(completedExercises.length > 0 ? completedExercises : [{ n: headlineTitle, s: `${minutes} min`, cardN: storyTitle }]).map((c, idx) => (
+                    <View key={`${c.n}-${idx}`} style={styles.silverChapterRow}>
                       <View style={styles.silverCheckCircle}>
                         <View style={styles.silverCheckTick} />
                       </View>
                       <Text style={styles.silverChapterName}>{c.n}</Text>
-                      <Text style={styles.silverChapterAt}>{c.at}</Text>
+                      <Text style={styles.silverChapterAt}>{c.s || ''}</Text>
                     </View>
                   ))}
                 </View>
@@ -695,7 +716,7 @@ function generateStoryCardCanvas(data: {
               <View style={[styles.coachReadCard, styles.fromVictorCard]}>
                 <Text style={styles.coachReadKicker}>FROM VICTOR</Text>
                 <Text style={styles.coachReadBody}>
-                  {`That is session 64, ${userName} — Upper Body Strength, all thirty-eight minutes of it, on a Friday evening when most people had already decided not to. Wednesday is Legs and Glutes. Same time, same you.`}
+                  {`That is ${sessionLabel.toLowerCase().replace(' complete', '')}, ${userName} — ${headlineTitle}, ${minutes} minutes finished. Same time, same you.`}
                 </Text>
                 <Text style={styles.readTwiceAuthor}>VICTOR AKKO</Text>
               </View>
@@ -728,19 +749,19 @@ function generateStoryCardCanvas(data: {
 
                   <View style={styles.storyVictoryRow}>
                     <Text style={styles.storyVictoryLabel}>YOUR VICTORY</Text>
-                    <Text style={styles.storyDateLabel}>{dateStr}</Text>
+                    <Text style={styles.storyDateLabel}>{displayDate}</Text>
                   </View>
 
                   <Text style={styles.storyCompleteLabel}>WORKOUT COMPLETE</Text>
-                  <Text style={styles.storyWorkoutTitle}>{'UPPER BODY\nSTRENGTH'}</Text>
+                  <Text style={styles.storyWorkoutTitle}>{storyTitle}</Text>
 
                   {/* Copper/Orange divider line */}
                   <View style={styles.storyOrangeDivider} />
 
                   {/* 4 Bulleted Exercises with 4px gold dots */}
                   <View style={styles.storyExerciseList}>
-                    {DEFAULT_EXERCISES.map((e, idx) => (
-                      <View key={idx} style={styles.storyExerciseItem}>
+                    {(completedExercises.length > 0 ? completedExercises : [{ n: headlineTitle, s: '', cardN: storyTitle }]).map((e, idx) => (
+                      <View key={`${e.cardN}-${idx}`} style={styles.storyExerciseItem}>
                         <View style={styles.storyGoldDot} />
                         <Text style={styles.storyExerciseName}>{e.cardN}</Text>
                       </View>

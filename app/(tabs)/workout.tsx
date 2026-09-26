@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 import {
   fetchCurrentUser,
   AuthUser,
+  createWorkoutLog,
   recordAnalyticsEvent,
 } from '../../lib/api';
 import { normalizeSubscriptionTier } from '../../lib/access';
@@ -61,6 +62,14 @@ function formatWorkoutMeta(workout: WorkoutLibraryItem) {
   const tag = workout.tag || 'Workout';
   const equipment = workout.equipment || 'Kit not set';
   return `${duration} · ${tag} · ${equipment}`;
+}
+
+function formatCompletionDate() {
+  return new Date().toLocaleDateString(undefined, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  }).toUpperCase();
 }
 
 function mapLibraryWorkout(workout: WorkoutLibraryItem): GridWorkoutItem {
@@ -154,9 +163,10 @@ export default function WorkoutScreen() {
   // Active workout being played / tracked
   const [selectedWorkout, setSelectedWorkout] = useState<GridWorkoutItem | null>(null);
   const [completedStats, setCompletedStats] = useState({
-    minutes: 40,
-    setsLogged: 7,
-    volumeKg: 840,
+    minutes: 0,
+    setsLogged: 0,
+    volumeKg: 0,
+    durationSeconds: 0,
   });
 
   const tier = useMemo(() => {
@@ -280,18 +290,46 @@ export default function WorkoutScreen() {
   };
 
   const handleFinishSession = (
-    stats?: { minutes: number; setsLogged: number; volumeKg: number },
+    stats?: { minutes: number; setsLogged: number; volumeKg: number; durationSeconds?: number },
     stepMode: 'feedback' | 'complete' = 'complete'
   ) => {
-    if (stats) setCompletedStats(stats);
+    const nextStats = stats
+      ? { ...stats, durationSeconds: Math.max(0, stats.durationSeconds || stats.minutes * 60) }
+      : completedStats;
+    if (stats) setCompletedStats(nextStats);
     setCompleteInitialStep(stepMode);
     setVimeoModalVisible(false);
     setActiveSessionVisible(false);
     setCompleteModalVisible(true);
 
-    // Record analytics event
+    const movementSummary = selectedExercises.map((exercise, index) => ({
+      order: index,
+      name: exercise.name,
+      prescription: exercise.s,
+      targetSets: exercise.targetSets,
+      targetReps: exercise.targetReps,
+      defaultKg: exercise.defaultKg,
+      restSeconds: exercise.restSeconds,
+    }));
+
+    void createWorkoutLog({
+      workout_id: selectedWorkout?.id || 'workout',
+      title: selectedWorkout?.name || 'Workout',
+      duration_seconds: nextStats.durationSeconds,
+      sets_logged: nextStats.setsLogged,
+      volume_kg: nextStats.volumeKg,
+      movements: movementSummary,
+      status: 'completed',
+      market: currentUser?.country_code || undefined,
+    })
+      .then(() => fetchCurrentUser())
+      .then((user) => {
+        if (user) setCurrentUser(user);
+      })
+      .catch(() => undefined);
+
     void recordAnalyticsEvent('workout_completed', {
-      workout_id: selectedWorkout?.id || 'session_64',
+      workout_id: selectedWorkout?.id || 'workout',
       tier,
     }).catch(() => undefined);
   };
@@ -508,12 +546,16 @@ export default function WorkoutScreen() {
         onClose={() => setCompleteModalVisible(false)}
         initialStep={completeInitialStep}
         workoutTitle={selectedWorkout?.name || 'Workout'}
+        sessionNumber={Math.max(1, Number(currentUser?.workouts_completed || 0) + 1)}
         minutes={completedStats.minutes}
         setsLogged={completedStats.setsLogged}
         volumeKg={completedStats.volumeKg}
-        streakDays={currentUser?.streak_days || 13}
+        streakDays={Math.max(0, Number(currentUser?.streak_days || 0))}
+        exercises={selectedExercises}
         identityStatement={currentUser?.identity_statement || undefined}
         motivationStatement={currentUser?.motivation_statement || undefined}
+        userName={currentUser?.name || 'there'}
+        dateStr={formatCompletionDate()}
         tier={tier}
         onDoneHome={() => {
           setCompleteModalVisible(false);

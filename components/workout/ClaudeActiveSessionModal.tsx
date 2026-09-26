@@ -29,7 +29,7 @@ interface ClaudeActiveSessionModalProps {
   workoutTitle?: string;
   unlockNote?: string;
   exercises?: ActiveExerciseItem[];
-  onEndSession: (stats: { minutes: number; setsLogged: number; volumeKg: number }) => void;
+  onEndSession: (stats: { minutes: number; setsLogged: number; volumeKg: number; durationSeconds: number }) => void;
 }
 
 const OBSIDIAN = '#0D0D0D';
@@ -53,7 +53,7 @@ export default function ClaudeActiveSessionModal({
   exercises = [],
   onEndSession,
 }: ClaudeActiveSessionModalProps) {
-  const [seconds, setSeconds] = useState(14 * 60 + 22);
+  const [seconds, setSeconds] = useState(0);
   const [currentExIdx, setCurrentExIdx] = useState(0);
   const [currentSetIdx, setCurrentSetIdx] = useState(0);
   const [loggedSets, setLoggedSets] = useState<Record<string, string>>({});
@@ -72,6 +72,7 @@ export default function ClaudeActiveSessionModal({
     setCurrentSetIdx(0);
     setLoggedSets({});
     setRestRemainingSeconds(0);
+    setSeconds(0);
   }, [workoutTitle, exercises]);
 
   // Synchronize exercise weight & reps when moving between exercises
@@ -169,11 +170,16 @@ export default function ClaudeActiveSessionModal({
 
   const handleFinish = (finalLogged = loggedSets) => {
     const totalLoggedCount = Object.keys(finalLogged).length;
-    const volume = totalLoggedCount * weightKg * (typeof reps === 'number' ? reps : 5);
+    const volume = Object.values(finalLogged).reduce((total, entry) => {
+      const match = String(entry).match(/([\d.]+)\s*kg\s*[x×]\s*([\d.]+)/i);
+      if (!match) return total;
+      return total + Number(match[1] || 0) * Number(match[2] || 0);
+    }, 0);
     onEndSession({
       minutes: Math.max(1, Math.round(seconds / 60)),
       setsLogged: totalLoggedCount,
       volumeKg: Math.max(0, volume),
+      durationSeconds: Math.max(0, seconds),
     });
   };
 
