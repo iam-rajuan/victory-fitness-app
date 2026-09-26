@@ -8,6 +8,8 @@ interface ClaudeActiveChallengeBannerProps {
   onOpenCohort: () => void;
   onInvite: () => void;
   onOpenChallenge?: () => void;
+  onCompleteToday?: () => void;
+  completingToday?: boolean;
 }
 
 const NAVY = '#0D2B45';
@@ -25,6 +27,8 @@ export default function ClaudeActiveChallengeBanner({
   onOpenCohort,
   onInvite,
   onOpenChallenge,
+  onCompleteToday,
+  completingToday = false,
 }: ClaudeActiveChallengeBannerProps) {
   const { isDark } = useTheme();
 
@@ -35,12 +39,27 @@ export default function ClaudeActiveChallengeBanner({
   const daysTotal = Math.max(1, challenge.d || 1);
   const isJoined = challenge.status === 'active' || challenge.status === 'completed';
   const isCompleted = challenge.status === 'completed';
+  const isTodayDone = isCompleted || Boolean(challenge.completedToday);
   const progressPct = Math.max(0, Math.min(100, Math.round(Number(challenge.progress || 0) * 100)));
   const doneTo = Math.max(0, Math.min(daysTotal, Math.round(daysTotal * (progressPct / 100))));
-  const currentDay = Math.min(daysTotal, doneTo + 1);
+  const currentDay = Math.max(1, Math.min(daysTotal, Number(challenge.currentDayNumber || doneTo + 1)));
   const daysLeft = Math.max(0, Number(challenge.daysLeft || daysTotal - doneTo));
   const unreadCount = Math.max(0, Number(challenge.unreadCount || 0));
   const kickerText = isJoined ? `YOU'RE IN · DAY ${currentDay} OF ${daysTotal}` : `FEATURED · ${daysTotal} DAYS`;
+  const pointsText = isJoined ? `${challenge.p.toUpperCase()} AT STAKE` : challenge.p;
+  const loggedAt = formatLoggedTime(challenge.completedTodayAt);
+  const checkTitle = isCompleted
+    ? 'Challenge complete'
+    : isTodayDone
+    ? `Day ${currentDay} done`
+    : isJoined
+    ? `Day ${currentDay} in progress`
+    : 'Join this challenge';
+  const checkNote = isTodayDone
+    ? `${loggedAt ? `Logged at ${loggedAt}. ` : ''}${daysLeft > 0 ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} to go - ` : ''}tap to undo.`
+    : isJoined
+    ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} left. Continue from your challenge hub.`
+    : challenge.desc || 'Featured from the admin dashboard. Tap to see details.';
 
   return (
     <View style={styles.container}>
@@ -61,7 +80,7 @@ export default function ClaudeActiveChallengeBanner({
       >
         <View style={styles.headerRow}>
           <Text style={[styles.kicker, { color: GOLD }]}>{kickerText}</Text>
-          <Text style={styles.pointsBadge}>{challenge.p}</Text>
+          <Text style={styles.pointsBadge}>{pointsText}</Text>
         </View>
 
         <Text style={[styles.title, { color: isDark ? IVORY : NAVY }]}>{challenge.n}</Text>
@@ -107,39 +126,37 @@ export default function ClaudeActiveChallengeBanner({
         <TouchableOpacity
           style={[
             styles.checkCard,
-            isCompleted ? styles.checkCardDone : styles.checkCardPending,
+            isTodayDone ? styles.checkCardDone : styles.checkCardPending,
+            completingToday && styles.checkCardDisabled,
           ]}
           activeOpacity={0.85}
-          onPress={onOpenChallenge || onOpenCohort}
+          onPress={isJoined ? onCompleteToday : onOpenChallenge}
+          disabled={completingToday || (isJoined && !onCompleteToday)}
         >
           <View
             style={[
               styles.checkBox,
-              isCompleted ? styles.checkBoxDone : styles.checkBoxPending,
+              isTodayDone ? styles.checkBoxDone : styles.checkBoxPending,
             ]}
           >
-            {isCompleted && <View style={styles.checkTick} />}
+            {isTodayDone && <View style={styles.checkTick} />}
           </View>
           <View style={styles.checkTextWrap}>
             <Text
               style={[
                 styles.checkTitle,
-                { color: isCompleted ? IVORY : '#0D0D0D' },
+                { color: isTodayDone ? IVORY : '#0D0D0D' },
               ]}
             >
-              {isCompleted ? 'Challenge complete' : isJoined ? `Day ${currentDay} in progress` : 'Join this challenge'}
+              {completingToday ? 'Saving...' : checkTitle}
             </Text>
             <Text
               style={[
                 styles.checkNote,
-                { color: isCompleted ? 'rgba(247, 243, 238, 0.7)' : '#2A2218' },
+                { color: isTodayDone ? 'rgba(247, 243, 238, 0.7)' : '#2A2218' },
               ]}
             >
-              {isJoined
-                ? daysLeft > 0
-                  ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} left. Continue from your challenge hub.`
-                  : 'Your challenge progress is saved.'
-                : challenge.desc || 'Featured from the admin dashboard. Tap to see details.'}
+              {checkNote}
             </Text>
           </View>
         </TouchableOpacity>
@@ -162,6 +179,17 @@ export default function ClaudeActiveChallengeBanner({
       </View>
     </View>
   );
+}
+
+function formatLoggedTime(value?: string) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleTimeString(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
 }
 
 const styles = StyleSheet.create({
@@ -236,9 +264,12 @@ const styles = StyleSheet.create({
     backgroundColor: GOLD,
   },
   checkCardDone: {
-    backgroundColor: 'rgba(26, 122, 74, 0.16)',
+    backgroundColor: 'rgba(28, 104, 94, 0.78)',
     borderWidth: 1.5,
-    borderColor: 'rgba(95, 196, 142, 0.5)',
+    borderColor: 'rgba(95, 196, 142, 0.65)',
+  },
+  checkCardDisabled: {
+    opacity: 0.7,
   },
   checkBox: {
     width: 24,
@@ -253,7 +284,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   checkBoxDone: {
-    backgroundColor: '#1A7A4A',
+    backgroundColor: '#22A66A',
   },
   checkTick: {
     width: 10,

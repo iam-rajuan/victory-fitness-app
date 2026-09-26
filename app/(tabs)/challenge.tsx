@@ -69,6 +69,10 @@ function buildChallengeItem(raw: Record<string, any>, status: ChallengeItem['sta
     daysLeft: Math.max(0, Number(raw.days_left || 0)),
     unreadCount,
     featured: Boolean(raw.featured),
+    currentDayNumber: raw.current_day_number == null ? null : Math.max(1, Number(raw.current_day_number || 1)),
+    completedToday: Boolean(raw.completed_today),
+    completedTodayAt: String(raw.completed_today_at || ''),
+    canCompleteToday: Boolean(raw.can_complete_today),
   };
 }
 
@@ -129,6 +133,7 @@ export default function ChallengeScreen() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showCohortModal, setShowCohortModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [completingChallengeId, setCompletingChallengeId] = useState<string | null>(null);
   const [userTier, setUserTier] = useState('GOLD');
   const [userName, setUserName] = useState('Member');
   const [userInitials, setUserInitials] = useState('ME');
@@ -283,6 +288,36 @@ export default function ChallengeScreen() {
     setShowCohortModal(true);
   }, [activeChallenge, selectedChallenge]);
 
+  const completeFeaturedToday = useCallback(async () => {
+    const challenge = featuredChallenge;
+    const challengeId = challenge?.challengeId || challenge?.id;
+    if (!challenge || !challengeId || challenge.status !== 'active') {
+      openFeaturedChallenge();
+      return;
+    }
+
+    const totalDays = Math.max(1, Number(challenge.d || 1));
+    const currentDay = Math.max(1, Math.min(totalDays, Number(challenge.currentDayNumber || 1)));
+    const shouldUndo = Boolean(challenge.completedToday);
+
+    setCompletingChallengeId(challengeId);
+    try {
+      if (shouldUndo) {
+        await apiRequest(`/challenges/${encodeURIComponent(challengeId)}/plan/days/${currentDay}/complete`, {
+          method: 'POST',
+          body: { completed: false },
+        });
+      } else {
+        await apiRequest(`/challenges/${encodeURIComponent(challengeId)}/complete-today`, { method: 'POST' });
+      }
+      await loadChallenges({ forceRefresh: true });
+    } catch (error: any) {
+      Alert.alert('Could not update challenge', error?.message || 'Please try again.');
+    } finally {
+      setCompletingChallengeId(null);
+    }
+  }, [featuredChallenge, loadChallenges, openFeaturedChallenge]);
+
   const inviteChallenge = useMemo(() => selectedChallenge || activeChallenge, [activeChallenge, selectedChallenge]);
 
   return (
@@ -312,6 +347,8 @@ export default function ChallengeScreen() {
               onOpenChallenge={openFeaturedChallenge}
               onOpenCohort={openCohortForSelected}
               onInvite={handleInviteSomeone}
+              onCompleteToday={completeFeaturedToday}
+              completingToday={Boolean(featuredChallenge && completingChallengeId === (featuredChallenge.challengeId || featuredChallenge.id))}
             />
 
             <ClaudeChallengeDirectory

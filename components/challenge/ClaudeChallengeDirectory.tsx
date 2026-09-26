@@ -26,6 +26,10 @@ export interface ChallengeItem {
   daysLeft?: number;
   unreadCount?: number;
   featured?: boolean;
+  currentDayNumber?: number | null;
+  completedToday?: boolean;
+  completedTodayAt?: string;
+  canCompleteToday?: boolean;
 }
 
 interface ClaudeChallengeDirectoryProps {
