@@ -17,6 +17,7 @@ export interface GridWorkoutItem {
   durationMinutes?: number;
   durationSeconds?: number;
   thumbnail?: string;
+  completed?: boolean;
   movements?: Array<{
     id?: string;
     name: string;
@@ -114,11 +115,13 @@ export default function ClaudeWorkoutGrid({
               <View style={styles.playCircle}>
                 <View style={styles.playArrow} />
               </View>
+              {w.completed ? <Text style={styles.completedBadge}>Completed</Text> : null}
               <Text style={styles.badge}>{w.badge}</Text>
             </View>
 
             <Text style={[styles.workoutName, { color: colors.text }]}>{w.name}</Text>
             <Text style={[styles.workoutMeta, { color: colors.textMuted }]}>{w.meta}</Text>
+            {w.completed ? <Text style={styles.completedText}>Completed before · can repeat</Text> : null}
           </Pressable>
         ))}
       </View>
@@ -215,6 +218,21 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     paddingHorizontal: 5,
   },
+  completedBadge: {
+    position: 'absolute',
+    top: 6,
+    left: 7,
+    fontFamily: MONO,
+    fontSize: 9,
+    fontWeight: '900',
+    color: IVORY,
+    backgroundColor: 'rgba(26, 122, 74, 0.92)',
+    borderRadius: 999,
+    paddingVertical: 3,
+    paddingHorizontal: 7,
+    overflow: 'hidden',
+    textTransform: 'uppercase',
+  },
   workoutName: {
     fontFamily: DMSANS,
     fontSize: 14,
@@ -229,6 +247,15 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: 'rgba(247, 243, 238, 0.5)',
     marginTop: 3,
+  },
+  completedText: {
+    marginTop: 3,
+    fontFamily: MONO,
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    color: '#1A7A4A',
+    textTransform: 'uppercase',
   },
   footnote: {
     fontFamily: INTER,

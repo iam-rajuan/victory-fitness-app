@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -12,6 +12,7 @@ import {
   fetchCurrentUser,
   AuthUser,
   createWorkoutLog,
+  fetchWorkoutLogs,
   recordAnalyticsEvent,
 } from '../../lib/api';
 import { normalizeSubscriptionTier } from '../../lib/access';
@@ -72,7 +73,7 @@ function formatCompletionDate() {
   }).toUpperCase();
 }
 
-function mapLibraryWorkout(workout: WorkoutLibraryItem): GridWorkoutItem {
+function mapLibraryWorkout(workout: WorkoutLibraryItem, completedWorkoutIds: Set<string> = new Set()): GridWorkoutItem {
   return {
     id: workout.id,
     name: workout.title,
@@ -87,6 +88,7 @@ function mapLibraryWorkout(workout: WorkoutLibraryItem): GridWorkoutItem {
     durationMinutes: workout.durationMinutes,
     durationSeconds: workout.durationSeconds,
     thumbnail: workout.thumbnail,
+    completed: completedWorkoutIds.has(workout.id),
     movements: workout.movements,
   };
 }
@@ -100,6 +102,7 @@ function mapRowWorkout(workout: GridWorkoutItem, badge: string): WorkoutRowItem 
     videoUrl: workout.videoUrl,
     videoSource: workout.videoSource,
     thumbnail: workout.thumbnail,
+    completed: workout.completed,
     item: workout,
   } as WorkoutRowItem & { item: GridWorkoutItem };
 }
@@ -141,6 +144,7 @@ export default function WorkoutScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [libraryWorkouts, setLibraryWorkouts] = useState<GridWorkoutItem[]>([]);
   const [libraryPrograms, setLibraryPrograms] = useState<ProgramCardItem[]>([]);
+  const completedWorkoutIdsRef = useRef<Set<string>>(new Set());
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
@@ -180,11 +184,23 @@ export default function WorkoutScreen() {
       const user = await fetchCurrentUser();
       if (user) setCurrentUser(user);
 
-      const library = await fetchWorkoutLibrary();
-      const mappedWorkouts = library.workouts.map(mapLibraryWorkout);
+      const [library, completedLogs] = await Promise.all([
+        fetchWorkoutLibrary(),
+        fetchWorkoutLogs(1, 200, 'completed').catch(() => ({ items: [] })),
+      ]);
+      const completedWorkoutIds = new Set(
+        completedLogs.items
+          .map((log) => String(log.workout_id || '').trim())
+          .filter(Boolean)
+      );
+      completedWorkoutIdsRef.current.forEach((id) => completedWorkoutIds.add(id));
+      const mappedWorkouts = library.workouts.map((workout) => mapLibraryWorkout(workout, completedWorkoutIds));
       setLibraryWorkouts(mappedWorkouts);
       setLibraryPrograms(library.categories.map(mapLibraryCategory));
-      setSelectedWorkout((existing) => existing || mappedWorkouts[0] || null);
+      setSelectedWorkout((existing) => {
+        if (!existing?.id) return mappedWorkouts[0] || existing || null;
+        return mappedWorkouts.find((workout) => workout.id === existing.id) || existing;
+      });
 
       const status = await getSavedPlanStatus();
       if (status.planBuilt) {
@@ -297,6 +313,14 @@ export default function WorkoutScreen() {
       ? { ...stats, durationSeconds: Math.max(0, stats.durationSeconds || stats.minutes * 60) }
       : completedStats;
     if (stats) setCompletedStats(nextStats);
+    if (selectedWorkout?.id) {
+      const completedId = selectedWorkout.id;
+      completedWorkoutIdsRef.current.add(completedId);
+      setLibraryWorkouts((items) =>
+        items.map((item) => (item.id === completedId ? { ...item, completed: true } : item))
+      );
+      setSelectedWorkout((item) => (item?.id === completedId ? { ...item, completed: true } : item));
+    }
     setCompleteInitialStep(stepMode);
     setVimeoModalVisible(false);
     setActiveSessionVisible(false);
@@ -325,6 +349,7 @@ export default function WorkoutScreen() {
       .then(() => fetchCurrentUser())
       .then((user) => {
         if (user) setCurrentUser(user);
+        void loadData();
       })
       .catch(() => undefined);
 
@@ -398,6 +423,7 @@ export default function WorkoutScreen() {
           thumbnail={selectedWorkout?.thumbnail || ''}
           videoUrl={selectedWorkout?.videoUrl || ''}
           videoSource={selectedWorkout?.videoSource || ''}
+          completed={Boolean(selectedWorkout?.completed)}
           progressPct={0}
           onResume={handleResumeSession}
         />
@@ -485,6 +511,7 @@ export default function WorkoutScreen() {
         }
         vimeoId={selectedWorkout?.vimeoId || ''}
         videoUrl={selectedWorkout?.videoUrl || ''}
+        completed={Boolean(selectedWorkout?.completed)}
         exercises={selectedExercises}
       />
 
@@ -559,7 +586,6 @@ export default function WorkoutScreen() {
         tier={tier}
         onDoneHome={() => {
           setCompleteModalVisible(false);
-          pushRoute(router, '/(tabs)');
         }}
         onUpgrade={() => {
           setCompleteModalVisible(false);

@@ -24,6 +24,7 @@ export interface ClaudeWorkoutDetailModalProps {
   description?: string;
   vimeoId?: string;
   videoUrl?: string;
+  completed?: boolean;
   exercises?: WorkoutDetailExercise[];
 }
 
@@ -47,6 +48,7 @@ export default function ClaudeWorkoutDetailModal({
   description = 'Seven movements, three rounds. Victor demonstrates each one before you start it, and the video pauses itself between sets.',
   vimeoId = '',
   videoUrl = '',
+  completed = false,
   exercises = [],
 }: ClaudeWorkoutDetailModalProps) {
   const [isSaved, setIsSaved] = useState(false);
@@ -95,13 +97,19 @@ export default function ClaudeWorkoutDetailModal({
           {/* 2. Content Info matching VF Prototype.dc.html lines 1546-1563 */}
           <View style={styles.contentWrap}>
             <Text style={styles.kicker}>{kicker}</Text>
+            {completed ? (
+              <View style={styles.completedNotice}>
+                <Text style={styles.completedNoticeText}>Previously completed</Text>
+                <Text style={styles.completedNoticeSub}>You can repeat this workout anytime.</Text>
+              </View>
+            ) : null}
             <Text style={styles.title}>{workoutTitle}</Text>
             <Text style={styles.description}>{description}</Text>
 
             {/* 3. Action Buttons Row */}
             <View style={styles.actionsRow}>
               <Pressable style={styles.startBtn} onPress={onStartWorkout}>
-                <Text style={styles.startBtnText}>Start workout</Text>
+                <Text style={styles.startBtnText}>{completed ? 'Start again' : 'Start workout'}</Text>
               </Pressable>
 
               <Pressable
@@ -221,6 +229,30 @@ const styles = StyleSheet.create({
     letterSpacing: 1.4,
     color: COPPER,
     marginBottom: 8,
+  },
+  completedNotice: {
+    marginTop: 10,
+    marginBottom: 8,
+    borderRadius: 12,
+    backgroundColor: 'rgba(26, 122, 74, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(26, 122, 74, 0.7)',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  completedNoticeText: {
+    fontFamily: MONO,
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#5FC48E',
+    textTransform: 'uppercase',
+  },
+  completedNoticeSub: {
+    marginTop: 4,
+    fontFamily: INTER,
+    fontSize: 12,
+    lineHeight: 16,
+    color: 'rgba(247, 243, 238, 0.68)',
   },
   title: {
     fontFamily: CLASH,

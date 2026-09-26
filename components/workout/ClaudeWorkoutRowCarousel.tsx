@@ -20,6 +20,7 @@ export interface WorkoutRowItem {
   videoUrl?: string;
   videoSource?: string;
   thumbnail?: string;
+  completed?: boolean;
   item?: any;
 }
 
@@ -261,10 +262,12 @@ export default function ClaudeWorkoutRowCarousel({
                 <View style={styles.playCircle}>
                   <View style={styles.playArrow} />
                 </View>
+                {w.completed ? <Text style={styles.completedBadge}>Completed</Text> : null}
                 <Text style={styles.workoutBadge}>{w.t}</Text>
               </View>
               <Text style={styles.workoutName}>{w.n}</Text>
               <Text style={styles.workoutMeta}>{w.m}</Text>
+              {w.completed ? <Text style={styles.completedText}>Completed before</Text> : null}
             </Pressable>
           ))}
       </ScrollView>
@@ -427,6 +430,21 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     paddingHorizontal: 6,
   },
+  completedBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    fontFamily: MONO,
+    fontSize: 9,
+    fontWeight: '900',
+    color: IVORY,
+    backgroundColor: 'rgba(26, 122, 74, 0.92)',
+    borderRadius: 999,
+    paddingVertical: 3,
+    paddingHorizontal: 7,
+    overflow: 'hidden',
+    textTransform: 'uppercase',
+  },
   workoutName: {
     fontFamily: DMSANS,
     fontSize: 14.5,
@@ -440,5 +458,14 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: 'rgba(247, 243, 238, 0.5)',
     marginTop: 3,
+  },
+  completedText: {
+    marginTop: 4,
+    fontFamily: MONO,
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    color: '#1A7A4A',
+    textTransform: 'uppercase',
   },
 });

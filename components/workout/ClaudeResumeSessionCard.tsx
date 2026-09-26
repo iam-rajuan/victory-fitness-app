@@ -11,6 +11,7 @@ interface ClaudeResumeSessionCardProps {
   thumbnail?: string;
   videoUrl?: string;
   videoSource?: string;
+  completed?: boolean;
   onResume?: () => void;
 }
 
@@ -40,13 +41,16 @@ export default function ClaudeResumeSessionCard({
   thumbnail = '',
   videoUrl = '',
   videoSource = '',
+  completed = false,
   onResume,
 }: ClaudeResumeSessionCardProps) {
   const { colors, isDark } = useTheme();
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.eyebrow, { color: colors.textMuted }]}>PICK UP WHERE YOU LEFT OFF</Text>
+      <Text style={[styles.eyebrow, { color: colors.textMuted }]}>
+        {completed ? 'COMPLETED BEFORE' : 'PICK UP WHERE YOU LEFT OFF'}
+      </Text>
 
       <Pressable
         style={[
@@ -120,6 +124,7 @@ export default function ClaudeResumeSessionCard({
 
           {/* Time remaining pill badge */}
           <Text style={styles.timeBadge}>{minutesLeft}</Text>
+          {completed ? <Text style={styles.completedBadge}>Completed</Text> : null}
 
           {/* Bottom progress bar */}
           <View style={styles.progressTrack}>
@@ -137,12 +142,12 @@ export default function ClaudeResumeSessionCard({
                 { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
               ]}
             >
-              {sessionLine}
+              {completed ? `Previously completed · ${sessionLine}` : sessionLine}
             </Text>
           </View>
 
           <Pressable style={styles.resumeBtn} onPress={onResume}>
-            <Text style={styles.resumeBtnText}>Resume</Text>
+            <Text style={styles.resumeBtnText}>{completed ? 'Start again' : 'Resume'}</Text>
           </Pressable>
         </View>
       </Pressable>
@@ -215,6 +220,21 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     paddingVertical: 3,
     paddingHorizontal: 7,
+  },
+  completedBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 14,
+    fontFamily: MONO,
+    fontSize: 10,
+    fontWeight: '900',
+    color: IVORY,
+    backgroundColor: 'rgba(26, 122, 74, 0.92)',
+    borderRadius: 999,
+    paddingVertical: 5,
+    paddingHorizontal: 9,
+    overflow: 'hidden',
+    textTransform: 'uppercase',
   },
   progressTrack: {
     position: 'absolute',
