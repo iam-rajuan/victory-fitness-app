@@ -22,7 +22,6 @@ export interface ClaudeWorkoutDetailModalProps {
   workoutTitle?: string;
   kicker?: string;
   description?: string;
-  durationBadge?: string;
   vimeoId?: string;
   videoUrl?: string;
   exercises?: WorkoutDetailExercise[];
@@ -46,7 +45,6 @@ export default function ClaudeWorkoutDetailModal({
   workoutTitle = 'Workout',
   kicker = 'STRENGTH · DUMBBELLS · INTERMEDIATE',
   description = 'Seven movements, three rounds. Victor demonstrates each one before you start it, and the video pauses itself between sets.',
-  durationBadge = '38:00',
   vimeoId = '',
   videoUrl = '',
   exercises = [],
@@ -85,16 +83,13 @@ export default function ClaudeWorkoutDetailModal({
               </Pressable>
             )}
 
-            {/* Back button ← Train */}
+            {/* Back button */}
             <Pressable style={styles.backBtn} onPress={onClose} hitSlop={12}>
-              <Text style={styles.backBtnText}>← Train</Text>
+              <Text style={styles.backBtnText}>← Workout</Text>
             </Pressable>
 
             {/* Bottom info row */}
             <Text style={styles.mediaMeta}>{vimeoId ? 'vimeo' : 'video'} · 1080p · steps down on 3G</Text>
-            <View style={styles.durationBadge}>
-              <Text style={styles.durationText}>{durationBadge}</Text>
-            </View>
           </View>
 
           {/* 2. Content Info matching VF Prototype.dc.html lines 1546-1563 */}
@@ -214,21 +209,6 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     fontWeight: '400',
     color: 'rgba(247, 243, 238, 0.6)',
-  },
-  durationBadge: {
-    position: 'absolute',
-    bottom: 12,
-    right: 20,
-    backgroundColor: 'rgba(13, 13, 13, 0.7)',
-    borderRadius: 4,
-    paddingVertical: 3,
-    paddingHorizontal: 6,
-  },
-  durationText: {
-    fontFamily: MONO,
-    fontSize: 11,
-    fontWeight: '700',
-    color: IVORY,
   },
   contentWrap: {
     paddingTop: 20,

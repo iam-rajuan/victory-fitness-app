@@ -443,7 +443,6 @@ export default function WorkoutScreen() {
             ? `${selectedWorkout.movements.length} movements. Follow the admin-programmed session and video for this workout.`
             : 'Follow the workout video. Add movements in the admin dashboard to show the full member session here.'
         }
-        durationBadge={selectedWorkout?.badge || 'Not set'}
         vimeoId={selectedWorkout?.vimeoId || ''}
         videoUrl={selectedWorkout?.videoUrl || ''}
         exercises={selectedExercises}
