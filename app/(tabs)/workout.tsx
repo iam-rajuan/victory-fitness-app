@@ -257,11 +257,7 @@ export default function WorkoutScreen() {
 
   const handleStartWorkoutFromDetail = () => {
     setWorkoutDetailModalVisible(false);
-    if (selectedWorkout?.videoUrl || selectedWorkout?.vimeoId) {
-      setVimeoModalVisible(true);
-    } else {
-      setActiveSessionVisible(true);
-    }
+    setActiveSessionVisible(true);
   };
 
   const handleResumeSession = () => {
