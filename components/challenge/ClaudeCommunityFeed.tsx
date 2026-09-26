@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../context/ThemeContext';
+import CrossPlatformWebView from '../CrossPlatformWebView';
 
 export interface CommunityPost {
   id: string;
@@ -63,6 +64,85 @@ const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system,
 const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
+
+function escapeHtmlAttribute(value: string) {
+  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function isDirectVideoUrl(value?: string) {
+  const normalized = String(value || '').trim();
+  return /\.(mp4|mov|m4v|webm|ogv)(\?.*)?$/i.test(normalized) || normalized.includes('/community-videos/');
+}
+
+function buildCommunityVideoHtml(videoUrl: string) {
+  const escapedUrl = escapeHtmlAttribute(videoUrl);
+  const directVideo = isDirectVideoUrl(videoUrl);
+  return `<!doctype html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+    <style>
+      html,body{margin:0;width:100%;height:100%;background:#0D2B45;overflow:hidden}
+      .frame{position:fixed;inset:0;width:100%;height:100%;border:0;background:#0D2B45}
+      video.frame{object-fit:cover}
+    </style>
+  </head>
+  <body>
+    ${
+      directVideo
+        ? `<video class="frame" src="${escapedUrl}" controls playsinline preload="metadata"></video>`
+        : `<iframe class="frame" src="${escapedUrl}" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`
+    }
+  </body>
+</html>`;
+}
+
+function CommunityVideoPlayer({ videoUrl }: { videoUrl?: string }) {
+  const normalizedUrl = String(videoUrl || '').trim();
+
+  if (!normalizedUrl) {
+    return (
+      <View style={styles.videoPlaceholder}>
+        <View style={styles.videoPlayBtn}>
+          <View style={styles.playTriangle} />
+        </View>
+      </View>
+    );
+  }
+
+  if (Platform.OS === 'web' && isDirectVideoUrl(normalizedUrl)) {
+    return React.createElement('video', {
+      src: normalizedUrl,
+      controls: true,
+      playsInline: true,
+      preload: 'metadata',
+      style: {
+        position: 'absolute',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover',
+        backgroundColor: NAVY,
+      },
+    });
+  }
+
+  return (
+    <CrossPlatformWebView
+      source={{ html: buildCommunityVideoHtml(normalizedUrl) }}
+      style={StyleSheet.absoluteFill}
+      originWhitelist={['*']}
+      javaScriptEnabled
+      domStorageEnabled
+      allowsInlineMediaPlayback
+      mediaPlaybackRequiresUserAction={false}
+      scrollEnabled={false}
+      setSupportMultipleWindows={false}
+      javaScriptCanOpenWindowsAutomatically={false}
+      startInLoadingState
+    />
+  );
+}
 
 export default function ClaudeCommunityFeed({
   userTier = 'gold',
@@ -398,9 +478,7 @@ export default function ClaudeCommunityFeed({
             {p.hasVideo && (
               <View style={styles.videoContainer}>
                 <View style={styles.videoPlayerBox}>
-                  <View style={styles.videoPlayBtn}>
-                    <View style={styles.playTriangle} />
-                  </View>
+                  <CommunityVideoPlayer videoUrl={p.videoUrl} />
                 </View>
                 <View style={styles.videoMetaWrap}>
                   <Text style={styles.videoTitleText}>{p.videoTitle}</Text>
@@ -825,6 +903,13 @@ const styles = StyleSheet.create({
   videoPlayerBox: {
     height: 150,
     backgroundColor: '#0D2B45',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  videoPlaceholder: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
   },

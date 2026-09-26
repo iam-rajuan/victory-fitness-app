@@ -9,7 +9,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { apiRequest, fetchCurrentUser } from '../../lib/api';
+import { apiRequest, fetchCurrentUser, resolveRemoteAssetUrl } from '../../lib/api';
 import { fetchChallengeOverviewData } from '../../lib/screenData';
 import ClaudeChallengeTabs, { ChallengeTabType } from '../../components/challenge/ClaudeChallengeTabs';
 import ClaudeActiveChallengeBanner from '../../components/challenge/ClaudeActiveChallengeBanner';
@@ -99,8 +99,8 @@ function formatRelativeTime(value: unknown) {
 function mapCommunityPost(raw: Record<string, any>): CommunityPost {
   const likeCount = Math.max(0, Number(raw.like_count || 0));
   const commentCount = Math.max(0, Number(raw.comment_count || 0));
-  const videoUrl = String(raw.video_url || '').trim();
-  const imageUrl = String(raw.image_url || '').trim();
+  const videoUrl = resolveRemoteAssetUrl(raw.video_url);
+  const imageUrl = resolveRemoteAssetUrl(raw.image_url);
   const authorName = String(raw.author_name || 'Victory member').trim();
   return {
     id: String(raw.id || ''),
