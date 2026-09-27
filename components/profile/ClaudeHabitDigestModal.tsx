@@ -13,6 +13,10 @@ interface ClaudeHabitDigestModalProps {
   visible: boolean;
   onClose: () => void;
   onBookHumanSession: () => void;
+  identityStatement?: string;
+  summaryText?: string;
+  currentScore?: number;
+  weeks?: Array<{ label: string; score: number }>;
 }
 
 const NAVY = '#0D2B45';
@@ -30,7 +34,18 @@ export default function ClaudeHabitDigestModal({
   visible,
   onClose,
   onBookHumanSession,
+  identityStatement = 'Set the person you are becoming.',
+  summaryText = 'Your digest will build as you log workouts and trigger days.',
+  currentScore = 0,
+  weeks = [],
 }: ClaudeHabitDigestModalProps) {
+  const chartWeeks = weeks.length > 0 ? weeks.slice(-4) : [
+    { label: 'W1', score: 0 },
+    { label: 'W2', score: 0 },
+    { label: 'W3', score: 0 },
+    { label: 'W4', score: Math.max(0, Math.min(100, currentScore)) },
+  ];
+
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
       <View style={styles.container}>
@@ -53,10 +68,10 @@ export default function ClaudeHabitDigestModal({
           {/* Identity & Habits Reflection matching lines 1258-1261 */}
           <View style={styles.reflectionCard}>
             <Text style={styles.identityQuote}>
-              “I am someone who trains even when it is hard.”
+              “{identityStatement}”
             </Text>
             <Text style={styles.reflectionBody}>
-              This week you trained 4 times. Your trigger is “after the kids are in bed” — you used it on 3 of those 4 days. Your unlock, the true-crime podcast, was waiting each time.
+              {summaryText}
             </Text>
           </View>
 
@@ -64,29 +79,30 @@ export default function ClaudeHabitDigestModal({
           <View style={styles.chartCard}>
             <View style={styles.chartHeader}>
               <Text style={styles.chartTitle}>Habit consistency</Text>
-              <Text style={styles.chartValue}>75% of trigger days</Text>
+              <Text style={styles.chartValue}>{Math.max(0, Math.min(100, Math.round(currentScore)))}% of trigger days</Text>
             </View>
 
             <View style={styles.barsRow}>
-              <View style={styles.barCol}>
-                <View style={[styles.barFill, { height: 30, backgroundColor: 'rgba(247,243,238,0.2)' }]} />
-                <Text style={styles.barLabel}>W1</Text>
-              </View>
-
-              <View style={styles.barCol}>
-                <View style={[styles.barFill, { height: 42, backgroundColor: 'rgba(247,243,238,0.34)' }]} />
-                <Text style={styles.barLabel}>W2</Text>
-              </View>
-
-              <View style={styles.barCol}>
-                <View style={[styles.barFill, { height: 38, backgroundColor: 'rgba(247,243,238,0.34)' }]} />
-                <Text style={styles.barLabel}>W3</Text>
-              </View>
-
-              <View style={styles.barCol}>
-                <View style={[styles.barFill, { height: 56, backgroundColor: GOLD }]} />
-                <Text style={[styles.barLabel, { color: GOLD, fontWeight: '700' }]}>W4</Text>
-              </View>
+              {chartWeeks.map((week, index) => {
+                const score = Math.max(0, Math.min(100, Math.round(Number(week.score || 0))));
+                const isLatest = index === chartWeeks.length - 1;
+                return (
+                  <View style={styles.barCol} key={`${week.label}-${index}`}>
+                    <View
+                      style={[
+                        styles.barFill,
+                        {
+                          height: Math.max(8, Math.round((score / 100) * 56)),
+                          backgroundColor: isLatest ? GOLD : 'rgba(247,243,238,0.34)',
+                        },
+                      ]}
+                    />
+                    <Text style={[styles.barLabel, isLatest && { color: GOLD, fontWeight: '700' }]}>
+                      {week.label || `W${index + 1}`}
+                    </Text>
+                  </View>
+                );
+              })}
             </View>
           </View>
 

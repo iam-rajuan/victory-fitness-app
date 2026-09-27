@@ -1106,6 +1106,25 @@ export async function fetchHabitConsistency(): Promise<HabitConsistencyResponse>
   return apiRequest<HabitConsistencyResponse>('/me/habit-consistency');
 }
 
+export async function createCoachSessionBooking(payload: {
+  day: string;
+  time: string;
+  mode: 'Zoom' | 'Phone';
+  note?: string;
+}) {
+  return apiRequest<{
+    id: string;
+    day: string;
+    time: string;
+    mode: 'Zoom' | 'Phone';
+    status: string;
+    requested_at: string;
+  }>('/me/coach-session-bookings', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
 export interface RuntimeFeatureFlagsResponse {
   provider: string;
   items: Array<{ key: string; enabled: boolean; reason: string }>;
@@ -2173,7 +2192,7 @@ export async function fetchAccountabilityPartner(): Promise<AccountabilityPartne
 export async function createAccountabilityInvite(email?: string): Promise<{ pair_id: string; invite_code: string; message: string }> {
   return apiRequest<{ pair_id: string; invite_code: string; message: string }>('/accountability-pairs/invite', {
     method: 'POST',
-    body: { email },
+    body: { partner_email: email },
   });
 }
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,7 +9,6 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import RequirementAuditBoundary from '../audit/RequirementAuditBoundary';
 
 interface DeviceItem {
   id: string;
@@ -36,7 +35,7 @@ const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' })
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
 
 const INITIAL_DEVICES: DeviceItem[] = [
-  { id: 'garmin', name: 'Garmin Connect', sub: 'Forerunner, Fenix, Epix, Venu', connected: true },
+  { id: 'garmin', name: 'Garmin Connect', sub: 'Forerunner, Fenix, Epix, Venu', connected: false },
   { id: 'apple', name: 'Apple Health', sub: 'Apple Watch Series 4+, Ultra', connected: false },
   { id: 'whoop', name: 'WHOOP', sub: 'WHOOP 4.0 recovery and strain', connected: false },
   { id: 'oura', name: 'Oura Ring', sub: 'Gen 3 sleep and readiness', connected: false },
@@ -49,27 +48,17 @@ export default function ClaudeWearablesModal({
   onClose,
   tierBadge = 'PLATINUM',
 }: ClaudeWearablesModalProps) {
-  const [devices, setDevices] = useState<DeviceItem[]>(INITIAL_DEVICES);
-
-  const toggleDevice = (id: string) => {
-    setDevices((prev) =>
-      prev.map((d) => {
-        if (d.id === id) {
-          const next = !d.connected;
-          Alert.alert(
-            next ? 'Connected' : 'Disconnected',
-            `${d.name} ${next ? 'is now synced for workout heart-rate zones.' : 'has been disconnected.'}`
-          );
-          return { ...d, connected: next };
-        }
-        return d;
-      })
+  const handleProviderPress = (device: DeviceItem) => {
+    Alert.alert(
+      device.connected ? 'Connected' : 'Connection not active',
+      device.connected
+        ? `${device.name} is connected through the backend.`
+        : `${device.name} is not connected yet. Use the backend integration flow before showing it as active here.`
     );
   };
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
-      <RequirementAuditBoundary auditId="APP-EXTRA-012" status="extra" style={{ flex: 1 }}>
         <View style={styles.container}>
           <ScrollView
             style={styles.scrollView}
@@ -93,12 +82,12 @@ export default function ClaudeWearablesModal({
 
           {/* Device Sync Cards matching lines 1442-1449 */}
           <View style={styles.devicesCard}>
-            {devices.map((d, i) => (
+            {INITIAL_DEVICES.map((d, i) => (
               <TouchableOpacity
                 key={d.id}
-                style={[styles.deviceRow, i < devices.length - 1 && styles.deviceRowBorder]}
+                style={[styles.deviceRow, i < INITIAL_DEVICES.length - 1 && styles.deviceRowBorder]}
                 activeOpacity={0.8}
-                onPress={() => toggleDevice(d.id)}
+                onPress={() => handleProviderPress(d)}
               >
                 <View style={styles.deviceTextCol}>
                   <Text style={styles.deviceName}>{d.name}</Text>
@@ -156,7 +145,6 @@ export default function ClaudeWearablesModal({
           </Text>
         </ScrollView>
       </View>
-    </RequirementAuditBoundary>
   </Modal>
   );
 }

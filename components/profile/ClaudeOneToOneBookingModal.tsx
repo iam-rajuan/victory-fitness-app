@@ -9,6 +9,7 @@ import {
   Platform,
   Alert,
 } from 'react-native';
+import { createCoachSessionBooking } from '../../lib/api';
 
 interface SlotItem {
   id: string;
@@ -21,6 +22,7 @@ interface ClaudeOneToOneBookingModalProps {
   visible: boolean;
   onClose: () => void;
   tierBadge?: string;
+  userPhone?: string;
 }
 
 const NAVY = '#0D2B45';
@@ -34,27 +36,58 @@ const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System'
 const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
 
-const SLOTS: SlotItem[] = [
-  { id: 's1', day: 'Tuesday, 12 May', time: '18:30 – 18:55', note: 'Next available' },
-  { id: 's2', day: 'Wednesday, 13 May', time: '19:00 – 19:25', note: 'Popular' },
-  { id: 's3', day: 'Thursday, 14 May', time: '08:00 – 08:25', note: 'Morning' },
-  { id: 's4', day: 'Friday, 15 May', time: '17:30 – 17:55', note: 'Evening' },
-];
+function nextSlots(): SlotItem[] {
+  const times = [
+    { time: '18:30 - 18:55', note: 'Next available' },
+    { time: '19:00 - 19:25', note: 'Popular' },
+    { time: '08:00 - 08:25', note: 'Morning' },
+    { time: '17:30 - 17:55', note: 'Evening' },
+  ];
+  const today = new Date();
+  return times.map((item, index) => {
+    const date = new Date(today);
+    date.setDate(today.getDate() + index + 1);
+    return {
+      id: `s${index + 1}`,
+      day: date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' }),
+      time: item.time,
+      note: item.note,
+    };
+  });
+}
 
 export default function ClaudeOneToOneBookingModal({
   visible,
   onClose,
   tierBadge = 'PLATINUM',
+  userPhone = '',
 }: ClaudeOneToOneBookingModalProps) {
   const [talkMode, setTalkMode] = useState<'Zoom' | 'Phone'>('Zoom');
   const [selectedSlot, setSelectedSlot] = useState<string>('s1');
+  const [saving, setSaving] = useState(false);
+  const slots = nextSlots();
 
-  const handleConfirm = () => {
-    Alert.alert(
-      'Session Confirmed',
-      `Your 25-minute 1-to-1 call with Victor is confirmed via ${talkMode}. Calendar invites with your private link have been sent!`
-    );
-    onClose();
+  const handleConfirm = async () => {
+    const slot = slots.find((item) => item.id === selectedSlot) || slots[0];
+    if (!slot || saving) return;
+    setSaving(true);
+    try {
+      await createCoachSessionBooking({
+        day: slot.day,
+        time: slot.time,
+        mode: talkMode,
+        note: slot.note,
+      });
+      Alert.alert(
+        'Session requested',
+        `Your ${talkMode.toLowerCase()} session request for ${slot.day} at ${slot.time} was saved.`
+      );
+      onClose();
+    } catch (error: any) {
+      Alert.alert('Could not request session', error?.message || 'Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -108,7 +141,7 @@ export default function ClaudeOneToOneBookingModal({
           {/* Slots List matching lines 2040-2050 */}
           <Text style={styles.sectionLabel}>NEXT AVAILABLE</Text>
           <View style={styles.slotsList}>
-            {SLOTS.map((s) => {
+            {slots.map((s) => {
               const isSelected = selectedSlot === s.id;
               return (
                 <TouchableOpacity
@@ -147,7 +180,7 @@ export default function ClaudeOneToOneBookingModal({
             </View>
             <View style={styles.confirmedRow}>
               <Text style={styles.confirmedLabel}>Your number</Text>
-              <Text style={styles.confirmedVal}>+49 171 555 0148</Text>
+              <Text style={styles.confirmedVal}>{userPhone || 'Not set'}</Text>
             </View>
             <View style={[styles.confirmedRow, { borderBottomWidth: 0 }]}>
               <Text style={styles.confirmedLabel}>Calendar</Text>
@@ -167,9 +200,10 @@ export default function ClaudeOneToOneBookingModal({
           <TouchableOpacity
             style={styles.confirmBtn}
             activeOpacity={0.85}
+            disabled={saving}
             onPress={handleConfirm}
           >
-            <Text style={styles.confirmBtnText}>Confirm session</Text>
+            <Text style={styles.confirmBtnText}>{saving ? 'Saving...' : 'Confirm session'}</Text>
           </TouchableOpacity>
 
           <Text style={styles.cancelNotice}>

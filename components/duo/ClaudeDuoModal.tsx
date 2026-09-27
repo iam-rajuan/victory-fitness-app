@@ -47,6 +47,7 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [daysInSync, setDaysInSync] = useState(0);
   const [partnerTrainedToday, setPartnerTrainedToday] = useState(false);
+  const [youTrainedToday, setYouTrainedToday] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -61,18 +62,21 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
           setPartnerName(res.partner.name || res.partner.email?.split('@')[0] || 'Partner');
           setDaysInSync(Math.max(0, Number(res.days_in_sync || res.partner.days_in_sync || 0)));
           setPartnerTrainedToday(Boolean(res.partner.trained_today ?? res.partner_checked_in_today));
+          setYouTrainedToday(Boolean(res.your_checked_in_today));
         } else if (res && res.invite_code) {
           setDuoState('pending');
           setInviteCode(String(res.invite_code || ''));
           setPartnerName('Partner');
           setDaysInSync(0);
           setPartnerTrainedToday(false);
+          setYouTrainedToday(false);
         } else {
           setDuoState('inactive');
           setInviteCode('');
           setPartnerName('Partner');
           setDaysInSync(0);
           setPartnerTrainedToday(false);
+          setYouTrainedToday(false);
         }
       } catch {
         setDuoState('inactive');
@@ -80,6 +84,7 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
         setPartnerName('Partner');
         setDaysInSync(0);
         setPartnerTrainedToday(false);
+        setYouTrainedToday(false);
       }
     };
 
@@ -87,11 +92,13 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
   }, [visible]);
 
   const handleCopyCode = async () => {
+    if (!inviteCode) return;
     await Clipboard.setStringAsync(inviteCode);
     Alert.alert('Copied', `Pairing code ${inviteCode} copied to clipboard!`);
   };
 
   const handleShareWhatsApp = () => {
+    if (!inviteCode) return;
     const text = `Join my Accountability Duo on Victory Fitness! Enter code: ${inviteCode}`;
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
@@ -104,30 +111,29 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
     if (!inputCode.trim()) return;
     setLoading(true);
     try {
-      await apiRequest('/accountability-pairs/accept', {
-        method: 'POST',
-        body: { invite_code: inputCode.trim().toUpperCase() },
-      });
+      const res = await acceptAccountabilityInvite(inputCode.trim().toUpperCase());
+      setPairId(res.pair_id || '');
       setDuoState('active');
       setPartnerName('Partner');
       setShowCodeInput(false);
       Alert.alert('Duo Active', 'You are now synced with your accountability partner!');
-    } catch {
-      // Fallback for demonstration
-      setDuoState('active');
-      setPartnerName('Partner');
-      setShowCodeInput(false);
+    } catch (error: any) {
+      Alert.alert('Code not accepted', error?.message || 'That invite code could not be used.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleNudge = async () => {
+    if (!pairId) {
+      Alert.alert('Duo not ready', 'Your accountability pair is not active yet.');
+      return;
+    }
     try {
-      await apiRequest('/accountability-pairs/me/nudge', { method: 'POST' });
+      await nudgeAccountabilityPartner(pairId);
       Alert.alert('Nudge Sent', `A gentle nudge was sent to ${partnerName}!`);
-    } catch {
-      Alert.alert('Nudge Sent', `A gentle nudge was sent to ${partnerName}!`);
+    } catch (error: any) {
+      Alert.alert('Could not send nudge', error?.message || 'Please try again.');
     }
   };
 
@@ -137,12 +143,36 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
       {
         text: 'End this duo',
         style: 'destructive',
-        onPress: () => {
-          setDuoState('inactive');
-          Alert.alert('Duo Ended', 'Your accountability partnership has ended.');
+        onPress: async () => {
+          try {
+            if (pairId) await unpairAccountabilityPartner(pairId);
+            setPairId('');
+            setDuoState('inactive');
+            setPartnerName('Partner');
+            setDaysInSync(0);
+            setPartnerTrainedToday(false);
+            setYouTrainedToday(false);
+            Alert.alert('Duo Ended', 'Your accountability partnership has ended.');
+          } catch (error: any) {
+            Alert.alert('Could not end duo', error?.message || 'Please try again.');
+          }
         },
       },
     ]);
+  };
+
+  const handleCreateInvite = async () => {
+    setLoading(true);
+    try {
+      const res = await createAccountabilityInvite();
+      setPairId(res.pair_id || '');
+      setInviteCode(res.invite_code || '');
+      setDuoState('pending');
+    } catch (error: any) {
+      Alert.alert('Could not create invite', error?.message || 'Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -207,7 +237,9 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
                 </Text>
                 <Text style={styles.cardSub}>
                   {duoState === 'active'
-                    ? 'She trained today. You both did.'
+                    ? partnerTrainedToday
+                      ? 'They trained today.'
+                      : 'No partner workout logged today.'
                     : duoState === 'pending'
                     ? `Code ${inviteCode} sent — nothing shared yet`
                     : 'Inactive until someone accepts, then the card becomes their name.'}
@@ -229,9 +261,10 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
                     <TouchableOpacity
                       style={styles.primaryBtn}
                       activeOpacity={0.85}
-                      onPress={() => setDuoState('pending')}
+                      disabled={loading}
+                      onPress={handleCreateInvite}
                     >
-                      <Text style={styles.primaryBtnText}>Invite partner</Text>
+                      <Text style={styles.primaryBtnText}>{loading ? 'Creating...' : 'Invite partner'}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -246,7 +279,7 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
                   <View style={styles.codeEntryBox}>
                     <TextInput
                       style={styles.codeInput}
-                      placeholder="Enter partner code (e.g. VF-4K9M)"
+                      placeholder="Enter partner code"
                       placeholderTextColor="rgba(247,243,238,0.3)"
                       value={inputCode}
                       onChangeText={setInputCode}
@@ -256,9 +289,10 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
                       <TouchableOpacity
                         style={styles.primaryBtn}
                         activeOpacity={0.85}
+                        disabled={loading}
                         onPress={handleEnterCodeSubmit}
                       >
-                        <Text style={styles.primaryBtnText}>Connect</Text>
+                        <Text style={styles.primaryBtnText}>{loading ? 'Connecting...' : 'Connect'}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={styles.outlineBtn}
@@ -315,19 +349,25 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
                     <Text style={styles.statLabel}>DAYS IN SYNC</Text>
                   </View>
                   <View style={[styles.statCol, styles.statColBorder]}>
-                    <Text style={[styles.statValue, { color: IVORY }]}>4/4</Text>
-                    <Text style={styles.statLabel}>HER WEEK</Text>
+                    <Text style={[styles.statValue, { color: partnerTrainedToday ? GREEN : IVORY }]}>
+                      {partnerTrainedToday ? 'YES' : 'NO'}
+                    </Text>
+                    <Text style={styles.statLabel}>PARTNER TODAY</Text>
                   </View>
                   <View style={styles.statCol}>
-                    <Text style={[styles.statValue, { color: GOLD }]}>3/4</Text>
-                    <Text style={styles.statLabel}>YOUR WEEK</Text>
+                    <Text style={[styles.statValue, { color: youTrainedToday ? GREEN : GOLD }]}>
+                      {youTrainedToday ? 'YES' : 'NO'}
+                    </Text>
+                    <Text style={styles.statLabel}>YOU TODAY</Text>
                   </View>
                 </View>
 
                 <View style={styles.indicatorRow}>
                   <View style={[styles.dot, { backgroundColor: GREEN }]} />
                   <Text style={styles.indicatorText}>
-                    {`${partnerName} trained today — she will see your tick too`}
+                    {partnerTrainedToday
+                      ? `${partnerName} trained today.`
+                      : `${partnerName} has not logged a workout today.`}
                   </Text>
                 </View>
 

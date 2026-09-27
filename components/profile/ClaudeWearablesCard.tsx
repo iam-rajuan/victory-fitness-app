@@ -1,11 +1,14 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
-import RequirementAuditBoundary from '../audit/RequirementAuditBoundary';
 
 interface ClaudeWearablesCardProps {
   onOpenWearables: () => void;
   connectedDevice?: string;
+  restingBpm?: string;
+  sleepAverage?: string;
+  caloriesAverage?: string;
+  syncMeta?: string;
 }
 
 const NAVY = '#0D2B45';
@@ -20,16 +23,15 @@ const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Cou
 
 export default function ClaudeWearablesCard({
   onOpenWearables,
-  connectedDevice = 'Garmin Forerunner 965',
+  connectedDevice = 'No wearable connected',
+  restingBpm = '--',
+  sleepAverage = '--',
+  caloriesAverage = '--',
+  syncMeta = 'Connect a device to sync health metrics',
 }: ClaudeWearablesCardProps) {
   const { colors, isDark } = useTheme();
 
   return (
-    <RequirementAuditBoundary
-      auditId="APP-EXTRA-005"
-      status="extra"
-      label="NEW FEATURE - WEARABLE HEALTH DASHBOARD NOT IN REQUIREMENT"
-    >
     <View style={styles.container}>
       <Text style={[styles.sectionKicker, { color: colors.textMuted }]}>YOUR HEALTH · LAST 4 WEEKS</Text>
 
@@ -51,7 +53,7 @@ export default function ClaudeWearablesCard({
         {/* Metric Triplet matching lines 1163-1167 */}
         <View style={styles.tripletRow}>
           <View style={styles.tripletCol}>
-            <Text style={[styles.tripletValue, { color: GREEN }]}>54</Text>
+            <Text style={[styles.tripletValue, { color: GREEN }]}>{restingBpm}</Text>
             <Text
               style={[
                 styles.tripletLabel,
@@ -66,12 +68,12 @@ export default function ClaudeWearablesCard({
                 { color: isDark ? 'rgba(247, 243, 238, 0.4)' : 'rgba(13, 43, 69, 0.45)' },
               ]}
             >
-              −3 in 4 weeks
+              {syncMeta}
             </Text>
           </View>
 
           <View style={styles.tripletCol}>
-            <Text style={[styles.tripletValue, { color: isDark ? IVORY : NAVY }]}>6:48</Text>
+            <Text style={[styles.tripletValue, { color: isDark ? IVORY : NAVY }]}>{sleepAverage}</Text>
             <Text
               style={[
                 styles.tripletLabel,
@@ -86,12 +88,12 @@ export default function ClaudeWearablesCard({
                 { color: isDark ? 'rgba(247, 243, 238, 0.4)' : 'rgba(13, 43, 69, 0.45)' },
               ]}
             >
-              72% quality
+              {syncMeta}
             </Text>
           </View>
 
           <View style={styles.tripletCol}>
-            <Text style={[styles.tripletValue, { color: GOLD }]}>2 410</Text>
+            <Text style={[styles.tripletValue, { color: GOLD }]}>{caloriesAverage}</Text>
             <Text
               style={[
                 styles.tripletLabel,
@@ -106,7 +108,7 @@ export default function ClaudeWearablesCard({
                 { color: isDark ? 'rgba(247, 243, 238, 0.4)' : 'rgba(13, 43, 69, 0.45)' },
               ]}
             >
-              Garmin
+              {connectedDevice === 'No wearable connected' ? 'No device' : connectedDevice}
             </Text>
           </View>
         </View>
@@ -174,7 +176,6 @@ export default function ClaudeWearablesCard({
         <Text style={styles.chevron}>›</Text>
       </TouchableOpacity>
     </View>
-    </RequirementAuditBoundary>
   );
 }
 

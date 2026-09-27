@@ -14,6 +14,7 @@ import {
   fetchAccountabilityPartner,
   fetchCurrentUser,
   fetchHabitConsistency,
+  fetchLongevityDashboard,
   fetchSubscriptionPlans,
   fetchWorkoutLogs,
   logout,
@@ -178,6 +179,9 @@ export default function ProfileScreen() {
   const [habitUnlock, setHabitUnlock] = useState('Set a reward you only use while training.');
   const [habitTrigger, setHabitTrigger] = useState('Set the moment that starts your session.');
   const [triggerUsage, setTriggerUsage] = useState('No trigger data yet');
+  const [habitDigestSummary, setHabitDigestSummary] = useState('Your digest will build as you log workouts and trigger days.');
+  const [habitDigestWeeks, setHabitDigestWeeks] = useState<Array<{ label: string; score: number }>>([]);
+  const [habitDigestScore, setHabitDigestScore] = useState(0);
   const [notificationMeta, setNotificationMeta] = useState('All caught up');
   const [languageMeta, setLanguageMeta] = useState('Not set');
   const [notificationPrefs, setNotificationPrefs] = useState({
@@ -190,6 +194,8 @@ export default function ProfileScreen() {
   const [partnerNote, setPartnerNote] = useState('Set up or manage your partner.');
   const [planPrice, setPlanPrice] = useState('Free');
   const [planDescription, setPlanDescription] = useState('Choose the plan that fits your training.');
+  const [wearableDevice, setWearableDevice] = useState('No wearable connected');
+  const [wearableSyncMeta, setWearableSyncMeta] = useState('Connect a device to sync health metrics');
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   // Modals state
@@ -205,13 +211,14 @@ export default function ProfileScreen() {
 
     const loadUserData = async () => {
       try {
-        const [u, habit, journal, plans, completedLogs, accountability] = await Promise.all([
+        const [u, habit, journal, plans, completedLogs, accountability, longevity] = await Promise.all([
           fetchCurrentUser({ forceRefresh: true }),
           fetchHabitConsistency().catch(() => null),
           fetchJournalEntries().catch(() => ({ entries: [] })),
           fetchSubscriptionPlans().catch(() => ({ items: [] })),
           fetchWorkoutLogs(1, 100, 'completed').catch(() => ({ items: [], total: 0, page: 1, limit: 100, total_pages: 0 })),
           fetchAccountabilityPartner().catch(() => null),
+          fetchLongevityDashboard().catch(() => null),
         ]);
         if (cancelled || !u) return;
         const userObj = u as any;
@@ -237,6 +244,7 @@ export default function ProfileScreen() {
         setTotalSessions(Math.max(0, Number((completedLogs as any)?.total || workoutItems.length || 0)));
 
         const score = Math.round(Number((habit as any)?.current_score || 0));
+        setHabitDigestScore(score);
         setConsistencyPct(calculateWorkoutConsistency(workoutItems, score));
         setHabitIdentity(String((habit as any)?.identity_statement || userObj.identity_statement || 'Set the person you are becoming.'));
         setHabitUnlock(String((habit as any)?.workout_unlock_label || userObj.workout_unlock_label || 'Set a reward you only use while training.'));
@@ -245,6 +253,16 @@ export default function ProfileScreen() {
         setHabitTrigger([triggerContext, triggerAction].filter(Boolean).join(', ') || 'Set the moment that starts your session.');
         const latestWeek = Array.isArray((habit as any)?.weeks) ? (habit as any).weeks[(habit as any).weeks.length - 1] : null;
         setTriggerUsage(latestWeek ? `used on ${latestWeek.trained_trigger_days || 0} of ${latestWeek.trigger_days || 0} trigger days` : 'No trigger data yet');
+        const digestWeeks = Array.isArray((habit as any)?.weeks)
+          ? (habit as any).weeks.map((week: any, index: number) => ({
+              label: String(week.label || `W${index + 1}`),
+              score: Math.round(Number(week.score || 0)),
+            }))
+          : [];
+        setHabitDigestWeeks(digestWeeks);
+        setHabitDigestSummary(latestWeek
+          ? `This week you trained on ${latestWeek.trained_trigger_days || 0} of ${latestWeek.trigger_days || 0} trigger days. ${triggerContext ? `Your trigger is "${triggerContext}".` : 'Set a trigger to make this digest sharper.'}`
+          : 'Your digest will build as you log workouts and trigger days.');
 
         const entries = Array.isArray((journal as any)?.entries) ? (journal as any).entries : [];
         setJournalRunningText(entries.length > 0 ? `${entries.length} ENTRIES SAVED` : 'READY TODAY');
@@ -265,6 +283,11 @@ export default function ProfileScreen() {
         const plan = (plans.items || []).find((item: any) => normalizeTierLabel(item.subscriptionTier) === normalizedTier);
         setPlanPrice(planPriceText(plan, normalizedTier));
         setPlanDescription(planCopy(plan, normalizedTier));
+
+        const wearableDevices = Array.isArray((longevity as any)?.wearables?.devices) ? (longevity as any).wearables.devices : [];
+        const connected = wearableDevices.find((device: any) => Boolean(device.connected || device.is_connected));
+        setWearableDevice(connected ? String(connected.name || connected.provider || 'Connected wearable') : 'No wearable connected');
+        setWearableSyncMeta(String((longevity as any)?.wearables?.sync_message || (connected ? 'Connected' : 'Connect a device to sync health metrics')));
       } catch {
         // Fallback silently
       }
@@ -379,7 +402,11 @@ export default function ProfileScreen() {
 
         {/* Health & Wearables section matching lines 1158-1182 (Platinum & Inner Circle) */}
         {isPlatinumOrIC && (
-          <ClaudeWearablesCard onOpenWearables={() => setShowWearModal(true)} />
+          <ClaudeWearablesCard
+            onOpenWearables={() => setShowWearModal(true)}
+            connectedDevice={wearableDevice}
+            syncMeta={wearableSyncMeta}
+          />
         )}
 
         {/* All 4 Habit Fields editable with trigger usage counter matching lines 1184-1211 */}
@@ -587,6 +614,10 @@ export default function ProfileScreen() {
       <ClaudeHabitDigestModal
         visible={showDigestModal}
         onClose={() => setShowDigestModal(false)}
+        identityStatement={habitIdentity}
+        summaryText={habitDigestSummary}
+        currentScore={habitDigestScore}
+        weeks={habitDigestWeeks}
         onBookHumanSession={() => {
           setShowDigestModal(false);
           setShowBookingModal(true);
@@ -601,6 +632,7 @@ export default function ProfileScreen() {
         visible={showBookingModal}
         onClose={() => setShowBookingModal(false)}
         tierBadge={tier}
+        userPhone={user?.contact_number || ''}
       />
       <ClaudeInnerCircleApplyModal
         visible={showApplyModal}

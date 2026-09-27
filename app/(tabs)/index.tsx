@@ -145,22 +145,24 @@ export default function HomeScreen() {
         setCurrentWeight(String(existingWeight));
       }
 
-      // Map challenges from backend overview if available
-      if (challengeData?.active_challenges && Array.isArray(challengeData.active_challenges) && challengeData.active_challenges.length > 0) {
-        const mapped = challengeData.active_challenges.map((ch: any) => {
+      // Map only joined challenges from backend overview
+      if (Array.isArray(challengeData?.active_challenges)) {
+        const joinedMapped = challengeData.active_challenges.map((ch: any) => {
           const totalDays = Number(ch.total_days || ch.duration_days || 21);
           const daysLeft = Number(ch.days_left || 0);
           const currentDay = Math.max(1, totalDays - daysLeft);
+          const rawProgress = Number(ch.progress || 0);
+          const pct = Math.min(100, Math.max(0, Math.round(rawProgress <= 1 ? rawProgress * 100 : rawProgress)));
           return {
             id: ch.challenge_id || ch.id,
             n: ch.title || 'Active Challenge',
             d: `Day ${currentDay} of ${totalDays}`,
-            pct: Math.min(100, Math.max(0, Math.round(Number(ch.progress || 0)))),
+            pct,
             rank: ch.points ? `${ch.points} pts` : 'Active',
             note: ch.why_it_matters || ch.description || 'Finish today to keep the streak bonus.',
           };
         });
-        setChallenges(mapped);
+        setChallenges(joinedMapped);
       }
 
       // Check periodic weight check-in prompt
