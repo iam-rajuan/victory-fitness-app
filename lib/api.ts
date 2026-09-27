@@ -1483,6 +1483,32 @@ export async function confirmCurrentUserWeight(snoozeDays = 0) {
   return bodyMetricsCache;
 }
 
+export type HydrationState = {
+  date: string;
+  water_ml: number;
+  target_liters: number;
+  reminder: {
+    enabled: boolean;
+    mode: 'Vibrate' | 'Tone';
+  };
+};
+
+export async function fetchCurrentUserHydration() {
+  return apiRequest<HydrationState>('/me/hydration');
+}
+
+export async function updateCurrentUserHydration(payload: {
+  water_ml?: number;
+  target_liters?: number;
+  reminder_enabled?: boolean;
+  reminder_mode?: 'Vibrate' | 'Tone';
+}) {
+  return apiRequest<HydrationState>('/me/hydration', {
+    method: 'PATCH',
+    body: payload,
+  });
+}
+
 export async function submitCoachingApplication(payload: CoachingApplicationPayload) {
   return apiRequest('/applications', {
     method: 'POST',

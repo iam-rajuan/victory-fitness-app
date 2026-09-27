@@ -11,6 +11,7 @@ interface ClaudeAlsoTodayCardProps {
   sessionsDoneThisWeek?: number;
   sessionsTargetThisWeek?: number;
   journalWrittenToday?: boolean;
+  onNavigateWorkout?: () => void;
 }
 
 const NAVY = '#0D2B45';
@@ -28,6 +29,7 @@ export default function ClaudeAlsoTodayCard({
   sessionsDoneThisWeek = 3,
   sessionsTargetThisWeek = 4,
   journalWrittenToday = false,
+  onNavigateWorkout,
 }: ClaudeAlsoTodayCardProps) {
   const router = useRouter();
   const { colors, isDark } = useTheme();
@@ -121,8 +123,14 @@ export default function ClaudeAlsoTodayCard({
 
         {/* Row 3: Weekly Target & Library */}
         <Pressable
-          style={styles.itemRow}
-          onPress={() => pushRoute(router, '/workout-library')}
+          style={({ pressed }) => [styles.itemRow, pressed && { opacity: 0.75 }]}
+          onPress={() => {
+            if (onNavigateWorkout) {
+              onNavigateWorkout();
+            } else {
+              pushRoute(router, '/workout');
+            }
+          }}
         >
           <View style={styles.textCol}>
             <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]}>

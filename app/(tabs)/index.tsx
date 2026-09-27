@@ -16,9 +16,15 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import {
   AuthUser,
   confirmCurrentUserWeight,
+  createWorkoutLog,
   fetchCurrentUser,
   fetchCurrentUserBodyMetrics,
+  fetchCurrentUserHydration,
+  fetchWorkoutLogs,
+  HydrationState,
   updateCurrentUserBodyMetrics,
+  updateCurrentUserHydration,
+  WorkoutLogItem,
 } from '../../lib/api';
 import { normalizeSubscriptionTier } from '../../lib/access';
 import { useModuleAccessGuard } from '../../lib/useModuleAccessGuard';
@@ -30,8 +36,16 @@ import {
   shouldShowWeightUpdatePrompt,
   updateUserWeight,
 } from '../../lib/onboarding';
-import { fetchChallengeOverviewData } from '../../lib/screenData';
+import { fetchChallengeOverviewData, fetchJournalEntries } from '../../lib/screenData';
 import { getSavedPlanStatus, dismissFreshPlanBanner } from '../../lib/planStorage';
+import { getLatestNutritionPlan, NutritionPlanApiResponse, updateNutritionMealCompletion } from '../../lib/nutrition';
+import {
+  fetchLatestStrengthWorkoutPlan,
+  StrengthPlanDay,
+  StrengthPlanExercise,
+  StrengthPlanResponse,
+} from '../../lib/workout-plans';
+import { fetchWorkoutLibrary } from '../../lib/workouts';
 
 import ClaudeHomeHeader from '../../components/home/ClaudeHomeHeader';
 import ClaudeInspirationCard from '../../components/home/ClaudeInspirationCard';
@@ -61,6 +75,133 @@ const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System'
 const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
 
+type HomeMealItem = {
+  key: string;
+  title: string;
+  subtitle: string;
+  completed: boolean;
+  canLog?: boolean;
+};
+
+type HomePlanExercise = {
+  id: string;
+  name: string;
+  note: string;
+  sets: string;
+  kind?: string;
+  rest?: string;
+};
+
+type HomeActiveExercise = {
+  id: string;
+  name: string;
+  note: string;
+  targetSets: number;
+  targetReps: number | 'max';
+  defaultKg: number;
+  restTime: string;
+  restSeconds: number;
+  isHold?: boolean;
+};
+
+function parseMinutes(value: unknown, fallback = 40) {
+  const match = String(value || '').match(/\d+/);
+  return match ? Math.max(1, Number(match[0])) : fallback;
+}
+
+function parseNumber(value: unknown, fallback = 0) {
+  const match = String(value || '').match(/[\d.]+/);
+  return match ? Number(match[0]) || fallback : fallback;
+}
+
+function parseReps(value: unknown): number | 'max' {
+  const text = String(value || '').trim().toLowerCase();
+  if (!text || text.includes('max')) return 'max';
+  const match = text.match(/\d+/);
+  return match ? Math.max(1, Number(match[0])) : 1;
+}
+
+function parseRestSeconds(value: unknown, fallback = 60) {
+  const text = String(value || '').trim().toLowerCase();
+  const amount = parseNumber(text, fallback);
+  if (text.includes('min')) return Math.max(0, Math.round(amount * 60));
+  return Math.max(0, Math.round(amount));
+}
+
+function formatDurationFromSeconds(seconds: number) {
+  if (!seconds) return 'Duration not set';
+  const minutes = Math.max(1, Math.round(seconds / 60));
+  return `${minutes} min`;
+}
+
+function isSameLocalDay(value: string | null | undefined, now = new Date()) {
+  if (!value) return false;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return false;
+  return (
+    parsed.getFullYear() === now.getFullYear() &&
+    parsed.getMonth() === now.getMonth() &&
+    parsed.getDate() === now.getDate()
+  );
+}
+
+function isThisLocalWeek(value: string | null | undefined, now = new Date()) {
+  if (!value) return false;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return false;
+  const day = now.getDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  const weekStart = new Date(now);
+  weekStart.setHours(0, 0, 0, 0);
+  weekStart.setDate(now.getDate() + mondayOffset);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 7);
+  return parsed >= weekStart && parsed < weekEnd;
+}
+
+function firstStrengthDay(plan: StrengthPlanResponse | null): StrengthPlanDay | null {
+  return plan?.days?.[0] ?? null;
+}
+
+function mapPlanExerciseForDetail(exercise: StrengthPlanExercise, index: number): HomePlanExercise {
+  return {
+    id: exercise.id || `exercise-${index}`,
+    name: exercise.name || `Exercise ${index + 1}`,
+    note: [exercise.type, exercise.rest ? `${exercise.rest} rest` : '', exercise.weight]
+      .filter(Boolean)
+      .join(' · '),
+    sets: `${exercise.sets || 1} × ${exercise.reps || '1'}`,
+    kind: exercise.type,
+    rest: exercise.rest,
+  };
+}
+
+function mapPlanExerciseForSession(exercise: StrengthPlanExercise, index: number): HomeActiveExercise {
+  const reps = parseReps(exercise.reps);
+  const isHold = reps === 'max' || /hold|hang|plank/i.test(exercise.name || '');
+  const restSeconds = parseRestSeconds(exercise.rest, 60);
+  return {
+    id: exercise.id || `exercise-${index}`,
+    name: exercise.name || `Exercise ${index + 1}`,
+    note: [exercise.type, exercise.rest ? `${exercise.rest} rest` : ''].filter(Boolean).join(' · '),
+    targetSets: Math.max(1, Number(exercise.sets || 1)),
+    targetReps: reps,
+    defaultKg: parseNumber(exercise.weight, 0),
+    restTime: restSeconds > 0 ? `${restSeconds}s` : '--',
+    restSeconds,
+    isHold,
+  };
+}
+
+function getNutritionToday(plan: NutritionPlanApiResponse | null) {
+  if (!plan?.days?.length) return null;
+  const weekday = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+  return (
+    plan.days.find((day) => String(day.day || '').toLowerCase().includes(weekday)) ||
+    plan.days[0]
+  );
+}
+
 export default function HomeScreen() {
   const checkingAccess = useModuleAccessGuard('/');
   const router = useRouter();
@@ -71,6 +212,13 @@ export default function HomeScreen() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [currentWeight, setCurrentWeight] = useState('');
   const [challenges, setChallenges] = useState<ChallengeItem[]>([]);
+  const [nutritionPlan, setNutritionPlan] = useState<NutritionPlanApiResponse | null>(null);
+  const [updatingMealKey, setUpdatingMealKey] = useState<string | null>(null);
+  const [strengthPlan, setStrengthPlan] = useState<StrengthPlanResponse | null>(null);
+  const [homeLibraryWorkout, setHomeLibraryWorkout] = useState<any | null>(null);
+  const [workoutLogs, setWorkoutLogs] = useState<WorkoutLogItem[]>([]);
+  const [journalWrittenToday, setJournalWrittenToday] = useState(false);
+  const [hydration, setHydration] = useState<HydrationState | null>(null);
 
   // Workout Plan Detail, Active Workout, and Completion Modals
   const [planDetailVisible, setPlanDetailVisible] = useState(false);
@@ -130,10 +278,26 @@ export default function HomeScreen() {
 
   const loadHomeData = useCallback(async () => {
     try {
-      const [user, metrics, challengeData] = await Promise.all([
+      const [
+        user,
+        metrics,
+        challengeData,
+        latestNutritionPlan,
+        latestStrengthPlan,
+        logsData,
+        journalData,
+        hydrationData,
+        workoutLibrary,
+      ] = await Promise.all([
         fetchCurrentUser().catch(() => null),
         fetchCurrentUserBodyMetrics().catch(() => null),
-        fetchChallengeOverviewData().catch(() => null),
+        fetchChallengeOverviewData({ forceRefresh: true }).catch(() => null),
+        getLatestNutritionPlan({ forceRefresh: true }).catch(() => null),
+        fetchLatestStrengthWorkoutPlan().catch(() => null),
+        fetchWorkoutLogs(1, 50, 'completed').catch(() => null),
+        fetchJournalEntries().catch(() => null),
+        fetchCurrentUserHydration().catch(() => null),
+        fetchWorkoutLibrary().catch(() => null),
       ]);
 
       if (user) {
@@ -143,6 +307,31 @@ export default function HomeScreen() {
       const existingWeight = metrics?.weight || (user as any)?.weight || '';
       if (existingWeight) {
         setCurrentWeight(String(existingWeight));
+      }
+
+      setNutritionPlan(latestNutritionPlan);
+      setStrengthPlan(latestStrengthPlan);
+      setWorkoutLogs(Array.isArray(logsData?.items) ? logsData.items : []);
+      setHydration(hydrationData);
+      setHomeLibraryWorkout(workoutLibrary?.featuredWorkout || workoutLibrary?.workouts?.[0] || null);
+
+      if (Array.isArray(journalData?.entries)) {
+        setJournalWrittenToday(journalData.entries.some((entry) => isSameLocalDay(entry.created_at)));
+      }
+
+      if (latestStrengthPlan) {
+        const day = firstStrengthDay(latestStrengthPlan);
+        const exerciseCount = day?.exercises?.length || day?.sections?.reduce((total, section) => total + (section.exercises?.length || 0), 0) || 0;
+        const durationLabel = day?.est_time || planDuration;
+        const summary = latestStrengthPlan.summary || '';
+        const equipmentMatch = summary.match(/using\s+(.+?)(?:\.|$)/i);
+        setPlanBuilt(true);
+        setPlanSummaryLine(
+          summary ||
+            `${day?.title || 'Your strength session'} · ${parseMinutes(durationLabel, 40)} min · ${exerciseCount} exercises.`
+        );
+        setPlanKit(equipmentMatch?.[1]?.trim() || planKit);
+        setPlanDuration(`${parseMinutes(durationLabel, 40)} minutes`);
       }
 
       // Map only joined challenges from backend overview
@@ -250,8 +439,112 @@ export default function HomeScreen() {
   const streakDays = currentUser?.streak_days || 12;
   const targetWaterLiters = useMemo(() => {
     const w = Number(currentWeight) || 70;
-    return Math.round(w * 0.035 * 10) / 10;
-  }, [currentWeight]);
+    return hydration?.target_liters || Math.round(w * 0.035 * 10) / 10;
+  }, [currentWeight, hydration?.target_liters]);
+
+  const strengthDay = useMemo(() => firstStrengthDay(strengthPlan), [strengthPlan]);
+  const strengthExercises = useMemo(() => {
+    const flat = strengthDay?.exercises?.length
+      ? strengthDay.exercises
+      : (strengthDay?.sections || []).flatMap((section) => section.exercises || []);
+    return flat || [];
+  }, [strengthDay]);
+  const detailExercises = useMemo(
+    () => {
+      if (strengthExercises.length > 0) {
+        return strengthExercises.map(mapPlanExerciseForDetail);
+      }
+      return (homeLibraryWorkout?.movements || []).map((movement: any, index: number) => ({
+        id: movement.id || `movement-${index}`,
+        name: movement.name || `Movement ${index + 1}`,
+        note: [movement.equipment, movement.restSeconds ? `${movement.restSeconds}s rest` : '', movement.notes]
+          .filter(Boolean)
+          .join(' · '),
+        sets: `${movement.sets || 1} × ${movement.reps || '1'}`,
+        rest: movement.restSeconds ? `${movement.restSeconds}s` : undefined,
+      }));
+    },
+    [homeLibraryWorkout?.movements, strengthExercises]
+  );
+  const activeExercises = useMemo(
+    () => {
+      if (strengthExercises.length > 0) {
+        return strengthExercises.map(mapPlanExerciseForSession);
+      }
+      return (homeLibraryWorkout?.movements || []).map((movement: any, index: number) => {
+        const reps = parseReps(movement.reps);
+        const restSeconds = Math.max(0, Number(movement.restSeconds || 60));
+        return {
+          id: movement.id || `movement-${index}`,
+          name: movement.name || `Movement ${index + 1}`,
+          note: [movement.equipment, movement.notes].filter(Boolean).join(' · '),
+          targetSets: Math.max(1, Number(movement.sets || 1)),
+          targetReps: reps,
+          defaultKg: parseNumber(movement.load, 0),
+          restTime: restSeconds > 0 ? `${restSeconds}s` : '--',
+          restSeconds,
+          isHold: reps === 'max',
+        };
+      });
+    },
+    [homeLibraryWorkout?.movements, strengthExercises]
+  );
+  const workoutTitle = useMemo(() => {
+    return (
+      strengthDay?.title ||
+      homeLibraryWorkout?.title ||
+      currentUser?.workout_unlock_label ||
+      'Workout'
+    );
+  }, [currentUser?.workout_unlock_label, homeLibraryWorkout?.title, strengthDay?.title]);
+  const workoutDurationMinutes = useMemo(() => {
+    if (strengthDay?.est_time) return parseMinutes(strengthDay.est_time, 40);
+    if (homeLibraryWorkout?.durationMinutes) return Number(homeLibraryWorkout.durationMinutes);
+    return Number(planDuration.replace(/[^0-9]/g, '')) || (tier === 'SILVER' ? 38 : 40);
+  }, [homeLibraryWorkout?.durationMinutes, planDuration, strengthDay?.est_time, tier]);
+  const workoutEquipment = useMemo(() => {
+    const fromExercise = strengthExercises.find((item) => String(item.weight || '').trim())?.weight;
+    return (planKit || homeLibraryWorkout?.equipment || fromExercise || 'Bodyweight').toUpperCase();
+  }, [homeLibraryWorkout?.equipment, planKit, strengthExercises]);
+  const planDayKicker = useMemo(() => {
+    if (strengthDay?.day) {
+      return `${String(strengthDay.day).toUpperCase()} · ${workoutDurationMinutes} MIN`;
+    }
+    return `TODAY · ${workoutDurationMinutes} MIN`;
+  }, [strengthDay?.day, workoutDurationMinutes]);
+  const planSource = strengthPlan ? 'BUILT BY YOUR COACH' : tier !== 'SILVER' ? 'BUILT BY YOUR COACH' : 'TODAY’S WORKOUT';
+
+  const todayMeals = useMemo<HomeMealItem[]>(() => {
+    const today = getNutritionToday(nutritionPlan);
+    if (!today) return [];
+    const completions = nutritionPlan?.meal_completions?.[today.day] || {};
+    const rows: HomeMealItem[] = [];
+    ([
+      ['breakfast', 'Breakfast'],
+      ['lunch', 'Lunch'],
+      ['dinner', 'Dinner'],
+    ] as const).forEach(([key, label]) => {
+      const meal = today[key];
+      if (!meal || typeof meal !== 'object') return;
+      const completed = Boolean(completions[key]);
+      rows.push({
+        key,
+        title: String(meal.name || `${label} planned`),
+        subtitle: `${label} · ${completed ? 'eaten' : meal.timing || 'from your week plan'}`,
+        completed,
+        canLog: key === 'dinner',
+      });
+    });
+    return rows;
+  }, [nutritionPlan]);
+
+  const sessionsDoneThisWeek = useMemo(() => {
+    return workoutLogs.filter((log) => isThisLocalWeek(log.completed_at || log.started_at)).length;
+  }, [workoutLogs]);
+
+  const latestCompletedToday = useMemo(() => {
+    return workoutLogs.find((log) => isSameLocalDay(log.completed_at || log.started_at));
+  }, [workoutLogs]);
 
   const handleOpenChallenge = useCallback((ch: any) => {
     router.push('/(tabs)/challenge');
@@ -260,6 +553,81 @@ export default function HomeScreen() {
   const handleInviteSomeone = useCallback(() => {
     setInviteModalVisible(true);
   }, []);
+
+  const handleToggleHomeMeal = useCallback(async (mealKey: string, completed: boolean) => {
+    const today = getNutritionToday(nutritionPlan);
+    if (!today?.day || updatingMealKey) return;
+    setUpdatingMealKey(mealKey);
+    try {
+      const updated = await updateNutritionMealCompletion({
+        day: today.day,
+        meal_key: mealKey,
+        completed,
+      });
+      setNutritionPlan(updated);
+    } catch {
+      Alert.alert('Unable to update meal', 'Please try again in a moment.');
+    } finally {
+      setUpdatingMealKey(null);
+    }
+  }, [nutritionPlan, updatingMealKey]);
+
+  const handleWaterChange = useCallback(async (ml: number) => {
+    try {
+      const updated = await updateCurrentUserHydration({
+        water_ml: ml,
+        target_liters: targetWaterLiters,
+      });
+      setHydration(updated);
+    } catch {
+      // Keep the optimistic UI state; the card still persists locally.
+    }
+  }, [targetWaterLiters]);
+
+  const handleReminderChange = useCallback(async (enabled: boolean, mode: 'Vibrate' | 'Tone') => {
+    try {
+      const updated = await updateCurrentUserHydration({
+        reminder_enabled: enabled,
+        reminder_mode: mode,
+        target_liters: targetWaterLiters,
+      });
+      setHydration(updated);
+    } catch {
+      // Reminder state remains locally available if the request fails.
+    }
+  }, [targetWaterLiters]);
+
+  const handleCompletedHomeSession = useCallback(async (stats: { minutes: number; setsLogged: number; volumeKg: number; durationSeconds: number }) => {
+    setCompletedStats(stats);
+    try {
+      await createWorkoutLog({
+        workout_id: strengthPlan?.plan_id ? `${strengthPlan.plan_id}-${strengthDay?.day || 'day'}` : homeLibraryWorkout?.id || 'home-session',
+        title: workoutTitle,
+        duration_seconds: stats.durationSeconds || stats.minutes * 60,
+        sets_logged: stats.setsLogged,
+        volume_kg: stats.volumeKg,
+        movements: activeExercises.map((exercise: HomeActiveExercise) => ({
+          id: exercise.id,
+          name: exercise.name,
+          sets: exercise.targetSets,
+          reps: exercise.targetReps,
+          rest_seconds: exercise.restSeconds,
+          default_kg: exercise.defaultKg,
+        })),
+        status: 'completed',
+      });
+      const logsData = await fetchWorkoutLogs(1, 50, 'completed').catch(() => null);
+      if (Array.isArray(logsData?.items)) {
+        setWorkoutLogs(logsData.items);
+      }
+      const refreshedUser = await fetchCurrentUser({ forceRefresh: true }).catch(() => null);
+      if (refreshedUser) setCurrentUser(refreshedUser);
+    } catch {
+      Alert.alert('Session saved locally only', 'The workout finished, but saving it to the backend failed. Please try again when the connection is stable.');
+    } finally {
+      setCompleteModalVisible(true);
+    }
+  }, [activeExercises, homeLibraryWorkout?.id, strengthDay?.day, strengthPlan?.plan_id, workoutTitle]);
 
   if (checkingAccess) {
     return (
@@ -424,10 +792,10 @@ export default function HomeScreen() {
         {/* 4. Today's Workout Session Card (Adaptive by Tier & Custom Built Plan) */}
         <ClaudeTodayWorkoutCard
           tier={tier}
-          workoutTitle={currentUser?.workout_unlock_label || 'Upper Body Strength'}
-          durationMinutes={Number(planDuration.replace(/[^0-9]/g, '')) || (tier === 'SILVER' ? 38 : 40)}
-          exerciseCount={4}
-          equipment={planKit.toUpperCase()}
+          workoutTitle={workoutTitle}
+          durationMinutes={workoutDurationMinutes}
+          exerciseCount={activeExercises.length || homeLibraryWorkout?.movements?.length || 0}
+          equipment={workoutEquipment}
           isPlanBuilt={planBuilt}
           onStartSession={() => {
             if (tier === 'SILVER') {
@@ -456,12 +824,19 @@ export default function HomeScreen() {
           tier={tier}
           onNavigateFood={() => pushRoute(router, '/mealPlan')}
           onNavigatePlan={() => pushRoute(router, '/mealPlan')}
+          meals={todayMeals}
+          updatingMealKey={updatingMealKey}
+          onToggleMeal={handleToggleHomeMeal}
         />
 
         {/* 7. Hydration Glass with animated fill & reminder toggle */}
         <ClaudeHydrationCard
           targetLiters={targetWaterLiters}
-          initialMl={1400}
+          initialMl={hydration?.water_ml || 0}
+          reminderEnabled={hydration?.reminder?.enabled}
+          reminderMode={hydration?.reminder?.mode}
+          onWaterChange={handleWaterChange}
+          onReminderChange={handleReminderChange}
         />
 
         {/* 8. AI Coach Bar (Prompt input for Gold/Plat/IC, locked teaser for Silver) */}
@@ -472,11 +847,12 @@ export default function HomeScreen() {
 
         {/* 10. Also Today (Accountability Duo, Daily Journal, Weekly Target) */}
         <ClaudeAlsoTodayCard
-          partnerName="Anna Reinhardt"
-          partnerTrainedToday={true}
-          sessionsDoneThisWeek={3}
+          partnerName={undefined}
+          partnerTrainedToday={false}
+          sessionsDoneThisWeek={sessionsDoneThisWeek}
           sessionsTargetThisWeek={4}
-          journalWrittenToday={false}
+          journalWrittenToday={journalWrittenToday}
+          onNavigateWorkout={() => pushRoute(router, '/workout')}
         />
       </ScrollView>
 
@@ -484,17 +860,17 @@ export default function HomeScreen() {
       <ClaudeVimeoPlayerModal
         visible={vimeoModalVisible}
         onClose={() => setVimeoModalVisible(false)}
-        workoutTitle={currentUser?.workout_unlock_label || 'Upper Body Strength'}
-        workoutMeta="FROM THE LIBRARY · 38 MIN · DUMBBELLS"
-        vimeoId="912440318"
+        workoutTitle={homeLibraryWorkout?.title || workoutTitle}
+        workoutMeta={`FROM THE LIBRARY · ${homeLibraryWorkout?.durationMinutes || workoutDurationMinutes} MIN · ${homeLibraryWorkout?.equipment || workoutEquipment}`}
+        vimeoId={homeLibraryWorkout?.vimeoId || ''}
         onFinishSession={() => {
           setVimeoModalVisible(false);
-          setCompletedStats({
-            minutes: 38,
-            setsLogged: 4,
-            volumeKg: 680,
+          void handleCompletedHomeSession({
+            minutes: homeLibraryWorkout?.durationMinutes || workoutDurationMinutes,
+            setsLogged: homeLibraryWorkout?.movements?.length || 0,
+            volumeKg: 0,
+            durationSeconds: homeLibraryWorkout?.durationSeconds || workoutDurationMinutes * 60,
           });
-          setCompleteModalVisible(true);
         }}
       />
 
@@ -502,9 +878,10 @@ export default function HomeScreen() {
       <ClaudePlanDetailModal
         visible={planDetailVisible}
         onClose={() => setPlanDetailVisible(false)}
-        planTitle={currentUser?.workout_unlock_label || 'Upper Body Strength'}
-        dayKicker="DAY 3 OF WEEK 2 · PUSH DAY"
-        planSource={tier !== 'SILVER' ? 'BUILT BY YOUR COACH' : 'TODAY’S WORKOUT'}
+        planTitle={workoutTitle}
+        dayKicker={planDayKicker}
+        planSource={planSource}
+        exercises={detailExercises}
         onBeginSession={() => {
           setPlanDetailVisible(false);
           setActiveSessionVisible(true);
@@ -520,11 +897,13 @@ export default function HomeScreen() {
         visible={activeSessionVisible}
         onClose={() => setActiveSessionVisible(false)}
         tier={tier}
-        workoutTitle={currentUser?.workout_unlock_label || 'Upper Body Strength'}
+        workoutTitle={workoutTitle}
+        exercises={activeExercises}
         onEndSession={(stats) => {
-          if (stats) setCompletedStats(stats);
           setActiveSessionVisible(false);
-          setCompleteModalVisible(true);
+          if (stats) {
+            void handleCompletedHomeSession(stats);
+          }
         }}
       />
 
@@ -532,7 +911,7 @@ export default function HomeScreen() {
       <ClaudeSessionCompleteModal
         visible={completeModalVisible}
         onClose={() => setCompleteModalVisible(false)}
-        workoutTitle={currentUser?.workout_unlock_label || 'Upper Body Strength'}
+        workoutTitle={latestCompletedToday?.title || workoutTitle}
         minutes={completedStats.minutes}
         setsLogged={completedStats.setsLogged}
         volumeKg={completedStats.volumeKg}

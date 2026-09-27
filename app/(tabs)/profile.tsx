@@ -31,6 +31,7 @@ import ClaudeOneToOneBookingModal from '../../components/profile/ClaudeOneToOneB
 import ClaudeInnerCircleApplyModal from '../../components/profile/ClaudeInnerCircleApplyModal';
 import ClaudeNotificationPreferencesModal from '../../components/profile/ClaudeNotificationPreferencesModal';
 import ClaudeDuoModal from '../../components/duo/ClaudeDuoModal';
+import RequirementAuditBoundary from '../../components/audit/RequirementAuditBoundary';
 import { useTheme } from '../../context/ThemeContext';
 
 const OBSIDIAN = '#0D0D0D';
@@ -374,31 +375,33 @@ export default function ProfileScreen() {
         />
 
         {/* Daily Journal Teaser Card matching lines 1143-1156 */}
-        <View style={styles.sectionWrap}>
-          <Text style={[styles.sectionKicker, { color: colors.copper }]}>JOURNAL</Text>
-          <TouchableOpacity
-            style={[
-              styles.journalCard,
-              {
-                backgroundColor: isDark ? NAVY : '#FFFFFF',
-                borderColor: isDark ? 'transparent' : colors.cardBorder,
-                borderWidth: isDark ? 0 : 1,
-              },
-            ]}
-            activeOpacity={0.85}
-            onPress={() => router.push('/journal')}
-          >
-            <View style={styles.journalTopRow}>
-              <Text style={styles.journalPromptKicker}>TODAY'S PROMPT</Text>
-              <Text style={styles.journalRunningBadge}>{journalRunningText}</Text>
-            </View>
-            <Text style={[styles.journalTitle, { color: colors.text }]}>{journalPrompt}</Text>
-            <View style={styles.journalBottomRow}>
-              <Text style={[styles.journalSub, { color: colors.textSecondary }]}>Two minutes. Nobody else sees it.</Text>
-              <Text style={styles.journalWriteLink}>Write ›</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
+        <RequirementAuditBoundary auditId="APP-EXTRA-001" status="extra">
+          <View style={styles.sectionWrap}>
+            <Text style={[styles.sectionKicker, { color: colors.copper }]}>JOURNAL</Text>
+            <TouchableOpacity
+              style={[
+                styles.journalCard,
+                {
+                  backgroundColor: isDark ? NAVY : '#FFFFFF',
+                  borderColor: isDark ? 'transparent' : colors.cardBorder,
+                  borderWidth: isDark ? 0 : 1,
+                },
+              ]}
+              activeOpacity={0.85}
+              onPress={() => router.push('/journal')}
+            >
+              <View style={styles.journalTopRow}>
+                <Text style={styles.journalPromptKicker}>TODAY'S PROMPT</Text>
+                <Text style={styles.journalRunningBadge}>{journalRunningText}</Text>
+              </View>
+              <Text style={[styles.journalTitle, { color: colors.text }]}>{journalPrompt}</Text>
+              <View style={styles.journalBottomRow}>
+                <Text style={[styles.journalSub, { color: colors.textSecondary }]}>Two minutes. Nobody else sees it.</Text>
+                <Text style={styles.journalWriteLink}>Write ›</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </RequirementAuditBoundary>
 
         {/* Health & Wearables section matching lines 1158-1182 (Platinum & Inner Circle) */}
         {isPlatinumOrIC && (

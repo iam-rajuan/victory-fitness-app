@@ -7,6 +7,9 @@ interface ClaudeHydrationCardProps {
   targetLiters?: number;
   initialMl?: number;
   onWaterChange?: (ml: number) => void;
+  reminderEnabled?: boolean;
+  reminderMode?: 'Vibrate' | 'Tone';
+  onReminderChange?: (enabled: boolean, mode: 'Vibrate' | 'Tone') => void;
 }
 
 const NAVY = '#0D2B45';
@@ -30,15 +33,34 @@ export default function ClaudeHydrationCard({
   targetLiters = 2.5,
   initialMl = 1400,
   onWaterChange,
+  reminderEnabled,
+  reminderMode,
+  onReminderChange,
 }: ClaudeHydrationCardProps) {
   const { colors, isDark } = useTheme();
   const [waterMl, setWaterMl] = useState(initialMl);
-  const [remindEnabled, setRemindEnabled] = useState(false);
-  const [remindMode, setRemindMode] = useState<'Vibrate' | 'Tone'>('Vibrate');
+  const [remindEnabled, setRemindEnabled] = useState(Boolean(reminderEnabled));
+  const [remindMode, setRemindMode] = useState<'Vibrate' | 'Tone'>(reminderMode || 'Vibrate');
 
   const fillAnim = useRef(new Animated.Value(Math.min(1, initialMl / (targetLiters * 1000)))).current;
 
-  // Hydrate from storage
+  useEffect(() => {
+    setWaterMl(initialMl);
+  }, [initialMl]);
+
+  useEffect(() => {
+    if (typeof reminderEnabled === 'boolean') {
+      setRemindEnabled(reminderEnabled);
+    }
+  }, [reminderEnabled]);
+
+  useEffect(() => {
+    if (reminderMode === 'Tone' || reminderMode === 'Vibrate') {
+      setRemindMode(reminderMode);
+    }
+  }, [reminderMode]);
+
+  // Hydrate from storage when backend state has not arrived yet.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -47,14 +69,14 @@ export default function ClaudeHydrationCard({
         const savedRemind = await AsyncStorage.getItem(REMINDER_KEY);
         const savedMode = await AsyncStorage.getItem(REMINDER_MODE_KEY);
         if (cancelled) return;
-        if (savedVal !== null) {
+        if (initialMl === 0 && savedVal !== null) {
           const parsed = Number(savedVal);
           if (!isNaN(parsed)) setWaterMl(parsed);
         }
-        if (savedRemind !== null) {
+        if (typeof reminderEnabled !== 'boolean' && savedRemind !== null) {
           setRemindEnabled(savedRemind === 'true');
         }
-        if (savedMode === 'Tone' || savedMode === 'Vibrate') {
+        if (!reminderMode && (savedMode === 'Tone' || savedMode === 'Vibrate')) {
           setRemindMode(savedMode);
         }
       } catch {}
@@ -62,7 +84,7 @@ export default function ClaudeHydrationCard({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialMl, reminderEnabled, reminderMode]);
 
   const targetMl = targetLiters * 1000;
   const pctNum = Math.min(100, Math.round((waterMl / targetMl) * 100));
@@ -87,6 +109,7 @@ export default function ClaudeHydrationCard({
   const toggleRemind = async () => {
     const next = !remindEnabled;
     setRemindEnabled(next);
+    if (onReminderChange) onReminderChange(next, remindMode);
     try {
       await AsyncStorage.setItem(REMINDER_KEY, String(next));
     } catch {}
@@ -94,6 +117,7 @@ export default function ClaudeHydrationCard({
 
   const changeMode = async (m: 'Vibrate' | 'Tone') => {
     setRemindMode(m);
+    if (onReminderChange) onReminderChange(remindEnabled, m);
     try {
       await AsyncStorage.setItem(REMINDER_MODE_KEY, m);
     } catch {}

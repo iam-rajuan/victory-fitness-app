@@ -8,7 +8,15 @@ interface ClaudeFoodTodayCardProps {
   tier: 'SILVER' | 'GOLD' | 'GOLD_BETA' | 'PLATINUM' | 'INNER_CIRCLE' | 'NONE';
   onNavigateFood?: () => void;
   onNavigatePlan?: () => void;
-  onLogDinner?: () => void;
+  meals?: Array<{
+    key: string;
+    title: string;
+    subtitle: string;
+    completed: boolean;
+    canLog?: boolean;
+  }>;
+  updatingMealKey?: string | null;
+  onToggleMeal?: (mealKey: string, completed: boolean) => void;
 }
 
 const NAVY = '#0D2B45';
@@ -23,12 +31,28 @@ export default function ClaudeFoodTodayCard({
   tier,
   onNavigateFood,
   onNavigatePlan,
-  onLogDinner,
+  meals,
+  updatingMealKey,
+  onToggleMeal,
 }: ClaudeFoodTodayCardProps) {
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const hasFoodPlanner = tier !== 'SILVER' && tier !== 'NONE';
-  const [dinnerLogged, setDinnerLogged] = useState(false);
+  const [fallbackDinnerLogged, setFallbackDinnerLogged] = useState(false);
+
+  const visibleMeals = meals && meals.length > 0
+    ? meals.slice(0, 3)
+    : [
+        { key: 'breakfast', title: 'No breakfast planned', subtitle: 'Breakfast · open food screen', completed: false },
+        { key: 'lunch', title: 'No lunch planned', subtitle: 'Lunch · open food screen', completed: false },
+        {
+          key: 'dinner',
+          title: 'No dinner planned',
+          subtitle: fallbackDinnerLogged ? 'Dinner · eaten' : 'Dinner · open food screen',
+          completed: fallbackDinnerLogged,
+          canLog: true,
+        },
+      ];
 
   const handleOpenFood = () => {
     if (onNavigateFood) {
@@ -46,9 +70,14 @@ export default function ClaudeFoodTodayCard({
     pushRoute(router, '/mealPlan');
   };
 
-  const handleLogDinner = () => {
-    setDinnerLogged((prev) => !prev);
-    if (onLogDinner) onLogDinner();
+  const handleToggleMeal = (mealKey: string, currentCompleted: boolean) => {
+    if (onToggleMeal) {
+      onToggleMeal(mealKey, !currentCompleted);
+      return;
+    }
+    if (mealKey === 'dinner') {
+      setFallbackDinnerLogged((prev) => !prev);
+    }
   };
 
   return (
@@ -74,81 +103,50 @@ export default function ClaudeFoodTodayCard({
             },
           ]}
         >
-          {/* Breakfast */}
-          <Pressable
-            style={[
-              styles.mealRow,
-              { borderBottomColor: isDark ? 'rgba(247, 243, 238, 0.1)' : 'rgba(13, 43, 69, 0.08)' },
-            ]}
-            onPress={handleOpenFood}
-          >
-            <View style={styles.greenDot} />
-            <View style={styles.mealTextCol}>
-              <Text style={[styles.mealTitle, { color: isDark ? IVORY : NAVY }]}>Oats, skyr &amp; berries</Text>
-              <Text
+          {visibleMeals.map((meal, index) => {
+            const isLastMeal = index === visibleMeals.length - 1;
+            const isUpdating = updatingMealKey === meal.key;
+            return (
+              <Pressable
+                key={meal.key}
                 style={[
-                  styles.mealSub,
-                  { color: isDark ? 'rgba(247, 243, 238, 0.5)' : 'rgba(13, 43, 69, 0.55)' },
+                  styles.mealRow,
+                  isLastMeal && !meal.completed && styles.dinnerHighlightRow,
+                  { borderBottomColor: isDark ? 'rgba(247, 243, 238, 0.1)' : 'rgba(13, 43, 69, 0.08)' },
                 ]}
+                onPress={handleOpenFood}
               >
-                Breakfast · eaten
-              </Text>
-            </View>
-          </Pressable>
-
-          {/* Lunch */}
-          <Pressable
-            style={[
-              styles.mealRow,
-              { borderBottomColor: isDark ? 'rgba(247, 243, 238, 0.1)' : 'rgba(13, 43, 69, 0.08)' },
-            ]}
-            onPress={handleOpenFood}
-          >
-            <View style={styles.greenDot} />
-            <View style={styles.mealTextCol}>
-              <Text style={[styles.mealTitle, { color: isDark ? IVORY : NAVY }]}>Chicken &amp; rice bowl</Text>
-              <Text
-                style={[
-                  styles.mealSub,
-                  { color: isDark ? 'rgba(247, 243, 238, 0.5)' : 'rgba(13, 43, 69, 0.55)' },
-                ]}
-              >
-                Lunch · eaten
-              </Text>
-            </View>
-          </Pressable>
-
-          {/* Dinner */}
-          <Pressable
-            style={[
-              styles.mealRow,
-              !dinnerLogged && styles.dinnerHighlightRow,
-              { borderBottomColor: isDark ? 'rgba(247, 243, 238, 0.1)' : 'rgba(13, 43, 69, 0.08)' },
-            ]}
-            onPress={handleOpenFood}
-          >
-            {dinnerLogged ? (
-              <View style={styles.greenDot} />
-            ) : (
-              <View style={styles.goldRingDot} />
-            )}
-            <View style={styles.mealTextCol}>
-              <Text style={[styles.mealTitle, { color: isDark ? IVORY : NAVY }]}>Salmon, potatoes &amp; broccoli</Text>
-              <Text
-                style={[
-                  styles.mealSub,
-                  { color: isDark ? 'rgba(247, 243, 238, 0.5)' : 'rgba(13, 43, 69, 0.55)' },
-                ]}
-              >
-                {dinnerLogged
-                  ? 'Dinner · eaten'
-                  : 'Dinner · 19:30, from your week plan'}
-              </Text>
-            </View>
-            <Pressable hitSlop={10} style={styles.logBtn} onPress={handleLogDinner}>
-              <Text style={styles.logBtnText}>{dinnerLogged ? 'DONE' : 'LOG'}</Text>
-            </Pressable>
-          </Pressable>
+                {meal.completed ? (
+                  <View style={styles.greenDot} />
+                ) : (
+                  <View style={styles.goldRingDot} />
+                )}
+                <View style={styles.mealTextCol}>
+                  <Text style={[styles.mealTitle, { color: isDark ? IVORY : NAVY }]}>{meal.title}</Text>
+                  <Text
+                    style={[
+                      styles.mealSub,
+                      { color: isDark ? 'rgba(247, 243, 238, 0.5)' : 'rgba(13, 43, 69, 0.55)' },
+                    ]}
+                  >
+                    {meal.subtitle}
+                  </Text>
+                </View>
+                {(meal.canLog || isLastMeal) ? (
+                  <Pressable
+                    hitSlop={10}
+                    style={styles.logBtn}
+                    disabled={isUpdating}
+                    onPress={() => handleToggleMeal(meal.key, meal.completed)}
+                  >
+                    <Text style={styles.logBtnText}>
+                      {isUpdating ? '...' : meal.completed ? 'DONE' : 'LOG'}
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </Pressable>
+            );
+          })}
 
           {/* Week Plan Row */}
           <Pressable style={styles.weekPlanRow} onPress={handleOpenWeekPlan}>
