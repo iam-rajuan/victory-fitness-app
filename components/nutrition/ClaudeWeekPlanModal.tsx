@@ -82,6 +82,10 @@ export default function ClaudeWeekPlanModal({
   const [selectedMeals, setSelectedMeals] = useState<string[]>([]);
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
   const [customMeal, setCustomMeal] = useState('');
+  const [customAllergy, setCustomAllergy] = useState('');
+  const [cookingTime, setCookingTime] = useState('30 min');
+  const [peopleCount, setPeopleCount] = useState('4');
+  const [weeklyBudget, setWeeklyBudget] = useState('€120');
   const [generatedPlan, setGeneratedPlan] = useState<NutritionPlanApiResponse | null>(null);
   const [isBuilding, setIsBuilding] = useState(false);
   const activePlan = generatedPlan || plan || null;
@@ -117,6 +121,13 @@ export default function ClaudeWeekPlanModal({
     );
   };
 
+  const addCustomAllergy = () => {
+    const item = customAllergy.trim();
+    if (!item) return;
+    setSelectedAllergies((prev) => (prev.some((value) => value.toLowerCase() === item.toLowerCase()) ? prev : [...prev, item]));
+    setCustomAllergy('');
+  };
+
   const handleBack = () => {
     if (viewMode === 'weekPlan') {
       setViewMode('questionnaire');
@@ -127,7 +138,7 @@ export default function ClaudeWeekPlanModal({
 
   const handleBuildWeek = async () => {
     if (isBuilding) return;
-    const meals = selectedMeals
+    const meals = [...selectedMeals, customMeal]
       .map((meal) => meal.trim())
       .filter(Boolean);
     const favoriteMeals = Array.from(new Set(meals)).slice(0, 8);
@@ -145,9 +156,12 @@ export default function ClaudeWeekPlanModal({
         favorite_meals: favoriteMeals,
         favorite_meals_json: favoriteMeals,
         diet: 'balanced',
-        allergies: selectedAllergies.join(', '),
+        allergies: Array.from(new Set([...selectedAllergies, customAllergy.trim()].filter(Boolean))).join(', '),
         activity_level: 'moderate',
         weight: String(defaultWeight),
+        cooking_time_weekday: cookingTime.trim(),
+        people_cooking_for: peopleCount.trim(),
+        weekly_food_budget: weeklyBudget.trim(),
         regenerate: true,
         force_refresh: true,
       });
@@ -251,7 +265,7 @@ export default function ClaudeWeekPlanModal({
               <View style={[styles.card, styles.cardCopperBorder]}>
                 <Text style={styles.cardKicker}>3 · ALLERGIES AND ANYTHING YOU CANNOT EAT</Text>
                 <View style={styles.chipsWrap}>
-                  {ALLERGIES.map((a) => {
+                  {Array.from(new Set([...ALLERGIES, ...selectedAllergies])).map((a) => {
                     const active = selectedAllergies.includes(a);
                     return (
                       <Pressable
@@ -266,6 +280,20 @@ export default function ClaudeWeekPlanModal({
                     );
                   })}
                 </View>
+                <View style={styles.mealInputRow}>
+                  <TextInput
+                    style={styles.mealInput}
+                    placeholder="Type anything else..."
+                    placeholderTextColor="rgba(247,243,238,0.38)"
+                    value={customAllergy}
+                    onChangeText={setCustomAllergy}
+                    onSubmitEditing={addCustomAllergy}
+                    returnKeyType="done"
+                  />
+                  <Pressable style={styles.addMealBtn} onPress={addCustomAllergy}>
+                    <Text style={styles.addMealBtnText}>Add</Text>
+                  </Pressable>
+                </View>
                 <Text style={styles.cardFootnote}>
                   Anything ticked here is excluded from every plan and every shopping list, permanently.
                 </Text>
@@ -275,15 +303,36 @@ export default function ClaudeWeekPlanModal({
               <View style={[styles.card, styles.paramsCard]}>
                 <View style={styles.paramRow}>
                   <Text style={styles.paramLabel}>4 · Cooking time on a weekday</Text>
-                  <Text style={styles.paramValue}>30 min</Text>
+                  <TextInput
+                    style={styles.paramInput}
+                    value={cookingTime}
+                    onChangeText={setCookingTime}
+                    placeholder="30 min"
+                    placeholderTextColor="rgba(247,243,238,0.38)"
+                    returnKeyType="done"
+                  />
                 </View>
                 <View style={styles.paramRow}>
                   <Text style={styles.paramLabel}>5 · People you cook for</Text>
-                  <Text style={styles.paramValue}>4</Text>
+                  <TextInput
+                    style={styles.paramInput}
+                    value={peopleCount}
+                    onChangeText={(value) => setPeopleCount(value.replace(/[^\dA-Za-z\s+-]/g, '').slice(0, 18))}
+                    placeholder="4"
+                    placeholderTextColor="rgba(247,243,238,0.38)"
+                    returnKeyType="done"
+                  />
                 </View>
                 <View style={[styles.paramRow, { borderBottomWidth: 0 }]}>
                   <Text style={styles.paramLabel}>6 · Weekly food budget</Text>
-                  <Text style={styles.paramValue}>€120</Text>
+                  <TextInput
+                    style={styles.paramInput}
+                    value={weeklyBudget}
+                    onChangeText={(value) => setWeeklyBudget(value.slice(0, 24))}
+                    placeholder="€120"
+                    placeholderTextColor="rgba(247,243,238,0.38)"
+                    returnKeyType="done"
+                  />
                 </View>
               </View>
 
@@ -495,6 +544,22 @@ const styles = StyleSheet.create({
     color: 'rgba(247, 243, 238, 0.75)',
   },
   paramValue: {
+    fontFamily: MONO,
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: IVORY,
+  },
+  paramInput: {
+    minWidth: 84,
+    maxWidth: 132,
+    minHeight: 36,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(247, 243, 238, 0.18)',
+    backgroundColor: 'rgba(13, 13, 13, 0.18)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    textAlign: 'right',
     fontFamily: MONO,
     fontSize: 13.5,
     fontWeight: '700',
