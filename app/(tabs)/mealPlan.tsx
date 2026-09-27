@@ -22,6 +22,7 @@ import {
   NutritionMealLog,
   NutritionPlanApiResponse,
   updateNutritionMealCompletion,
+  updateNutritionMealLog,
 } from '../../lib/nutrition';
 import ClaudeMacroCards from '../../components/nutrition/ClaudeMacroCards';
 import ClaudeFullDayMeals, { MealRecord } from '../../components/nutrition/ClaudeFullDayMeals';
@@ -158,12 +159,14 @@ export default function MealPlanScreen() {
       id: `log-${log.id}`,
       logId: log.id,
       name: log.name,
-      sub: log.source === 'meal_analysis' ? 'Photo analysis · eaten' : 'Logged meal · eaten',
+      sub: log.completed
+        ? log.source === 'meal_analysis' ? 'Photo analysis · eaten' : 'Logged meal · eaten'
+        : log.source === 'meal_analysis' ? 'Photo analysis · ready to add' : 'Logged meal · ready to add',
       proteinG: Math.max(0, Number(log.protein || 0)),
       carbsG: Math.max(0, Number(log.carbs || 0)),
       fatG: Math.max(0, Number(log.fat || 0)),
       kcal: Math.max(0, Number(log.calories || 0)),
-      logged: true,
+      logged: Boolean(log.completed),
       isExtraLog: true,
     }));
     return [...plannedMeals, ...loggedMeals];
@@ -194,6 +197,7 @@ export default function MealPlanScreen() {
       { kcal: 0, p: 0, c: 0, f: 0 }
     );
     mealLogs.forEach((log) => {
+      if (!log.completed) return;
       current.kcal += Number(log.calories || 0);
       current.p += Number(log.protein || 0);
       current.c += Number(log.carbs || 0);
@@ -297,6 +301,19 @@ export default function MealPlanScreen() {
   };
 
   const handleToggleMeal = async (meal: MealRecord) => {
+    if (meal.logId) {
+      if (updatingMealKey) return;
+      setUpdatingMealKey(meal.id);
+      try {
+        const updated = await updateNutritionMealLog(meal.logId, { completed: !meal.logged });
+        setMealLogs((prev) => prev.map((log) => (log.id === updated.id ? updated : log)));
+      } catch (error: any) {
+        Alert.alert('Unable to update meal', error?.message || 'Please try again.');
+      } finally {
+        setUpdatingMealKey(null);
+      }
+      return;
+    }
     const mealKey = meal.mealKey || meal.id;
     const day = todayPlan?.day || todayKey;
     if (!mealKey || updatingMealKey) return;
@@ -435,9 +452,10 @@ export default function MealPlanScreen() {
             source: 'meal_analysis',
             source_analysis_id: meal.analysisId || null,
             logged_date: todayIsoDate,
+            completed: false,
           });
           setMealLogs((prev) => [...prev, created]);
-          Alert.alert('Meal Logged', `${created.name} is now in your full day.`);
+          Alert.alert('Meal Added', `${created.name} is in your full day. Tap ADD to count it.`);
         }}
         imageBase64={selectedMealPhoto?.base64}
         imageUri={selectedMealPhoto?.uri}

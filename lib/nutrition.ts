@@ -100,6 +100,7 @@ export type NutritionMealLog = {
   source: string;
   source_analysis_id?: string;
   logged_date: string;
+  completed?: boolean;
   created_at: string;
 };
 
@@ -185,9 +186,17 @@ export async function createNutritionMealLog(payload: {
   source?: string;
   source_analysis_id?: string | null;
   logged_date?: string;
+  completed?: boolean;
 }) {
   return apiRequest<NutritionMealLog>('/ai/nutrition/meal-logs', {
     method: 'POST',
+    body: payload,
+  });
+}
+
+export async function updateNutritionMealLog(logId: string, payload: { completed: boolean }) {
+  return apiRequest<NutritionMealLog>(`/ai/nutrition/meal-logs/${encodeURIComponent(logId)}`, {
+    method: 'PATCH',
     body: payload,
   });
 }
