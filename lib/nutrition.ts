@@ -90,6 +90,19 @@ export type MealImageAnalysisResponse = {
   created_at?: string | null;
 };
 
+export type NutritionMealLog = {
+  id: string;
+  name: string;
+  protein: number;
+  carbs: number;
+  fat: number;
+  calories: number;
+  source: string;
+  source_analysis_id?: string;
+  logged_date: string;
+  created_at: string;
+};
+
 const MEAL_ANALYSIS_HISTORY_CACHE_KEY = 'meal-analysis-history';
 
 export async function startNutritionPlanJob(payload: Record<string, unknown>) {
@@ -156,6 +169,32 @@ export async function updateProgressiveNutritionMealCompletion(payload: {
   return apiRequest<NutritionPlanApiResponse>('/ai/nutrition/plan/progressive/latest/completions', {
     method: 'PATCH',
     body: payload,
+  });
+}
+
+export async function getNutritionMealLogs(date: string) {
+  return apiRequest<{ logs: NutritionMealLog[] }>(`/ai/nutrition/meal-logs?date=${encodeURIComponent(date)}`);
+}
+
+export async function createNutritionMealLog(payload: {
+  name: string;
+  protein: number;
+  carbs: number;
+  fat: number;
+  calories: number;
+  source?: string;
+  source_analysis_id?: string | null;
+  logged_date?: string;
+}) {
+  return apiRequest<NutritionMealLog>('/ai/nutrition/meal-logs', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+export async function deleteNutritionMealLog(logId: string) {
+  return apiRequest<void>(`/ai/nutrition/meal-logs/${encodeURIComponent(logId)}`, {
+    method: 'DELETE',
   });
 }
 

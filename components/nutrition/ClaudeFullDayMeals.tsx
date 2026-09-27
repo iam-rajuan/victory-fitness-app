@@ -3,11 +3,15 @@ import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native
 export interface MealRecord {
   id: string;
   mealKey?: string;
+  logId?: string;
   name: string;
   sub: string;
   proteinG: number;
+  carbsG?: number;
+  fatG?: number;
   kcal?: number;
   logged: boolean;
+  isExtraLog?: boolean;
   isDinnerPlanned?: boolean;
 }
 
@@ -107,7 +111,7 @@ export default function ClaudeFullDayMeals({ meals, updatingMealKey, onToggleMea
                     disabled={isUpdating || m.id === 'empty'}
                   >
                     <Text style={styles.actionText}>
-                      {isUpdating ? '...' : isHighlight ? 'LOG IT' : 'ADD'}
+                      {isUpdating ? '...' : 'ADD'}
                     </Text>
                   </TouchableOpacity>
                 )}

@@ -10,6 +10,7 @@ import {
   ScrollView,
   Platform,
   TextInput,
+  Alert,
 } from 'react-native';
 import { analyzeMealImage, MealImageAnalysisResponse } from '../../lib/nutrition';
 
@@ -22,7 +23,7 @@ interface MacroSnapshot {
 interface ClaudeMealAnalysisModalProps {
   visible: boolean;
   onClose: () => void;
-  onLogMeal: (mealData: any) => void;
+  onLogMeal: (mealData: any) => void | Promise<void>;
   imageBase64?: string | null;
   imageUri?: string | null;
   mimeType?: string | null;
@@ -74,6 +75,7 @@ export default function ClaudeMealAnalysisModal({
     fat: '',
     calories: '',
   });
+  const [isLogging, setIsLogging] = React.useState(false);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -133,17 +135,24 @@ export default function ClaudeMealAnalysisModal({
     { k: 'KCAL', v: `${parsedMacros.calories}`, color: GREEN },
   ];
 
-  const handleLog = () => {
-    if (!analysis) return;
-    onLogMeal({
-      name: analysis.meal_name_guess,
-      protein: parsedMacros.protein,
-      carbs: parsedMacros.carbs,
-      fat: parsedMacros.fat,
-      calories: parsedMacros.calories,
-      analysisId: analysis.analysis_id,
-    });
-    onClose();
+  const handleLog = async () => {
+    if (!analysis || isLogging) return;
+    setIsLogging(true);
+    try {
+      await onLogMeal({
+        name: analysis.meal_name_guess,
+        protein: parsedMacros.protein,
+        carbs: parsedMacros.carbs,
+        fat: parsedMacros.fat,
+        calories: parsedMacros.calories,
+        analysisId: analysis.analysis_id,
+      });
+      onClose();
+    } catch (error: any) {
+      Alert.alert('Unable to log meal', error?.message || 'Please try again.');
+    } finally {
+      setIsLogging(false);
+    }
   };
 
   return (
@@ -243,8 +252,8 @@ export default function ClaudeMealAnalysisModal({
 
           {/* Action CTAs */}
           <View style={styles.actionsRow}>
-            <Pressable style={[styles.logBtn, !analysis && styles.logBtnDisabled]} onPress={handleLog} disabled={!analysis}>
-              <Text style={styles.logBtnText}>Log this meal</Text>
+            <Pressable style={[styles.logBtn, (!analysis || isLogging) && styles.logBtnDisabled]} onPress={handleLog} disabled={!analysis || isLogging}>
+              <Text style={styles.logBtnText}>{isLogging ? 'Logging...' : 'Log this meal'}</Text>
             </Pressable>
             <Pressable style={styles.editBtn} onPress={() => setIsEditingMacros((prev) => !prev)} disabled={!analysis}>
               <Text style={styles.editBtnText}>{isEditingMacros ? 'Done' : 'Edit'}</Text>

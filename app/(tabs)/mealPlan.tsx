@@ -13,9 +13,13 @@ import { fetchCurrentUser, fetchCurrentUserBodyMetrics, AuthUser } from '../../l
 import { normalizeSubscriptionTier, SubscriptionTier } from '../../lib/access';
 import {
   calculateProteinTarget,
+  createNutritionMealLog,
+  deleteNutritionMealLog,
   getLatestNutritionPlan,
+  getNutritionMealLogs,
   NutritionDayPlan,
   NutritionMealEntry,
+  NutritionMealLog,
   NutritionPlanApiResponse,
   updateNutritionMealCompletion,
 } from '../../lib/nutrition';
@@ -46,6 +50,7 @@ export default function MealPlanScreen() {
   // Current user & tier state
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [nutritionPlan, setNutritionPlan] = useState<NutritionPlanApiResponse | null>(null);
+  const [mealLogs, setMealLogs] = useState<NutritionMealLog[]>([]);
   const [proteinTarget, setProteinTarget] = useState(0);
   const [userWeight, setUserWeight] = useState(75);
   const [updatingMealKey, setUpdatingMealKey] = useState<string | null>(null);
@@ -60,16 +65,18 @@ export default function MealPlanScreen() {
   const [showMealAnalysisModal, setShowMealAnalysisModal] = useState(false);
   const [showWeekPlanModal, setShowWeekPlanModal] = useState(false);
   const [showShoppingModal, setShowShoppingModal] = useState(false);
+  const todayIsoDate = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
   useEffect(() => {
     let cancelled = false;
 
     const loadData = async () => {
       try {
-        const [user, metrics, plan] = await Promise.all([
+        const [user, metrics, plan, logsResponse] = await Promise.all([
           fetchCurrentUser().catch(() => null),
           fetchCurrentUserBodyMetrics().catch(() => null),
           getLatestNutritionPlan({ forceRefresh: true }).catch(() => null),
+          getNutritionMealLogs(todayIsoDate).catch(() => ({ logs: [] })),
         ]);
 
         if (cancelled) return;
@@ -90,6 +97,7 @@ export default function MealPlanScreen() {
           if (plan.daily_protein_target) setProteinTarget(plan.daily_protein_target);
           if (plan.baseline_weight) setUserWeight(plan.baseline_weight);
         }
+        setMealLogs(Array.isArray(logsResponse?.logs) ? logsResponse.logs : []);
       } catch {
         // Fallback to defaults
       }
@@ -100,7 +108,7 @@ export default function MealPlanScreen() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [todayIsoDate]);
 
   const tier: SubscriptionTier = useMemo(() => {
     return normalizeSubscriptionTier(currentUser?.subscription_tier);
@@ -132,7 +140,7 @@ export default function MealPlanScreen() {
   }, [nutritionPlan?.meal_completions, todayPlan?.day, todayKey]);
 
   const fullDayMeals = useMemo<MealRecord[]>(() => {
-    return mealEntries.map((entry) => {
+    const plannedMeals = mealEntries.map((entry) => {
       const meal = entry.meal as NutritionMealEntry;
       const logged = Boolean(todayCompletions[entry.key]);
       return {
@@ -146,7 +154,20 @@ export default function MealPlanScreen() {
         isDinnerPlanned: entry.key === 'dinner',
       };
     });
-  }, [mealEntries, todayCompletions]);
+    const loggedMeals = mealLogs.map((log) => ({
+      id: `log-${log.id}`,
+      logId: log.id,
+      name: log.name,
+      sub: log.source === 'meal_analysis' ? 'Photo analysis · eaten' : 'Logged meal · eaten',
+      proteinG: Math.max(0, Number(log.protein || 0)),
+      carbsG: Math.max(0, Number(log.carbs || 0)),
+      fatG: Math.max(0, Number(log.fat || 0)),
+      kcal: Math.max(0, Number(log.calories || 0)),
+      logged: true,
+      isExtraLog: true,
+    }));
+    return [...plannedMeals, ...loggedMeals];
+  }, [mealEntries, mealLogs, todayCompletions]);
 
   const macroTotals = useMemo(() => {
     const target = mealEntries.reduce(
@@ -172,8 +193,14 @@ export default function MealPlanScreen() {
       },
       { kcal: 0, p: 0, c: 0, f: 0 }
     );
+    mealLogs.forEach((log) => {
+      current.kcal += Number(log.calories || 0);
+      current.p += Number(log.protein || 0);
+      current.c += Number(log.carbs || 0);
+      current.f += Number(log.fat || 0);
+    });
     return { target, current };
-  }, [mealEntries, todayCompletions]);
+  }, [mealEntries, mealLogs, todayCompletions]);
 
   const todayActions = useMemo<ActionItem[]>(() => {
     return mealEntries.slice(0, 5).map((entry, index) => {
@@ -289,6 +316,19 @@ export default function MealPlanScreen() {
   };
 
   const handleRemoveMeal = async (meal: MealRecord) => {
+    if (meal.logId) {
+      if (updatingMealKey) return;
+      setUpdatingMealKey(meal.id);
+      try {
+        await deleteNutritionMealLog(meal.logId);
+        setMealLogs((prev) => prev.filter((log) => log.id !== meal.logId));
+      } catch (error: any) {
+        Alert.alert('Unable to remove meal', error?.message || 'Please try again.');
+      } finally {
+        setUpdatingMealKey(null);
+      }
+      return;
+    }
     const mealKey = meal.mealKey || meal.id;
     const day = todayPlan?.day || todayKey;
     if (!mealKey || updatingMealKey) return;
@@ -385,9 +425,19 @@ export default function MealPlanScreen() {
       <ClaudeMealAnalysisModal
         visible={showMealAnalysisModal}
         onClose={() => setShowMealAnalysisModal(false)}
-        onLogMeal={(meal) => {
-          Alert.alert('Meal Logged', `${meal.name} logged successfully!`);
-          setShowMealAnalysisModal(false);
+        onLogMeal={async (meal) => {
+          const created = await createNutritionMealLog({
+            name: meal.name,
+            protein: meal.protein,
+            carbs: meal.carbs,
+            fat: meal.fat,
+            calories: meal.calories,
+            source: 'meal_analysis',
+            source_analysis_id: meal.analysisId || null,
+            logged_date: todayIsoDate,
+          });
+          setMealLogs((prev) => [...prev, created]);
+          Alert.alert('Meal Logged', `${created.name} is now in your full day.`);
         }}
         imageBase64={selectedMealPhoto?.base64}
         imageUri={selectedMealPhoto?.uri}
