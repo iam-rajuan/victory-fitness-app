@@ -288,6 +288,25 @@ export default function MealPlanScreen() {
     }
   };
 
+  const handleRemoveMeal = async (meal: MealRecord) => {
+    const mealKey = meal.mealKey || meal.id;
+    const day = todayPlan?.day || todayKey;
+    if (!mealKey || updatingMealKey) return;
+    setUpdatingMealKey(mealKey);
+    try {
+      const updated = await updateNutritionMealCompletion({
+        day,
+        meal_key: mealKey,
+        completed: false,
+      });
+      setNutritionPlan(updated);
+    } catch (error: any) {
+      Alert.alert('Unable to remove meal', error?.message || 'Please try again.');
+    } finally {
+      setUpdatingMealKey(null);
+    }
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
@@ -328,6 +347,7 @@ export default function MealPlanScreen() {
           meals={fullDayMeals}
           updatingMealKey={updatingMealKey}
           onToggleMeal={handleToggleMeal}
+          onRemoveMeal={handleRemoveMeal}
           onLogMeal={() => undefined}
         />
 

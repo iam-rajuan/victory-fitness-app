@@ -15,6 +15,7 @@ interface ClaudeFullDayMealsProps {
   meals: MealRecord[];
   updatingMealKey?: string | null;
   onToggleMeal?: (meal: MealRecord) => void;
+  onRemoveMeal?: (meal: MealRecord) => void;
   onLogMeal?: (mealId: string) => void;
 }
 
@@ -27,7 +28,7 @@ const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", de
 const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
-export default function ClaudeFullDayMeals({ meals, updatingMealKey, onToggleMeal, onLogMeal }: ClaudeFullDayMealsProps) {
+export default function ClaudeFullDayMeals({ meals, updatingMealKey, onToggleMeal, onRemoveMeal, onLogMeal }: ClaudeFullDayMealsProps) {
   const visibleMeals = meals.length > 0 ? meals : [
     {
       id: 'empty',
@@ -84,7 +85,17 @@ export default function ClaudeFullDayMeals({ meals, updatingMealKey, onToggleMea
                   {`${m.proteinG} g`}
                 </Text>
                 {m.logged ? (
-                  <Text style={styles.kcalVal}>{`${m.kcal} kcal`}</Text>
+                  <>
+                    <Text style={styles.kcalVal}>{`${m.kcal} kcal`}</Text>
+                    <TouchableOpacity
+                      activeOpacity={0.72}
+                      onPress={() => onRemoveMeal?.(m)}
+                      style={styles.removeBtn}
+                      disabled={isUpdating}
+                    >
+                      <Text style={styles.removeText}>{isUpdating ? '...' : 'REMOVE'}</Text>
+                    </TouchableOpacity>
+                  </>
                 ) : (
                   <TouchableOpacity
                     activeOpacity={0.7}
@@ -199,6 +210,21 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: 'rgba(247, 243, 238, 0.45)',
     marginTop: 2,
+  },
+  removeBtn: {
+    marginTop: 5,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: 'rgba(201, 148, 58, 0.45)',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  removeText: {
+    fontFamily: DMSANS,
+    fontSize: 9.5,
+    fontWeight: '700',
+    letterSpacing: 0.7,
+    color: GOLD,
   },
   actionBtn: {
     marginTop: 2,
