@@ -69,14 +69,14 @@ export default function ClaudeHydrationCard({
         const savedRemind = await AsyncStorage.getItem(REMINDER_KEY);
         const savedMode = await AsyncStorage.getItem(REMINDER_MODE_KEY);
         if (cancelled) return;
-        if (initialMl === 0 && savedVal !== null) {
+        if (!onWaterChange && initialMl === 0 && savedVal !== null) {
           const parsed = Number(savedVal);
           if (!isNaN(parsed)) setWaterMl(parsed);
         }
-        if (typeof reminderEnabled !== 'boolean' && savedRemind !== null) {
+        if (!onReminderChange && typeof reminderEnabled !== 'boolean' && savedRemind !== null) {
           setRemindEnabled(savedRemind === 'true');
         }
-        if (!reminderMode && (savedMode === 'Tone' || savedMode === 'Vibrate')) {
+        if (!onReminderChange && !reminderMode && (savedMode === 'Tone' || savedMode === 'Vibrate')) {
           setRemindMode(savedMode);
         }
       } catch {}
@@ -84,7 +84,7 @@ export default function ClaudeHydrationCard({
     return () => {
       cancelled = true;
     };
-  }, [initialMl, reminderEnabled, reminderMode]);
+  }, [initialMl, onReminderChange, onWaterChange, reminderEnabled, reminderMode]);
 
   const targetMl = targetLiters * 1000;
   const pctNum = Math.min(100, Math.round((waterMl / targetMl) * 100));

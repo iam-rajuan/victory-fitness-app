@@ -15,8 +15,10 @@ import { useRouter, useFocusEffect } from 'expo-router';
 
 import {
   AuthUser,
+  AccountabilityPartnerResponse,
   confirmCurrentUserWeight,
   createWorkoutLog,
+  fetchAccountabilityPartner,
   fetchCurrentUser,
   fetchCurrentUserBodyMetrics,
   fetchCurrentUserHydration,
@@ -219,6 +221,7 @@ export default function HomeScreen() {
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLogItem[]>([]);
   const [journalWrittenToday, setJournalWrittenToday] = useState(false);
   const [hydration, setHydration] = useState<HydrationState | null>(null);
+  const [accountabilityPartner, setAccountabilityPartner] = useState<AccountabilityPartnerResponse | null>(null);
 
   // Workout Plan Detail, Active Workout, and Completion Modals
   const [planDetailVisible, setPlanDetailVisible] = useState(false);
@@ -288,6 +291,7 @@ export default function HomeScreen() {
         journalData,
         hydrationData,
         workoutLibrary,
+        accountabilityData,
       ] = await Promise.all([
         fetchCurrentUser().catch(() => null),
         fetchCurrentUserBodyMetrics().catch(() => null),
@@ -298,6 +302,7 @@ export default function HomeScreen() {
         fetchJournalEntries().catch(() => null),
         fetchCurrentUserHydration().catch(() => null),
         fetchWorkoutLibrary().catch(() => null),
+        fetchAccountabilityPartner().catch(() => null),
       ]);
 
       if (user) {
@@ -314,6 +319,7 @@ export default function HomeScreen() {
       setWorkoutLogs(Array.isArray(logsData?.items) ? logsData.items : []);
       setHydration(hydrationData);
       setHomeLibraryWorkout(workoutLibrary?.featuredWorkout || workoutLibrary?.workouts?.[0] || null);
+      setAccountabilityPartner(accountabilityData);
 
       if (Array.isArray(journalData?.entries)) {
         setJournalWrittenToday(journalData.entries.some((entry) => isSameLocalDay(entry.created_at)));
@@ -847,8 +853,8 @@ export default function HomeScreen() {
 
         {/* 10. Also Today (Accountability Duo, Daily Journal, Weekly Target) */}
         <ClaudeAlsoTodayCard
-          partnerName={undefined}
-          partnerTrainedToday={false}
+          partnerName={accountabilityPartner?.partner?.name}
+          partnerTrainedToday={Boolean(accountabilityPartner?.partner?.trained_today)}
           sessionsDoneThisWeek={sessionsDoneThisWeek}
           sessionsTargetThisWeek={4}
           journalWrittenToday={journalWrittenToday}
