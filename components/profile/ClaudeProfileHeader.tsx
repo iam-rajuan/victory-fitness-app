@@ -25,18 +25,19 @@ const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' })
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
 
 export default function ClaudeProfileHeader({
-  name = 'Michael Krause',
-  initials = 'MK',
-  tier = 'GOLD',
-  country = 'Germany',
-  sinceDate = 'March',
-  streakDays = 12,
-  totalSessions = 64,
-  consistencyPct = 78,
+  name = 'Victory member',
+  initials = 'VF',
+  tier = 'NONE',
+  country = '',
+  sinceDate = '',
+  streakDays = 0,
+  totalSessions = 0,
+  consistencyPct = 0,
 }: ClaudeProfileHeaderProps) {
   const { isDark, colors } = useTheme();
   const isSilver = tier.toUpperCase() === 'SILVER';
   const isIC = tier.toUpperCase() === 'INNER CIRCLE' || tier.toUpperCase() === 'INNER_CIRCLE';
+  const metaText = [country, sinceDate ? `since ${sinceDate}` : ''].filter(Boolean).join(' · ');
 
   return (
     <View style={styles.container}>
@@ -69,7 +70,9 @@ export default function ClaudeProfileHeader({
                 {tier.toUpperCase()}
               </Text>
             </View>
-            <Text style={[styles.userLocation, { color: colors.textMuted }]}>{`${country} · since ${sinceDate}`}</Text>
+            {metaText ? (
+              <Text style={[styles.userLocation, { color: colors.textMuted }]}>{metaText}</Text>
+            ) : null}
           </View>
         </View>
       </View>

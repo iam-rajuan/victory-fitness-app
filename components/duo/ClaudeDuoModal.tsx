@@ -11,7 +11,13 @@ import {
   TextInput,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import { apiRequest } from '../../lib/api';
+import {
+  acceptAccountabilityInvite,
+  createAccountabilityInvite,
+  fetchAccountabilityPartner,
+  nudgeAccountabilityPartner,
+  unpairAccountabilityPartner,
+} from '../../lib/api';
 
 interface ClaudeDuoModalProps {
   visible: boolean;
@@ -34,12 +40,13 @@ const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Cou
 
 export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps) {
   const [duoState, setDuoState] = useState<DuoState>('inactive');
-  const [partnerName, setPartnerName] = useState('Anna');
-  const [inviteCode, setInviteCode] = useState('VF-4K9M');
+  const [pairId, setPairId] = useState('');
+  const [partnerName, setPartnerName] = useState('Partner');
+  const [inviteCode, setInviteCode] = useState('');
   const [inputCode, setInputCode] = useState('');
   const [showCodeInput, setShowCodeInput] = useState(false);
-  const [daysInSync, setDaysInSync] = useState(12);
-  const [partnerTrainedToday, setPartnerTrainedToday] = useState(true);
+  const [daysInSync, setDaysInSync] = useState(0);
+  const [partnerTrainedToday, setPartnerTrainedToday] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -47,20 +54,32 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
 
     const loadPair = async () => {
       try {
-        const res = await apiRequest<any>('/me/accountability-partner');
+        const res = await fetchAccountabilityPartner() as any;
+        setPairId(String(res?.pair_id || ''));
         if (res && res.partner) {
           setDuoState('active');
           setPartnerName(res.partner.name || res.partner.email?.split('@')[0] || 'Partner');
-          if (res.days_in_sync) setDaysInSync(res.days_in_sync);
-          if (typeof res.partner_trained_today === 'boolean') {
-            setPartnerTrainedToday(res.partner_trained_today);
-          }
+          setDaysInSync(Math.max(0, Number(res.days_in_sync || res.partner.days_in_sync || 0)));
+          setPartnerTrainedToday(Boolean(res.partner.trained_today ?? res.partner_checked_in_today));
         } else if (res && res.invite_code) {
           setDuoState('pending');
-          setInviteCode(res.invite_code);
+          setInviteCode(String(res.invite_code || ''));
+          setPartnerName('Partner');
+          setDaysInSync(0);
+          setPartnerTrainedToday(false);
+        } else {
+          setDuoState('inactive');
+          setInviteCode('');
+          setPartnerName('Partner');
+          setDaysInSync(0);
+          setPartnerTrainedToday(false);
         }
       } catch {
-        // Keep default interactive mock if not configured yet
+        setDuoState('inactive');
+        setInviteCode('');
+        setPartnerName('Partner');
+        setDaysInSync(0);
+        setPartnerTrainedToday(false);
       }
     };
 

@@ -10,7 +10,16 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { fetchCurrentUser, logout } from '../../lib/api';
+import {
+  fetchAccountabilityPartner,
+  fetchCurrentUser,
+  fetchHabitConsistency,
+  fetchSubscriptionPlans,
+  fetchWorkoutLogs,
+  logout,
+  updateCurrentUserProfile,
+} from '../../lib/api';
+import { fetchJournalEntries } from '../../lib/screenData';
 import { replaceRoute } from '../../lib/navigation';
 import ClaudeProfileHeader from '../../components/profile/ClaudeProfileHeader';
 import ClaudeHabitsCard from '../../components/profile/ClaudeHabitsCard';
@@ -22,7 +31,6 @@ import ClaudeInnerCircleApplyModal from '../../components/profile/ClaudeInnerCir
 import ClaudeNotificationPreferencesModal from '../../components/profile/ClaudeNotificationPreferencesModal';
 import ClaudeDuoModal from '../../components/duo/ClaudeDuoModal';
 import { useTheme } from '../../context/ThemeContext';
-import RequirementAuditBoundary from '../../components/audit/RequirementAuditBoundary';
 
 const OBSIDIAN = '#0D0D0D';
 const NAVY = '#0D2B45';
@@ -35,17 +43,153 @@ const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System'
 const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
 
+const JOURNAL_PROMPTS = [
+  'What made today easier than expected?',
+  'Where did you keep a promise to yourself?',
+  'What went better than you expected?',
+  'What did you avoid, and why?',
+  'Who did you show up for?',
+  'What should tomorrow get from you?',
+  'What are you proud you did anyway?',
+];
+
+function initialsForName(value: string) {
+  const parts = value.trim().split(/\s+/).filter(Boolean);
+  if (parts.length > 1) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  return (parts[0] || 'VF').slice(0, 2).toUpperCase();
+}
+
+function normalizeTierLabel(value: unknown) {
+  const tier = String(value || 'NONE').trim().toUpperCase().replace(/_/g, ' ');
+  return tier || 'NONE';
+}
+
+function languageLabel(value: unknown) {
+  const code = String(value || '').trim().toLowerCase();
+  if (!code) return 'Not set';
+  const labels: Record<string, string> = {
+    en: 'ENGLISH',
+    'en-gb': 'ENGLISH',
+    de: 'GERMAN',
+    fr: 'FRENCH',
+    es: 'SPANISH',
+    it: 'ITALIAN',
+    pt: 'PORTUGUESE',
+    bn: 'BENGALI',
+  };
+  return labels[code] || code.toUpperCase();
+}
+
+function notificationSummary(user: any) {
+  const channels = [
+    user.notification_push_enabled !== false ? 'PUSH' : '',
+    user.notification_whatsapp_enabled ? 'WA' : '',
+    user.notification_email_enabled ? 'EMAIL' : '',
+  ].filter(Boolean);
+  const time = String(user.notification_nudge_time || '20:30');
+  return channels.length ? `${time} · ${channels.join(' & ')}` : 'Off';
+}
+
+function monthName(value?: string | null) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-GB', { month: 'long' });
+}
+
+function planPriceText(plan: any, userTier: string) {
+  const monthly = Number(plan?.discountedPriceMonthly ?? plan?.priceMonthly ?? 0);
+  if (monthly > 0) return `€${monthly}/mo`;
+  if (userTier === 'SILVER') return '€19/mo';
+  if (userTier === 'GOLD') return '€49/mo';
+  if (userTier === 'PLATINUM') return '€129/mo';
+  if (userTier === 'INNER CIRCLE' || userTier === 'INNER_CIRCLE') return '€490/mo';
+  return 'Free';
+}
+
+function planCopy(plan: any, tier: string) {
+  const description = String(plan?.description || '').trim();
+  if (description) return description;
+  if (tier === 'SILVER') return 'Workouts, challenges, community, and your journal.';
+  if (tier === 'GOLD') return 'AI Coach, workout library, nutrition, and habit tools.';
+  if (tier === 'PLATINUM') return 'Wearable sync, priority support, and deeper coaching tools.';
+  if (tier === 'INNER CIRCLE' || tier === 'INNER_CIRCLE') return 'Direct coach review and the highest-touch Victory Fitness support.';
+  return 'Choose the plan that fits your training.';
+}
+
+function workoutLogDate(item: any) {
+  const raw = item?.completed_at || item?.started_at || item?.created_at;
+  if (!raw) return null;
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString().slice(0, 10);
+}
+
+function calculateWorkoutStreak(items: any[]) {
+  const completedDates = new Set(items.map(workoutLogDate).filter(Boolean) as string[]);
+  if (completedDates.size === 0) return 0;
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const dayKey = (offset: number) => {
+    const d = new Date(today);
+    d.setUTCDate(d.getUTCDate() - offset);
+    return d.toISOString().slice(0, 10);
+  };
+  const startOffset = completedDates.has(dayKey(0)) ? 0 : completedDates.has(dayKey(1)) ? 1 : -1;
+  if (startOffset < 0) return 0;
+  let streak = 0;
+  for (let offset = startOffset; offset < 400; offset += 1) {
+    if (!completedDates.has(dayKey(offset))) break;
+    streak += 1;
+  }
+  return streak;
+}
+
+function calculateWorkoutConsistency(items: any[], fallbackScore: number) {
+  const completedDates = new Set(items.map(workoutLogDate).filter(Boolean) as string[]);
+  if (completedDates.size === 0) return Math.max(0, Math.min(100, Math.round(fallbackScore || 0)));
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  let activeDays = 0;
+  for (let offset = 0; offset < 28; offset += 1) {
+    const d = new Date(today);
+    d.setUTCDate(d.getUTCDate() - offset);
+    if (completedDates.has(d.toISOString().slice(0, 10))) activeDays += 1;
+  }
+  return Math.max(0, Math.min(100, Math.round((activeDays / 28) * 100)));
+}
+
 export default function ProfileScreen() {
   const router = useRouter();
   const { isDark, colors, theme } = useTheme();
 
   const [user, setUser] = useState<any>(null);
-  const [name, setName] = useState('Michael Krause');
-  const [initials, setInitials] = useState('MK');
-  const [tier, setTier] = useState('GOLD');
-  const [streakDays, setStreakDays] = useState(12);
-  const [totalSessions, setTotalSessions] = useState(64);
-  const [consistencyPct, setConsistencyPct] = useState(78);
+  const [name, setName] = useState('Victory member');
+  const [initials, setInitials] = useState('VF');
+  const [tier, setTier] = useState('NONE');
+  const [country, setCountry] = useState('');
+  const [sinceDate, setSinceDate] = useState('');
+  const [streakDays, setStreakDays] = useState(0);
+  const [totalSessions, setTotalSessions] = useState(0);
+  const [consistencyPct, setConsistencyPct] = useState(0);
+  const [journalPrompt, setJournalPrompt] = useState(JOURNAL_PROMPTS[new Date().getDay() % JOURNAL_PROMPTS.length]);
+  const [journalRunningText, setJournalRunningText] = useState('READY TODAY');
+  const [habitIdentity, setHabitIdentity] = useState('Set the person you are becoming.');
+  const [habitUnlock, setHabitUnlock] = useState('Set a reward you only use while training.');
+  const [habitTrigger, setHabitTrigger] = useState('Set the moment that starts your session.');
+  const [triggerUsage, setTriggerUsage] = useState('No trigger data yet');
+  const [notificationMeta, setNotificationMeta] = useState('All caught up');
+  const [languageMeta, setLanguageMeta] = useState('Not set');
+  const [notificationPrefs, setNotificationPrefs] = useState({
+    pushEnabled: true,
+    whatsappEnabled: false,
+    emailEnabled: false,
+    nudgeTime: '20:30',
+  });
+  const [partnerTitle, setPartnerTitle] = useState('Accountability duo');
+  const [partnerNote, setPartnerNote] = useState('Set up or manage your partner.');
+  const [planPrice, setPlanPrice] = useState('Free');
+  const [planDescription, setPlanDescription] = useState('Choose the plan that fits your training.');
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   // Modals state
@@ -61,18 +205,66 @@ export default function ProfileScreen() {
 
     const loadUserData = async () => {
       try {
-        const u = await fetchCurrentUser();
+        const [u, habit, journal, plans, completedLogs, accountability] = await Promise.all([
+          fetchCurrentUser({ forceRefresh: true }),
+          fetchHabitConsistency().catch(() => null),
+          fetchJournalEntries().catch(() => ({ entries: [] })),
+          fetchSubscriptionPlans().catch(() => ({ items: [] })),
+          fetchWorkoutLogs(1, 100, 'completed').catch(() => ({ items: [], total: 0, page: 1, limit: 100, total_pages: 0 })),
+          fetchAccountabilityPartner().catch(() => null),
+        ]);
         if (cancelled || !u) return;
         const userObj = u as any;
         setUser(userObj);
-        if (userObj.name) {
-          setName(userObj.name);
-          const parts = userObj.name.trim().split(' ');
-          const inits = parts.length > 1 ? `${parts[0][0]}${parts[1][0]}` : parts[0].slice(0, 2);
-          setInitials(inits.toUpperCase());
+        const displayName = String(userObj.name || userObj.email || 'Victory member').trim();
+        setName(displayName);
+        setInitials(initialsForName(displayName));
+        const normalizedTier = normalizeTierLabel(userObj.subscription_tier || userObj.tier || userObj.membership_tier);
+        setTier(normalizedTier);
+        setCountry(String(userObj.country || '').trim());
+        setLanguageMeta(languageLabel(userObj.preferred_language));
+        const nextNotificationPrefs = {
+          pushEnabled: userObj.notification_push_enabled !== false,
+          whatsappEnabled: Boolean(userObj.notification_whatsapp_enabled),
+          emailEnabled: Boolean(userObj.notification_email_enabled),
+          nudgeTime: String(userObj.notification_nudge_time || '20:30'),
+        };
+        setNotificationPrefs(nextNotificationPrefs);
+        setNotificationMeta(notificationSummary(userObj));
+        setSinceDate(monthName(userObj.subscription_confirmed_at || userObj.subscription_started_at || userObj.created_at));
+        const workoutItems = Array.isArray((completedLogs as any)?.items) ? (completedLogs as any).items : [];
+        setStreakDays(calculateWorkoutStreak(workoutItems));
+        setTotalSessions(Math.max(0, Number((completedLogs as any)?.total || workoutItems.length || 0)));
+
+        const score = Math.round(Number((habit as any)?.current_score || 0));
+        setConsistencyPct(calculateWorkoutConsistency(workoutItems, score));
+        setHabitIdentity(String((habit as any)?.identity_statement || userObj.identity_statement || 'Set the person you are becoming.'));
+        setHabitUnlock(String((habit as any)?.workout_unlock_label || userObj.workout_unlock_label || 'Set a reward you only use while training.'));
+        const triggerContext = String((habit as any)?.training_trigger_context || userObj.training_trigger_context || '').trim();
+        const triggerAction = String((habit as any)?.training_trigger_action || userObj.training_trigger_action || '').trim();
+        setHabitTrigger([triggerContext, triggerAction].filter(Boolean).join(', ') || 'Set the moment that starts your session.');
+        const latestWeek = Array.isArray((habit as any)?.weeks) ? (habit as any).weeks[(habit as any).weeks.length - 1] : null;
+        setTriggerUsage(latestWeek ? `used on ${latestWeek.trained_trigger_days || 0} of ${latestWeek.trigger_days || 0} trigger days` : 'No trigger data yet');
+
+        const entries = Array.isArray((journal as any)?.entries) ? (journal as any).entries : [];
+        setJournalRunningText(entries.length > 0 ? `${entries.length} ENTRIES SAVED` : 'READY TODAY');
+        setJournalPrompt(JOURNAL_PROMPTS[new Date().getDay() % JOURNAL_PROMPTS.length]);
+
+        const partner = (accountability as any)?.partner;
+        if (partner) {
+          setPartnerTitle(`${partner.name || 'Your partner'} is your partner`);
+          setPartnerNote(partner.trained_today ? 'They trained today.' : 'No session logged today yet.');
+        } else if ((accountability as any)?.status === 'pending') {
+          setPartnerTitle('Duo invite pending');
+          setPartnerNote((accountability as any)?.invite_code ? `Code ${(accountability as any).invite_code}` : 'Waiting for your partner.');
+        } else {
+          setPartnerTitle('Accountability duo');
+          setPartnerNote('Set up or manage your partner.');
         }
-        const t = (userObj.tier || userObj.membership_tier || 'gold').toUpperCase();
-        setTier(t);
+
+        const plan = (plans.items || []).find((item: any) => normalizeTierLabel(item.subscriptionTier) === normalizedTier);
+        setPlanPrice(planPriceText(plan, normalizedTier));
+        setPlanDescription(planCopy(plan, normalizedTier));
       } catch {
         // Fallback silently
       }
@@ -107,6 +299,38 @@ export default function ProfileScreen() {
     await performLogout();
   };
 
+  const handleSaveHabits = async (habits: { identity: string; unlock: string; trigger: string }) => {
+    const updated = await updateCurrentUserProfile({
+      identity_statement: habits.identity.trim(),
+      workout_unlock_label: habits.unlock.trim(),
+      training_trigger_context: habits.trigger.trim(),
+      training_trigger_action: 'Open Victory Fitness and start',
+    });
+    const updatedUser = updated as any;
+    setUser(updatedUser);
+    setHabitIdentity(String(updatedUser.identity_statement || habits.identity));
+    setHabitUnlock(String(updatedUser.workout_unlock_label || habits.unlock));
+    setHabitTrigger(String(updatedUser.training_trigger_context || habits.trigger));
+  };
+
+  const handleSaveNotificationPrefs = async (preferences: {
+    pushEnabled: boolean;
+    whatsappEnabled: boolean;
+    emailEnabled: boolean;
+    nudgeTime: string;
+  }) => {
+    const updated = await updateCurrentUserProfile({
+      notification_push_enabled: preferences.pushEnabled,
+      notification_whatsapp_enabled: preferences.whatsappEnabled,
+      notification_email_enabled: preferences.emailEnabled,
+      notification_nudge_time: preferences.nudgeTime,
+    });
+    const updatedUser = updated as any;
+    setUser(updatedUser);
+    setNotificationPrefs(preferences);
+    setNotificationMeta(notificationSummary(updatedUser));
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
@@ -119,39 +343,39 @@ export default function ProfileScreen() {
           name={name}
           initials={initials}
           tier={tier}
+          country={country}
+          sinceDate={sinceDate}
           streakDays={streakDays}
           totalSessions={totalSessions}
           consistencyPct={consistencyPct}
         />
 
         {/* Daily Journal Teaser Card matching lines 1143-1156 */}
-        <RequirementAuditBoundary auditId="APP-EXTRA-001" status="extra">
-          <View style={styles.sectionWrap}>
-            <Text style={[styles.sectionKicker, { color: colors.copper }]}>JOURNAL</Text>
-            <TouchableOpacity
-              style={[
-                styles.journalCard,
-                {
-                  backgroundColor: isDark ? NAVY : '#FFFFFF',
-                  borderColor: isDark ? 'transparent' : colors.cardBorder,
-                  borderWidth: isDark ? 0 : 1,
-                },
-              ]}
-              activeOpacity={0.85}
-              onPress={() => router.push('/journal')}
-            >
-              <View style={styles.journalTopRow}>
-                <Text style={styles.journalPromptKicker}>TODAY'S PROMPT</Text>
-                <Text style={styles.journalRunningBadge}>5 DAYS RUNNING</Text>
-              </View>
-              <Text style={[styles.journalTitle, { color: colors.text }]}>What went better than you expected?</Text>
-              <View style={styles.journalBottomRow}>
-                <Text style={[styles.journalSub, { color: colors.textSecondary }]}>Two minutes. Nobody else sees it.</Text>
-                <Text style={styles.journalWriteLink}>Write ›</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </RequirementAuditBoundary>
+        <View style={styles.sectionWrap}>
+          <Text style={[styles.sectionKicker, { color: colors.copper }]}>JOURNAL</Text>
+          <TouchableOpacity
+            style={[
+              styles.journalCard,
+              {
+                backgroundColor: isDark ? NAVY : '#FFFFFF',
+                borderColor: isDark ? 'transparent' : colors.cardBorder,
+                borderWidth: isDark ? 0 : 1,
+              },
+            ]}
+            activeOpacity={0.85}
+            onPress={() => router.push('/journal')}
+          >
+            <View style={styles.journalTopRow}>
+              <Text style={styles.journalPromptKicker}>TODAY'S PROMPT</Text>
+              <Text style={styles.journalRunningBadge}>{journalRunningText}</Text>
+            </View>
+            <Text style={[styles.journalTitle, { color: colors.text }]}>{journalPrompt}</Text>
+            <View style={styles.journalBottomRow}>
+              <Text style={[styles.journalSub, { color: colors.textSecondary }]}>Two minutes. Nobody else sees it.</Text>
+              <Text style={styles.journalWriteLink}>Write ›</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
 
         {/* Health & Wearables section matching lines 1158-1182 (Platinum & Inner Circle) */}
         {isPlatinumOrIC && (
@@ -160,9 +384,16 @@ export default function ProfileScreen() {
 
         {/* All 4 Habit Fields editable with trigger usage counter matching lines 1184-1211 */}
         <ClaudeHabitsCard
+          identity={habitIdentity}
+          unlock={habitUnlock}
+          trigger={habitTrigger}
+          triggerUsage={triggerUsage}
+          partnerTitle={partnerTitle}
+          partnerNote={partnerNote}
           isSilver={isSilver}
           onOpenDuo={() => setShowDuoModal(true)}
           onUpgrade={() => router.push('/plan')}
+          onSaveHabits={handleSaveHabits}
         />
 
         {/* Weekly Digest Teaser Card matching lines 1213-1220 (Platinum & Inner Circle) */}
@@ -240,17 +471,17 @@ export default function ProfileScreen() {
               onPress={() => setShowNotifModal(true)}
             >
               <Text style={[styles.menuTitle, { color: colors.text }]}>Notifications</Text>
-              <Text style={[styles.menuMeta, { fontFamily: MONO, color: colors.textMuted }]}>20:30 · PUSH & WA</Text>
+              <Text style={[styles.menuMeta, { fontFamily: MONO, color: colors.textMuted }]}>{notificationMeta}</Text>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.menuRow, { borderBottomColor: colors.divider }]}
               activeOpacity={0.7}
-              onPress={() => Alert.alert('Language', 'English (UK) is currently selected.')}
+              onPress={() => Alert.alert('Language', `${languageMeta} is currently selected.`)}
             >
               <Text style={[styles.menuTitle, { color: colors.text }]}>Language</Text>
-              <Text style={[styles.menuMeta, { fontFamily: MONO, color: GOLD }]}>ENGLISH</Text>
+              <Text style={[styles.menuMeta, { fontFamily: MONO, color: GOLD }]}>{languageMeta}</Text>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
 
@@ -316,15 +547,11 @@ export default function ProfileScreen() {
           <View style={styles.planHeaderRow}>
             <Text style={styles.planKicker}>{`YOUR PLAN · ${tier}`}</Text>
             <Text style={[styles.planPrice, { color: colors.textMuted }]}>
-              {tier === 'SILVER' ? '€19/mo' : tier === 'GOLD' ? '€49/mo' : tier === 'PLATINUM' ? '€129/mo' : '€490/mo'}
+              {planPrice}
             </Text>
           </View>
           <Text style={[styles.planSub, { color: colors.textSecondary }]}>
-            {tier === 'SILVER'
-              ? 'Workouts and community. Upgrade to Gold for AI Coach, macro tracker, and week meal plans.'
-              : tier === 'GOLD'
-              ? 'Unlimited AI Coach, 170 workouts, and macro tracking. Platinum adds wearable sync & monthly 1-to-1 coach calls.'
-              : 'Priority coach responses, wearable sync, and monthly 1-to-1 coaching sessions included.'}
+            {planDescription}
           </Text>
           <TouchableOpacity
             style={styles.compareBtn}
@@ -379,12 +606,20 @@ export default function ProfileScreen() {
         visible={showApplyModal}
         onClose={() => setShowApplyModal(false)}
         userName={name}
-        userEmail={user?.email || 'm.krause@mail.de'}
+        userEmail={user?.email || ''}
         userPhone={user?.contact_number || ''}
+        userCountry={country}
       />
       <ClaudeNotificationPreferencesModal
         visible={showNotifModal}
         onClose={() => setShowNotifModal(false)}
+        pushEnabled={notificationPrefs.pushEnabled}
+        whatsappEnabled={notificationPrefs.whatsappEnabled}
+        emailEnabled={notificationPrefs.emailEnabled}
+        nudgeTime={notificationPrefs.nudgeTime}
+        contactNumber={user?.contact_number || ''}
+        countryCode={user?.country_code || ''}
+        onSave={handleSaveNotificationPrefs}
       />
     </View>
   );

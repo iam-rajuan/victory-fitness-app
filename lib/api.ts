@@ -193,6 +193,10 @@ export type AuthUser = {
   is_verified: boolean;
   is_admin?: boolean;
   preferred_language?: string;
+  notification_push_enabled?: boolean;
+  notification_whatsapp_enabled?: boolean;
+  notification_email_enabled?: boolean;
+  notification_nudge_time?: string;
   country?: string;
   country_code?: string | null;
   contact_number?: string | null;
@@ -650,6 +654,10 @@ function normalizeAuthUser(user: Partial<AuthUser> & { id?: string; name?: strin
     is_verified: Boolean(user.is_verified),
     is_admin: Boolean(user.is_admin),
     preferred_language: String(user.preferred_language ?? ''),
+    notification_push_enabled: user.notification_push_enabled !== undefined ? Boolean(user.notification_push_enabled) : true,
+    notification_whatsapp_enabled: user.notification_whatsapp_enabled !== undefined ? Boolean(user.notification_whatsapp_enabled) : false,
+    notification_email_enabled: user.notification_email_enabled !== undefined ? Boolean(user.notification_email_enabled) : false,
+    notification_nudge_time: String(user.notification_nudge_time || '20:30'),
     country: String(user.country ?? ''),
     country_code: user.country_code ? String(user.country_code).toUpperCase() : null,
     contact_number: contactNumber == null ? null : String(contactNumber),
@@ -1049,6 +1057,10 @@ export async function updateCurrentUserProfile(payload: {
   country_code?: string;
   contact_number?: string;
   preferred_language?: string;
+  notification_push_enabled?: boolean;
+  notification_whatsapp_enabled?: boolean;
+  notification_email_enabled?: boolean;
+  notification_nudge_time?: string;
   profileImage?: string;
   onboarding_completed?: boolean;
   motivation_statement?: string;

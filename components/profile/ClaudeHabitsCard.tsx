@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -21,7 +21,7 @@ interface ClaudeHabitsCardProps {
   isSilver?: boolean;
   onOpenDuo: () => void;
   onUpgrade: () => void;
-  onSaveHabits?: (habits: { identity: string; unlock: string; trigger: string }) => void;
+  onSaveHabits?: (habits: { identity: string; unlock: string; trigger: string }) => void | Promise<void>;
 }
 
 const NAVY = '#0D2B45';
@@ -36,12 +36,12 @@ const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' })
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
 
 export default function ClaudeHabitsCard({
-  identity = '“I am someone who trains even when it is hard.”',
-  unlock = 'My true-crime podcast — only while I train',
-  trigger = 'After the kids are in bed, I open the app and start.',
-  triggerUsage = 'used on 3 of 4 sessions this week',
-  partnerTitle = 'Anna is your partner',
-  partnerNote = 'She trained today. You both did.',
+  identity = 'Set the person you are becoming.',
+  unlock = 'Set a reward you only use while training.',
+  trigger = 'Set the moment that starts your session.',
+  triggerUsage = 'No trigger data yet',
+  partnerTitle = 'Accountability duo',
+  partnerNote = 'Set up or manage your partner.',
   isSilver = false,
   onOpenDuo,
   onUpgrade,
@@ -52,17 +52,38 @@ export default function ClaudeHabitsCard({
   const [currentIdentity, setCurrentIdentity] = useState(identity);
   const [currentUnlock, setCurrentUnlock] = useState(unlock);
   const [currentTrigger, setCurrentTrigger] = useState(trigger);
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = () => {
-    setEditing(false);
-    if (onSaveHabits) {
-      onSaveHabits({
-        identity: currentIdentity,
-        unlock: currentUnlock,
-        trigger: currentTrigger,
-      });
+  useEffect(() => {
+    setCurrentIdentity(identity);
+  }, [identity]);
+
+  useEffect(() => {
+    setCurrentUnlock(unlock);
+  }, [unlock]);
+
+  useEffect(() => {
+    setCurrentTrigger(trigger);
+  }, [trigger]);
+
+  const handleSave = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      if (onSaveHabits) {
+        await onSaveHabits({
+          identity: currentIdentity,
+          unlock: currentUnlock,
+          trigger: currentTrigger,
+        });
+      }
+      setEditing(false);
+      Alert.alert('Habits saved', 'Your habit fields have been updated.');
+    } catch (error: any) {
+      Alert.alert('Could not save habits', error?.message || 'Please try again.');
+    } finally {
+      setSaving(false);
     }
-    Alert.alert('Habits Saved', 'Your 4 habit fields have been updated.');
   };
 
   if (isSilver) {
@@ -225,8 +246,8 @@ export default function ClaudeHabitsCard({
               <Text style={[styles.modalCancel, { color: colors.textMuted }]}>Cancel</Text>
             </TouchableOpacity>
             <Text style={[styles.modalTitle, { color: colors.text }]}>Edit Habit Fields</Text>
-            <TouchableOpacity onPress={handleSave} activeOpacity={0.7}>
-              <Text style={styles.modalSave}>Save</Text>
+            <TouchableOpacity onPress={handleSave} activeOpacity={0.7} disabled={saving}>
+              <Text style={styles.modalSave}>{saving ? 'Saving...' : 'Save'}</Text>
             </TouchableOpacity>
           </View>
 

@@ -23,6 +23,7 @@ interface ClaudeInnerCircleApplyModalProps {
   userName?: string;
   userEmail?: string;
   userPhone?: string;
+  userCountry?: string;
 }
 
 const NAVY = '#0D2B45';
@@ -77,9 +78,10 @@ const FALLBACK_QUESTIONS: InnerCircleApplicationQuestion[] = [
 export default function ClaudeInnerCircleApplyModal({
   visible,
   onClose,
-  userName = 'Michael Krause',
-  userEmail = 'm.krause@mail.de',
+  userName = '',
+  userEmail = '',
   userPhone = '',
+  userCountry = '',
 }: ClaudeInnerCircleApplyModalProps) {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -235,11 +237,11 @@ export default function ClaudeInnerCircleApplyModal({
                 </View>
                 <View style={styles.contactRow}>
                   <Text style={styles.contactLabel}>WhatsApp</Text>
-                  <Text style={[styles.contactVal, { fontFamily: MONO }]}>+49 171 555 0148</Text>
+                  <Text style={[styles.contactVal, { fontFamily: MONO }]}>{userPhone || 'Not set'}</Text>
                 </View>
                 <View style={styles.contactRow}>
-                  <Text style={styles.contactLabel}>Country · time zone</Text>
-                  <Text style={[styles.contactVal, { fontFamily: MONO }]}>Germany · CET</Text>
+                  <Text style={styles.contactLabel}>Country</Text>
+                  <Text style={[styles.contactVal, { fontFamily: MONO }]}>{userCountry || 'Not set'}</Text>
                 </View>
                 <View style={[styles.contactRow, { borderBottomWidth: 0 }]}>
                   <Text style={styles.contactLabel}>Best time to call</Text>

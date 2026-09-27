@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -13,6 +13,18 @@ import {
 interface ClaudeNotificationPreferencesModalProps {
   visible: boolean;
   onClose: () => void;
+  pushEnabled?: boolean;
+  whatsappEnabled?: boolean;
+  emailEnabled?: boolean;
+  nudgeTime?: string;
+  contactNumber?: string | null;
+  countryCode?: string | null;
+  onSave?: (preferences: {
+    pushEnabled: boolean;
+    whatsappEnabled: boolean;
+    emailEnabled: boolean;
+    nudgeTime: string;
+  }) => void | Promise<void>;
 }
 
 const NAVY = '#0D2B45';
@@ -29,15 +41,40 @@ const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Cou
 export default function ClaudeNotificationPreferencesModal({
   visible,
   onClose,
+  pushEnabled: initialPushEnabled = true,
+  whatsappEnabled: initialWhatsappEnabled = false,
+  emailEnabled: initialEmailEnabled = false,
+  nudgeTime: initialNudgeTime = '20:30',
+  contactNumber,
+  countryCode,
+  onSave,
 }: ClaudeNotificationPreferencesModalProps) {
-  const [pushEnabled, setPushEnabled] = useState(true);
-  const [whatsappEnabled, setWhatsappEnabled] = useState(true);
-  const [emailEnabled, setEmailEnabled] = useState(false);
-  const [nudgeTime, setNudgeTime] = useState('20:30');
+  const [pushEnabled, setPushEnabled] = useState(initialPushEnabled);
+  const [whatsappEnabled, setWhatsappEnabled] = useState(initialWhatsappEnabled);
+  const [emailEnabled, setEmailEnabled] = useState(initialEmailEnabled);
+  const [nudgeTime, setNudgeTime] = useState(initialNudgeTime);
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = () => {
-    Alert.alert('Preferences Saved', 'Your reminder channels and quiet hours have been updated.');
-    onClose();
+  useEffect(() => {
+    if (!visible) return;
+    setPushEnabled(initialPushEnabled);
+    setWhatsappEnabled(initialWhatsappEnabled);
+    setEmailEnabled(initialEmailEnabled);
+    setNudgeTime(initialNudgeTime || '20:30');
+  }, [initialEmailEnabled, initialNudgeTime, initialPushEnabled, initialWhatsappEnabled, visible]);
+
+  const handleSave = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await onSave?.({ pushEnabled, whatsappEnabled, emailEnabled, nudgeTime });
+      Alert.alert('Preferences saved', 'Your reminder channels have been updated.');
+      onClose();
+    } catch (error: any) {
+      Alert.alert('Could not save preferences', error?.message || 'Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -103,8 +140,8 @@ export default function ClaudeNotificationPreferencesModal({
             <View style={styles.waCard}>
               <Text style={styles.waKicker}>WHATSAPP NUMBER</Text>
               <View style={styles.waRow}>
-                <Text style={styles.waCountryCode}>+49</Text>
-                <Text style={styles.waNumber}>171 555 0148</Text>
+                <Text style={styles.waCountryCode}>{countryCode ? countryCode.toUpperCase() : 'WA'}</Text>
+                <Text style={styles.waNumber}>{contactNumber || 'No WhatsApp number set'}</Text>
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={() => Alert.alert('Change Number', 'Update your phone number in account settings.')}
@@ -134,8 +171,8 @@ export default function ClaudeNotificationPreferencesModal({
             </View>
           </View>
 
-          <TouchableOpacity style={styles.saveBtn} activeOpacity={0.85} onPress={handleSave}>
-            <Text style={styles.saveBtnText}>Save preferences</Text>
+          <TouchableOpacity style={[styles.saveBtn, saving && styles.saveBtnDisabled]} activeOpacity={0.85} onPress={handleSave} disabled={saving}>
+            <Text style={styles.saveBtnText}>{saving ? 'Saving...' : 'Save preferences'}</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -328,6 +365,9 @@ const styles = StyleSheet.create({
     backgroundColor: GOLD,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  saveBtnDisabled: {
+    opacity: 0.65,
   },
   saveBtnText: {
     fontFamily: DMSANS,
