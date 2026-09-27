@@ -11,6 +11,7 @@ export type NutritionMealEntry = {
   f: number;
   ingredients: string[];
   instructions: string[];
+  timing?: string | null;
 };
 
 export type NutritionDayPlan = {

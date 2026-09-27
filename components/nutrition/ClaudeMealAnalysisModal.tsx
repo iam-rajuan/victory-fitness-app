@@ -1,5 +1,7 @@
 import React from 'react';
 import {
+  ActivityIndicator,
+  Image,
   StyleSheet,
   Text,
   View,
@@ -8,6 +10,7 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
+import { analyzeMealImage, MealImageAnalysisResponse } from '../../lib/nutrition';
 
 interface MacroSnapshot {
   k: string;
@@ -19,6 +22,10 @@ interface ClaudeMealAnalysisModalProps {
   visible: boolean;
   onClose: () => void;
   onLogMeal: (mealData: any) => void;
+  imageBase64?: string | null;
+  imageUri?: string | null;
+  mimeType?: string | null;
+  fileName?: string | null;
 }
 
 const OBSIDIAN = '#0D0D0D';
@@ -33,25 +40,70 @@ const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", de
 const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
-const SNAP_MACROS: MacroSnapshot[] = [
-  { k: 'PROTEIN', v: '48 g', color: GOLD },
-  { k: 'CARBS', v: '96 g', color: COPPER },
-  { k: 'FAT', v: '18 g', color: IVORY },
-  { k: 'KCAL', v: '720', color: GREEN },
-];
-
 export default function ClaudeMealAnalysisModal({
   visible,
   onClose,
   onLogMeal,
+  imageBase64,
+  imageUri,
+  mimeType,
+  fileName,
 }: ClaudeMealAnalysisModalProps) {
+  const [analysis, setAnalysis] = React.useState<MealImageAnalysisResponse | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = React.useState(false);
+  const [analysisError, setAnalysisError] = React.useState('');
+
+  React.useEffect(() => {
+    let cancelled = false;
+    if (!visible) return;
+
+    const runAnalysis = async () => {
+      if (!imageBase64) {
+        setAnalysis(null);
+        setAnalysisError('');
+        return;
+      }
+      setIsAnalyzing(true);
+      setAnalysisError('');
+      try {
+        const result = await analyzeMealImage({
+          image_base64: imageBase64,
+          mime_type: mimeType || 'image/jpeg',
+          file_name: fileName || 'meal-photo.jpg',
+        });
+        if (!cancelled) setAnalysis(result);
+      } catch (error: any) {
+        if (!cancelled) {
+          setAnalysis(null);
+          setAnalysisError(error?.message || 'Unable to analyse this meal right now.');
+        }
+      } finally {
+        if (!cancelled) setIsAnalyzing(false);
+      }
+    };
+
+    void runAnalysis();
+    return () => {
+      cancelled = true;
+    };
+  }, [fileName, imageBase64, mimeType, visible]);
+
+  const macros: MacroSnapshot[] = [
+    { k: 'PROTEIN', v: `${analysis?.estimated_protein ?? 0} g`, color: GOLD },
+    { k: 'CARBS', v: `${analysis?.estimated_carbs ?? 0} g`, color: COPPER },
+    { k: 'FAT', v: `${analysis?.estimated_fat ?? 0} g`, color: IVORY },
+    { k: 'KCAL', v: `${analysis?.estimated_calories ?? 0}`, color: GREEN },
+  ];
+
   const handleLog = () => {
+    if (!analysis) return;
     onLogMeal({
-      name: 'Jollof rice with grilled chicken',
-      protein: 48,
-      carbs: 96,
-      fat: 18,
-      calories: 720,
+      name: analysis.meal_name_guess,
+      protein: analysis.estimated_protein,
+      carbs: analysis.estimated_carbs,
+      fat: analysis.estimated_fat,
+      calories: analysis.estimated_calories,
+      analysisId: analysis.analysis_id,
     });
     onClose();
   };
@@ -70,20 +122,30 @@ export default function ClaudeMealAnalysisModal({
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Photo Canvas Preview */}
           <View style={styles.photoCanvas}>
-            <View style={styles.cameraBox}>
-              <View style={styles.cameraCap} />
-              <View style={styles.cameraLens} />
-            </View>
-            <Text style={styles.photoText}>your photo</Text>
+            {imageUri ? (
+              <Image source={{ uri: imageUri }} style={styles.photoPreview} resizeMode="cover" />
+            ) : (
+              <>
+                <View style={styles.cameraBox}>
+                  <View style={styles.cameraCap} />
+                  <View style={styles.cameraLens} />
+                </View>
+                <Text style={styles.photoText}>your photo</Text>
+              </>
+            )}
           </View>
 
           {/* Recognition Results */}
-          <Text style={styles.dishTitle}>Jollof rice with grilled chicken</Text>
-          <Text style={styles.portionText}>Recognised · about 380 g on the plate</Text>
+          <Text style={styles.dishTitle}>
+            {isAnalyzing ? 'Analysing your meal...' : analysis?.meal_name_guess || 'Meal analysis'}
+          </Text>
+          <Text style={styles.portionText}>
+            {analysisError || (analysis ? `${analysis.confidence} confidence · saved to your history` : 'Choose a meal photo to analyse it')}
+          </Text>
 
           {/* 4 Macro Boxes Row */}
           <View style={styles.macrosRow}>
-            {SNAP_MACROS.map((m) => (
+            {macros.map((m) => (
               <View key={m.k} style={styles.macroCol}>
                 <Text style={[styles.macroVal, { color: m.color }]}>{m.v}</Text>
                 <Text style={styles.macroLabel}>{m.k}</Text>
@@ -91,27 +153,31 @@ export default function ClaudeMealAnalysisModal({
             ))}
           </View>
 
+          {isAnalyzing ? (
+            <View style={styles.loadingRow}>
+              <ActivityIndicator color={GOLD} />
+              <Text style={styles.loadingText}>Reading the plate from the backend...</Text>
+            </View>
+          ) : null}
+
           {/* What to do about it Card */}
           <View style={styles.adviceCard}>
             <Text style={styles.adviceKicker}>WHAT TO DO ABOUT IT</Text>
             <Text style={styles.adviceText}>
-              Good protein for one plate, but the rice puts you near your carbs for the day. Keep dinner to fish or eggs with vegetables and you finish level.
+              {analysis?.summary || analysisError || 'Your backend analysis appears here after the photo is processed.'}
             </Text>
 
-            <View style={styles.bulletRow}>
-              <View style={styles.greenDot} />
-              <Text style={styles.bulletText}>Protein: on pace for 112 g</Text>
-            </View>
-
-            <View style={styles.bulletRow}>
-              <View style={styles.copperDot} />
-              <Text style={styles.bulletText}>Carbs: 74% used, and dinner is still to come</Text>
-            </View>
+            {(analysis?.notes || []).slice(0, 3).map((note, idx) => (
+              <View key={`${note}-${idx}`} style={styles.bulletRow}>
+                <View style={idx % 2 === 0 ? styles.greenDot : styles.copperDot} />
+                <Text style={styles.bulletText}>{note}</Text>
+              </View>
+            ))}
           </View>
 
           {/* Action CTAs */}
           <View style={styles.actionsRow}>
-            <Pressable style={styles.logBtn} onPress={handleLog}>
+            <Pressable style={[styles.logBtn, !analysis && styles.logBtnDisabled]} onPress={handleLog} disabled={!analysis}>
               <Text style={styles.logBtnText}>Log this meal</Text>
             </Pressable>
             <Pressable style={styles.editBtn} onPress={onClose}>
@@ -168,6 +234,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 10,
     marginBottom: 16,
+    overflow: 'hidden',
+  },
+  photoPreview: {
+    width: '100%',
+    height: '100%',
   },
   cameraBox: {
     width: 44,
@@ -325,5 +396,19 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     lineHeight: 18,
     color: 'rgba(247, 243, 238, 0.42)',
+  },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 14,
+  },
+  loadingText: {
+    fontFamily: INTER,
+    fontSize: 12.5,
+    color: 'rgba(247, 243, 238, 0.55)',
+  },
+  logBtnDisabled: {
+    opacity: 0.45,
   },
 });

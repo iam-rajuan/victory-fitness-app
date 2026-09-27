@@ -18,6 +18,8 @@ interface ShopCategory {
 interface ClaudeShoppingListModalProps {
   visible: boolean;
   onClose: () => void;
+  categories?: ShopCategory[];
+  footnote?: string;
 }
 
 const OBSIDIAN = '#0D0D0D';
@@ -64,8 +66,11 @@ const SHOP_CATEGORIES: ShopCategory[] = [
 export default function ClaudeShoppingListModal({
   visible,
   onClose,
+  categories,
+  footnote,
 }: ClaudeShoppingListModalProps) {
   const [tickedIds, setTickedIds] = useState<Record<string, boolean>>({});
+  const visibleCategories = categories && categories.length > 0 ? categories : SHOP_CATEGORIES;
 
   const toggleItem = (id: string) => {
     setTickedIds((prev) => ({
@@ -76,7 +81,7 @@ export default function ClaudeShoppingListModal({
 
   const handleCopyList = () => {
     if (Platform.OS === 'web') {
-      const allItems = SHOP_CATEGORIES.map(
+      const allItems = visibleCategories.map(
         (c) => `${c.category}:\n` + c.items.map((it) => `- ${it.name}`).join('\n')
       ).join('\n\n');
       navigator.clipboard?.writeText(allItems);
@@ -106,7 +111,7 @@ export default function ClaudeShoppingListModal({
           </Text>
 
           {/* Grouped Categories */}
-          {SHOP_CATEGORIES.map((g) => (
+          {visibleCategories.map((g) => (
             <View key={g.category} style={styles.categoryWrap}>
               <Text style={styles.categoryTitle}>{g.category}</Text>
               <View style={styles.itemsCard}>
@@ -140,7 +145,7 @@ export default function ClaudeShoppingListModal({
           ))}
 
           <Text style={styles.footnote}>
-            Quantities are for four people across seven days. Nothing on this list contains lactose.
+            {footnote || 'Quantities come from your saved backend meal plan.'}
           </Text>
         </ScrollView>
       </View>

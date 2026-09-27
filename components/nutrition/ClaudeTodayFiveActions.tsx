@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
 import RequirementAuditBoundary from '../audit/RequirementAuditBoundary';
 
-interface ActionItem {
+export interface ActionItem {
   id: string;
   t: string;
   why: string;
@@ -11,6 +11,7 @@ interface ActionItem {
 }
 
 interface ClaudeTodayFiveActionsProps {
+  actions?: ActionItem[];
   onActionToggle?: (id: string, isDone: boolean) => void;
 }
 
@@ -24,8 +25,7 @@ const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", de
 const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
-export default function ClaudeTodayFiveActions({ onActionToggle }: ClaudeTodayFiveActionsProps) {
-  const [actions, setActions] = useState<ActionItem[]>([
+const DEFAULT_ACTIONS: ActionItem[] = [
     {
       id: 'a1',
       t: 'Add skyr to your breakfast oats',
@@ -61,21 +61,22 @@ export default function ClaudeTodayFiveActions({ onActionToggle }: ClaudeTodayFi
       g: '+25 g',
       done: false,
     },
-  ]);
+  ];
+
+export default function ClaudeTodayFiveActions({ actions: backendActions, onActionToggle }: ClaudeTodayFiveActionsProps) {
+  const [localDone, setLocalDone] = useState<Record<string, boolean>>({});
+  const actions = (backendActions && backendActions.length > 0 ? backendActions : DEFAULT_ACTIONS).slice(0, 5).map((action) => ({
+    ...action,
+    done: localDone[action.id] ?? action.done,
+  }));
 
   const doneCount = actions.filter((a) => a.done).length;
 
   const toggleAction = (id: string) => {
-    setActions((prev) =>
-      prev.map((a) => {
-        if (a.id === id) {
-          const next = !a.done;
-          if (onActionToggle) onActionToggle(id, next);
-          return { ...a, done: next };
-        }
-        return a;
-      })
-    );
+    const current = actions.find((action) => action.id === id);
+    const next = !current?.done;
+    setLocalDone((prev) => ({ ...prev, [id]: next }));
+    if (onActionToggle) onActionToggle(id, next);
   };
 
   return (

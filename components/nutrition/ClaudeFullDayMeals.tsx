@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
 
-interface MealRecord {
+export interface MealRecord {
   id: string;
+  mealKey?: string;
   name: string;
   sub: string;
   proteinG: number;
@@ -12,6 +12,9 @@ interface MealRecord {
 }
 
 interface ClaudeFullDayMealsProps {
+  meals: MealRecord[];
+  updatingMealKey?: string | null;
+  onToggleMeal?: (meal: MealRecord) => void;
   onLogMeal?: (mealId: string) => void;
 }
 
@@ -24,72 +27,27 @@ const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", de
 const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
-export default function ClaudeFullDayMeals({ onLogMeal }: ClaudeFullDayMealsProps) {
-  const [meals, setMeals] = useState<MealRecord[]>([
+export default function ClaudeFullDayMeals({ meals, updatingMealKey, onToggleMeal, onLogMeal }: ClaudeFullDayMealsProps) {
+  const visibleMeals = meals.length > 0 ? meals : [
     {
-      id: 'm1',
-      name: 'Oats, skyr & berries',
-      sub: 'Breakfast · 07:40',
-      proteinG: 32,
-      kcal: 420,
-      logged: true,
-    },
-    {
-      id: 'm2',
-      name: 'Chicken & rice bowl',
-      sub: 'Lunch · 12:55',
-      proteinG: 54,
-      kcal: 640,
-      logged: true,
-    },
-    {
-      id: 'm3',
-      name: 'Salmon, potatoes & broccoli',
-      sub: 'Dinner · planned for 19:30',
-      proteinG: 31,
-      kcal: 680,
-      logged: false,
-      isDinnerPlanned: true,
-    },
-    {
-      id: 'm4',
-      name: 'Evening shake',
-      sub: 'Only if dinner leaves you short',
-      proteinG: 25,
-      kcal: 180,
+      id: 'empty',
+      mealKey: 'breakfast',
+      name: 'Your meal plan is loading',
+      sub: 'Backend meals appear here',
+      proteinG: 0,
+      kcal: 0,
       logged: false,
     },
-  ]);
-
-  const handleToggleMeal = (id: string) => {
-    setMeals((prev) =>
-      prev.map((m) => {
-        if (m.id === id) {
-          const nextLogged = !m.logged;
-          return {
-            ...m,
-            logged: nextLogged,
-            sub: nextLogged
-              ? `${m.name.split(' ')[0]} · eaten`
-              : m.id === 'm3'
-              ? 'Dinner · planned for 19:30'
-              : 'Only if dinner leaves you short',
-          };
-        }
-        return m;
-      })
-    );
-    if (onLogMeal) onLogMeal(id);
-  };
-
+  ];
   return (
     <View style={styles.container}>
       <Text style={styles.kicker}>YOUR FULL DAY</Text>
 
       <View style={styles.card}>
-        {meals.map((m, idx) => {
+        {visibleMeals.map((m, idx) => {
           const isHighlight = m.isDinnerPlanned && !m.logged;
-          const isLast = idx === meals.length - 1;
+          const isLast = idx === visibleMeals.length - 1;
+          const isUpdating = updatingMealKey === (m.mealKey || m.id);
 
           return (
             <View
@@ -130,11 +88,15 @@ export default function ClaudeFullDayMeals({ onLogMeal }: ClaudeFullDayMealsProp
                 ) : (
                   <TouchableOpacity
                     activeOpacity={0.7}
-                    onPress={() => handleToggleMeal(m.id)}
+                    onPress={() => {
+                      onToggleMeal?.(m);
+                      onLogMeal?.(m.id);
+                    }}
                     style={styles.actionBtn}
+                    disabled={isUpdating || m.id === 'empty'}
                   >
                     <Text style={styles.actionText}>
-                      {isHighlight ? 'LOG IT' : 'ADD'}
+                      {isUpdating ? '...' : isHighlight ? 'LOG IT' : 'ADD'}
                     </Text>
                   </TouchableOpacity>
                 )}

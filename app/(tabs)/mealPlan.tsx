@@ -8,15 +8,20 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { fetchCurrentUser, fetchCurrentUserBodyMetrics, AuthUser } from '../../lib/api';
 import { normalizeSubscriptionTier, SubscriptionTier } from '../../lib/access';
-import { pushRoute } from '../../lib/navigation';
-import { calculateProteinTarget } from '../../lib/nutrition';
+import {
+  calculateProteinTarget,
+  getLatestNutritionPlan,
+  NutritionDayPlan,
+  NutritionMealEntry,
+  NutritionPlanApiResponse,
+  updateNutritionMealCompletion,
+} from '../../lib/nutrition';
 import ClaudeMacroCards from '../../components/nutrition/ClaudeMacroCards';
-import ClaudeFullDayMeals from '../../components/nutrition/ClaudeFullDayMeals';
-import ClaudeTodayFiveActions from '../../components/nutrition/ClaudeTodayFiveActions';
+import ClaudeFullDayMeals, { MealRecord } from '../../components/nutrition/ClaudeFullDayMeals';
+import ClaudeTodayFiveActions, { ActionItem } from '../../components/nutrition/ClaudeTodayFiveActions';
 import ClaudeMealAnalysisCard from '../../components/nutrition/ClaudeMealAnalysisCard';
 import ClaudeMealAnalysisModal from '../../components/nutrition/ClaudeMealAnalysisModal';
 import ClaudeWeekPlanModal from '../../components/nutrition/ClaudeWeekPlanModal';
@@ -36,13 +41,20 @@ const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", defau
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 export default function MealPlanScreen() {
-  const router = useRouter();
   const { isDark, colors } = useTheme();
 
   // Current user & tier state
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [nutritionPlan, setNutritionPlan] = useState<NutritionPlanApiResponse | null>(null);
   const [proteinTarget, setProteinTarget] = useState(112);
   const [userWeight, setUserWeight] = useState(75);
+  const [updatingMealKey, setUpdatingMealKey] = useState<string | null>(null);
+  const [selectedMealPhoto, setSelectedMealPhoto] = useState<{
+    uri: string;
+    base64: string;
+    mimeType: string;
+    fileName: string;
+  } | null>(null);
 
   // Modals state
   const [showMealAnalysisModal, setShowMealAnalysisModal] = useState(false);
@@ -54,9 +66,10 @@ export default function MealPlanScreen() {
 
     const loadData = async () => {
       try {
-        const [user, metrics] = await Promise.all([
+        const [user, metrics, plan] = await Promise.all([
           fetchCurrentUser().catch(() => null),
           fetchCurrentUserBodyMetrics().catch(() => null),
+          getLatestNutritionPlan({ forceRefresh: true }).catch(() => null),
         ]);
 
         if (cancelled) return;
@@ -71,6 +84,11 @@ export default function MealPlanScreen() {
             setUserWeight(w);
             setProteinTarget(calculateProteinTarget(w, 'maintenance').target);
           }
+        }
+        if (plan) {
+          setNutritionPlan(plan);
+          if (plan.daily_protein_target) setProteinTarget(plan.daily_protein_target);
+          if (plan.baseline_weight) setUserWeight(plan.baseline_weight);
         }
       } catch {
         // Fallback to defaults
@@ -89,7 +107,96 @@ export default function MealPlanScreen() {
   }, [currentUser?.subscription_tier]);
 
   const isSilver = tier === 'SILVER' || tier === 'NONE';
-  const isPlatinumOrIC = tier === 'PLATINUM' || tier === 'INNER_CIRCLE';
+  const todayKey = useMemo(() => {
+    const keys = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return keys[new Date().getDay()];
+  }, []);
+
+  const todayPlan = useMemo(() => {
+    return nutritionPlan?.days?.find((day) => day.day === todayKey) || nutritionPlan?.days?.[0] || null;
+  }, [nutritionPlan?.days, todayKey]);
+
+  const mealEntries = useMemo(() => {
+    const rows: Array<{ key: string; label: string; meal: NutritionMealEntry | null | undefined }> = [
+      { key: 'breakfast', label: 'Breakfast', meal: todayPlan?.breakfast },
+      { key: 'lunch', label: 'Lunch', meal: todayPlan?.lunch },
+      { key: 'dinner', label: 'Dinner', meal: todayPlan?.dinner },
+      { key: 'pre_workout', label: 'Pre workout', meal: todayPlan?.pre_workout },
+      { key: 'post_workout', label: 'Post workout', meal: todayPlan?.post_workout },
+    ];
+    return rows.filter((row) => row.meal && row.meal.name);
+  }, [todayPlan]);
+
+  const todayCompletions = useMemo(() => {
+    return (nutritionPlan?.meal_completions?.[todayPlan?.day || todayKey] || {}) as Record<string, boolean>;
+  }, [nutritionPlan?.meal_completions, todayPlan?.day, todayKey]);
+
+  const fullDayMeals = useMemo<MealRecord[]>(() => {
+    return mealEntries.map((entry) => {
+      const meal = entry.meal as NutritionMealEntry;
+      const logged = Boolean(todayCompletions[entry.key]);
+      return {
+        id: entry.key,
+        mealKey: entry.key,
+        name: meal.name,
+        sub: logged ? `${entry.label} · eaten` : `${entry.label} · ${meal.timing || meal.desc || 'planned today'}`,
+        proteinG: Math.max(0, Number(meal.p || 0)),
+        kcal: Math.max(0, Number(meal.kcal || 0)),
+        logged,
+        isDinnerPlanned: entry.key === 'dinner',
+      };
+    });
+  }, [mealEntries, todayCompletions]);
+
+  const macroTotals = useMemo(() => {
+    const target = mealEntries.reduce(
+      (acc, entry) => {
+        const meal = entry.meal as NutritionMealEntry;
+        acc.kcal += Number(meal.kcal || 0);
+        acc.p += Number(meal.p || 0);
+        acc.c += Number(meal.c || 0);
+        acc.f += Number(meal.f || 0);
+        return acc;
+      },
+      { kcal: 0, p: 0, c: 0, f: 0 }
+    );
+    const current = mealEntries.reduce(
+      (acc, entry) => {
+        if (!todayCompletions[entry.key]) return acc;
+        const meal = entry.meal as NutritionMealEntry;
+        acc.kcal += Number(meal.kcal || 0);
+        acc.p += Number(meal.p || 0);
+        acc.c += Number(meal.c || 0);
+        acc.f += Number(meal.f || 0);
+        return acc;
+      },
+      { kcal: 0, p: 0, c: 0, f: 0 }
+    );
+    return { target, current };
+  }, [mealEntries, todayCompletions]);
+
+  const todayActions = useMemo<ActionItem[]>(() => {
+    return mealEntries.slice(0, 5).map((entry, index) => {
+      const meal = entry.meal as NutritionMealEntry;
+      return {
+        id: `meal-action-${entry.key}`,
+        t: entry.key === 'pre_workout' || entry.key === 'post_workout' ? `Use ${meal.name}` : `Eat ${meal.name}`,
+        why: meal.desc || `${entry.label} from your saved plan`,
+        g: `+${Math.max(0, Number(meal.p || 0))} g`,
+        done: Boolean(todayCompletions[entry.key]) || index < 0,
+      };
+    });
+  }, [mealEntries, todayCompletions]);
+
+  const shoppingCategories = useMemo(() => {
+    return (nutritionPlan?.shopping_list || []).map((section) => ({
+      category: section.category,
+      items: (section.items || []).map((item, idx) => ({
+        id: `${section.category}-${idx}-${item.name}`,
+        name: `${item.name}${item.qty ? ` ${item.qty}` : ''}`,
+      })),
+    }));
+  }, [nutritionPlan?.shopping_list]);
 
   const getFormattedDate = () => {
     const d = new Date();
@@ -114,6 +221,15 @@ export default function MealPlanScreen() {
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        if (asset.base64) {
+          setSelectedMealPhoto({
+            uri: asset.uri,
+            base64: asset.base64,
+            mimeType: normalizePickedImageMimeType(asset),
+            fileName: asset.fileName || `meal-photo-${Date.now()}.jpg`,
+          });
+        }
         setShowMealAnalysisModal(true);
       }
     } catch {
@@ -137,10 +253,38 @@ export default function MealPlanScreen() {
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        if (asset.base64) {
+          setSelectedMealPhoto({
+            uri: asset.uri,
+            base64: asset.base64,
+            mimeType: normalizePickedImageMimeType(asset),
+            fileName: asset.fileName || `meal-photo-${Date.now()}.jpg`,
+          });
+        }
         setShowMealAnalysisModal(true);
       }
     } catch {
       setShowMealAnalysisModal(true);
+    }
+  };
+
+  const handleToggleMeal = async (meal: MealRecord) => {
+    const mealKey = meal.mealKey || meal.id;
+    const day = todayPlan?.day || todayKey;
+    if (!mealKey || updatingMealKey) return;
+    setUpdatingMealKey(mealKey);
+    try {
+      const updated = await updateNutritionMealCompletion({
+        day,
+        meal_key: mealKey,
+        completed: !meal.logged,
+      });
+      setNutritionPlan(updated);
+    } catch (error: any) {
+      Alert.alert('Unable to update meal', error?.message || 'Please try again.');
+    } finally {
+      setUpdatingMealKey(null);
     }
   };
 
@@ -161,20 +305,34 @@ export default function MealPlanScreen() {
           <TouchableOpacity
             style={styles.logFoodBtn}
             activeOpacity={0.8}
-            onPress={() => setShowMealAnalysisModal(true)}
+            onPress={handleUploadPhoto}
           >
             <Text style={styles.logFoodBtnText}>+ Log food</Text>
           </TouchableOpacity>
         </View>
 
         {/* 4 Macro Rings matching lines 1003-1014 */}
-        <ClaudeMacroCards proteinTarget={proteinTarget} />
+        <ClaudeMacroCards
+          proteinTarget={proteinTarget || macroTotals.target.p || 112}
+          proteinCurrent={macroTotals.current.p}
+          carbsCurrent={macroTotals.current.c}
+          carbsTarget={macroTotals.target.c || 220}
+          fatCurrent={macroTotals.current.f}
+          fatTarget={macroTotals.target.f || 70}
+          kcalCurrent={macroTotals.current.kcal}
+          kcalTarget={macroTotals.target.kcal || 2200}
+        />
 
         {/* YOUR FULL DAY matching lines 1017-1026 */}
-        <ClaudeFullDayMeals onLogMeal={() => setShowMealAnalysisModal(true)} />
+        <ClaudeFullDayMeals
+          meals={fullDayMeals}
+          updatingMealKey={updatingMealKey}
+          onToggleMeal={handleToggleMeal}
+          onLogMeal={() => undefined}
+        />
 
         {/* TODAY'S FIVE ACTIONS matching lines 1028-1046 */}
-        <ClaudeTodayFiveActions />
+        <ClaudeTodayFiveActions actions={todayActions} />
 
         {/* MEAL ANALYSIS Photo Card matching lines 1048-1063 */}
         <ClaudeMealAnalysisCard
@@ -211,6 +369,10 @@ export default function MealPlanScreen() {
           Alert.alert('Meal Logged', `${meal.name} logged successfully!`);
           setShowMealAnalysisModal(false);
         }}
+        imageBase64={selectedMealPhoto?.base64}
+        imageUri={selectedMealPhoto?.uri}
+        mimeType={selectedMealPhoto?.mimeType}
+        fileName={selectedMealPhoto?.fileName}
       />
 
       {/* Week Plan Modal matching lines 1567-1653 */}
@@ -221,15 +383,31 @@ export default function MealPlanScreen() {
           setShowWeekPlanModal(false);
           setShowShoppingModal(true);
         }}
+        plan={nutritionPlan}
+        defaultWeight={userWeight}
+        onPlanUpdated={setNutritionPlan}
       />
 
       {/* Shopping List Modal matching lines 1655-1679 */}
       <ClaudeShoppingListModal
         visible={showShoppingModal}
         onClose={() => setShowShoppingModal(false)}
+        categories={shoppingCategories}
+        footnote={`Quantities come from your saved ${nutritionPlan?.goal_label || 'meal'} plan.`}
       />
     </View>
   );
+}
+
+function normalizePickedImageMimeType(asset: ImagePicker.ImagePickerAsset) {
+  const mime = String(asset.mimeType || '').toLowerCase();
+  if (mime.startsWith('image/')) return mime;
+  const source = `${asset.fileName || ''} ${asset.uri || ''}`.toLowerCase();
+  if (source.includes('.png')) return 'image/png';
+  if (source.includes('.webp')) return 'image/webp';
+  if (source.includes('.gif')) return 'image/gif';
+  if (source.includes('.heic')) return 'image/heic';
+  return 'image/jpeg';
 }
 
 const styles = StyleSheet.create({

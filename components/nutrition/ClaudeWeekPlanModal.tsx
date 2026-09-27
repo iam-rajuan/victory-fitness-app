@@ -7,7 +7,9 @@ import {
   Pressable,
   ScrollView,
   Platform,
+  Alert,
 } from 'react-native';
+import { createNutritionPlan, NutritionPlanApiResponse, NutritionDayPlan } from '../../lib/nutrition';
 
 interface DayPlan {
   day: string;
@@ -20,6 +22,9 @@ interface ClaudeWeekPlanModalProps {
   visible: boolean;
   onClose: () => void;
   onOpenShoppingList: () => void;
+  plan?: NutritionPlanApiResponse | null;
+  defaultWeight?: number;
+  onPlanUpdated?: (plan: NutritionPlanApiResponse) => void;
 }
 
 const OBSIDIAN = '#0D0D0D';
@@ -37,36 +42,54 @@ const CUISINES = ['German', 'Ghanaian', 'Italian', 'Turkish', 'Indian', 'Mexican
 const FAVORITE_MEALS = ['Chicken & rice', 'Salmon & potatoes', 'Oats & skyr', '+ add your own'];
 const ALLERGIES = ['Lactose', 'Nuts', 'Gluten', 'Shellfish', 'Pork'];
 
-const DAYS_PLAN: DayPlan[] = [
-  {
-    day: 'Monday',
-    proteinText: '114 g protein',
-    meals: 'Oats with berries · Jollof rice with chicken · Salmon, potatoes, broccoli',
-    prepTime: '25 min total',
-  },
-  {
-    day: 'Tuesday',
-    proteinText: '110 g protein',
-    meals: 'Skyr with honey · Chicken & rice bowl · Groundnut soup with turkey',
-    prepTime: '30 min total',
-  },
-  {
-    day: 'Wednesday',
-    proteinText: '113 g protein',
-    meals: 'Eggs on rye · Lentil stew · Waakye with grilled fish',
-    prepTime: '28 min total',
-  },
-];
+function formatDayName(day: string) {
+  const names: Record<string, string> = {
+    Mon: 'Monday',
+    Tue: 'Tuesday',
+    Wed: 'Wednesday',
+    Thu: 'Thursday',
+    Fri: 'Friday',
+    Sat: 'Saturday',
+    Sun: 'Sunday',
+  };
+  return names[day] || day;
+}
+
+function mealNamesForDay(day: NutritionDayPlan) {
+  return [day.breakfast, day.lunch, day.dinner, day.pre_workout, day.post_workout]
+    .filter(Boolean)
+    .map((meal: any) => meal.name)
+    .filter(Boolean)
+    .join(' · ');
+}
+
+function proteinForDay(day: NutritionDayPlan) {
+  return [day.breakfast, day.lunch, day.dinner, day.pre_workout, day.post_workout]
+    .filter(Boolean)
+    .reduce((sum, meal: any) => sum + Math.max(0, Number(meal.p || 0)), 0);
+}
 
 export default function ClaudeWeekPlanModal({
   visible,
   onClose,
   onOpenShoppingList,
+  plan,
+  defaultWeight = 75,
+  onPlanUpdated,
 }: ClaudeWeekPlanModalProps) {
   const [viewMode, setViewMode] = useState<'questionnaire' | 'weekPlan'>('questionnaire');
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>(['German', 'Ghanaian']);
-  const [selectedMeals, setSelectedMeals] = useState<string[]>(['Chicken & rice', 'Salmon & potatoes']);
+  const [selectedMeals, setSelectedMeals] = useState<string[]>(['Chicken & rice', 'Salmon & potatoes', 'Oats & skyr']);
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>(['Lactose']);
+  const [generatedPlan, setGeneratedPlan] = useState<NutritionPlanApiResponse | null>(null);
+  const [isBuilding, setIsBuilding] = useState(false);
+  const activePlan = generatedPlan || plan || null;
+  const dayPlans: DayPlan[] = (activePlan?.days || []).map((day) => ({
+    day: formatDayName(day.day),
+    proteinText: `${proteinForDay(day)} g protein`,
+    meals: mealNamesForDay(day),
+    prepTime: `${Math.max(15, Math.min(45, (day.breakfast?.instructions?.length || 1) * 5 + 20))} min total`,
+  }));
 
   const toggleCuisine = (c: string) => {
     setSelectedCuisines((prev) =>
@@ -91,6 +114,39 @@ export default function ClaudeWeekPlanModal({
       setViewMode('questionnaire');
     } else {
       onClose();
+    }
+  };
+
+  const handleBuildWeek = async () => {
+    if (isBuilding) return;
+    const meals = selectedMeals
+      .filter((meal) => meal !== '+ add your own')
+      .map((meal) => meal.trim())
+      .filter(Boolean);
+    const favoriteMeals = Array.from(new Set([...meals, 'Chicken & rice', 'Salmon & potatoes', 'Oats & skyr'])).slice(0, 8);
+
+    setIsBuilding(true);
+    try {
+      const response = await createNutritionPlan({
+        goal: 'maintenance',
+        cuisine: selectedCuisines.join(', ') || 'balanced',
+        favorite_meal: favoriteMeals[0],
+        favorite_meals: favoriteMeals,
+        favorite_meals_json: favoriteMeals,
+        diet: 'balanced',
+        allergies: selectedAllergies.join(', '),
+        activity_level: 'moderate',
+        weight: String(defaultWeight),
+        regenerate: true,
+        force_refresh: true,
+      });
+      setGeneratedPlan(response.plan);
+      onPlanUpdated?.(response.plan);
+      setViewMode('weekPlan');
+    } catch (error: any) {
+      Alert.alert('Could not build meal plan', error?.message || 'Please try again.');
+    } finally {
+      setIsBuilding(false);
     }
   };
 
@@ -204,8 +260,8 @@ export default function ClaudeWeekPlanModal({
               </View>
 
               {/* CTA */}
-              <Pressable style={styles.primaryBtn} onPress={() => setViewMode('weekPlan')}>
-                <Text style={styles.primaryBtnText}>Build my week</Text>
+              <Pressable style={[styles.primaryBtn, isBuilding && styles.primaryBtnDisabled]} onPress={handleBuildWeek} disabled={isBuilding}>
+                <Text style={styles.primaryBtnText}>{isBuilding ? 'Building...' : 'Build my week'}</Text>
               </Pressable>
             </View>
           ) : (
@@ -218,12 +274,12 @@ export default function ClaudeWeekPlanModal({
 
               {/* Days Card */}
               <View style={styles.card}>
-                {DAYS_PLAN.map((d, idx) => (
+                {(dayPlans.length > 0 ? dayPlans : []).map((d, idx) => (
                   <View
                     key={d.day}
                     style={[
                       styles.dayBlock,
-                      idx < DAYS_PLAN.length - 1 && styles.dayBlockBorder,
+                      idx < dayPlans.length - 1 && styles.dayBlockBorder,
                     ]}
                   >
                     <View style={styles.dayTopRow}>
@@ -240,6 +296,9 @@ export default function ClaudeWeekPlanModal({
                   </View>
                 ))}
               </View>
+              {dayPlans.length === 0 ? (
+                <Text style={styles.moreDaysNote}>No saved plan yet. Go back and build your week.</Text>
+              ) : null}
 
               <Text style={styles.moreDaysNote}>Thursday to Sunday below ⌄</Text>
 
@@ -389,6 +448,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 26,
+  },
+  primaryBtnDisabled: {
+    opacity: 0.6,
   },
   primaryBtnText: {
     fontFamily: DMSANS,
