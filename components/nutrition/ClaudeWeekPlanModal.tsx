@@ -56,7 +56,7 @@ function formatDayName(day: string) {
 }
 
 function mealNamesForDay(day: NutritionDayPlan) {
-  return [day.breakfast, day.lunch, day.dinner, day.pre_workout, day.post_workout]
+  return [day.breakfast, day.lunch, day.dinner]
     .filter(Boolean)
     .map((meal: any) => meal.name)
     .filter(Boolean)
@@ -67,6 +67,14 @@ function proteinForDay(day: NutritionDayPlan) {
   return [day.breakfast, day.lunch, day.dinner, day.pre_workout, day.post_workout]
     .filter(Boolean)
     .reduce((sum, meal: any) => sum + Math.max(0, Number(meal.p || 0)), 0);
+}
+
+function shortPlanSummary(summary?: string | null) {
+  const text = String(summary || '').replace(/\s+/g, ' ').trim();
+  if (!text) return 'A practical week built from your food preferences, schedule, portions, and budget.';
+  const firstSentence = text.match(/^.*?[.!?](?:\s|$)/)?.[0]?.trim();
+  const candidate = firstSentence && firstSentence.length >= 45 ? firstSentence : text;
+  return candidate.length > 150 ? `${candidate.slice(0, 147).trim()}...` : candidate;
 }
 
 export default function ClaudeWeekPlanModal({
@@ -142,10 +150,6 @@ export default function ClaudeWeekPlanModal({
       .map((meal) => meal.trim())
       .filter(Boolean);
     const favoriteMeals = Array.from(new Set(meals)).slice(0, 8);
-    if (favoriteMeals.length < 3) {
-      Alert.alert('Add meals you like', 'Pick at least 3 favourite meals before building your backend plan.');
-      return;
-    }
 
     setIsBuilding(true);
     try {
@@ -317,9 +321,10 @@ export default function ClaudeWeekPlanModal({
                   <TextInput
                     style={styles.paramInput}
                     value={peopleCount}
-                    onChangeText={(value) => setPeopleCount(value.replace(/[^\dA-Za-z\s+-]/g, '').slice(0, 18))}
+                    onChangeText={(value) => setPeopleCount(value.replace(/[^\d]/g, '').slice(0, 2))}
                     placeholder="4"
                     placeholderTextColor="rgba(247,243,238,0.38)"
+                    keyboardType="number-pad"
                     returnKeyType="done"
                   />
                 </View>
@@ -346,8 +351,22 @@ export default function ClaudeWeekPlanModal({
             <View>
               <Text style={styles.headline}>Your week</Text>
               <Text style={styles.subheadline}>
-                {activePlan?.summary || 'Your saved backend meal plan appears here after it is built.'}
+                {shortPlanSummary(activePlan?.summary)}
               </Text>
+              <View style={styles.summaryPills}>
+                <View style={styles.summaryPill}>
+                  <Text style={styles.summaryPillLabel}>Cook</Text>
+                  <Text style={styles.summaryPillValue}>{cookingTime || '30 min'}</Text>
+                </View>
+                <View style={styles.summaryPill}>
+                  <Text style={styles.summaryPillLabel}>People</Text>
+                  <Text style={styles.summaryPillValue}>{peopleCount || '4'}</Text>
+                </View>
+                <View style={styles.summaryPill}>
+                  <Text style={styles.summaryPillLabel}>Budget</Text>
+                  <Text style={styles.summaryPillValue}>{weeklyBudget || '€120'}</Text>
+                </View>
+              </View>
 
               {/* Days Card */}
               <View style={styles.card}>
@@ -433,7 +452,36 @@ const styles = StyleSheet.create({
     fontSize: 14.5,
     lineHeight: 23,
     color: 'rgba(247, 243, 238, 0.6)',
-    marginBottom: 22,
+    marginBottom: 14,
+  },
+  summaryPills: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 14,
+  },
+  summaryPill: {
+    flex: 1,
+    borderRadius: 13,
+    backgroundColor: NAVY,
+    borderWidth: 1,
+    borderColor: 'rgba(247, 243, 238, 0.08)',
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+  },
+  summaryPillLabel: {
+    fontFamily: DMSANS,
+    fontSize: 9.5,
+    fontWeight: '700',
+    letterSpacing: 0.9,
+    color: GOLD,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+  summaryPillValue: {
+    fontFamily: MONO,
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: IVORY,
   },
   card: {
     backgroundColor: NAVY,
@@ -550,8 +598,7 @@ const styles = StyleSheet.create({
     color: IVORY,
   },
   paramInput: {
-    minWidth: 84,
-    maxWidth: 132,
+    width: 120,
     minHeight: 36,
     borderRadius: 10,
     borderWidth: 1,
