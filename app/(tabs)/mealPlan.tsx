@@ -46,7 +46,7 @@ export default function MealPlanScreen() {
   // Current user & tier state
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [nutritionPlan, setNutritionPlan] = useState<NutritionPlanApiResponse | null>(null);
-  const [proteinTarget, setProteinTarget] = useState(112);
+  const [proteinTarget, setProteinTarget] = useState(0);
   const [userWeight, setUserWeight] = useState(75);
   const [updatingMealKey, setUpdatingMealKey] = useState<string | null>(null);
   const [selectedMealPhoto, setSelectedMealPhoto] = useState<{
@@ -332,14 +332,14 @@ export default function MealPlanScreen() {
 
         {/* 4 Macro Rings matching lines 1003-1014 */}
         <ClaudeMacroCards
-          proteinTarget={proteinTarget || macroTotals.target.p || 112}
+          proteinTarget={proteinTarget || macroTotals.target.p}
           proteinCurrent={macroTotals.current.p}
           carbsCurrent={macroTotals.current.c}
           carbsTarget={macroTotals.target.c || 220}
           fatCurrent={macroTotals.current.f}
           fatTarget={macroTotals.target.f || 70}
           kcalCurrent={macroTotals.current.kcal}
-          kcalTarget={macroTotals.target.kcal || 2200}
+          kcalTarget={macroTotals.target.kcal}
         />
 
         {/* YOUR FULL DAY matching lines 1017-1026 */}

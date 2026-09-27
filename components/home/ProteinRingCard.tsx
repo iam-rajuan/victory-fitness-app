@@ -18,7 +18,6 @@ import {
   getLatestNutritionPlan,
   updateNutritionMealCompletion,
   calculateProteinTarget,
-  STARTER_MEAL_PLAN,
   NutritionDayPlan,
 } from '../../lib/nutrition';
 import { useLanguage } from '../../lib/i18n';
@@ -39,12 +38,12 @@ export default function ProteinRingCard({ onPressLogMeal }: ProteinRingCardProps
   const { t } = useLanguage();
 
   // Zero by default: NO demo data!
-  const [proteinTarget, setProteinTarget] = useState(112);
+  const [proteinTarget, setProteinTarget] = useState(0);
   const [proteinConsumed, setProteinConsumed] = useState(0);
-  const [caloriesTarget, setCaloriesTarget] = useState(2100);
+  const [caloriesTarget, setCaloriesTarget] = useState(0);
   const [caloriesConsumed, setCaloriesConsumed] = useState(0);
 
-  const [todayPlan, setTodayPlan] = useState<NutritionDayPlan | typeof STARTER_MEAL_PLAN['Mon'] | null>(null);
+  const [todayPlan, setTodayPlan] = useState<NutritionDayPlan | null>(null);
   const [todayCompletions, setTodayCompletions] = useState<Record<string, boolean>>({});
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
   const [updatingMealKey, setUpdatingMealKey] = useState<string | null>(null);
@@ -60,19 +59,16 @@ export default function ProteinRingCard({ onPressLogMeal }: ProteinRingCardProps
 
       const weightKg = Number(metrics?.weight) || Number((user as any)?.weight) || 70;
       const calcProtein = calculateProteinTarget(weightKg, (user as any)?.goal || (plan?.profile as any)?.goal);
-      const targetP = plan?.daily_protein_target || user?.daily_protein_target || calcProtein.target || 112;
+      const targetP = plan?.daily_protein_target || user?.daily_protein_target || calcProtein.target || 0;
       setProteinTarget(targetP);
 
-      const resolvedDayPlan =
-        plan?.days?.find((d) => d.day === todayKey) ||
-        STARTER_MEAL_PLAN[todayKey] ||
-        STARTER_MEAL_PLAN['Mon'];
+      const resolvedDayPlan = plan?.days?.find((d) => d.day === todayKey) || plan?.days?.[0] || null;
       setTodayPlan(resolvedDayPlan);
 
       const dayMeals = Object.entries(resolvedDayPlan || {}).filter(
         ([k, v]) => k !== 'day' && v && typeof v === 'object' && typeof (v as any).kcal === 'number'
       );
-      const targetKcal = dayMeals.reduce((sum, [_, m]: any) => sum + (m.kcal || 0), 0) || 2100;
+      const targetKcal = dayMeals.reduce((sum, [_, m]: any) => sum + (m.kcal || 0), 0);
       setCaloriesTarget(targetKcal);
 
       const dayCompletions = (plan?.meal_completions?.[todayKey] as Record<string, boolean>) || {};

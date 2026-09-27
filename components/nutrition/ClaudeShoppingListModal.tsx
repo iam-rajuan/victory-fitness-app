@@ -33,36 +33,6 @@ const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system,
 const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 
-const SHOP_CATEGORIES: ShopCategory[] = [
-  {
-    category: 'Produce',
-    items: [
-      { id: 'p1', name: 'Spinach 400 g' },
-      { id: 'p2', name: 'Berries 500 g' },
-      { id: 'p3', name: 'Sweet potatoes 1 kg' },
-      { id: 'p4', name: 'Broccoli 2 heads' },
-    ],
-  },
-  {
-    category: 'Protein',
-    items: [
-      { id: 'm1', name: 'Chicken breast 1 kg' },
-      { id: 'm2', name: 'Salmon fillets ×4' },
-      { id: 'm3', name: 'Greek yoghurt 1 kg' },
-      { id: 'm4', name: 'Eggs ×12' },
-    ],
-  },
-  {
-    category: 'Pantry',
-    items: [
-      { id: 'pa1', name: 'Oats 1 kg' },
-      { id: 'pa2', name: 'Jollof rice mix' },
-      { id: 'pa3', name: 'Olive oil' },
-      { id: 'pa4', name: 'Whey protein 1 kg' },
-    ],
-  },
-];
-
 export default function ClaudeShoppingListModal({
   visible,
   onClose,
@@ -70,7 +40,7 @@ export default function ClaudeShoppingListModal({
   footnote,
 }: ClaudeShoppingListModalProps) {
   const [tickedIds, setTickedIds] = useState<Record<string, boolean>>({});
-  const visibleCategories = categories && categories.length > 0 ? categories : SHOP_CATEGORIES;
+  const visibleCategories = categories || [];
 
   const toggleItem = (id: string) => {
     setTickedIds((prev) => ({
@@ -111,7 +81,11 @@ export default function ClaudeShoppingListModal({
           </Text>
 
           {/* Grouped Categories */}
-          {visibleCategories.map((g) => (
+          {visibleCategories.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyText}>Your backend shopping list will appear after a meal plan is saved.</Text>
+            </View>
+          ) : visibleCategories.map((g) => (
             <View key={g.category} style={styles.categoryWrap}>
               <Text style={styles.categoryTitle}>{g.category}</Text>
               <View style={styles.itemsCard}>
@@ -212,6 +186,17 @@ const styles = StyleSheet.create({
     backgroundColor: NAVY,
     borderRadius: 16,
     overflow: 'hidden',
+  },
+  emptyCard: {
+    backgroundColor: NAVY,
+    borderRadius: 16,
+    padding: 16,
+  },
+  emptyText: {
+    fontFamily: INTER,
+    fontSize: 13,
+    lineHeight: 19,
+    color: 'rgba(247, 243, 238, 0.55)',
   },
   itemRow: {
     flexDirection: 'row',

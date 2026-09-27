@@ -8,6 +8,7 @@ import {
   ScrollView,
   Platform,
   Alert,
+  TextInput,
 } from 'react-native';
 import { createNutritionPlan, NutritionPlanApiResponse, NutritionDayPlan } from '../../lib/nutrition';
 
@@ -39,7 +40,6 @@ const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", defau
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 const CUISINES = ['German', 'Ghanaian', 'Italian', 'Turkish', 'Indian', 'Mexican'];
-const FAVORITE_MEALS = ['Chicken & rice', 'Salmon & potatoes', 'Oats & skyr', '+ add your own'];
 const ALLERGIES = ['Lactose', 'Nuts', 'Gluten', 'Shellfish', 'Pork'];
 
 function formatDayName(day: string) {
@@ -78,9 +78,10 @@ export default function ClaudeWeekPlanModal({
   onPlanUpdated,
 }: ClaudeWeekPlanModalProps) {
   const [viewMode, setViewMode] = useState<'questionnaire' | 'weekPlan'>('questionnaire');
-  const [selectedCuisines, setSelectedCuisines] = useState<string[]>(['German', 'Ghanaian']);
-  const [selectedMeals, setSelectedMeals] = useState<string[]>(['Chicken & rice', 'Salmon & potatoes', 'Oats & skyr']);
-  const [selectedAllergies, setSelectedAllergies] = useState<string[]>(['Lactose']);
+  const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
+  const [selectedMeals, setSelectedMeals] = useState<string[]>([]);
+  const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
+  const [customMeal, setCustomMeal] = useState('');
   const [generatedPlan, setGeneratedPlan] = useState<NutritionPlanApiResponse | null>(null);
   const [isBuilding, setIsBuilding] = useState(false);
   const activePlan = generatedPlan || plan || null;
@@ -103,6 +104,13 @@ export default function ClaudeWeekPlanModal({
     );
   };
 
+  const addCustomMeal = () => {
+    const meal = customMeal.trim();
+    if (!meal) return;
+    setSelectedMeals((prev) => (prev.some((item) => item.toLowerCase() === meal.toLowerCase()) ? prev : [...prev, meal]));
+    setCustomMeal('');
+  };
+
   const toggleAllergy = (a: string) => {
     setSelectedAllergies((prev) =>
       prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]
@@ -120,10 +128,13 @@ export default function ClaudeWeekPlanModal({
   const handleBuildWeek = async () => {
     if (isBuilding) return;
     const meals = selectedMeals
-      .filter((meal) => meal !== '+ add your own')
       .map((meal) => meal.trim())
       .filter(Boolean);
-    const favoriteMeals = Array.from(new Set([...meals, 'Chicken & rice', 'Salmon & potatoes', 'Oats & skyr'])).slice(0, 8);
+    const favoriteMeals = Array.from(new Set(meals)).slice(0, 8);
+    if (favoriteMeals.length < 3) {
+      Alert.alert('Add meals you like', 'Pick at least 3 favourite meals before building your backend plan.');
+      return;
+    }
 
     setIsBuilding(true);
     try {
@@ -202,7 +213,7 @@ export default function ClaudeWeekPlanModal({
               <View style={styles.card}>
                 <Text style={styles.cardKicker}>2 · MEALS YOU ALREADY LOVE</Text>
                 <View style={styles.chipsWrap}>
-                  {FAVORITE_MEALS.map((m) => {
+                  {selectedMeals.map((m) => {
                     const active = selectedMeals.includes(m);
                     return (
                       <Pressable
@@ -217,6 +228,23 @@ export default function ClaudeWeekPlanModal({
                     );
                   })}
                 </View>
+                <View style={styles.mealInputRow}>
+                  <TextInput
+                    style={styles.mealInput}
+                    placeholder="Type a meal you already eat..."
+                    placeholderTextColor="rgba(247,243,238,0.38)"
+                    value={customMeal}
+                    onChangeText={setCustomMeal}
+                    onSubmitEditing={addCustomMeal}
+                    returnKeyType="done"
+                  />
+                  <Pressable style={styles.addMealBtn} onPress={addCustomMeal}>
+                    <Text style={styles.addMealBtnText}>Add</Text>
+                  </Pressable>
+                </View>
+                <Text style={styles.cardFootnote}>
+                  Add at least three. These are sent to the backend plan generator.
+                </Text>
               </View>
 
               {/* 3 · ALLERGIES AND ANYTHING YOU CANNOT EAT */}
@@ -269,7 +297,7 @@ export default function ClaudeWeekPlanModal({
             <View>
               <Text style={styles.headline}>Your week</Text>
               <Text style={styles.subheadline}>
-                German and Ghanaian dishes, lactose-free, 30 minutes or less on weekdays, four portions each. Every day lands on 112 g of protein.
+                {activePlan?.summary || 'Your saved backend meal plan appears here after it is built.'}
               </Text>
 
               {/* Days Card */}
@@ -413,6 +441,37 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: 'rgba(247, 243, 238, 0.45)',
     marginTop: 11,
+  },
+  mealInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+  },
+  mealInput: {
+    flex: 1,
+    minHeight: 42,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(247, 243, 238, 0.18)',
+    paddingHorizontal: 12,
+    fontFamily: INTER,
+    fontSize: 13,
+    color: IVORY,
+  },
+  addMealBtn: {
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: GOLD,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addMealBtnText: {
+    fontFamily: DMSANS,
+    fontSize: 13,
+    fontWeight: '700',
+    color: OBSIDIAN,
   },
   paramsCard: {
     padding: 0,

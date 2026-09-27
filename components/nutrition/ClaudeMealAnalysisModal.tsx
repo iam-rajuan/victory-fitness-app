@@ -9,6 +9,7 @@ import {
   Pressable,
   ScrollView,
   Platform,
+  TextInput,
 } from 'react-native';
 import { analyzeMealImage, MealImageAnalysisResponse } from '../../lib/nutrition';
 
@@ -39,6 +40,20 @@ const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system,
 const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
+const WEB_MACRO_INPUT_RESET = Platform.OS === 'web'
+  ? ({
+      outline: 'none',
+      outlineStyle: 'none',
+      outlineWidth: 0,
+      boxShadow: 'none',
+      borderTopWidth: 0,
+      borderLeftWidth: 0,
+      borderRightWidth: 0,
+      borderTopColor: 'transparent',
+      borderLeftColor: 'transparent',
+      borderRightColor: 'transparent',
+    } as any)
+  : null;
 
 export default function ClaudeMealAnalysisModal({
   visible,
@@ -52,6 +67,13 @@ export default function ClaudeMealAnalysisModal({
   const [analysis, setAnalysis] = React.useState<MealImageAnalysisResponse | null>(null);
   const [isAnalyzing, setIsAnalyzing] = React.useState(false);
   const [analysisError, setAnalysisError] = React.useState('');
+  const [isEditingMacros, setIsEditingMacros] = React.useState(false);
+  const [macroDraft, setMacroDraft] = React.useState({
+    protein: '',
+    carbs: '',
+    fat: '',
+    calories: '',
+  });
 
   React.useEffect(() => {
     let cancelled = false;
@@ -71,7 +93,16 @@ export default function ClaudeMealAnalysisModal({
           mime_type: mimeType || 'image/jpeg',
           file_name: fileName || 'meal-photo.jpg',
         });
-        if (!cancelled) setAnalysis(result);
+        if (!cancelled) {
+          setAnalysis(result);
+          setMacroDraft({
+            protein: String(result.estimated_protein ?? 0),
+            carbs: String(result.estimated_carbs ?? 0),
+            fat: String(result.estimated_fat ?? 0),
+            calories: String(result.estimated_calories ?? 0),
+          });
+          setIsEditingMacros(false);
+        }
       } catch (error: any) {
         if (!cancelled) {
           setAnalysis(null);
@@ -88,21 +119,28 @@ export default function ClaudeMealAnalysisModal({
     };
   }, [fileName, imageBase64, mimeType, visible]);
 
+  const parsedMacros = {
+    protein: Math.max(0, Number.parseInt(macroDraft.protein || '0', 10) || 0),
+    carbs: Math.max(0, Number.parseInt(macroDraft.carbs || '0', 10) || 0),
+    fat: Math.max(0, Number.parseInt(macroDraft.fat || '0', 10) || 0),
+    calories: Math.max(0, Number.parseInt(macroDraft.calories || '0', 10) || 0),
+  };
+
   const macros: MacroSnapshot[] = [
-    { k: 'PROTEIN', v: `${analysis?.estimated_protein ?? 0} g`, color: GOLD },
-    { k: 'CARBS', v: `${analysis?.estimated_carbs ?? 0} g`, color: COPPER },
-    { k: 'FAT', v: `${analysis?.estimated_fat ?? 0} g`, color: IVORY },
-    { k: 'KCAL', v: `${analysis?.estimated_calories ?? 0}`, color: GREEN },
+    { k: 'PROTEIN', v: `${parsedMacros.protein} g`, color: GOLD },
+    { k: 'CARBS', v: `${parsedMacros.carbs} g`, color: COPPER },
+    { k: 'FAT', v: `${parsedMacros.fat} g`, color: IVORY },
+    { k: 'KCAL', v: `${parsedMacros.calories}`, color: GREEN },
   ];
 
   const handleLog = () => {
     if (!analysis) return;
     onLogMeal({
       name: analysis.meal_name_guess,
-      protein: analysis.estimated_protein,
-      carbs: analysis.estimated_carbs,
-      fat: analysis.estimated_fat,
-      calories: analysis.estimated_calories,
+      protein: parsedMacros.protein,
+      carbs: parsedMacros.carbs,
+      fat: parsedMacros.fat,
+      calories: parsedMacros.calories,
       analysisId: analysis.analysis_id,
     });
     onClose();
@@ -147,7 +185,35 @@ export default function ClaudeMealAnalysisModal({
           <View style={styles.macrosRow}>
             {macros.map((m) => (
               <View key={m.k} style={styles.macroCol}>
-                <Text style={[styles.macroVal, { color: m.color }]}>{m.v}</Text>
+                {isEditingMacros ? (
+                  <TextInput
+                    style={[
+                      styles.macroInput,
+                      WEB_MACRO_INPUT_RESET,
+                      { color: m.color },
+                    ]}
+                    value={
+                      m.k === 'PROTEIN'
+                        ? macroDraft.protein
+                        : m.k === 'CARBS'
+                        ? macroDraft.carbs
+                        : m.k === 'FAT'
+                        ? macroDraft.fat
+                        : macroDraft.calories
+                    }
+                    onChangeText={(value) => {
+                      const numeric = value.replace(/[^\d]/g, '').slice(0, 4);
+                      setMacroDraft((prev) => ({
+                        ...prev,
+                        [m.k === 'PROTEIN' ? 'protein' : m.k === 'CARBS' ? 'carbs' : m.k === 'FAT' ? 'fat' : 'calories']: numeric,
+                      }));
+                    }}
+                    keyboardType="number-pad"
+                    selectTextOnFocus
+                  />
+                ) : (
+                  <Text style={[styles.macroVal, { color: m.color }]}>{m.v}</Text>
+                )}
                 <Text style={styles.macroLabel}>{m.k}</Text>
               </View>
             ))}
@@ -180,8 +246,8 @@ export default function ClaudeMealAnalysisModal({
             <Pressable style={[styles.logBtn, !analysis && styles.logBtnDisabled]} onPress={handleLog} disabled={!analysis}>
               <Text style={styles.logBtnText}>Log this meal</Text>
             </Pressable>
-            <Pressable style={styles.editBtn} onPress={onClose}>
-              <Text style={styles.editBtnText}>Edit</Text>
+            <Pressable style={styles.editBtn} onPress={() => setIsEditingMacros((prev) => !prev)} disabled={!analysis}>
+              <Text style={styles.editBtnText}>{isEditingMacros ? 'Done' : 'Edit'}</Text>
             </Pressable>
           </View>
 
@@ -303,6 +369,18 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     marginBottom: 4,
+  },
+  macroInput: {
+    width: '100%',
+    minHeight: 28,
+    paddingVertical: 0,
+    paddingHorizontal: 2,
+    textAlign: 'center',
+    fontFamily: MONO,
+    fontSize: 20,
+    fontWeight: '700',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(247, 243, 238, 0.24)',
   },
   macroLabel: {
     fontFamily: DMSANS,

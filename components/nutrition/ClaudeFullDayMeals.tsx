@@ -33,8 +33,8 @@ export default function ClaudeFullDayMeals({ meals, updatingMealKey, onToggleMea
     {
       id: 'empty',
       mealKey: 'breakfast',
-      name: 'Your meal plan is loading',
-      sub: 'Backend meals appear here',
+      name: 'No backend meals yet',
+      sub: 'Saved meal plan meals appear here',
       proteinG: 0,
       kcal: 0,
       logged: false,

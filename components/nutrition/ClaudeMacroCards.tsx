@@ -31,14 +31,14 @@ const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", defau
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 export default function ClaudeMacroCards({
-  proteinTarget = 112,
-  proteinCurrent = 86,
-  carbsCurrent = 164,
-  carbsTarget = 220,
-  fatCurrent = 44,
-  fatTarget = 70,
-  kcalCurrent = 1480,
-  kcalTarget = 2200,
+  proteinTarget = 0,
+  proteinCurrent = 0,
+  carbsCurrent = 0,
+  carbsTarget = 0,
+  fatCurrent = 0,
+  fatTarget = 0,
+  kcalCurrent = 0,
+  kcalTarget = 0,
 }: ClaudeMacroCardsProps) {
   const macros: MacroItem[] = [
     {
@@ -46,28 +46,28 @@ export default function ClaudeMacroCards({
       v: `${proteinCurrent}`,
       of: `of ${proteinTarget} g`,
       color: GOLD,
-      pct: Math.min(100, Math.round((proteinCurrent / proteinTarget) * 100)),
+      pct: proteinTarget > 0 ? Math.min(100, Math.round((proteinCurrent / proteinTarget) * 100)) : 0,
     },
     {
       k: 'Carbs',
       v: `${carbsCurrent}`,
       of: `of ${carbsTarget} g`,
       color: COPPER,
-      pct: Math.min(100, Math.round((carbsCurrent / carbsTarget) * 100)),
+      pct: carbsTarget > 0 ? Math.min(100, Math.round((carbsCurrent / carbsTarget) * 100)) : 0,
     },
     {
       k: 'Fat',
       v: `${fatCurrent}`,
       of: `of ${fatTarget} g`,
       color: IVORY,
-      pct: Math.min(100, Math.round((fatCurrent / fatTarget) * 100)),
+      pct: fatTarget > 0 ? Math.min(100, Math.round((fatCurrent / fatTarget) * 100)) : 0,
     },
     {
       k: 'Calories',
       v: kcalCurrent >= 1000 ? `${Math.floor(kcalCurrent / 1000)} ${kcalCurrent % 1000}` : `${kcalCurrent}`,
       of: kcalTarget >= 1000 ? `of ${Math.floor(kcalTarget / 1000)} ${kcalTarget % 1000}` : `of ${kcalTarget}`,
       color: GREEN,
-      pct: Math.min(100, Math.round((kcalCurrent / kcalTarget) * 100)),
+      pct: kcalTarget > 0 ? Math.min(100, Math.round((kcalCurrent / kcalTarget) * 100)) : 0,
     },
   ];
 

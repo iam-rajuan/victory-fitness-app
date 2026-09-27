@@ -25,47 +25,9 @@ const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", de
 const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
-const DEFAULT_ACTIONS: ActionItem[] = [
-    {
-      id: 'a1',
-      t: 'Add skyr to your breakfast oats',
-      why: 'you logged this 9 times',
-      g: '+18 g',
-      done: true,
-    },
-    {
-      id: 'a2',
-      t: 'Swap the afternoon biscuit for nuts',
-      why: 'you often dip here at 15:00',
-      g: '+7 g',
-      done: false,
-    },
-    {
-      id: 'a3',
-      t: 'Grill 200 g chicken for dinner',
-      why: 'your most-logged dinner',
-      g: '+46 g',
-      done: true,
-    },
-    {
-      id: 'a4',
-      t: 'Drink 500 ml before your session',
-      why: 'you train at 20:30',
-      g: '+0.5 L',
-      done: false,
-    },
-    {
-      id: 'a5',
-      t: 'Keep the shake only if dinner is short',
-      why: 'you needed it twice last week',
-      g: '+25 g',
-      done: false,
-    },
-  ];
-
 export default function ClaudeTodayFiveActions({ actions: backendActions, onActionToggle }: ClaudeTodayFiveActionsProps) {
   const [localDone, setLocalDone] = useState<Record<string, boolean>>({});
-  const actions = (backendActions && backendActions.length > 0 ? backendActions : DEFAULT_ACTIONS).slice(0, 5).map((action) => ({
+  const actions = (backendActions || []).slice(0, 5).map((action) => ({
     ...action,
     done: localDone[action.id] ?? action.done,
   }));
@@ -88,7 +50,11 @@ export default function ClaudeTodayFiveActions({ actions: backendActions, onActi
       </View>
 
       <View style={styles.card}>
-        {actions.map((a, idx) => {
+        {actions.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>Your plan actions will appear after the backend meal plan loads.</Text>
+          </View>
+        ) : actions.map((a, idx) => {
           const isLast = idx === actions.length - 1;
 
           return (
@@ -176,6 +142,16 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: COPPER,
     overflow: 'hidden',
+  },
+  emptyState: {
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+  },
+  emptyText: {
+    fontFamily: INTER,
+    fontSize: 13,
+    lineHeight: 19,
+    color: 'rgba(247, 243, 238, 0.55)',
   },
   actionRow: {
     flexDirection: 'row',
