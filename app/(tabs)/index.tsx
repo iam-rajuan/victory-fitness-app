@@ -47,7 +47,7 @@ import {
   StrengthPlanExercise,
   StrengthPlanResponse,
 } from '../../lib/workout-plans';
-import { fetchWorkoutLibrary } from '../../lib/workouts';
+import { fetchHomeWorkoutPlanSummary, fetchWorkoutLibrary, HomeWorkoutPlanSummary } from '../../lib/workouts';
 
 import ClaudeHomeHeader from '../../components/home/ClaudeHomeHeader';
 import ClaudeInspirationCard from '../../components/home/ClaudeInspirationCard';
@@ -218,6 +218,7 @@ export default function HomeScreen() {
   const [updatingMealKey, setUpdatingMealKey] = useState<string | null>(null);
   const [strengthPlan, setStrengthPlan] = useState<StrengthPlanResponse | null>(null);
   const [homeLibraryWorkout, setHomeLibraryWorkout] = useState<any | null>(null);
+  const [homeWorkoutSummary, setHomeWorkoutSummary] = useState<HomeWorkoutPlanSummary | null>(null);
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLogItem[]>([]);
   const [journalWrittenToday, setJournalWrittenToday] = useState(false);
   const [hydration, setHydration] = useState<HydrationState | null>(null);
@@ -291,6 +292,7 @@ export default function HomeScreen() {
         journalData,
         hydrationData,
         workoutLibrary,
+        homePlanSummary,
         accountabilityData,
       ] = await Promise.all([
         fetchCurrentUser().catch(() => null),
@@ -302,6 +304,7 @@ export default function HomeScreen() {
         fetchJournalEntries().catch(() => null),
         fetchCurrentUserHydration().catch(() => null),
         fetchWorkoutLibrary().catch(() => null),
+        fetchHomeWorkoutPlanSummary().catch(() => null),
         fetchAccountabilityPartner().catch(() => null),
       ]);
 
@@ -319,6 +322,7 @@ export default function HomeScreen() {
       setWorkoutLogs(Array.isArray(logsData?.items) ? logsData.items : []);
       setHydration(hydrationData);
       setHomeLibraryWorkout(workoutLibrary?.featuredWorkout || workoutLibrary?.workouts?.[0] || null);
+      setHomeWorkoutSummary(homePlanSummary);
       setAccountabilityPartner(accountabilityData);
 
       if (Array.isArray(journalData?.entries)) {
@@ -497,28 +501,31 @@ export default function HomeScreen() {
   );
   const workoutTitle = useMemo(() => {
     return (
+      homeWorkoutSummary?.title ||
       strengthDay?.title ||
       homeLibraryWorkout?.title ||
       currentUser?.workout_unlock_label ||
       'Workout'
     );
-  }, [currentUser?.workout_unlock_label, homeLibraryWorkout?.title, strengthDay?.title]);
+  }, [currentUser?.workout_unlock_label, homeLibraryWorkout?.title, homeWorkoutSummary?.title, strengthDay?.title]);
   const workoutDurationMinutes = useMemo(() => {
+    if (homeWorkoutSummary?.durationMinutes) return Number(homeWorkoutSummary.durationMinutes);
     if (strengthDay?.est_time) return parseMinutes(strengthDay.est_time, 40);
     if (homeLibraryWorkout?.durationMinutes) return Number(homeLibraryWorkout.durationMinutes);
     return Number(planDuration.replace(/[^0-9]/g, '')) || (tier === 'SILVER' ? 38 : 40);
-  }, [homeLibraryWorkout?.durationMinutes, planDuration, strengthDay?.est_time, tier]);
+  }, [homeLibraryWorkout?.durationMinutes, homeWorkoutSummary?.durationMinutes, planDuration, strengthDay?.est_time, tier]);
   const workoutEquipment = useMemo(() => {
     const fromExercise = strengthExercises.find((item) => String(item.weight || '').trim())?.weight;
-    return (planKit || homeLibraryWorkout?.equipment || fromExercise || 'Bodyweight').toUpperCase();
-  }, [homeLibraryWorkout?.equipment, planKit, strengthExercises]);
+    return (homeWorkoutSummary?.equipment || planKit || homeLibraryWorkout?.equipment || fromExercise || 'Bodyweight').toUpperCase();
+  }, [homeLibraryWorkout?.equipment, homeWorkoutSummary?.equipment, planKit, strengthExercises]);
   const planDayKicker = useMemo(() => {
+    if (homeWorkoutSummary?.dayKicker) return homeWorkoutSummary.dayKicker;
     if (strengthDay?.day) {
       return `${String(strengthDay.day).toUpperCase()} · ${workoutDurationMinutes} MIN`;
     }
     return `TODAY · ${workoutDurationMinutes} MIN`;
-  }, [strengthDay?.day, workoutDurationMinutes]);
-  const planSource = strengthPlan ? 'BUILT BY YOUR COACH' : tier !== 'SILVER' ? 'BUILT BY YOUR COACH' : 'TODAY’S WORKOUT';
+  }, [homeWorkoutSummary?.dayKicker, strengthDay?.day, workoutDurationMinutes]);
+  const planSource = homeWorkoutSummary?.planSource || (strengthPlan ? 'BUILT BY YOUR COACH' : tier !== 'SILVER' ? 'BUILT BY YOUR COACH' : 'TODAY’S WORKOUT');
 
   const todayMeals = useMemo<HomeMealItem[]>(() => {
     const today = getNutritionToday(nutritionPlan);
@@ -888,6 +895,9 @@ export default function HomeScreen() {
         dayKicker={planDayKicker}
         planSource={planSource}
         exercises={detailExercises}
+        weekPips={homeWorkoutSummary?.week?.pips}
+        weekNote={homeWorkoutSummary?.week?.note}
+        sessionSummary={homeWorkoutSummary?.session}
         onBeginSession={() => {
           setPlanDetailVisible(false);
           setActiveSessionVisible(true);

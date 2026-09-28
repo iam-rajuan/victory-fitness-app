@@ -42,6 +42,35 @@ export type WorkoutLibraryResponse = {
   categories: WorkoutLibraryCategory[];
 };
 
+export type HomeWorkoutWeekPip = {
+  label: string;
+  key?: string;
+  state: 'done' | 'today' | 'optional' | 'rest' | 'missed' | string;
+};
+
+export type HomeWorkoutPlanSummary = {
+  source: 'strength_plan' | 'workout_library' | string;
+  planId?: string;
+  title: string;
+  dayKicker: string;
+  planSource: string;
+  durationMinutes: number;
+  equipment: string;
+  week: {
+    pips: HomeWorkoutWeekPip[];
+    note: string;
+    doneCount: number;
+    targetCount: number;
+    remainingLightSessions: number;
+    todayCompleted: boolean;
+  };
+  session: {
+    exerciseCount: number;
+    setCount: number;
+    compoundCount: number;
+  };
+};
+
 export function getWorkoutLibraryCacheKey(query = '') {
   return `workout-library:${query.trim().toLowerCase() || 'default'}`;
 }
@@ -148,6 +177,10 @@ export async function fetchWorkoutLibrary(query = '') {
     const response = await apiRequest<WorkoutLibraryResponse>(`/workouts/library${suffix}`);
     return normalizeWorkoutLibraryResponse(response);
   });
+}
+
+export async function fetchHomeWorkoutPlanSummary() {
+  return apiRequest<HomeWorkoutPlanSummary>('/workouts/home-plan-summary');
 }
 
 export function getCachedWorkoutLibrary(query = '') {

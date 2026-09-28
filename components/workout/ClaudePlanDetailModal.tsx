@@ -20,6 +20,17 @@ interface ExerciseItem {
   rest?: string;
 }
 
+interface WeekPipItem {
+  label: string;
+  state: string;
+}
+
+interface SessionSummary {
+  exerciseCount: number;
+  setCount: number;
+  compoundCount: number;
+}
+
 interface ClaudePlanDetailModalProps {
   visible: boolean;
   onClose: () => void;
@@ -29,6 +40,9 @@ interface ClaudePlanDetailModalProps {
   dayKicker?: string;
   planSource?: string;
   exercises?: ExerciseItem[];
+  weekPips?: WeekPipItem[];
+  weekNote?: string;
+  sessionSummary?: SessionSummary;
 }
 
 const NAVY = '#0D2B45';
@@ -100,8 +114,22 @@ export default function ClaudePlanDetailModal({
   dayKicker = 'DAY 3 OF WEEK 2 · PUSH DAY',
   planSource = 'BUILT BY YOUR COACH',
   exercises = DEFAULT_EXERCISES,
+  weekPips = WEEK_PIPS,
+  weekNote = '2 done · today · 1 light session left · Sunday optional',
+  sessionSummary,
 }: ClaudePlanDetailModalProps) {
   const { isDark, colors } = useTheme();
+  const summary = sessionSummary || {
+    exerciseCount: exercises.length,
+    setCount: exercises.reduce((total, exercise) => {
+      const match = String(exercise.sets || '').match(/\d+/);
+      return total + (match ? Number(match[0]) || 1 : 1);
+    }, 0),
+    compoundCount: exercises.filter((exercise) => {
+      const text = `${exercise.kind || ''} ${exercise.name || ''}`.toLowerCase();
+      return /compound|squat|deadlift|press|bench|row|pull|push|clean|snatch|lunge|thruster|burpee/.test(text);
+    }).length,
+  };
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
@@ -170,7 +198,7 @@ export default function ClaudePlanDetailModal({
               YOUR WEEK
             </Text>
             <View style={styles.pipsRow}>
-              {WEEK_PIPS.map((p, idx) => {
+              {weekPips.map((p, idx) => {
                 const isPipDone = p.state === 'done';
                 const isPipToday = p.state === 'today';
                 const isPipOptional = p.state === 'optional';
@@ -205,7 +233,7 @@ export default function ClaudePlanDetailModal({
                 { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
               ]}
             >
-              2 done · today · 1 light session left · Sunday optional
+              {weekNote}
             </Text>
           </View>
 
@@ -222,7 +250,7 @@ export default function ClaudePlanDetailModal({
             ]}
           >
             <Text style={[styles.sessionLine, { color: isDark ? GOLD : '#C9943A' }]}>
-              {`${exercises.length} EXERCISES · 17 SETS · 3 COMPOUNDS`}
+              {`${summary.exerciseCount} EXERCISES · ${summary.setCount} SETS · ${summary.compoundCount} COMPOUNDS`}
             </Text>
             {exercises.map((e, idx) => (
               <View
