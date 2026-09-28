@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { useTheme } from '../../context/ThemeContext';
+import { fetchHomepageQuote } from '../../lib/api';
 
 interface ClaudeInspirationCardProps {
   tier: 'SILVER' | 'GOLD' | 'GOLD_BETA' | 'PLATINUM' | 'INNER_CIRCLE' | 'NONE';
@@ -14,27 +16,41 @@ const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", d
 const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
 
 export default function ClaudeInspirationCard({
-  tier,
-  identityStatement,
-  userName = '',
+  tier: _tier,
+  identityStatement: _identityStatement,
+  userName: _userName = '',
 }: ClaudeInspirationCardProps) {
   const { colors } = useTheme();
-  const isSilverOrNone = tier === 'SILVER' || tier === 'NONE';
+  const [quote, setQuote] = useState({
+    text: 'Every rep is a reminder that growth takes patience.',
+    author: 'Victor Akko',
+  });
 
-  const kicker = isSilverOrNone ? 'DAILY INSPIRATION' : 'WHO YOU ARE BECOMING';
-  const quote = isSilverOrNone || !identityStatement?.trim()
-    ? '“Every rep is a reminder that growth takes patience.”'
-    : `“${identityStatement.trim()}”`;
-  const author = isSilverOrNone || !identityStatement?.trim()
-    ? 'VICTOR AKKO'
-    : userName ? `${userName.toUpperCase()} · IN YOUR OWN WORDS` : 'IN YOUR OWN WORDS';
+  useEffect(() => {
+    let mounted = true;
+    const appVersion = Constants.expoConfig?.version || '1.0.0';
+    void fetchHomepageQuote(appVersion)
+      .then((remoteQuote) => {
+        if (!mounted || !remoteQuote?.text) return;
+        setQuote({
+          text: remoteQuote.text,
+          author: remoteQuote.author || 'Victor Akko',
+        });
+      })
+      .catch(() => {
+        // Keep the local Victor quote when offline.
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.kicker, { color: colors.textMuted }]}>{kicker}</Text>
+      <Text style={[styles.kicker, { color: colors.textMuted }]}>DAILY INSPIRATION</Text>
       <View style={styles.quoteBox}>
-        <Text style={[styles.quoteText, { color: colors.text }]}>{quote}</Text>
-        <Text style={styles.authorText}>{author}</Text>
+        <Text style={[styles.quoteText, { color: colors.text }]}>{`“${quote.text.replace(/^["“]|["”]$/g, '')}”`}</Text>
+        <Text style={styles.authorText}>{quote.author.toUpperCase()}</Text>
       </View>
     </View>
   );
@@ -74,4 +90,3 @@ const styles = StyleSheet.create({
     color: COPPER,
   },
 });
-
