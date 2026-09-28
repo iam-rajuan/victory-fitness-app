@@ -515,15 +515,21 @@ export default function ProfileScreen() {
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.menuRow, { borderBottomColor: colors.divider }]}
-              activeOpacity={0.7}
-              onPress={() => router.push('/profile/support')}
+            <RequirementAuditBoundary
+              auditId="APP-EXTRA-021"
+              status="extra"
+              label="NEW FEATURE - HELP & SUPPORT NOT IN REQUIREMENT"
             >
-              <Text style={[styles.menuTitle, { color: colors.text }]}>Help & support</Text>
-              <Text style={[styles.menuMeta, { color: colors.textMuted }]}>Replies within a day</Text>
-              <Text style={styles.chevron}>›</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.menuRow, { borderBottomColor: colors.divider }]}
+                activeOpacity={0.7}
+                onPress={() => router.push('/profile/support')}
+              >
+                <Text style={[styles.menuTitle, { color: colors.text }]}>Help & support</Text>
+                <Text style={[styles.menuMeta, { color: colors.textMuted }]}>Replies within a day</Text>
+                <Text style={styles.chevron}>›</Text>
+              </TouchableOpacity>
+            </RequirementAuditBoundary>
 
             <TouchableOpacity
               style={[styles.menuRow, { borderBottomWidth: 0 }]}

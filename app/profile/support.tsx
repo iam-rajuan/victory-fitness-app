@@ -17,6 +17,7 @@ import { Colors } from '../../constants/Colors';
 import { submitSupportMessage } from '../../lib/api';
 import { useLanguage } from '../../lib/i18n';
 import { goBackOrReplace } from '../../lib/navigation';
+import RequirementAuditBoundary from '../../components/audit/RequirementAuditBoundary';
 
 export default function ContactUsScreen() {
   const router = useRouter();
@@ -70,71 +71,78 @@ export default function ContactUsScreen() {
         ),
       }} />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.title}>{t('GET IN TOUCH')}</Text>
-          <Text style={styles.subtitle}>
-            {t("Have a question or feedback? We'd love to hear from you. Our team and AI coach are ready to help.")}
-          </Text>
-        </View>
-
-        <View style={styles.contactGrid}>
-          <TouchableOpacity style={styles.contactCard} activeOpacity={0.8} onPress={handleEmail}>
-            <View style={[styles.iconBox, { backgroundColor: 'rgba(6,182,212,0.1)' }]}>
-              <Ionicons name="mail-outline" size={28} color={Colors.accentBlue} />
-            </View>
-            <Text style={styles.cardTitle}>{t('EMAIL US')}</Text>
-            <Text style={styles.cardValue}>office@victorakko.com</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.contactCard}
-            activeOpacity={0.8}
-            onPress={() => router.push('/chat')}
-          >
-            <View style={[styles.iconBox, { backgroundColor: 'rgba(168,85,247,0.1)' }]}>
-              <Ionicons name="chatbubbles-outline" size={28} color={Colors.accentPurple} />
-            </View>
-            <Text style={styles.cardTitle}>{t('AI COACH')}</Text>
-            <Text style={styles.cardValue}>{t('Chat with Victor')}</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.formSection}>
-          <Text style={styles.sectionTitle}>{t('SEND US A MESSAGE')}</Text>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t('SUBJECT')}</Text>
-            <TextInput
-              style={styles.input}
-              placeholder={t('What can we help you with?')}
-              placeholderTextColor="rgba(255,255,255,0.2)"
-              value={subject}
-              onChangeText={setSubject}
-              editable={!submitting}
-            />
+      <RequirementAuditBoundary
+        auditId="APP-EXTRA-021"
+        status="extra"
+        label="NEW FEATURE - HELP & SUPPORT NOT IN REQUIREMENT"
+        style={{ flex: 1 }}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <View style={styles.header}>
+            <Text style={styles.title}>{t('GET IN TOUCH')}</Text>
+            <Text style={styles.subtitle}>
+              {t("Have a question or feedback? We'd love to hear from you. Our team and AI coach are ready to help.")}
+            </Text>
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t('MESSAGE')}</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              placeholder={t('Write your message here...')}
-              placeholderTextColor="rgba(255,255,255,0.2)"
-              multiline
-              numberOfLines={4}
-              value={message}
-              onChangeText={setMessage}
-              editable={!submitting}
-            />
+          <View style={styles.contactGrid}>
+            <TouchableOpacity style={styles.contactCard} activeOpacity={0.8} onPress={handleEmail}>
+              <View style={[styles.iconBox, { backgroundColor: 'rgba(6,182,212,0.1)' }]}>
+                <Ionicons name="mail-outline" size={28} color={Colors.accentBlue} />
+              </View>
+              <Text style={styles.cardTitle}>{t('EMAIL US')}</Text>
+              <Text style={styles.cardValue}>office@victorakko.com</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.contactCard}
+              activeOpacity={0.8}
+              onPress={() => router.push('/chat')}
+            >
+              <View style={[styles.iconBox, { backgroundColor: 'rgba(168,85,247,0.1)' }]}>
+                <Ionicons name="chatbubbles-outline" size={28} color={Colors.accentPurple} />
+              </View>
+              <Text style={styles.cardTitle}>{t('AI COACH')}</Text>
+              <Text style={styles.cardValue}>{t('Chat with Victor')}</Text>
+            </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={[styles.sendBtn, submitting && styles.sendBtnDisabled]} activeOpacity={0.8} onPress={handleSubmit} disabled={submitting}>
-            {submitting ? <ActivityIndicator color="#000" size="small" /> : <Text style={styles.sendBtnText}>{t('SEND MESSAGE')}</Text>}
-          </TouchableOpacity>
-        </View>
-        <View style={{ height: 40 }} />
-      </ScrollView>
+          <View style={styles.formSection}>
+            <Text style={styles.sectionTitle}>{t('SEND US A MESSAGE')}</Text>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>{t('SUBJECT')}</Text>
+              <TextInput
+                style={styles.input}
+                placeholder={t('What can we help you with?')}
+                placeholderTextColor="rgba(255,255,255,0.2)"
+                value={subject}
+                onChangeText={setSubject}
+                editable={!submitting}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>{t('MESSAGE')}</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder={t('Write your message here...')}
+                placeholderTextColor="rgba(255,255,255,0.2)"
+                multiline
+                numberOfLines={4}
+                value={message}
+                onChangeText={setMessage}
+                editable={!submitting}
+              />
+            </View>
+
+            <TouchableOpacity style={[styles.sendBtn, submitting && styles.sendBtnDisabled]} activeOpacity={0.8} onPress={handleSubmit} disabled={submitting}>
+              {submitting ? <ActivityIndicator color="#000" size="small" /> : <Text style={styles.sendBtnText}>{t('SEND MESSAGE')}</Text>}
+            </TouchableOpacity>
+          </View>
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </RequirementAuditBoundary>
     </SafeAreaView>
   );
 }
