@@ -128,9 +128,13 @@ export default function ClaudeInnerCircleApplyModal({
     }
 
     const nameParts = String(userName || '').trim().split(/\s+/).filter(Boolean);
-    const firstName = nameParts[0] || 'Inner';
-    const lastName = nameParts.slice(1).join(' ') || 'Circle';
-    const safeEmail = String(userEmail || '').trim() || 'inner-circle-applicant@victory.local';
+    const safeEmail = String(userEmail || '').trim();
+    if (!nameParts.length || !safeEmail || !safeEmail.includes('@')) {
+      Alert.alert('Profile needed', 'Please sign in again or update your profile before applying.');
+      return;
+    }
+    const firstName = nameParts[0];
+    const lastName = nameParts.slice(1).join(' ') || '-';
     const questionAnswers = normalizedQuestions.map((q) => ({
       id: q.id,
       order: q.order,
