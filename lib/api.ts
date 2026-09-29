@@ -969,8 +969,14 @@ export async function getAuthUser() {
 
 export type HomepageQuote = { id: string; text: string; author: string; active: boolean };
 
-export async function fetchHomepageQuote(appVersion?: string) {
-  const query = appVersion ? `?app_version=${encodeURIComponent(appVersion)}` : '';
+export async function fetchHomepageQuote(appVersion?: string, options: { rotate?: boolean } = { rotate: true }) {
+  const params = new URLSearchParams();
+  if (appVersion) params.set('app_version', appVersion);
+  if (options.rotate !== false) {
+    params.set('rotate', 'true');
+    params.set('nonce', String(Date.now()));
+  }
+  const query = params.toString() ? `?${params.toString()}` : '';
   return apiRequest<HomepageQuote | null>(`/content/homepage/quote${query}`);
 }
 
