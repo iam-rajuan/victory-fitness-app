@@ -22,7 +22,7 @@ export default function ClaudeMealAnalysisCard({
 }: ClaudeMealAnalysisCardProps) {
   return (
     <View style={styles.container}>
-      <TouchableOpacity activeOpacity={0.9} style={styles.card} onPress={onTakePhoto}>
+      <View style={styles.card}>
         <View style={styles.topRow}>
           {/* Camera Graphic Icon matching lines 1050-1052 */}
           <View style={styles.cameraIconBox}>
@@ -59,7 +59,7 @@ export default function ClaudeMealAnalysisCard({
             <Text style={styles.uploadBtnText}>Upload</Text>
           </TouchableOpacity>
         </View>
-      </TouchableOpacity>
+      </View>
     </View>
   );
 }

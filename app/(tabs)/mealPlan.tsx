@@ -237,7 +237,60 @@ export default function MealPlanScreen() {
     return `${weekday}, ${day} ${month}`;
   };
 
+  const handleWebPhotoFile = (file: File | null) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      Alert.alert('Photo required', 'Please choose an image of your meal.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || '');
+      const base64 = result.includes(',') ? result.split(',')[1] : '';
+      if (!base64) {
+        Alert.alert('Photo error', 'The selected image could not be read.');
+        return;
+      }
+      setSelectedMealPhoto({
+        uri: result,
+        base64,
+        mimeType: file.type || 'image/jpeg',
+        fileName: file.name || `meal-photo-${Date.now()}.jpg`,
+      });
+      setShowMealAnalysisModal(true);
+    };
+    reader.onerror = () => {
+      Alert.alert('Photo error', 'The selected image could not be read.');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const openWebImagePicker = (source: 'camera' | 'library') => {
+    if (typeof document === 'undefined') return false;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    if (source === 'camera') {
+      input.setAttribute('capture', 'environment');
+    }
+    input.style.position = 'fixed';
+    input.style.left = '-9999px';
+    input.style.opacity = '0';
+    input.onchange = () => {
+      handleWebPhotoFile(input.files?.[0] || null);
+      input.remove();
+    };
+    document.body.appendChild(input);
+    input.click();
+    return true;
+  };
+
   const handleTakePhoto = async () => {
+    if (Platform.OS === 'web' && openWebImagePicker('camera')) {
+      return;
+    }
+
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
@@ -264,12 +317,15 @@ export default function MealPlanScreen() {
         setShowMealAnalysisModal(true);
       }
     } catch {
-      // Fallback: open modal directly
-      setShowMealAnalysisModal(true);
+      Alert.alert('Camera unavailable', 'Unable to open the camera right now.');
     }
   };
 
   const handleUploadPhoto = async () => {
+    if (Platform.OS === 'web' && openWebImagePicker('library')) {
+      return;
+    }
+
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
@@ -296,7 +352,7 @@ export default function MealPlanScreen() {
         setShowMealAnalysisModal(true);
       }
     } catch {
-      setShowMealAnalysisModal(true);
+      Alert.alert('Upload unavailable', 'Unable to open your photo library right now.');
     }
   };
 
