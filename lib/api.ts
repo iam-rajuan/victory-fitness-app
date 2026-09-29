@@ -1039,6 +1039,41 @@ export async function markAppNotificationRead(notificationId: string) {
   });
 }
 
+export type NotificationPreferenceTemplate = {
+  id: string;
+  type: string;
+  title: string;
+  channels: string[];
+  approved: boolean;
+  frequencyCapHours: number;
+  enabled: boolean;
+};
+
+export type NotificationPreferencesResponse = {
+  pushEnabled: boolean;
+  whatsappEnabled: boolean;
+  emailEnabled: boolean;
+  nudgeTime: string;
+  templates: NotificationPreferenceTemplate[];
+};
+
+export async function fetchNotificationPreferences() {
+  return apiRequest<NotificationPreferencesResponse>('/me/notification-preferences');
+}
+
+export async function updateNotificationPreferences(payload: {
+  pushEnabled?: boolean;
+  whatsappEnabled?: boolean;
+  emailEnabled?: boolean;
+  nudgeTime?: string;
+  templates?: Array<{ type: string; enabled: boolean }>;
+}) {
+  return apiRequest<NotificationPreferencesResponse>('/me/notification-preferences', {
+    method: 'PATCH',
+    body: payload,
+  });
+}
+
 export async function fetchDismissedActivityNotifications() {
   const response = await apiRequest<{ ids: string[] }>('/me/activity-notifications/dismissed');
   return response.ids || [];

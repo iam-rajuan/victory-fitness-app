@@ -19,6 +19,7 @@ import {
   confirmCurrentUserWeight,
   createWorkoutLog,
   fetchAccountabilityPartner,
+  fetchAppNotifications,
   fetchCurrentUser,
   fetchCurrentUserBodyMetrics,
   fetchCurrentUserHydration,
@@ -219,6 +220,7 @@ export default function HomeScreen() {
   const [strengthPlan, setStrengthPlan] = useState<StrengthPlanResponse | null>(null);
   const [homeLibraryWorkout, setHomeLibraryWorkout] = useState<any | null>(null);
   const [homeWorkoutSummary, setHomeWorkoutSummary] = useState<HomeWorkoutPlanSummary | null>(null);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLogItem[]>([]);
   const [journalWrittenToday, setJournalWrittenToday] = useState(false);
   const [hydration, setHydration] = useState<HydrationState | null>(null);
@@ -294,6 +296,7 @@ export default function HomeScreen() {
         workoutLibrary,
         homePlanSummary,
         accountabilityData,
+        notifications,
       ] = await Promise.all([
         fetchCurrentUser().catch(() => null),
         fetchCurrentUserBodyMetrics().catch(() => null),
@@ -306,6 +309,7 @@ export default function HomeScreen() {
         fetchWorkoutLibrary().catch(() => null),
         fetchHomeWorkoutPlanSummary().catch(() => null),
         fetchAccountabilityPartner().catch(() => null),
+        fetchAppNotifications().catch(() => []),
       ]);
 
       if (user) {
@@ -324,6 +328,7 @@ export default function HomeScreen() {
       setHomeLibraryWorkout(workoutLibrary?.featuredWorkout || workoutLibrary?.workouts?.[0] || null);
       setHomeWorkoutSummary(homePlanSummary);
       setAccountabilityPartner(accountabilityData);
+      setUnreadNotifications(Array.isArray(notifications) ? notifications.filter((item: any) => !item.read).length : 0);
 
       if (Array.isArray(journalData?.entries)) {
         setJournalWrittenToday(journalData.entries.some((entry) => isSameLocalDay(entry.created_at)));
@@ -668,6 +673,7 @@ export default function HomeScreen() {
         <ClaudeHomeHeader
           name={currentUser?.name || currentUser?.email || ''}
           streakDays={streakDays}
+          unreadNotifications={unreadNotifications}
         />
 
 

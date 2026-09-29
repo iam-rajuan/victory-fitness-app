@@ -17,6 +17,7 @@ interface ClaudeNotificationPreferencesModalProps {
   whatsappEnabled?: boolean;
   emailEnabled?: boolean;
   nudgeTime?: string;
+  templates?: Array<{ type: string; title: string; enabled: boolean; approved: boolean; channels: string[] }>;
   contactNumber?: string | null;
   countryCode?: string | null;
   onSave?: (preferences: {
@@ -24,6 +25,7 @@ interface ClaudeNotificationPreferencesModalProps {
     whatsappEnabled: boolean;
     emailEnabled: boolean;
     nudgeTime: string;
+    templates?: Array<{ type: string; enabled: boolean }>;
   }) => void | Promise<void>;
 }
 
@@ -45,6 +47,7 @@ export default function ClaudeNotificationPreferencesModal({
   whatsappEnabled: initialWhatsappEnabled = false,
   emailEnabled: initialEmailEnabled = false,
   nudgeTime: initialNudgeTime = '20:30',
+  templates: initialTemplates = [],
   contactNumber,
   countryCode,
   onSave,
@@ -53,6 +56,7 @@ export default function ClaudeNotificationPreferencesModal({
   const [whatsappEnabled, setWhatsappEnabled] = useState(initialWhatsappEnabled);
   const [emailEnabled, setEmailEnabled] = useState(initialEmailEnabled);
   const [nudgeTime, setNudgeTime] = useState(initialNudgeTime);
+  const [templateStates, setTemplateStates] = useState(initialTemplates);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -61,13 +65,26 @@ export default function ClaudeNotificationPreferencesModal({
     setWhatsappEnabled(initialWhatsappEnabled);
     setEmailEnabled(initialEmailEnabled);
     setNudgeTime(initialNudgeTime || '20:30');
-  }, [initialEmailEnabled, initialNudgeTime, initialPushEnabled, initialWhatsappEnabled, visible]);
+    setTemplateStates(initialTemplates);
+  }, [initialEmailEnabled, initialNudgeTime, initialPushEnabled, initialTemplates, initialWhatsappEnabled, visible]);
+
+  const toggleTemplate = (type: string) => {
+    setTemplateStates((prev) =>
+      prev.map((item) => item.type === type ? { ...item, enabled: !item.enabled } : item)
+    );
+  };
 
   const handleSave = async () => {
     if (saving) return;
     setSaving(true);
     try {
-      await onSave?.({ pushEnabled, whatsappEnabled, emailEnabled, nudgeTime });
+      await onSave?.({
+        pushEnabled,
+        whatsappEnabled,
+        emailEnabled,
+        nudgeTime,
+        templates: templateStates.map((item) => ({ type: item.type, enabled: item.enabled })),
+      });
       Alert.alert('Preferences saved', 'Your reminder channels have been updated.');
       onClose();
     } catch (error: any) {
@@ -158,6 +175,34 @@ export default function ClaudeNotificationPreferencesModal({
           <Text style={styles.channelFootnote}>
             Nudges include your accountability partner's status when they've trained.
           </Text>
+
+          {templateStates.length > 0 && (
+            <>
+              <Text style={styles.sectionLabel}>WHAT YOU WANT TO RECEIVE</Text>
+              <View style={styles.templateList}>
+                {templateStates.map((item) => (
+                  <TouchableOpacity
+                    key={item.type}
+                    style={styles.templateRow}
+                    activeOpacity={0.82}
+                    onPress={() => toggleTemplate(item.type)}
+                  >
+                    <View style={styles.templateTextCol}>
+                      <Text style={styles.templateTitle}>{item.title}</Text>
+                      <Text style={styles.templateMeta}>
+                        {(item.channels || []).join(' · ') || 'Push'} · {item.approved ? 'available' : 'silent until approved'}
+                      </Text>
+                    </View>
+                    <View style={[styles.templateSwitch, item.enabled && styles.templateSwitchOn]}>
+                      <Text style={[styles.templateSwitchText, item.enabled && styles.templateSwitchTextOn]}>
+                        {item.enabled ? 'On' : 'Off'}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
+          )}
 
           {/* WHEN matching lines 2097-2105 */}
           <Text style={styles.sectionLabel}>WHEN</Text>
@@ -325,6 +370,60 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     color: 'rgba(247, 243, 238, 0.5)',
     marginBottom: 22,
+  },
+  templateList: {
+    backgroundColor: NAVY,
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 22,
+  },
+  templateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(247, 243, 238, 0.1)',
+  },
+  templateTextCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  templateTitle: {
+    fontFamily: DMSANS,
+    fontSize: 14.5,
+    fontWeight: '700',
+    color: IVORY,
+  },
+  templateMeta: {
+    fontFamily: MONO,
+    fontSize: 10.5,
+    color: 'rgba(247, 243, 238, 0.5)',
+    marginTop: 4,
+    textTransform: 'uppercase',
+  },
+  templateSwitch: {
+    minWidth: 48,
+    height: 30,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(247, 243, 238, 0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  templateSwitchOn: {
+    backgroundColor: GOLD,
+    borderColor: GOLD,
+  },
+  templateSwitchText: {
+    fontFamily: DMSANS,
+    fontSize: 12,
+    fontWeight: '700',
+    color: 'rgba(247, 243, 238, 0.65)',
+  },
+  templateSwitchTextOn: {
+    color: '#0D0D0D',
   },
   whenCard: {
     backgroundColor: NAVY,

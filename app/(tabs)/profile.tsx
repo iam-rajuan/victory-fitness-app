@@ -15,9 +15,11 @@ import {
   fetchCurrentUser,
   fetchHabitConsistency,
   fetchLongevityDashboard,
+  fetchNotificationPreferences,
   fetchSubscriptionPlans,
   fetchWorkoutLogs,
   logout,
+  updateNotificationPreferences,
   updateCurrentUserProfile,
 } from '../../lib/api';
 import { fetchJournalEntries } from '../../lib/screenData';
@@ -190,6 +192,7 @@ export default function ProfileScreen() {
     whatsappEnabled: false,
     emailEnabled: false,
     nudgeTime: '20:30',
+    templates: [] as Array<{ type: string; title: string; enabled: boolean; approved: boolean; channels: string[] }>,
   });
   const [partnerTitle, setPartnerTitle] = useState('Accountability duo');
   const [partnerNote, setPartnerNote] = useState('Set up or manage your partner.');
@@ -212,7 +215,7 @@ export default function ProfileScreen() {
 
     const loadUserData = async () => {
       try {
-        const [u, habit, journal, plans, completedLogs, accountability, longevity] = await Promise.all([
+        const [u, habit, journal, plans, completedLogs, accountability, longevity, notificationPreferences] = await Promise.all([
           fetchCurrentUser({ forceRefresh: true }),
           fetchHabitConsistency().catch(() => null),
           fetchJournalEntries().catch(() => ({ entries: [] })),
@@ -220,6 +223,7 @@ export default function ProfileScreen() {
           fetchWorkoutLogs(1, 100, 'completed').catch(() => ({ items: [], total: 0, page: 1, limit: 100, total_pages: 0 })),
           fetchAccountabilityPartner().catch(() => null),
           fetchLongevityDashboard().catch(() => null),
+          fetchNotificationPreferences().catch(() => null),
         ]);
         if (cancelled || !u) return;
         const userObj = u as any;
@@ -232,10 +236,11 @@ export default function ProfileScreen() {
         setCountry(String(userObj.country || '').trim());
         setLanguageMeta(languageLabel(userObj.preferred_language));
         const nextNotificationPrefs = {
-          pushEnabled: userObj.notification_push_enabled !== false,
-          whatsappEnabled: Boolean(userObj.notification_whatsapp_enabled),
-          emailEnabled: Boolean(userObj.notification_email_enabled),
-          nudgeTime: String(userObj.notification_nudge_time || '20:30'),
+          pushEnabled: notificationPreferences?.pushEnabled ?? userObj.notification_push_enabled !== false,
+          whatsappEnabled: notificationPreferences?.whatsappEnabled ?? Boolean(userObj.notification_whatsapp_enabled),
+          emailEnabled: notificationPreferences?.emailEnabled ?? Boolean(userObj.notification_email_enabled),
+          nudgeTime: String(notificationPreferences?.nudgeTime || userObj.notification_nudge_time || '20:30'),
+          templates: Array.isArray(notificationPreferences?.templates) ? notificationPreferences.templates : [],
         };
         setNotificationPrefs(nextNotificationPrefs);
         setNotificationMeta(notificationSummary(userObj));
@@ -342,16 +347,23 @@ export default function ProfileScreen() {
     whatsappEnabled: boolean;
     emailEnabled: boolean;
     nudgeTime: string;
+    templates?: Array<{ type: string; enabled: boolean }>;
   }) => {
-    const updated = await updateCurrentUserProfile({
-      notification_push_enabled: preferences.pushEnabled,
-      notification_whatsapp_enabled: preferences.whatsappEnabled,
-      notification_email_enabled: preferences.emailEnabled,
-      notification_nudge_time: preferences.nudgeTime,
+    const updatedPreferences = await updateNotificationPreferences(preferences);
+    const updatedUser = await updateCurrentUserProfile({
+      notification_push_enabled: updatedPreferences.pushEnabled,
+      notification_whatsapp_enabled: updatedPreferences.whatsappEnabled,
+      notification_email_enabled: updatedPreferences.emailEnabled,
+      notification_nudge_time: updatedPreferences.nudgeTime,
     });
-    const updatedUser = updated as any;
-    setUser(updatedUser);
-    setNotificationPrefs(preferences);
+    setUser(updatedUser as any);
+    setNotificationPrefs({
+      pushEnabled: updatedPreferences.pushEnabled,
+      whatsappEnabled: updatedPreferences.whatsappEnabled,
+      emailEnabled: updatedPreferences.emailEnabled,
+      nudgeTime: updatedPreferences.nudgeTime,
+      templates: updatedPreferences.templates || [],
+    });
     setNotificationMeta(notificationSummary(updatedUser));
   };
 
@@ -658,6 +670,7 @@ export default function ProfileScreen() {
         whatsappEnabled={notificationPrefs.whatsappEnabled}
         emailEnabled={notificationPrefs.emailEnabled}
         nudgeTime={notificationPrefs.nudgeTime}
+        templates={notificationPrefs.templates}
         contactNumber={user?.contact_number || ''}
         countryCode={user?.country_code || ''}
         onSave={handleSaveNotificationPrefs}

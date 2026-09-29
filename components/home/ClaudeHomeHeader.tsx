@@ -1,12 +1,14 @@
 import React from 'react';
 import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { pushRoute } from '../../lib/navigation';
 import { useTheme } from '../../context/ThemeContext';
 
 interface ClaudeHomeHeaderProps {
   name: string;
   streakDays: number;
+  unreadNotifications?: number;
 }
 
 const GOLD = '#C9943A';
@@ -18,6 +20,7 @@ const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Cou
 export default function ClaudeHomeHeader({
   name,
   streakDays,
+  unreadNotifications = 0,
 }: ClaudeHomeHeaderProps) {
   const router = useRouter();
   const { colors, isDark } = useTheme();
@@ -45,22 +48,45 @@ export default function ClaudeHomeHeader({
         </Text>
       </View>
 
-      {/* Right: Streak Pill */}
-      <Pressable
-        style={[
-          styles.streakPill,
-          {
-            borderColor: isDark ? 'rgba(247, 243, 238, 0.2)' : 'rgba(13, 43, 69, 0.12)',
-            backgroundColor: isDark ? 'rgba(13, 43, 69, 0.6)' : '#FFFFFF',
-          },
-        ]}
-        onPress={() => pushRoute(router, '/profile')}
-      >
-        <View style={styles.goldSquareDot} />
-        <Text style={[styles.streakNumber, { color: colors.text }]}>
-          {streakDays || 12}
-        </Text>
-      </Pressable>
+      <View style={styles.actionsRow}>
+        <Pressable
+          style={[
+            styles.streakPill,
+            {
+              borderColor: isDark ? 'rgba(247, 243, 238, 0.2)' : 'rgba(13, 43, 69, 0.12)',
+              backgroundColor: isDark ? 'rgba(13, 43, 69, 0.6)' : '#FFFFFF',
+            },
+          ]}
+          onPress={() => pushRoute(router, '/profile')}
+        >
+          <View style={styles.goldSquareDot} />
+          <Text style={[styles.streakNumber, { color: colors.text }]}>
+            {streakDays || 0}
+          </Text>
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open notifications"
+          style={[
+            styles.iconButton,
+            {
+              borderColor: isDark ? 'rgba(247, 243, 238, 0.2)' : 'rgba(13, 43, 69, 0.12)',
+              backgroundColor: isDark ? 'rgba(13, 43, 69, 0.6)' : '#FFFFFF',
+            },
+          ]}
+          onPress={() => pushRoute(router, '/notifications')}
+        >
+          <Ionicons name="notifications-outline" size={17} color={colors.text} />
+          {unreadNotifications > 0 ? (
+            <View style={styles.notificationBadge}>
+              <Text style={styles.notificationBadgeText}>
+                {unreadNotifications > 9 ? '9+' : unreadNotifications}
+              </Text>
+            </View>
+          ) : null}
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -92,6 +118,38 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: -0.3,
   },
+  actionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  iconButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 999,
+    paddingHorizontal: 4,
+    backgroundColor: GOLD,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notificationBadgeText: {
+    fontFamily: MONO,
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#0D0D0D',
+  },
   streakPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -113,4 +171,3 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
-
