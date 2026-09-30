@@ -58,6 +58,7 @@ export type HomeWorkoutPlanSummary = {
   planSource: string;
   durationMinutes: number;
   equipment: string;
+  whyToday?: string;
   week: {
     pips: HomeWorkoutWeekPip[];
     note: string;

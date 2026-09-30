@@ -7,6 +7,7 @@ import {
   Pressable,
   ScrollView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 
 interface OptionWithNote {
@@ -31,7 +32,7 @@ interface ClaudePlanBuildModalProps {
     duration: string;
     kit: string;
     line: string;
-  }) => void;
+  }) => void | Promise<void>;
 }
 
 const OBSIDIAN = '#0D0D0D';
@@ -104,6 +105,7 @@ export default function ClaudePlanBuildModal({
 }: ClaudePlanBuildModalProps) {
   const [stepIdx, setStepIdx] = useState(0);
   const [picks, setPicks] = useState<number[]>([0, 0, 1, 1]);
+  const [submitting, setSubmitting] = useState(false);
 
   const currentStep = BUILD_STEPS[stepIdx];
   const currentPick = picks[stepIdx] !== undefined ? picks[stepIdx] : 0;
@@ -116,7 +118,8 @@ export default function ClaudePlanBuildModal({
     });
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    if (submitting) return;
     if (stepIdx < 3) {
       setStepIdx((s) => s + 1);
     } else {
@@ -137,15 +140,20 @@ export default function ClaudePlanBuildModal({
       const kitPhrase = kitPhrases[kit] || `your ${kit.toLowerCase()}`;
       const line = `${goal} · ${days} · ${minsNum} min · built around ${kitPhrase}.`;
 
-      onPlanBuilt({
-        goal,
-        days,
-        duration,
-        kit,
-        line,
-      });
-      setStepIdx(0);
-      onClose();
+      setSubmitting(true);
+      try {
+        await onPlanBuilt({
+          goal,
+          days,
+          duration,
+          kit,
+          line,
+        });
+        setStepIdx(0);
+        onClose();
+      } finally {
+        setSubmitting(false);
+      }
     }
   };
 
@@ -216,8 +224,12 @@ export default function ClaudePlanBuildModal({
 
           {/* Bottom CTA */}
           <View style={styles.bottomBar}>
-            <Pressable style={styles.ctaBtn} onPress={handleNext}>
-              <Text style={styles.ctaBtnText}>{currentStep.cta}</Text>
+            <Pressable style={[styles.ctaBtn, submitting && styles.ctaBtnDisabled]} onPress={() => void handleNext()} disabled={submitting}>
+              {submitting ? (
+                <ActivityIndicator color={OBSIDIAN} />
+              ) : (
+                <Text style={styles.ctaBtnText}>{currentStep.cta}</Text>
+              )}
             </Pressable>
           </View>
         </View>
@@ -366,6 +378,9 @@ const styles = StyleSheet.create({
     backgroundColor: GOLD,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  ctaBtnDisabled: {
+    opacity: 0.72,
   },
   ctaBtnText: {
     fontFamily: DMSANS,

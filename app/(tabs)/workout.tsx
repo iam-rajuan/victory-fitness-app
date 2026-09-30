@@ -5,6 +5,7 @@ import {
   ScrollView,
   RefreshControl,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -571,11 +572,8 @@ export default function WorkoutScreen() {
       setPlanBuildModalVisible(false);
       router.replace('/(tabs)');
     } catch {
-      setPlanBuilt(true);
-      setPlanSummaryLine(summary.line);
-      await savePlanBuiltData(summary);
-      setPlanBuildModalVisible(false);
-      router.replace('/(tabs)');
+      Alert.alert('Plan rebuild failed', 'Unable to rebuild your Home workout plan right now. Please try again in a moment.');
+      throw new Error('Unable to rebuild active Home workout plan');
     }
   };
 

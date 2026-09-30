@@ -1,6 +1,5 @@
 import React from 'react';
 import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
-import RequirementAuditBoundary from '../audit/RequirementAuditBoundary';
 
 interface ClaudeFreshPlanBannerProps {
   visible: boolean;
@@ -24,25 +23,23 @@ export default function ClaudeFreshPlanBanner({
 
   return (
     <View style={styles.container}>
-      <RequirementAuditBoundary auditId="APP-EXTRA-009" status="extra">
-        <View style={styles.card}>
-          {/* Green Checkmark Circle */}
-          <View style={styles.checkCircle}>
-            <View style={styles.checkTick} />
-          </View>
-
-          {/* Text Content */}
-          <View style={styles.textWrap}>
-            <Text style={styles.title}>Your plan is ready — six weeks</Text>
-            <Text style={styles.subtitle}>{line}</Text>
-          </View>
-
-          {/* Dismiss Button */}
-          <Pressable onPress={onDismiss} hitSlop={12} style={styles.closeBtn}>
-            <Text style={styles.closeText}>×</Text>
-          </Pressable>
+      <View style={styles.card}>
+        {/* Green Checkmark Circle */}
+        <View style={styles.checkCircle}>
+          <View style={styles.checkTick} />
         </View>
-      </RequirementAuditBoundary>
+
+        {/* Text Content */}
+        <View style={styles.textWrap}>
+          <Text style={styles.title}>Your plan is ready — six weeks</Text>
+          <Text style={styles.subtitle}>{line}</Text>
+        </View>
+
+        {/* Dismiss Button */}
+        <Pressable onPress={onDismiss} hitSlop={12} style={styles.closeBtn}>
+          <Text style={styles.closeText}>×</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }

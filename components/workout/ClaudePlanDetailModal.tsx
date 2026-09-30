@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   Platform,
 } from 'react-native';
-import RequirementAuditBoundary from '../audit/RequirementAuditBoundary';
 import { useTheme } from '../../context/ThemeContext';
 
 interface ExerciseItem {
@@ -42,6 +41,7 @@ interface ClaudePlanDetailModalProps {
   exercises?: ExerciseItem[];
   weekPips?: WeekPipItem[];
   weekNote?: string;
+  whyToday?: string;
   sessionSummary?: SessionSummary;
 }
 
@@ -116,6 +116,7 @@ export default function ClaudePlanDetailModal({
   exercises = DEFAULT_EXERCISES,
   weekPips = WEEK_PIPS,
   weekNote = '2 done · today · 1 light session left · Sunday optional',
+  whyToday = 'This session is built from your current workout plan, progress, and available training setup.',
   sessionSummary,
 }: ClaudePlanDetailModalProps) {
   const { isDark, colors } = useTheme();
@@ -151,36 +152,30 @@ export default function ClaudePlanDetailModal({
           <Text style={[styles.dayLine, { color: isDark ? COPPER : '#B5651D' }]}>{dayKicker}</Text>
           <Text style={[styles.title, { color: isDark ? IVORY : NAVY }]}>{planTitle}</Text>
 
-          {/* Card 1: WHY TODAY LOOKS LIKE THIS (Marked with Red Audit Border for Sleep/RHR Telemetry) */}
-          <RequirementAuditBoundary
-            auditId="APP-EXTRA-019"
-            status="extra"
-            label="NEW FEATURE - NOT IN REQUIREMENT (SLEEP & RHR BIOMETRIC TELEMETRY)"
+          {/* Card 1: WHY TODAY LOOKS LIKE THIS */}
+          <View
+            style={[
+              styles.whyCard,
+              {
+                backgroundColor: isDark ? NAVY : '#FFFFFF',
+                borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
+                borderWidth: isDark ? 0 : 1,
+                shadowOpacity: isDark ? 0.35 : 0.06,
+              },
+            ]}
           >
-            <View
+            <Text style={[styles.whyKicker, { color: isDark ? GOLD : '#C9943A' }]}>
+              WHY TODAY LOOKS LIKE THIS
+            </Text>
+            <Text
               style={[
-                styles.whyCard,
-                {
-                  backgroundColor: isDark ? NAVY : '#FFFFFF',
-                  borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
-                  borderWidth: isDark ? 0 : 1,
-                  shadowOpacity: isDark ? 0.35 : 0.06,
-                },
+                styles.whyBody,
+                { color: isDark ? 'rgba(247, 243, 238, 0.88)' : 'rgba(13, 43, 69, 0.85)' },
               ]}
             >
-              <Text style={[styles.whyKicker, { color: isDark ? GOLD : '#C9943A' }]}>
-                WHY TODAY LOOKS LIKE THIS
-              </Text>
-              <Text
-                style={[
-                  styles.whyBody,
-                  { color: isDark ? 'rgba(247, 243, 238, 0.88)' : 'rgba(13, 43, 69, 0.85)' },
-                ]}
-              >
-                Heavier than Monday because you slept 7h 20m and your resting heart rate is down. Wednesday stays light either way.
-              </Text>
-            </View>
-          </RequirementAuditBoundary>
+              {whyToday}
+            </Text>
+          </View>
 
           {/* Card 2: YOUR WEEK (7-Day schedule row) */}
           <View

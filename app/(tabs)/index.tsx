@@ -403,6 +403,12 @@ export default function HomeScreen() {
     void loadHomeData();
   }, [loadHomeData]);
 
+  useFocusEffect(
+    useCallback(() => {
+      void loadHomeData();
+    }, [loadHomeData])
+  );
+
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadHomeData();
@@ -962,6 +968,7 @@ export default function HomeScreen() {
         exercises={detailExercises}
         weekPips={homeWorkoutSummary?.week?.pips}
         weekNote={homeWorkoutSummary?.week?.note}
+        whyToday={homeWorkoutSummary?.whyToday}
         sessionSummary={homeWorkoutSummary?.session}
         onBeginSession={() => {
           setPlanDetailVisible(false);
