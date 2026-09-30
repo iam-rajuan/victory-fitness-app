@@ -40,6 +40,7 @@ import ClaudePlanBuildModal from '../../components/workout/ClaudePlanBuildModal'
 import ClaudeWorkoutDetailModal from '../../components/workout/ClaudeWorkoutDetailModal';
 import { getSavedPlanStatus, savePlanBuiltData } from '../../lib/planStorage';
 import { fetchWorkoutLibrary, WorkoutLibraryCategory, WorkoutLibraryItem } from '../../lib/workouts';
+import { createHomeSevenDayWorkoutPlan } from '../../lib/workout-plans';
 
 const OBSIDIAN = '#0D0D0D';
 const GOLD = '#C9943A';
@@ -534,13 +535,48 @@ export default function WorkoutScreen() {
     kit?: string;
     line: string;
   }) => {
-    setPlanBuilt(true);
-    setPlanSummaryLine(summary.line);
-    await savePlanBuiltData(summary);
-    setPlanBuildModalVisible(false);
-
-    // Follow Claude design routing flow: navigate to Home screen with new plan active!
-    router.replace('/(tabs)');
+    const dayMap: Record<string, string[]> = {
+      'Mon, Wed, Fri': ['Mon', 'Wed', 'Fri'],
+      'Mon, Tue, Thu, Fri': ['Mon', 'Tue', 'Thu', 'Fri'],
+      'Five weekdays': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+      'Weekends only': ['Sat', 'Sun'],
+    };
+    const equipmentMap: Record<string, string[]> = {
+      'Full gym': ['Gym', 'Barbell', 'Dumbbells', 'Cables', 'Machines'],
+      'Home gym': ['Dumbbells', 'Bands'],
+      'Dumbbells only': ['Dumbbells'],
+      'Nothing at all': ['No equipment'],
+    };
+    const goalMap: Record<string, string> = {
+      'Get stronger': 'Pure Strength',
+      'Lose weight and keep muscle': 'Body Recomp',
+      'Move without pain': 'Body Recomp',
+      'Stay consistent': 'Hypertrophy',
+    };
+    const days = dayMap[summary.days || ''] || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const minutes = String(summary.duration || '').match(/\d+/)?.[0] || undefined;
+    try {
+      const plan = await createHomeSevenDayWorkoutPlan({
+        goal: goalMap[summary.goal || ''] || summary.goal,
+        split: days.length >= 5 ? 'Push Pull Legs' : days.length === 4 ? 'Upper / Lower' : 'Full Body',
+        duration_minutes: minutes,
+        equipment: equipmentMap[summary.kit || ''] || [],
+        frequency: String(days.length || 7),
+        days,
+      });
+      const nextSummary = { ...summary, line: plan.summary || summary.line };
+      setPlanBuilt(true);
+      setPlanSummaryLine(nextSummary.line);
+      await savePlanBuiltData(nextSummary);
+      setPlanBuildModalVisible(false);
+      router.replace('/(tabs)');
+    } catch {
+      setPlanBuilt(true);
+      setPlanSummaryLine(summary.line);
+      await savePlanBuiltData(summary);
+      setPlanBuildModalVisible(false);
+      router.replace('/(tabs)');
+    }
   };
 
   if (checkingAccess) {

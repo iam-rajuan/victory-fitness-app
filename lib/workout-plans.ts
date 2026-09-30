@@ -106,6 +106,16 @@ export async function fetchLatestStrengthWorkoutPlan() {
   return plan;
 }
 
+export async function createHomeSevenDayWorkoutPlan(payload: Record<string, unknown> = {}) {
+  const plan = await apiRequest<StrengthPlanResponse>('/ai/workout-plan/home-seven-day', {
+    method: 'POST',
+    body: payload,
+    timeoutMs: 120_000,
+  });
+  await persistLatestStrengthPlan(plan);
+  return plan;
+}
+
 export async function fetchStrengthWorkoutPlans() {
   const response = await apiRequest<StrengthPlanListResponse>('/ai/workout-plan/strength');
   const latest = response.items[0] ?? null;

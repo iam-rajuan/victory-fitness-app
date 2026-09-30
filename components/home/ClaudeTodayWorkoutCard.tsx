@@ -11,8 +11,11 @@ interface ClaudeTodayWorkoutCardProps {
   exerciseCount?: number;
   equipment?: string;
   isPlanBuilt?: boolean;
+  hasActivePlan?: boolean;
+  isGeneratingPlan?: boolean;
   onStartSession?: () => void;
   onAdjustPlan?: () => void;
+  onCreatePlan?: () => void;
 }
 
 const NAVY = '#0D2B45';
@@ -32,14 +35,19 @@ export default function ClaudeTodayWorkoutCard({
   exerciseCount = 4,
   equipment = 'DUMBBELLS',
   isPlanBuilt = false,
+  hasActivePlan = true,
+  isGeneratingPlan = false,
   onStartSession,
   onAdjustPlan,
+  onCreatePlan,
 }: ClaudeTodayWorkoutCardProps) {
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const hasCoach = tier !== 'SILVER' && tier !== 'NONE';
 
-  const planLabel = hasCoach
+  const planLabel = !hasActivePlan
+    ? 'YOUR PLAN'
+    : hasCoach
     ? (isPlanBuilt ? 'YOUR NEW PLAN · WEEK 1 OF 6' : 'YOUR PLAN · WEEK 2 OF 6')
     : "TODAY'S WORKOUT";
   const planSource = hasCoach ? 'BUILT BY YOUR COACH' : 'VIDEO · FROM THE LIBRARY';
@@ -49,6 +57,10 @@ export default function ClaudeTodayWorkoutCard({
   const planAlt = hasCoach ? 'Adjust this plan with your coach' : 'Pick a different video instead';
 
   const handleStart = () => {
+    if (!hasActivePlan) {
+      onCreatePlan?.();
+      return;
+    }
     if (onStartSession) {
       onStartSession();
       return;
@@ -91,11 +103,15 @@ export default function ClaudeTodayWorkoutCard({
       >
         <View style={styles.accentGoldBar} />
 
-        <Text style={[styles.dayKicker, { color: isDark ? GOLD : '#B5651D' }]}>{planDayLine}</Text>
-        <Text style={[styles.title, { color: isDark ? IVORY : NAVY }]}>{workoutTitle}</Text>
+        <Text style={[styles.dayKicker, { color: isDark ? GOLD : '#B5651D' }]}>
+          {hasActivePlan ? planDayLine : 'READY WHEN YOU ARE'}
+        </Text>
+        <Text style={[styles.title, { color: isDark ? IVORY : NAVY }]}>
+          {hasActivePlan ? workoutTitle : 'Create your 7 day workout plan'}
+        </Text>
 
         {/* Stats row */}
-        <View style={styles.statsRow}>
+        {hasActivePlan ? <View style={styles.statsRow}>
           <View style={styles.statCol}>
             <Text style={[styles.statVal, { color: isDark ? IVORY : NAVY }]}>{durationMinutes}</Text>
             <Text
@@ -129,11 +145,13 @@ export default function ClaudeTodayWorkoutCard({
               EQUIPMENT
             </Text>
           </View>
-        </View>
+        </View> : null}
 
         {/* Primary CTA */}
-        <Pressable style={styles.startBtn} onPress={handleStart}>
-          <Text style={styles.startBtnText}>Start my session</Text>
+        <Pressable style={[styles.startBtn, isGeneratingPlan && styles.startBtnDisabled]} onPress={handleStart} disabled={isGeneratingPlan}>
+          <Text style={styles.startBtnText}>
+            {hasActivePlan ? 'Start my session' : isGeneratingPlan ? 'Creating plan...' : 'Create 7 day workout plan'}
+          </Text>
         </Pressable>
 
         {/* Secondary link */}
@@ -241,6 +259,9 @@ const styles = StyleSheet.create({
     backgroundColor: GOLD,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  startBtnDisabled: {
+    opacity: 0.72,
   },
   startBtnText: {
     fontFamily: DMSANS,

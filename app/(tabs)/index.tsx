@@ -43,10 +43,12 @@ import { fetchChallengeOverviewData, fetchJournalEntries } from '../../lib/scree
 import { getSavedPlanStatus, dismissFreshPlanBanner } from '../../lib/planStorage';
 import { getLatestNutritionPlan, NutritionPlanApiResponse, updateNutritionMealCompletion } from '../../lib/nutrition';
 import {
+  createHomeSevenDayWorkoutPlan,
   fetchLatestStrengthWorkoutPlan,
   StrengthPlanDay,
   StrengthPlanExercise,
   StrengthPlanResponse,
+  updateStrengthWorkoutPlanProgress,
 } from '../../lib/workout-plans';
 import { fetchHomeWorkoutPlanSummary, fetchWorkoutLibrary, HomeWorkoutPlanSummary } from '../../lib/workouts';
 
@@ -166,6 +168,14 @@ function firstStrengthDay(plan: StrengthPlanResponse | null): StrengthPlanDay | 
   return plan?.days?.[0] ?? null;
 }
 
+function selectedStrengthDay(plan: StrengthPlanResponse | null, summary: HomeWorkoutPlanSummary | null): StrengthPlanDay | null {
+  const dayKey = String(summary?.day || '').trim().toLowerCase();
+  if (dayKey && plan?.days?.length) {
+    return plan.days.find((day) => String(day.day || '').trim().toLowerCase() === dayKey) || plan.days[0] || null;
+  }
+  return firstStrengthDay(plan);
+}
+
 function mapPlanExerciseForDetail(exercise: StrengthPlanExercise, index: number): HomePlanExercise {
   return {
     id: exercise.id || `exercise-${index}`,
@@ -220,6 +230,7 @@ export default function HomeScreen() {
   const [strengthPlan, setStrengthPlan] = useState<StrengthPlanResponse | null>(null);
   const [homeLibraryWorkout, setHomeLibraryWorkout] = useState<any | null>(null);
   const [homeWorkoutSummary, setHomeWorkoutSummary] = useState<HomeWorkoutPlanSummary | null>(null);
+  const [generatingHomePlan, setGeneratingHomePlan] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLogItem[]>([]);
   const [journalWrittenToday, setJournalWrittenToday] = useState(false);
@@ -457,7 +468,7 @@ export default function HomeScreen() {
     return hydration?.target_liters || Math.round(w * 0.035 * 10) / 10;
   }, [currentWeight, hydration?.target_liters]);
 
-  const strengthDay = useMemo(() => firstStrengthDay(strengthPlan), [strengthPlan]);
+  const strengthDay = useMemo(() => selectedStrengthDay(strengthPlan, homeWorkoutSummary), [homeWorkoutSummary, strengthPlan]);
   const strengthExercises = useMemo(() => {
     const flat = strengthDay?.exercises?.length
       ? strengthDay.exercises
@@ -531,6 +542,7 @@ export default function HomeScreen() {
     return `TODAY · ${workoutDurationMinutes} MIN`;
   }, [homeWorkoutSummary?.dayKicker, strengthDay?.day, workoutDurationMinutes]);
   const planSource = homeWorkoutSummary?.planSource || (strengthPlan ? 'BUILT BY YOUR COACH' : tier !== 'SILVER' ? 'BUILT BY YOUR COACH' : 'TODAY’S WORKOUT');
+  const hasActiveHomePlan = tier === 'SILVER' || homeWorkoutSummary?.hasPlan !== false;
 
   const todayMeals = useMemo<HomeMealItem[]>(() => {
     const today = getNutritionToday(nutritionPlan);
@@ -602,6 +614,24 @@ export default function HomeScreen() {
     }
   }, [targetWaterLiters]);
 
+  const handleCreateHomePlan = useCallback(async () => {
+    if (generatingHomePlan) return;
+    setGeneratingHomePlan(true);
+    try {
+      const plan = await createHomeSevenDayWorkoutPlan();
+      setStrengthPlan(plan);
+      setPlanBuilt(true);
+      setShowFreshPlan(true);
+      setPlanSummaryLine(plan.summary || 'Your 7 day workout plan is ready.');
+      const refreshedSummary = await fetchHomeWorkoutPlanSummary().catch(() => null);
+      if (refreshedSummary) setHomeWorkoutSummary(refreshedSummary);
+    } catch {
+      Alert.alert('Plan generation failed', 'Unable to create your 7 day workout plan right now. Please try again in a moment.');
+    } finally {
+      setGeneratingHomePlan(false);
+    }
+  }, [generatingHomePlan]);
+
   const handleReminderChange = useCallback(async (enabled: boolean, mode: 'Vibrate' | 'Tone') => {
     try {
       const updated = await updateCurrentUserHydration({
@@ -634,6 +664,20 @@ export default function HomeScreen() {
         })),
         status: 'completed',
       });
+      if (strengthPlan?.plan_id && strengthDay?.day) {
+        const updatedPlan = await updateStrengthWorkoutPlanProgress(strengthPlan.plan_id, {
+          day: strengthDay.day,
+          completed: true,
+          duration_seconds: stats.durationSeconds || stats.minutes * 60,
+        }).catch(() => null);
+        if (updatedPlan) {
+          setStrengthPlan(updatedPlan);
+        }
+        const refreshedSummary = await fetchHomeWorkoutPlanSummary().catch(() => null);
+        if (refreshedSummary) {
+          setHomeWorkoutSummary(refreshedSummary);
+        }
+      }
       const logsData = await fetchWorkoutLogs(1, 50, 'completed').catch(() => null);
       if (Array.isArray(logsData?.items)) {
         setWorkoutLogs(logsData.items);
@@ -816,7 +860,14 @@ export default function HomeScreen() {
           exerciseCount={activeExercises.length || homeLibraryWorkout?.movements?.length || 0}
           equipment={workoutEquipment}
           isPlanBuilt={planBuilt}
+          hasActivePlan={hasActiveHomePlan}
+          isGeneratingPlan={generatingHomePlan}
+          onCreatePlan={() => void handleCreateHomePlan()}
           onStartSession={() => {
+            if (!hasActiveHomePlan) {
+              void handleCreateHomePlan();
+              return;
+            }
             if (tier === 'SILVER') {
               setVimeoModalVisible(true);
             } else {
@@ -827,7 +878,15 @@ export default function HomeScreen() {
             if (tier === 'SILVER') {
               pushRoute(router, '/workout-library');
             } else {
-              pushRoute(router, '/chat');
+              pushRoute(router, {
+                pathname: '/chat',
+                params: {
+                  initialPrompt: strengthPlan?.plan_id
+                    ? `Adjust my current active workout plan. Plan id: ${strengthPlan.plan_id}. I want to update the plan card and future sessions based on what we discuss.`
+                    : 'Help me create and apply a custom 7 day workout plan for my Home plan card.',
+                  contextNote: 'opened from the Home workout plan card',
+                },
+              });
             }
           }}
         />
@@ -910,7 +969,15 @@ export default function HomeScreen() {
         }}
         onAdjustWithCoach={() => {
           setPlanDetailVisible(false);
-          pushRoute(router, '/chat');
+          pushRoute(router, {
+            pathname: '/chat',
+            params: {
+              initialPrompt: strengthPlan?.plan_id
+                ? `Adjust my current active workout plan. Plan id: ${strengthPlan.plan_id}. Update the saved plan card and future sessions based on our discussion.`
+                : 'Help me create and apply a custom 7 day workout plan for my Home plan card.',
+              contextNote: 'opened from the Home session detail',
+            },
+          });
         }}
       />
 

@@ -50,7 +50,9 @@ export type HomeWorkoutWeekPip = {
 
 export type HomeWorkoutPlanSummary = {
   source: 'strength_plan' | 'workout_library' | string;
+  hasPlan?: boolean;
   planId?: string;
+  day?: string;
   title: string;
   dayKicker: string;
   planSource: string;
