@@ -600,14 +600,18 @@ export default function WorkoutScreen() {
         <ClaudeWorkoutRowCarousel
           title="Workout categories"
           actionText="All ›"
-          onActionPress={() => {}}
+          onActionPress={() => {
+            pushRoute(router, '/workout-library/categories');
+          }}
           type="programs"
           programs={libraryPrograms}
           onSelectProgram={(p) => {
-            const matchingWorkout = libraryWorkouts.find((workout) => {
-              return (workout.tag || '').toLowerCase() === p.n.toLowerCase();
+            pushRoute(router, {
+              pathname: '/workout-library/category/[name]',
+              params: {
+                name: p.n,
+              },
             });
-            if (matchingWorkout) handleStartWorkout(matchingWorkout);
           }}
         />
 

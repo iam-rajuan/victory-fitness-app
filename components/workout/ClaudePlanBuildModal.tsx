@@ -8,7 +8,6 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
-import RequirementAuditBoundary from '../audit/RequirementAuditBoundary';
 
 interface OptionWithNote {
   title: string;
@@ -152,8 +151,7 @@ export default function ClaudePlanBuildModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
-      <RequirementAuditBoundary auditId="APP-EXTRA-008" status="extra" style={{ flex: 1 }}>
-        <View style={styles.container}>
+      <View style={styles.container}>
           {/* Top Header */}
           <View style={styles.topBar}>
             <Pressable
@@ -223,7 +221,6 @@ export default function ClaudePlanBuildModal({
             </Pressable>
           </View>
         </View>
-      </RequirementAuditBoundary>
     </Modal>
   );
 }
