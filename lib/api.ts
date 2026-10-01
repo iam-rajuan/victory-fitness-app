@@ -2059,7 +2059,8 @@ export async function streamCoachVictorMessage(
   message: string,
   onToken: (token: string) => void,
   onDone: (fullReply: string, threadId: string) => void,
-  onError: (error: Error) => void
+  onError: (error: Error) => void,
+  options: { languageOverride?: string } = {}
 ): Promise<() => void> {
   const controller = new AbortController();
   const requestTokens = await getValidAuthTokens();
@@ -2078,14 +2079,14 @@ export async function streamCoachVictorMessage(
         method: 'POST',
         headers,
         credentials: APP_REQUEST_CREDENTIALS,
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message, language_override: options.languageOverride || undefined }),
         signal: controller.signal,
       });
 
       if (!response.ok || !response.body) {
         const fallbackRes = await apiRequest<{ reply: string; thread_id?: string }>('/ai/coach-victor/chat', {
           method: 'POST',
-          body: { message },
+          body: { message, language_override: options.languageOverride || undefined },
         });
         const words = fallbackRes.reply.split(' ');
         for (let i = 0; i < words.length; i++) {
