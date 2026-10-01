@@ -50,7 +50,7 @@ const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", defau
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 const DAY_FILTERS = ['All', '3', '5', '7', '14', '21'];
-const CAT_FILTERS = ['All', 'Physical', 'Mental', 'Relational'];
+const CAT_FILTERS = ['All', 'Physical', 'Mental', 'Relational', 'Nutrition'];
 
 function useHorizontalWebScroll() {
   const scrollRef = useRef<ScrollView>(null);
@@ -182,7 +182,9 @@ export default function ClaudeChallengeDirectory({
       if (ch.d !== targetDays) return false;
     }
     if (selectedCat !== 'All') {
-      if (ch.c.toUpperCase() !== selectedCat.toUpperCase()) return false;
+      const catUpper = selectedCat.trim().toUpperCase();
+      const itemCat = String(ch.c || '').trim().toUpperCase();
+      if (itemCat !== catUpper && !itemCat.includes(catUpper)) return false;
     }
     return true;
   });
