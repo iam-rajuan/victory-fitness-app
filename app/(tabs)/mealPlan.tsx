@@ -508,10 +508,10 @@ export default function MealPlanScreen() {
             source: 'meal_analysis',
             source_analysis_id: meal.analysisId || null,
             logged_date: todayIsoDate,
-            completed: false,
+            completed: true,
           });
           setMealLogs((prev) => [...prev, created]);
-          Alert.alert('Meal Added', `${created.name} is in your full day. Tap ADD to count it.`);
+          Alert.alert('Meal Logged', `${created.name} has been added to your full day and counted in your chart.`);
         }}
         imageBase64={selectedMealPhoto?.base64}
         imageUri={selectedMealPhoto?.uri}
