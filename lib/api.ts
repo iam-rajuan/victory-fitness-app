@@ -1201,6 +1201,11 @@ function normalizeOnboardingState(state: OnboardingState): OnboardingState {
     },
     anamnese: {
       primaryGoal: String(anamnese.primaryGoal || '').trim(),
+      primaryGoals: Array.isArray(anamnese.primaryGoals)
+        ? anamnese.primaryGoals.map((item) => String(item).trim()).filter(Boolean)
+        : String(anamnese.primaryGoal || '').trim()
+          ? [String(anamnese.primaryGoal || '').trim()]
+          : [],
       activityLevel: String(anamnese.activityLevel || '').trim(),
       healthConcerns: Array.isArray(anamnese.healthConcerns) ? anamnese.healthConcerns.map((item) => String(item).trim()).filter(Boolean) : [],
       healthNotes: String(anamnese.healthNotes || '').trim(),
@@ -2151,6 +2156,26 @@ export async function streamCoachVictorMessage(
   })();
 
   return () => controller.abort();
+}
+
+export type CoachVictorHistoryMessage = {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  created_at: string;
+};
+
+export async function fetchCoachVictorHistory(options: { skipResponseCache?: boolean } = {}) {
+  return apiRequest<{ thread_id?: string | null; messages: CoachVictorHistoryMessage[] }>('/ai/coach-victor/history', {
+    skipResponseCache: options.skipResponseCache,
+  });
+}
+
+export async function clearCoachVictorHistory() {
+  return apiRequest<{ cleared: boolean }>('/ai/coach-victor/history', {
+    method: 'DELETE',
+    skipResponseCache: true,
+  });
 }
 
 function extractErrorDetail(data: unknown): string {

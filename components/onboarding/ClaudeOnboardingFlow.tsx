@@ -234,6 +234,7 @@ export default function ClaudeOnboardingFlow({
 
   // User answers
   const [goal, setGoal] = useState<number>(0);
+  const [selectedGoals, setSelectedGoals] = useState<number[]>([0]);
   const [place, setPlace] = useState<number>(3); // Default Home gym
   const [kit, setKit] = useState<string[]>(['Dumbbells']);
   const [days, setDays] = useState<number>(4);
@@ -379,11 +380,19 @@ export default function ClaudeOnboardingFlow({
             }
           }
 
-          if (realOnboarding.anamnese?.primaryGoal) {
-            const gIdx = GOALS.findIndex(
-              (g) => g[0].toLowerCase() === realOnboarding.anamnese.primaryGoal.toLowerCase()
-            );
-            if (gIdx >= 0) setGoal(gIdx);
+          const storedGoals = Array.isArray(realOnboarding.anamnese?.primaryGoals)
+            ? realOnboarding.anamnese.primaryGoals
+            : realOnboarding.anamnese?.primaryGoal
+              ? [realOnboarding.anamnese.primaryGoal]
+              : [];
+          if (storedGoals.length) {
+            const matchedGoalIndexes = storedGoals
+              .map((storedGoal: string) => GOALS.findIndex((g) => g[0].toLowerCase() === String(storedGoal).toLowerCase()))
+              .filter((idx: number) => idx >= 0);
+            if (matchedGoalIndexes.length) {
+              setSelectedGoals(matchedGoalIndexes);
+              setGoal(matchedGoalIndexes[0]);
+            }
           }
 
           if (realOnboarding.anamnese?.equipmentAccess) {
@@ -840,6 +849,15 @@ export default function ClaudeOnboardingFlow({
     setNudge((prev) => (prev.includes(n) ? (prev.length > 1 ? prev.filter((x) => x !== n) : prev) : [...prev, n]));
   };
 
+  const toggleGoal = (idx: number) => {
+    setSelectedGoals((prev) => {
+      const next = prev.includes(idx) ? prev.filter((item) => item !== idx) : [...prev, idx];
+      const safeNext = next.length ? next : [idx];
+      setGoal(safeNext[0]);
+      return safeNext;
+    });
+  };
+
   const normalizeDialCodeInput = (value: string) => {
     const normalized = normalizeDialCode(value);
     setDialCode(normalized || value);
@@ -850,12 +868,16 @@ export default function ClaudeOnboardingFlow({
     const countryCode = region === 'uk' ? 'GB' : region.toUpperCase();
     const contactNumber = buildE164PhoneNumber(dialCode, dialNumber);
     const selectedTierTitle = String(curTier[0]);
+    const selectedGoalTitles = selectedGoals
+      .map((idx) => GOALS[idx]?.[0])
+      .filter(Boolean);
+    const primaryGoal = selectedGoalTitles[0] || GOALS[goal][0];
 
     await updateCurrentUserOnboarding({
       currentStep: step,
       country: currentRegion.n,
       countryCode,
-      motivationStatement: GOALS[goal][0],
+      motivationStatement: selectedGoalTitles.join(', ') || primaryGoal,
       identityStatement: identity.trim() || 'I am someone who trains even when it is hard',
       personalProfile: {
         age: String(age),
@@ -866,7 +888,8 @@ export default function ClaudeOnboardingFlow({
         weightUnit: 'kg',
       },
       anamnese: {
-        primaryGoal: GOALS[goal][0],
+        primaryGoal,
+        primaryGoals: selectedGoalTitles.length ? selectedGoalTitles : [primaryGoal],
         activityLevel: 'Moderately active',
         healthConcerns: [],
         healthNotes: isHomeGym && kit.length > 0 ? `Home gym kit: ${kit.join(', ')}` : '',
@@ -1124,16 +1147,16 @@ export default function ClaudeOnboardingFlow({
               <View style={styles.stepContent}>
                 <Text style={styles.stepTitle}>What is this for?</Text>
                 <Text style={styles.stepSubtitle}>
-                  Pick the one that is truest today. We use it to word the nudge that gets you off the sofa.
+                  Pick everything that is true today. We use it to word the nudge that gets you off the sofa.
                 </Text>
 
                 <View style={styles.optionsList}>
                   {GOALS.map((g, idx) => {
-                    const isSelected = idx === goal;
+                    const isSelected = selectedGoals.includes(idx);
                     return (
                       <Pressable
                         key={g[0]}
-                        onPress={() => setGoal(idx)}
+                        onPress={() => toggleGoal(idx)}
                         style={[styles.selectionCard, isSelected && styles.selectionCardActive]}
                       >
                         <Text style={[styles.cardTitle, isSelected && styles.cardTitleActive]}>{g[0]}</Text>
@@ -1231,7 +1254,7 @@ export default function ClaudeOnboardingFlow({
 
                 <Text style={styles.sectionKicker}>MINUTES A SESSION</Text>
                 <View style={styles.segmentedRow}>
-                  {[20, 30, 40, 60].map((n) => {
+                  {[20, 30, 40, 60, 90].map((n) => {
                     const isSelected = n === mins;
                     return (
                       <Pressable

@@ -17,6 +17,8 @@ import {
   fetchCurrentUser,
   AuthUser,
   streamCoachVictorMessage,
+  fetchCoachVictorHistory,
+  clearCoachVictorHistory,
 } from '../../lib/api';
 import { createHomeSevenDayWorkoutPlan } from '../../lib/workout-plans';
 import { savePlanBuiltData } from '../../lib/planStorage';
@@ -56,6 +58,7 @@ const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' })
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
 
 const QUICK_PROMPTS = [
+  'Adjust my current routine',
   'I only have 25 minutes tonight and no equipment.',
   'My lower back is tight today.',
   'What should I eat before training?',
@@ -96,7 +99,7 @@ function isWorkoutPlanRequest(text: string): boolean {
 }
 
 function isPlanInsertConfirmation(text: string): boolean {
-  return /^(yes|yeah|yep|ok|okay|confirm|apply|insert|save|replace|do it|sure)\b/i.test(text.trim());
+  return /^(yes|yeah|yep|ok|okay|confirm|apply|insert|save|replace|do it|sure|ja|sí|si|হ্যাঁ|হ্যা|हाँ)\b/i.test(text.trim());
 }
 
 function planSummaryLineFromPrompt(prompt: string) {
@@ -111,18 +114,18 @@ function planSummaryLineFromPrompt(prompt: string) {
 
 function insertQuestionForLanguage(language?: string) {
   if (language === 'de') {
-    return 'Soll dieser Plan deinen aktuellen Home-Workout-Plan ersetzen? Antworte mit Ja, dann zeige ich dir den Einfügen-Button.';
+    return 'Soll ich diesen Plan in deinen Home-Workout-Plan einfügen? Antworte mit Ja.';
   }
   if (language === 'bn') {
-    return 'এই প্ল্যানটি কি আপনার বর্তমান Home workout plan বদলে দেবে? হ্যাঁ লিখলে আমি insert button দেখাব।';
+    return 'এই প্ল্যানটি কি Home workout plan-এ বসাব? হ্যাঁ লিখুন।';
   }
   if (language === 'hi') {
-    return 'क्या यह प्लान आपके मौजूदा Home workout plan को replace करे? हाँ लिखें, फिर मैं insert button दिखाऊंगा।';
+    return 'क्या इसे आपके Home workout plan में डाल दूं? हाँ लिखें।';
   }
   if (language === 'es') {
-    return '¿Quieres que este plan reemplace tu plan actual de Home? Responde sí y te mostraré el botón para insertarlo.';
+    return '¿Lo inserto en tu plan de Home? Responde sí.';
   }
-  return 'Do you want this to replace your current Home workout plan? Reply yes and I will show the insert button.';
+  return 'Want me to insert this into your Home workout plan? Reply yes.';
 }
 
 function insertButtonLabel(language?: string) {
@@ -130,7 +133,7 @@ function insertButtonLabel(language?: string) {
   if (language === 'bn') return 'Home workout plan-এ বসান';
   if (language === 'hi') return 'Home workout plan में डालें';
   if (language === 'es') return 'Insertar en Home';
-  return 'Insert into Home workout plan';
+  return 'insert into my workout plan';
 }
 
 function parseInlineMarkdown(text: string, baseStyle: any, keyPrefix: string) {
@@ -168,6 +171,25 @@ function parseInlineMarkdown(text: string, baseStyle: any, keyPrefix: string) {
   });
 }
 
+function isMarkdownTableDivider(line: string) {
+  return /^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?$/.test(line.trim());
+}
+
+function isMarkdownTableRow(line: string) {
+  const trimmed = line.trim();
+  return trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.split('|').length >= 4;
+}
+
+function parseMarkdownTableCells(line: string) {
+  return line
+    .trim()
+    .replace(/^\|/, '')
+    .replace(/\|$/, '')
+    .split('|')
+    .map((cell) => cell.trim())
+    .filter(Boolean);
+}
+
 function FormattedCoachMessage({ text }: { text: string }) {
   if (!text) return null;
 
@@ -181,6 +203,29 @@ function FormattedCoachMessage({ text }: { text: string }) {
         // Empty line -> spacer
         if (!trimmed) {
           return <View key={`sp-${lineIdx}`} style={styles.lineSpacer} />;
+        }
+
+        if (isMarkdownTableDivider(trimmed)) {
+          return null;
+        }
+
+        if (isMarkdownTableRow(trimmed)) {
+          const cells = parseMarkdownTableCells(trimmed);
+          const isHeader = lineIdx + 1 < lines.length && isMarkdownTableDivider(lines[lineIdx + 1] || '');
+          if (!cells.length || isHeader) {
+            return null;
+          }
+          const [name, sets, reps, rest, equipment] = cells;
+          return (
+            <View key={`tbl-${lineIdx}`} style={styles.planExerciseRow}>
+              <Text style={styles.planExerciseName}>
+                {parseInlineMarkdown(name, styles.planExerciseName, `tbl-name-${lineIdx}`)}
+              </Text>
+              <Text style={styles.planExerciseMeta}>
+                {[sets, reps, rest, equipment].filter(Boolean).join(' · ')}
+              </Text>
+            </View>
+          );
         }
 
         // Markdown headings: ### / ## / #
@@ -280,6 +325,7 @@ export default function ClaudeCoachScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   // Horizontal mouse-drag and wheel scrolling for Quick Prompts
   const promptScrollRef = useRef<ScrollView>(null);
@@ -356,6 +402,38 @@ export default function ClaudeCoachScreen() {
     ? 'PRIORITY RESPONSES · FRONT OF QUEUE'
     : 'UNLIMITED · REPLIES IN ~2S';
 
+  useEffect(() => {
+    if (!hasCoach) return;
+    let cancelled = false;
+    setHistoryLoading(true);
+    fetchCoachVictorHistory({ skipResponseCache: true })
+      .then((history) => {
+        if (cancelled || !Array.isArray(history.messages)) return;
+        const loadedMessages = history.messages
+          .filter((item) => item.role === 'user' || item.role === 'assistant')
+          .slice(-40)
+          .map((item) => ({
+            id: item.id || `${item.role}-${item.created_at}`,
+            sender: item.role === 'user' ? 'user' : 'coach',
+            text: item.content,
+            contextNote: item.role === 'assistant' ? 'from your last coach conversation' : undefined,
+          } satisfies ChatMessage));
+        setMessages(loadedMessages);
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: false });
+        }, 120);
+      })
+      .catch(() => {
+        // History should never block a fresh coaching conversation.
+      })
+      .finally(() => {
+        if (!cancelled) setHistoryLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [hasCoach]);
+
   const handleSendText = async (
     textToSend: string,
     options?: {
@@ -376,6 +454,15 @@ export default function ClaudeCoachScreen() {
     const nextLanguage = requestedLanguage || conversationLanguage || currentUser?.preferred_language || undefined;
     const asksForPlan = isWorkoutPlanRequest(text);
     const confirmsPendingPlan = Boolean(pendingHomePlanPrompt && isPlanInsertConfirmation(text));
+    const backendMessage = confirmsPendingPlan
+      ? [
+          pendingHomePlanPrompt,
+          '',
+          'The user confirmed they want this routine generated now.',
+          'Generate the workout plan from the original request above.',
+          'Explicit user constraints override profile defaults. If the user said 10 minutes per day, every session must be 10 minutes. If the user named specific days, use only those days. If the user named specific exercise focus such as pull-ups or squats only, respect that focus.',
+        ].join('\n')
+      : text;
     if (requestedLanguage) {
       setConversationLanguage(requestedLanguage);
     }
@@ -399,7 +486,7 @@ export default function ClaudeCoachScreen() {
       let assistantText = '';
       await new Promise<void>(async (resolve) => {
         await streamCoachVictorMessage(
-          text,
+          backendMessage,
           (chunk) => {
             assistantText += chunk;
           },
@@ -420,7 +507,8 @@ export default function ClaudeCoachScreen() {
         assistantText = `I hear you, ${currentUser?.name ? currentUser.name.split(' ')[0] : 'friend'}. Based on your target of ${currentUser?.daily_protein_target || 112} g protein and your training consistency, let's keep showing up. How does that sound?`;
       }
 
-      if (asksForPlan && !confirmsPendingPlan) {
+      const isInsertHomePlanPrompt = /insert into my workout plan/i.test(text);
+      if (asksForPlan && !confirmsPendingPlan && !isInsertHomePlanPrompt) {
         setPendingHomePlanPrompt(text);
         assistantText = `${assistantText.trim()}\n\n${insertQuestionForLanguage(nextLanguage)}`;
       }
@@ -429,9 +517,9 @@ export default function ClaudeCoachScreen() {
         id: `coach-${Date.now()}`,
         sender: 'coach',
         text: assistantText,
-        homePlanAction: confirmsPendingPlan
+        homePlanAction: (confirmsPendingPlan || isInsertHomePlanPrompt)
           ? {
-              sourcePrompt: pendingHomePlanPrompt,
+              sourcePrompt: pendingHomePlanPrompt || text,
               status: 'ready',
             }
           : undefined,
@@ -474,7 +562,6 @@ export default function ClaudeCoachScreen() {
     const initialPrompt = typeof params.initialPrompt === 'string' ? params.initialPrompt.trim() : '';
     if (!hasCoach || !currentUser || !initialPrompt || autoPromptHandledRef.current) return;
     autoPromptHandledRef.current = true;
-    setInputText(initialPrompt);
     if (params.autoSend === '1') {
       void handleSendText(initialPrompt, buildPrescriptionOptionsFromParams());
     }
@@ -546,6 +633,19 @@ export default function ClaudeCoachScreen() {
     }
   };
 
+  const handleClearConversation = async () => {
+    if (sending || historyLoading) return;
+    try {
+      await clearCoachVictorHistory();
+      setMessages([]);
+      setPendingHomePlanPrompt('');
+      setConversationLanguage(null);
+      autoPromptHandledRef.current = false;
+    } catch {
+      Alert.alert('Could not clear chat', 'Please try again in a moment.');
+    }
+  };
+
   const handleSubmitInput = () => {
     const initialPrompt = typeof params.initialPrompt === 'string' ? params.initialPrompt.trim() : '';
     const shouldAttachPrescription = Boolean(initialPrompt && inputText.trim() === initialPrompt);
@@ -600,9 +700,19 @@ export default function ClaudeCoachScreen() {
             {coachStatus}
           </Text>
         </View>
-        <Pressable onPress={() => goBackOrReplace(router, '/(tabs)')} hitSlop={10}>
-          <Text style={styles.closeBtn}>×</Text>
-        </Pressable>
+        <View style={styles.topActions}>
+          <Pressable
+            style={styles.newChatButton}
+            onPress={handleClearConversation}
+            disabled={sending || historyLoading}
+            hitSlop={8}
+          >
+            <Text style={styles.newChatText}>New</Text>
+          </Pressable>
+          <Pressable onPress={() => goBackOrReplace(router, '/(tabs)')} hitSlop={10}>
+            <Text style={styles.closeBtn}>×</Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* Messages Thread */}
@@ -611,6 +721,13 @@ export default function ClaudeCoachScreen() {
         contentContainerStyle={styles.threadScroll}
         showsVerticalScrollIndicator={false}
       >
+        {historyLoading && !messages.length ? (
+          <View style={styles.typingIndicator}>
+            <ActivityIndicator color={GOLD} size="small" />
+            <Text style={styles.typingText}>Loading your last coach chat...</Text>
+          </View>
+        ) : null}
+
         {messages.map((m) => {
           const isUser = m.sender === 'user';
           return (
@@ -814,6 +931,27 @@ const styles = StyleSheet.create({
   statusPriority: {
     color: GOLD,
     fontWeight: '700',
+  },
+  topActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  newChatButton: {
+    minHeight: 30,
+    justifyContent: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(201, 148, 58, 0.45)',
+    paddingHorizontal: 11,
+    backgroundColor: 'rgba(201, 148, 58, 0.08)',
+  },
+  newChatText: {
+    fontFamily: MONO,
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: GOLD,
+    textTransform: 'uppercase',
   },
   closeBtn: {
     fontFamily: DMSANS,
@@ -1070,6 +1208,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     color: 'rgba(247, 243, 238, 0.88)',
+  },
+  planExerciseRow: {
+    marginTop: 7,
+    paddingVertical: 9,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    backgroundColor: 'rgba(247, 243, 238, 0.06)',
+    borderLeftWidth: 2,
+    borderLeftColor: 'rgba(201, 148, 58, 0.65)',
+  },
+  planExerciseName: {
+    fontFamily: DMSANS,
+    fontSize: 14,
+    lineHeight: 19,
+    fontWeight: '800',
+    color: IVORY,
+  },
+  planExerciseMeta: {
+    fontFamily: MONO,
+    fontSize: 11,
+    lineHeight: 16,
+    fontWeight: '500',
+    color: 'rgba(247, 243, 238, 0.62)',
+    marginTop: 3,
   },
   paragraph: {
     fontFamily: INTER,

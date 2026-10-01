@@ -15,6 +15,7 @@ export type OnboardingPersonalProfile = {
 
 export type OnboardingAnamnese = {
   primaryGoal: string;
+  primaryGoals: string[];
   activityLevel: string;
   healthConcerns: string[];
   healthNotes: string;
@@ -94,6 +95,7 @@ const EMPTY_PERSONAL_PROFILE: OnboardingPersonalProfile = {
 
 const EMPTY_ANAMNESE: OnboardingAnamnese = {
   primaryGoal: '',
+  primaryGoals: [],
   activityLevel: '',
   healthConcerns: [],
   healthNotes: '',
@@ -160,6 +162,11 @@ function normalizeOnboardingData(raw: unknown): OnboardingData | null {
     },
     anamnese: {
       primaryGoal: String((source.anamnese as Record<string, unknown> | undefined)?.primaryGoal ?? '').trim(),
+      primaryGoals: Array.isArray((source.anamnese as Record<string, unknown> | undefined)?.primaryGoals)
+        ? ((source.anamnese as Record<string, unknown>).primaryGoals as unknown[]).map((item) => String(item).trim()).filter(Boolean)
+        : String((source.anamnese as Record<string, unknown> | undefined)?.primaryGoal ?? '').trim()
+          ? [String((source.anamnese as Record<string, unknown>).primaryGoal ?? '').trim()]
+          : [],
       activityLevel: String((source.anamnese as Record<string, unknown> | undefined)?.activityLevel ?? '').trim(),
       healthConcerns: Array.isArray((source.anamnese as Record<string, unknown> | undefined)?.healthConcerns)
         ? ((source.anamnese as Record<string, unknown>).healthConcerns as unknown[]).map((item) => String(item).trim()).filter(Boolean)

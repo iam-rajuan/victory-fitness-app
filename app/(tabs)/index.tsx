@@ -887,10 +887,9 @@ export default function HomeScreen() {
               pushRoute(router, {
                 pathname: '/chat',
                 params: {
-                  initialPrompt: strengthPlan?.plan_id
-                    ? `Adjust my current active workout plan. Plan id: ${strengthPlan.plan_id}. I want to update the plan card and future sessions based on what we discuss.`
-                    : 'Help me create and apply a custom 7 day workout plan for my Home plan card.',
-                  contextNote: 'opened from the Home workout plan card',
+                  initialPrompt: `Help me adjust my current Home workout plan. Today's session is ${workoutTitle}, around ${workoutDurationMinutes} minutes, with ${activeExercises.length || homeLibraryWorkout?.movements?.length || 0} exercises. Use my active Home plan as the starting point.`,
+                  autoSend: '1',
+                  contextNote: 'used your active Home workout plan',
                 },
               });
             }
@@ -979,10 +978,9 @@ export default function HomeScreen() {
           pushRoute(router, {
             pathname: '/chat',
             params: {
-              initialPrompt: strengthPlan?.plan_id
-                ? `Adjust my current active workout plan. Plan id: ${strengthPlan.plan_id}. Update the saved plan card and future sessions based on our discussion.`
-                : 'Help me create and apply a custom 7 day workout plan for my Home plan card.',
-              contextNote: 'opened from the Home session detail',
+              initialPrompt: `Help me adjust this session from my current Home workout plan: ${workoutTitle}, ${workoutDurationMinutes} minutes, ${activeExercises.length || detailExercises.length} exercises. Keep the routine compatible with my Home plan card and Start Session flow.`,
+              autoSend: '1',
+              contextNote: 'used this session and your active Home workout plan',
             },
           });
         }}
