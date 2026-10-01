@@ -1,27 +1,29 @@
 import React from 'react';
 import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../lib/i18n';
 
 interface ClaudeTrainHeaderProps {
   totalWorkouts?: number;
   onPressFilter?: () => void;
 }
 
-const CLASH = Platform.select({ web: 'Clash Display', default: 'ClashDisplay-Bold' });
-const MONO = Platform.select({ web: 'JetBrains Mono', default: 'JetBrainsMono-Bold' });
+const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif", default: 'ClashDisplay-Bold' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 export default function ClaudeTrainHeader({
   totalWorkouts = 170,
   onPressFilter,
 }: ClaudeTrainHeaderProps) {
   const { colors, isDark } = useTheme();
+  const { t } = useLanguage();
 
   return (
     <View style={styles.headerRow}>
-      <Text style={[styles.title, { color: isDark ? '#F7F3EE' : '#0D0D0D' }]}>Workout</Text>
+      <Text style={[styles.title, { color: isDark ? '#F7F3EE' : '#0D0D0D' }]}>{t('Workout')}</Text>
       <View style={styles.rightGroup}>
         <Text style={[styles.countText, { color: isDark ? 'rgba(247, 243, 238, 0.45)' : 'rgba(13, 43, 69, 0.45)' }]}>
-          {`${totalWorkouts} workouts`}
+          {t('{count} workouts', { count: totalWorkouts })}
         </Text>
         <Pressable
           style={[

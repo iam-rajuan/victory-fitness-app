@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View, Platform } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../lib/i18n';
 
 interface ClaudeProfileHeaderProps {
   name?: string;
@@ -19,7 +20,7 @@ const COPPER = '#B5651D';
 const GREEN = '#1A7A4A';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
+const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif", default: 'System' });
 const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
 const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
@@ -35,9 +36,10 @@ export default function ClaudeProfileHeader({
   consistencyPct = 0,
 }: ClaudeProfileHeaderProps) {
   const { isDark, colors } = useTheme();
+  const { t } = useLanguage();
   const isSilver = tier.toUpperCase() === 'SILVER';
   const isIC = tier.toUpperCase() === 'INNER CIRCLE' || tier.toUpperCase() === 'INNER_CIRCLE';
-  const metaText = [country, sinceDate ? `since ${sinceDate}` : ''].filter(Boolean).join(' · ');
+  const metaText = [country, sinceDate ? t('since {date}', { date: sinceDate }) : ''].filter(Boolean).join(' · ');
 
   return (
     <View style={styles.container}>
@@ -90,12 +92,12 @@ export default function ClaudeProfileHeader({
       >
         <View style={[styles.statCol, styles.statBorder, { borderRightColor: colors.divider }]}>
           <Text style={[styles.statValue, { color: GOLD }]}>{streakDays}</Text>
-          <Text style={[styles.statLabel, { color: colors.textMuted }]}>STREAK</Text>
+          <Text style={[styles.statLabel, { color: colors.textMuted }]}>{t('STREAK')}</Text>
         </View>
 
         <View style={[styles.statCol, styles.statBorder, { borderRightColor: colors.divider }]}>
           <Text style={[styles.statValue, { color: colors.text }]}>{totalSessions}</Text>
-          <Text style={[styles.statLabel, { color: colors.textMuted }]}>SESSIONS</Text>
+          <Text style={[styles.statLabel, { color: colors.textMuted }]}>{t('SESSIONS')}</Text>
         </View>
 
         <View style={styles.statCol}>
@@ -103,7 +105,7 @@ export default function ClaudeProfileHeader({
             {consistencyPct}
             <Text style={{ fontSize: 13 }}>%</Text>
           </Text>
-          <Text style={[styles.statLabel, { color: colors.textMuted }]}>CONSISTENCY</Text>
+          <Text style={[styles.statLabel, { color: colors.textMuted }]}>{t('CONSISTENCY')}</Text>
         </View>
       </View>
     </View>

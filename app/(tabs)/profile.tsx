@@ -33,8 +33,10 @@ import ClaudeOneToOneBookingModal from '../../components/profile/ClaudeOneToOneB
 import ClaudeInnerCircleApplyModal from '../../components/profile/ClaudeInnerCircleApplyModal';
 import ClaudeNotificationPreferencesModal from '../../components/profile/ClaudeNotificationPreferencesModal';
 import ClaudeDuoModal from '../../components/duo/ClaudeDuoModal';
+import ClaudeLanguageModal from '../../components/profile/ClaudeLanguageModal';
 import RequirementAuditBoundary from '../../components/audit/RequirementAuditBoundary';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage, SUPPORTED_LANGUAGES, LanguageCode } from '../../lib/i18n';
 
 const OBSIDIAN = '#0D0D0D';
 const NAVY = '#0D2B45';
@@ -42,7 +44,7 @@ const GOLD = '#C9943A';
 const COPPER = '#B5651D';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
+const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif", default: 'System' });
 const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
 const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
@@ -71,17 +73,13 @@ function normalizeTierLabel(value: unknown) {
 function languageLabel(value: unknown) {
   const code = String(value || '').trim().toLowerCase();
   if (!code) return 'Not set';
-  const labels: Record<string, string> = {
-    en: 'ENGLISH',
-    'en-gb': 'ENGLISH',
-    de: 'GERMAN',
-    fr: 'FRENCH',
-    es: 'SPANISH',
-    it: 'ITALIAN',
-    pt: 'PORTUGUESE',
-    bn: 'BENGALI',
-  };
-  return labels[code] || code.toUpperCase();
+  const found = (SUPPORTED_LANGUAGES as readonly { code: string; label: string; nativeLabel: string }[]).find(
+    (lang) => lang.code.toLowerCase() === code
+  );
+  if (found) {
+    return (found.nativeLabel || found.label).toUpperCase();
+  }
+  return code.toUpperCase();
 }
 
 function notificationSummary(user: any) {
@@ -166,6 +164,7 @@ function calculateWorkoutConsistency(items: any[], fallbackScore: number) {
 export default function ProfileScreen() {
   const router = useRouter();
   const { isDark, colors, theme } = useTheme();
+  const { language, setLanguage, t } = useLanguage();
 
   const [user, setUser] = useState<any>(null);
   const [name, setName] = useState('Victory member');
@@ -187,6 +186,8 @@ export default function ProfileScreen() {
   const [habitDigestScore, setHabitDigestScore] = useState(0);
   const [notificationMeta, setNotificationMeta] = useState('All caught up');
   const [languageMeta, setLanguageMeta] = useState('Not set');
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [savingLanguage, setSavingLanguage] = useState(false);
   const [notificationPrefs, setNotificationPrefs] = useState({
     pushEnabled: true,
     whatsappEnabled: false,
@@ -209,6 +210,22 @@ export default function ProfileScreen() {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [showNotifModal, setShowNotifModal] = useState(false);
+
+  const handleLanguageSelect = async (nextLanguage: LanguageCode) => {
+    if (savingLanguage) return;
+    setSavingLanguage(true);
+    try {
+      await setLanguage(nextLanguage);
+      setLanguageMeta(languageLabel(nextLanguage));
+      await updateCurrentUserProfile({ preferred_language: nextLanguage }).catch((err) => {
+        console.warn('Failed to persist preferred language to backend:', err);
+      });
+    } catch (error) {
+      Alert.alert(t('Error'), t('Unable to change language right now. Please try again.'));
+    } finally {
+      setSavingLanguage(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -464,7 +481,7 @@ export default function ProfileScreen() {
 
         {/* ACCOUNT Menu Section matching lines 1222-1231 */}
         <View style={styles.sectionWrap}>
-          <Text style={[styles.sectionKicker, { color: colors.copper }]}>ACCOUNT</Text>
+          <Text style={[styles.sectionKicker, { color: colors.copper }]}>{t('ACCOUNT')}</Text>
           <View
             style={[
               styles.menuCard,
@@ -480,8 +497,8 @@ export default function ProfileScreen() {
               activeOpacity={0.7}
               onPress={() => router.push('/profile/settings')}
             >
-              <Text style={[styles.menuTitle, { color: colors.text }]}>Settings</Text>
-              <Text style={[styles.menuMeta, { color: colors.textMuted }]}>Habits & mindset</Text>
+              <Text style={[styles.menuTitle, { color: colors.text }]}>{t('Settings')}</Text>
+              <Text style={[styles.menuMeta, { color: colors.textMuted }]}>{t('Habits & mindset')}</Text>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
 
@@ -490,9 +507,9 @@ export default function ProfileScreen() {
               activeOpacity={0.7}
               onPress={() => router.push('/profile/settings')}
             >
-              <Text style={[styles.menuTitle, { color: colors.text }]}>Appearance</Text>
+              <Text style={[styles.menuTitle, { color: colors.text }]}>{t('Appearance')}</Text>
               <Text style={[styles.menuMeta, { fontFamily: MONO, color: GOLD }]}>
-                {isDark ? 'DARK MODE' : 'WHITE MODE'}
+                {isDark ? t('DARK MODE') : t('WHITE MODE')}
               </Text>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
@@ -502,8 +519,8 @@ export default function ProfileScreen() {
               activeOpacity={0.7}
               onPress={() => router.push('/profile/edit')}
             >
-              <Text style={[styles.menuTitle, { color: colors.text }]}>Edit profile</Text>
-              <Text style={[styles.menuMeta, { color: colors.textMuted }]}>Name, photo, targets</Text>
+              <Text style={[styles.menuTitle, { color: colors.text }]}>{t('Edit profile')}</Text>
+              <Text style={[styles.menuMeta, { color: colors.textMuted }]}>{t('Name, photo, targets')}</Text>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
 
@@ -512,7 +529,7 @@ export default function ProfileScreen() {
               activeOpacity={0.7}
               onPress={() => setShowNotifModal(true)}
             >
-              <Text style={[styles.menuTitle, { color: colors.text }]}>Notifications</Text>
+              <Text style={[styles.menuTitle, { color: colors.text }]}>{t('Notifications')}</Text>
               <Text style={[styles.menuMeta, { fontFamily: MONO, color: colors.textMuted }]}>{notificationMeta}</Text>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
@@ -520,10 +537,10 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={[styles.menuRow, { borderBottomColor: colors.divider }]}
               activeOpacity={0.7}
-              onPress={() => Alert.alert('Language', `${languageMeta} is currently selected.`)}
+              onPress={() => setShowLanguageModal(true)}
             >
-              <Text style={[styles.menuTitle, { color: colors.text }]}>Language</Text>
-              <Text style={[styles.menuMeta, { fontFamily: MONO, color: GOLD }]}>{languageMeta}</Text>
+              <Text style={[styles.menuTitle, { color: colors.text }]}>{t('Language')}</Text>
+              <Text style={[styles.menuMeta, { fontFamily: MONO, color: GOLD }]}>{languageLabel(language)}</Text>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
 
@@ -537,8 +554,8 @@ export default function ProfileScreen() {
                 activeOpacity={0.7}
                 onPress={() => router.push('/profile/support')}
               >
-                <Text style={[styles.menuTitle, { color: colors.text }]}>Help & support</Text>
-                <Text style={[styles.menuMeta, { color: colors.textMuted }]}>Replies within a day</Text>
+                <Text style={[styles.menuTitle, { color: colors.text }]}>{t('Help & support')}</Text>
+                <Text style={[styles.menuMeta, { color: colors.textMuted }]}>{t('Replies within a day')}</Text>
                 <Text style={styles.chevron}>›</Text>
               </TouchableOpacity>
             </RequirementAuditBoundary>
@@ -548,8 +565,8 @@ export default function ProfileScreen() {
               activeOpacity={0.7}
               onPress={() => router.push('/profile/privacy')}
             >
-              <Text style={[styles.menuTitle, { color: colors.text }]}>Privacy policy</Text>
-              <Text style={[styles.menuMeta, { color: colors.textMuted }]}>Export or delete data</Text>
+              <Text style={[styles.menuTitle, { color: colors.text }]}>{t('Privacy policy')}</Text>
+              <Text style={[styles.menuMeta, { color: colors.textMuted }]}>{t('Export or delete data')}</Text>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
           </View>
@@ -571,9 +588,9 @@ export default function ProfileScreen() {
               onPress={() => setShowApplyModal(true)}
             >
               <View style={styles.applyTextCol}>
-                <Text style={[styles.applyTitle, { color: colors.text }]}>Apply for Inner Circle</Text>
+                <Text style={[styles.applyTitle, { color: colors.text }]}>{t('Apply for Inner Circle')}</Text>
                 <Text style={[styles.applySub, { color: colors.textSecondary }]}>
-                  Five questions, straight to Victor. Then a call to see whether it fits.
+                  {t('Five questions, straight to Victor. Then a call to see whether it fits.')}
                 </Text>
               </View>
               <Text style={styles.chevron}>›</Text>
@@ -593,7 +610,7 @@ export default function ProfileScreen() {
           ]}
         >
           <View style={styles.planHeaderRow}>
-            <Text style={styles.planKicker}>{`YOUR PLAN · ${tier}`}</Text>
+            <Text style={styles.planKicker}>{t('YOUR PLAN · {tier}', { tier })}</Text>
             <Text style={[styles.planPrice, { color: colors.textMuted }]}>
               {planPrice}
             </Text>
@@ -606,7 +623,7 @@ export default function ProfileScreen() {
             activeOpacity={0.85}
             onPress={() => router.push('/plan')}
           >
-            <Text style={styles.compareBtnText}>Compare tiers & upgrade</Text>
+            <Text style={styles.compareBtnText}>{t('Compare tiers & upgrade')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -625,7 +642,7 @@ export default function ProfileScreen() {
           {isSigningOut ? (
             <ActivityIndicator color={colors.textSecondary} />
           ) : (
-            <Text style={[styles.signOutBtnText, { color: colors.textSecondary }]}>Sign out</Text>
+            <Text style={[styles.signOutBtnText, { color: colors.textSecondary }]}>{t('Sign out')}</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
@@ -674,6 +691,13 @@ export default function ProfileScreen() {
         contactNumber={user?.contact_number || ''}
         countryCode={user?.country_code || ''}
         onSave={handleSaveNotificationPrefs}
+      />
+      <ClaudeLanguageModal
+        visible={showLanguageModal}
+        onClose={() => setShowLanguageModal(false)}
+        currentLanguage={language}
+        onSelectLanguage={handleLanguageSelect}
+        isSaving={savingLanguage}
       />
     </View>
   );

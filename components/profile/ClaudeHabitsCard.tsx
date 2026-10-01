@@ -10,6 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../lib/i18n';
 
 interface ClaudeHabitsCardProps {
   identity?: string;
@@ -30,7 +31,7 @@ const COPPER = '#B5651D';
 const GREEN = '#1A7A4A';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
+const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif", default: 'System' });
 const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
 const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
@@ -48,6 +49,7 @@ export default function ClaudeHabitsCard({
   onSaveHabits,
 }: ClaudeHabitsCardProps) {
   const { colors, isDark } = useTheme();
+  const { t } = useLanguage();
   const [editing, setEditing] = useState(false);
   const [currentIdentity, setCurrentIdentity] = useState(identity);
   const [currentUnlock, setCurrentUnlock] = useState(unlock);
@@ -146,9 +148,9 @@ export default function ClaudeHabitsCard({
   return (
     <View style={styles.container}>
       <View style={styles.sectionHeaderRow}>
-        <Text style={[styles.sectionKicker, { color: colors.textMuted }]}>MY HABITS</Text>
+        <Text style={[styles.sectionKicker, { color: colors.textMuted }]}>{t('MY HABITS')}</Text>
         <TouchableOpacity onPress={() => setEditing(true)} activeOpacity={0.7}>
-          <Text style={styles.editLink}>Edit fields</Text>
+          <Text style={styles.editLink}>{t('Edit fields')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -170,7 +172,7 @@ export default function ClaudeHabitsCard({
           },
         ]}
       >
-        <Text style={[styles.fieldKicker, { color: isDark ? GOLD : '#B5651D' }]}>WHO I'M BECOMING</Text>
+        <Text style={[styles.fieldKicker, { color: isDark ? GOLD : '#B5651D' }]}>{t("WHO I'M BECOMING")}</Text>
         <Text style={[styles.identityStatement, { color: isDark ? IVORY : NAVY }]}>{currentIdentity}</Text>
       </View>
 
@@ -197,7 +199,7 @@ export default function ClaudeHabitsCard({
             { borderBottomColor: isDark ? 'rgba(247, 243, 238, 0.1)' : 'rgba(13, 43, 69, 0.08)' },
           ]}
         >
-          <Text style={[styles.fieldKicker, { color: isDark ? GOLD : '#B5651D' }]}>MY UNLOCK</Text>
+          <Text style={[styles.fieldKicker, { color: isDark ? GOLD : '#B5651D' }]}>{t('MY UNLOCK')}</Text>
           <Text style={[styles.habitValue, { color: isDark ? IVORY : NAVY }]}>{currentUnlock}</Text>
         </View>
 
@@ -208,7 +210,7 @@ export default function ClaudeHabitsCard({
             { borderBottomColor: isDark ? 'rgba(247, 243, 238, 0.1)' : 'rgba(13, 43, 69, 0.08)' },
           ]}
         >
-          <Text style={[styles.fieldKicker, { color: isDark ? GOLD : '#B5651D' }]}>MY TRIGGER</Text>
+          <Text style={[styles.fieldKicker, { color: isDark ? GOLD : '#B5651D' }]}>{t('MY TRIGGER')}</Text>
           <Text style={[styles.habitValue, { color: isDark ? IVORY : NAVY }]}>{currentTrigger}</Text>
           <Text
             style={[
