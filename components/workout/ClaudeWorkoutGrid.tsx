@@ -9,6 +9,7 @@ export interface GridWorkoutItem {
   meta: string;
   badge: string;
   lvl?: string;
+  levels?: string[];
   vimeoId?: string;
   videoUrl?: string;
   videoSource?: string;

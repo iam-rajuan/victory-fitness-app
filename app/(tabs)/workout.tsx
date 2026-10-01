@@ -107,7 +107,8 @@ function mapLibraryWorkout(
     name: workout.title,
     meta: formatWorkoutMeta(workout),
     badge: formatDurationBadge(workout.durationSeconds, workout.durationMinutes),
-    lvl: workout.level || 'All levels',
+    lvl: workout.levels?.length ? workout.levels.join(', ') : workout.level || 'All levels',
+    levels: workout.levels?.length ? workout.levels : (workout.level ? [workout.level] : []),
     vimeoId: workout.vimeoId,
     videoUrl: workout.videoUrl,
     videoSource: workout.videoSource,
@@ -222,6 +223,7 @@ export default function WorkoutScreen() {
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPurpose, setSelectedPurpose] = useState('All');
+  const [selectedDifficulty, setSelectedDifficulty] = useState('Any');
   const [selectedDuration, setSelectedDuration] = useState('Any');
   const [selectedKit, setSelectedKit] = useState('Any');
 
@@ -355,7 +357,12 @@ export default function WorkoutScreen() {
       }
       // Purpose
       if (selectedPurpose !== 'All') {
-        if (!w.meta.toLowerCase().includes(selectedPurpose.toLowerCase())) return false;
+        if (normalizeWords(w.tag) !== normalizeWords(selectedPurpose)) return false;
+      }
+      // Difficulty
+      if (selectedDifficulty !== 'Any') {
+        const levels = Array.isArray(w.levels) && w.levels.length ? w.levels : (w.lvl ? [w.lvl] : []);
+        if (!levels.some((level) => normalizeWords(level) === normalizeWords(selectedDifficulty))) return false;
       }
       // Kit
       if (selectedKit !== 'Any') {
@@ -368,7 +375,7 @@ export default function WorkoutScreen() {
       }
       return true;
     });
-  }, [libraryWorkouts, searchQuery, selectedPurpose, selectedKit, selectedDuration]);
+  }, [libraryWorkouts, searchQuery, selectedPurpose, selectedDifficulty, selectedKit, selectedDuration]);
 
   const resultCountText = `${filteredWorkouts.length} of ${libraryWorkouts.length} workouts · shortest first`;
   const forYouWorkouts = useMemo(() => filteredWorkouts.slice(0, 4).map((workout, idx) => {
@@ -686,6 +693,8 @@ export default function WorkoutScreen() {
           onSearchChange={setSearchQuery}
           selectedPurpose={selectedPurpose}
           onSelectPurpose={setSelectedPurpose}
+          selectedDifficulty={selectedDifficulty}
+          onSelectDifficulty={setSelectedDifficulty}
           selectedDuration={selectedDuration}
           onSelectDuration={setSelectedDuration}
           selectedKit={selectedKit}

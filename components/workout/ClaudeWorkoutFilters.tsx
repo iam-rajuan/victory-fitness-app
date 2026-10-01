@@ -7,6 +7,8 @@ interface ClaudeWorkoutFiltersProps {
   onSearchChange: (q: string) => void;
   selectedPurpose: string;
   onSelectPurpose: (p: string) => void;
+  selectedDifficulty: string;
+  onSelectDifficulty: (d: string) => void;
   selectedDuration: string;
   onSelectDuration: (d: string) => void;
   selectedKit: string;
@@ -23,7 +25,8 @@ const DMSANS = Platform.select({ web: 'DM Sans', default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: 'Inter', default: 'Inter-Regular' });
 const MONO = Platform.select({ web: 'JetBrains Mono', default: 'JetBrainsMono-Bold' });
 
-const PURPOSES = ['All', 'Strength', 'Hypertrophy', 'Conditioning', 'Mobility', 'Core', 'Recovery'];
+const PURPOSES = ['All', 'Strength', 'Full Body Workout', 'Hypertrophy', 'Conditioning', 'Mobility', 'Core', 'Recovery'];
+const DIFFICULTIES = ['Any', 'Beginner', 'Intermediate', 'Advanced'];
 const DURATIONS = ['Any', '15', '30', '45', '60'];
 const KITS = ['Any', 'No kit', 'Dumbbells', 'Bands', 'Mat'];
 
@@ -32,6 +35,8 @@ export default function ClaudeWorkoutFilters({
   onSearchChange,
   selectedPurpose,
   onSelectPurpose,
+  selectedDifficulty,
+  onSelectDifficulty,
   selectedDuration,
   onSelectDuration,
   selectedKit,
@@ -78,6 +83,14 @@ export default function ClaudeWorkoutFilters({
         selectedItem={selectedPurpose}
         onSelect={onSelectPurpose}
         paddingTop={16}
+      />
+
+      <SlideableChipsRow
+        label="DIFFICULTY"
+        items={DIFFICULTIES}
+        selectedItem={selectedDifficulty}
+        onSelect={onSelectDifficulty}
+        paddingTop={14}
       />
 
       {/* Minutes Filter Row */}

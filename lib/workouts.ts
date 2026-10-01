@@ -10,6 +10,7 @@ export type WorkoutLibraryItem = {
   tag: string;
   equipment: string;
   level: string;
+  levels: string[];
   durationMinutes: number;
   durationSeconds: number;
   thumbnail: string;
@@ -99,6 +100,11 @@ function normalizeWorkoutItem(value: unknown): WorkoutLibraryItem | null {
     tag: String(item.tag ?? 'Workout'),
     equipment: String(item.equipment ?? ''),
     level: String(item.level ?? ''),
+    levels: Array.isArray(item.levels)
+      ? item.levels.map((level) => String(level).trim()).filter(Boolean)
+      : String(item.level ?? '').trim()
+        ? [String(item.level).trim()]
+        : [],
     durationMinutes: Math.max(Number(item.durationMinutes ?? 0) || 0, 0),
     durationSeconds: Math.max(Number(item.durationSeconds ?? 0) || 0, 0),
     thumbnail: String(item.thumbnail ?? ''),
