@@ -1575,6 +1575,30 @@ export async function submitSupportMessage(payload: SupportMessagePayload) {
   });
 }
 
+export type BetaFeedbackPayload = {
+  rating: number;
+  theme: string;
+  message: string;
+  would_pay?: boolean | null;
+};
+
+export type BetaFeedbackResponse = {
+  id: string;
+  rating: number;
+  theme: string;
+  message: string;
+  wouldPay?: boolean | null;
+  status: string;
+  createdAt: string;
+};
+
+export async function submitBetaFeedback(payload: BetaFeedbackPayload) {
+  return apiRequest<BetaFeedbackResponse>('/me/beta-feedback', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
 export async function fetchOnboardingContent() {
   return apiRequest<OnboardingContentResponse>('/content/onboarding');
 }

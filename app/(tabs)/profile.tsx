@@ -8,6 +8,9 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -19,6 +22,7 @@ import {
   fetchSubscriptionPlans,
   fetchWorkoutLogs,
   logout,
+  submitBetaFeedback,
   updateNotificationPreferences,
   updateCurrentUserProfile,
 } from '../../lib/api';
@@ -48,6 +52,15 @@ const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system,
 const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
 const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+
+const FEEDBACK_THEME_OPTIONS = [
+  { key: 'nutrition_logging', title: 'Nutrition logging', note: 'Meals, calories, or logging speed.' },
+  { key: 'coach_context', title: 'AI coach', note: 'Memory, injuries, or replies.' },
+  { key: 'video_playback', title: 'Videos', note: 'Playback, loading, or quality.' },
+  { key: 'workout_plan', title: 'Workout plan', note: 'Plan fit, exercises, or flow.' },
+  { key: 'gold_value', title: 'Gold value', note: 'Pricing, features, or upgrade clarity.' },
+  { key: 'other', title: 'Something else', note: 'Anything we missed.' },
+];
 
 const JOURNAL_PROMPTS = [
   'What made today easier than expected?',
@@ -210,6 +223,12 @@ export default function ProfileScreen() {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [showNotifModal, setShowNotifModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [feedbackTheme, setFeedbackTheme] = useState(FEEDBACK_THEME_OPTIONS[0].key);
+  const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [feedbackWouldPay, setFeedbackWouldPay] = useState<boolean | null>(null);
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
 
   const handleLanguageSelect = async (nextLanguage: LanguageCode) => {
     if (savingLanguage) return;
@@ -384,6 +403,42 @@ export default function ProfileScreen() {
     setNotificationMeta(notificationSummary(updatedUser));
   };
 
+  const resetFeedbackForm = () => {
+    setFeedbackRating(0);
+    setFeedbackTheme(FEEDBACK_THEME_OPTIONS[0].key);
+    setFeedbackMessage('');
+    setFeedbackWouldPay(null);
+  };
+
+  const handleSubmitFeedback = async () => {
+    const message = feedbackMessage.trim();
+    if (feedbackRating < 1) {
+      Alert.alert(t('Rating needed'), t('Pick a star rating before sending.'));
+      return;
+    }
+    if (message.length < 4) {
+      Alert.alert(t('Message needed'), t('Write a short note so the team knows what to fix.'));
+      return;
+    }
+    if (submittingFeedback) return;
+    setSubmittingFeedback(true);
+    try {
+      await submitBetaFeedback({
+        rating: feedbackRating,
+        theme: feedbackTheme,
+        message,
+        would_pay: feedbackWouldPay,
+      });
+      setShowFeedbackModal(false);
+      resetFeedbackForm();
+      Alert.alert(t('Thank you'), t('Your feedback was sent to the team.'));
+    } catch (error) {
+      Alert.alert(t('Error'), t('Unable to send feedback right now. Please try again.'));
+    } finally {
+      setSubmittingFeedback(false);
+    }
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
@@ -544,6 +599,16 @@ export default function ProfileScreen() {
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
 
+            <TouchableOpacity
+              style={[styles.menuRow, { borderBottomColor: colors.divider }]}
+              activeOpacity={0.7}
+              onPress={() => setShowFeedbackModal(true)}
+            >
+              <Text style={[styles.menuTitle, { color: colors.text }]}>{t('Give feedback')}</Text>
+              <Text style={[styles.menuMeta, { color: colors.textMuted }]}>{t('Rate the beta')}</Text>
+              <Text style={styles.chevron}>›</Text>
+            </TouchableOpacity>
+
             <RequirementAuditBoundary
               auditId="APP-EXTRA-021"
               status="extra"
@@ -692,6 +757,152 @@ export default function ProfileScreen() {
         countryCode={user?.country_code || ''}
         onSave={handleSaveNotificationPrefs}
       />
+      <Modal
+        visible={showFeedbackModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowFeedbackModal(false)}
+      >
+        <View style={styles.feedbackOverlay}>
+          <KeyboardAvoidingView
+            style={styles.feedbackKeyboardWrap}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 18 : 0}
+          >
+            <View
+              style={[
+                styles.feedbackPanel,
+                {
+                  backgroundColor: isDark ? NAVY : '#FFFFFF',
+                  borderColor: isDark ? 'rgba(247, 243, 238, 0.12)' : colors.cardBorder,
+                },
+              ]}
+            >
+              <ScrollView
+                style={styles.feedbackScroll}
+                contentContainerStyle={styles.feedbackScrollContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                <View style={styles.feedbackHeader}>
+                  <View style={styles.feedbackHeaderText}>
+                    <Text style={styles.feedbackKicker}>{t('BETA FEEDBACK')}</Text>
+                    <Text style={[styles.feedbackTitle, { color: colors.text }]}>{t('Tell us what to fix')}</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.feedbackCloseBtn}
+                    activeOpacity={0.7}
+                    onPress={() => setShowFeedbackModal(false)}
+                  >
+                    <Text style={styles.feedbackCloseText}>×</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={[styles.feedbackLabel, { color: colors.textSecondary }]}>{t('Your rating')}</Text>
+                <View style={styles.feedbackStars}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <TouchableOpacity
+                      key={star}
+                      style={styles.feedbackStarBtn}
+                      activeOpacity={0.75}
+                      onPress={() => setFeedbackRating(star)}
+                    >
+                      <Text style={[styles.feedbackStar, { color: star <= feedbackRating ? GOLD : 'rgba(247, 243, 238, 0.28)' }]}>
+                        ★
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <Text style={[styles.feedbackLabel, { color: colors.textSecondary }]}>{t('What is this about?')}</Text>
+                <View style={styles.feedbackChipGrid}>
+                  {FEEDBACK_THEME_OPTIONS.map((option) => {
+                    const selected = feedbackTheme === option.key;
+                    return (
+                      <TouchableOpacity
+                        key={option.key}
+                        style={[
+                          styles.feedbackChip,
+                          {
+                            borderColor: selected ? GOLD : 'rgba(247, 243, 238, 0.18)',
+                            backgroundColor: selected ? 'rgba(201, 148, 58, 0.16)' : 'rgba(247, 243, 238, 0.04)',
+                          },
+                        ]}
+                        activeOpacity={0.78}
+                        onPress={() => setFeedbackTheme(option.key)}
+                      >
+                        <Text style={[styles.feedbackChipTitle, { color: selected ? GOLD : colors.text }]}>{t(option.title)}</Text>
+                        <Text style={[styles.feedbackChipNote, { color: colors.textMuted }]}>{t(option.note)}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <Text style={[styles.feedbackLabel, { color: colors.textSecondary }]}>{t('Would you pay for this after beta?')}</Text>
+                <View style={styles.feedbackPayRow}>
+                  {[
+                    { label: t('Yes'), value: true },
+                    { label: t('Not sure'), value: null },
+                    { label: t('No'), value: false },
+                  ].map((option) => {
+                    const selected = feedbackWouldPay === option.value;
+                    return (
+                      <TouchableOpacity
+                        key={String(option.value)}
+                        style={[
+                          styles.feedbackPayBtn,
+                          {
+                            borderColor: selected ? GOLD : 'rgba(247, 243, 238, 0.18)',
+                            backgroundColor: selected ? GOLD : 'transparent',
+                          },
+                        ]}
+                        activeOpacity={0.78}
+                        onPress={() => setFeedbackWouldPay(option.value)}
+                      >
+                        <Text style={[styles.feedbackPayText, { color: selected ? OBSIDIAN : colors.textSecondary }]}>{option.label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <TextInput
+                  style={[
+                    styles.feedbackInput,
+                    {
+                      color: colors.text,
+                      borderColor: 'rgba(247, 243, 238, 0.16)',
+                      backgroundColor: isDark ? 'rgba(13, 13, 13, 0.32)' : 'rgba(13, 43, 69, 0.05)',
+                    },
+                  ]}
+                  placeholder={t('Write your feedback...')}
+                  placeholderTextColor={colors.textMuted}
+                  multiline
+                  value={feedbackMessage}
+                  onChangeText={setFeedbackMessage}
+                  maxLength={2000}
+                  textAlignVertical="top"
+                />
+
+                <TouchableOpacity
+                  style={[
+                    styles.feedbackSubmitBtn,
+                    { opacity: feedbackRating > 0 && feedbackMessage.trim().length >= 4 && !submittingFeedback ? 1 : 0.55 },
+                  ]}
+                  activeOpacity={0.85}
+                  disabled={feedbackRating < 1 || feedbackMessage.trim().length < 4 || submittingFeedback}
+                  onPress={handleSubmitFeedback}
+                >
+                  {submittingFeedback ? (
+                    <ActivityIndicator color={OBSIDIAN} />
+                  ) : (
+                    <Text style={styles.feedbackSubmitText}>{t('Send feedback')}</Text>
+                  )}
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
       <ClaudeLanguageModal
         visible={showLanguageModal}
         onClose={() => setShowLanguageModal(false)}
@@ -924,5 +1135,161 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: 'rgba(247, 243, 238, 0.65)',
+  },
+  feedbackOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.72)',
+    paddingHorizontal: 18,
+    justifyContent: 'center',
+  },
+  feedbackKeyboardWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    width: '100%',
+  },
+  feedbackPanel: {
+    borderRadius: 22,
+    borderWidth: 1,
+    borderLeftWidth: 4,
+    borderLeftColor: COPPER,
+    maxHeight: '92%',
+    overflow: 'hidden',
+  },
+  feedbackScroll: {
+    maxHeight: '100%',
+  },
+  feedbackScrollContent: {
+    padding: 18,
+    paddingBottom: 22,
+  },
+  feedbackHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 18,
+  },
+  feedbackHeaderText: {
+    flex: 1,
+  },
+  feedbackKicker: {
+    fontFamily: DMSANS,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.3,
+    color: GOLD,
+    marginBottom: 4,
+  },
+  feedbackTitle: {
+    fontFamily: CLASH,
+    fontSize: 22,
+    lineHeight: 27,
+    fontWeight: '700',
+    color: IVORY,
+  },
+  feedbackCloseBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(247, 243, 238, 0.08)',
+  },
+  feedbackCloseText: {
+    fontFamily: DMSANS,
+    fontSize: 22,
+    fontWeight: '700',
+    color: 'rgba(247, 243, 238, 0.56)',
+    lineHeight: 24,
+  },
+  feedbackLabel: {
+    fontFamily: DMSANS,
+    fontSize: 12,
+    fontWeight: '700',
+    color: 'rgba(247, 243, 238, 0.64)',
+    marginBottom: 8,
+  },
+  feedbackStars: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 16,
+  },
+  feedbackStarBtn: {
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  feedbackStar: {
+    fontSize: 30,
+    lineHeight: 34,
+  },
+  feedbackChipGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  feedbackChip: {
+    width: '48%',
+    minHeight: 70,
+    borderRadius: 14,
+    borderWidth: 1.2,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  feedbackChipTitle: {
+    fontFamily: DMSANS,
+    fontSize: 13,
+    fontWeight: '700',
+    color: IVORY,
+  },
+  feedbackChipNote: {
+    fontFamily: INTER,
+    fontSize: 11.5,
+    lineHeight: 16,
+    color: 'rgba(247, 243, 238, 0.52)',
+    marginTop: 3,
+  },
+  feedbackPayRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 14,
+  },
+  feedbackPayBtn: {
+    flex: 1,
+    height: 42,
+    borderRadius: 12,
+    borderWidth: 1.2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  feedbackPayText: {
+    fontFamily: DMSANS,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  feedbackInput: {
+    minHeight: 112,
+    borderRadius: 14,
+    borderWidth: 1.2,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontFamily: INTER,
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 14,
+  },
+  feedbackSubmitBtn: {
+    height: 50,
+    borderRadius: 14,
+    backgroundColor: GOLD,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  feedbackSubmitText: {
+    fontFamily: DMSANS,
+    fontSize: 15,
+    fontWeight: '800',
+    color: OBSIDIAN,
   },
 });
