@@ -246,7 +246,7 @@ export default function ProfileScreen() {
         setNotificationMeta(notificationSummary(userObj));
         setSinceDate(monthName(userObj.subscription_confirmed_at || userObj.subscription_started_at || userObj.created_at));
         const workoutItems = Array.isArray((completedLogs as any)?.items) ? (completedLogs as any).items : [];
-        setStreakDays(calculateWorkoutStreak(workoutItems));
+        setStreakDays(Math.max(0, Number(userObj.streak_days ?? 0) || 0));
         setTotalSessions(Math.max(0, Number((completedLogs as any)?.total || workoutItems.length || 0)));
 
         const score = Math.round(Number((habit as any)?.current_score || 0));

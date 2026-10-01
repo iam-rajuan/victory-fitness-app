@@ -214,6 +214,7 @@ export type AuthUser = {
   workouts_completed?: number;
   workouts_total?: number;
   streak_days?: number;
+  best_streak_days?: number;
   rank?: string;
   next_rank?: string;
   points_to_next_rank?: number;
@@ -675,6 +676,7 @@ function normalizeAuthUser(user: Partial<AuthUser> & { id?: string; name?: strin
     workouts_completed: Math.max(Number(user.workouts_completed ?? 0) || 0, 0),
     workouts_total: Math.max(Number(user.workouts_total ?? 0) || 0, 0),
     streak_days: Math.max(Number(user.streak_days ?? 0) || 0, 0),
+    best_streak_days: Math.max(Number(user.best_streak_days ?? user.streak_days ?? 0) || 0, 0),
     rank: String(user.rank ?? 'Noob'),
     next_rank: String(user.next_rank ?? 'Bronze'),
     points_to_next_rank: Math.max(Number(user.points_to_next_rank ?? 0) || 0, 0),

@@ -468,7 +468,7 @@ export default function HomeScreen() {
     return rawTier !== 'NONE' ? rawTier : 'GOLD';
   }, [currentUser?.subscription_tier]);
 
-  const streakDays = currentUser?.streak_days || 12;
+  const streakDays = Math.max(0, Number(currentUser?.streak_days ?? 0) || 0);
   const targetWaterLiters = useMemo(() => {
     const w = Number(currentWeight) || 70;
     return hydration?.target_liters || Math.round(w * 0.035 * 10) / 10;
