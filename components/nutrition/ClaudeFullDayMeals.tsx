@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
+import { useLanguage } from '../../lib/i18n';
 
 export interface MealRecord {
   id: string;
@@ -33,12 +34,13 @@ const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", defau
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 export default function ClaudeFullDayMeals({ meals, updatingMealKey, onToggleMeal, onRemoveMeal, onLogMeal }: ClaudeFullDayMealsProps) {
+  const { t } = useLanguage();
   const visibleMeals = meals.length > 0 ? meals : [
     {
       id: 'empty',
       mealKey: 'breakfast',
-      name: 'No backend meals yet',
-      sub: 'Saved meal plan meals appear here',
+      name: t('No backend meals yet'),
+      sub: t('Saved meal plan meals appear here'),
       proteinG: 0,
       kcal: 0,
       logged: false,
@@ -46,7 +48,7 @@ export default function ClaudeFullDayMeals({ meals, updatingMealKey, onToggleMea
   ];
   return (
     <View style={styles.container}>
-      <Text style={styles.kicker}>YOUR FULL DAY</Text>
+      <Text style={styles.kicker}>{t('YOUR FULL DAY')}</Text>
 
       <View style={styles.card}>
         {visibleMeals.map((m, idx) => {
@@ -97,7 +99,7 @@ export default function ClaudeFullDayMeals({ meals, updatingMealKey, onToggleMea
                       style={styles.removeBtn}
                       disabled={isUpdating}
                     >
-                      <Text style={styles.removeText}>{isUpdating ? '...' : 'REMOVE'}</Text>
+                      <Text style={styles.removeText}>{isUpdating ? '...' : t('REMOVE')}</Text>
                     </TouchableOpacity>
                   </>
                 ) : (
@@ -111,7 +113,7 @@ export default function ClaudeFullDayMeals({ meals, updatingMealKey, onToggleMea
                     disabled={isUpdating || m.id === 'empty'}
                   >
                     <Text style={styles.actionText}>
-                      {isUpdating ? '...' : 'ADD'}
+                      {isUpdating ? '...' : t('ADD')}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -122,7 +124,7 @@ export default function ClaudeFullDayMeals({ meals, updatingMealKey, onToggleMea
       </View>
 
       <Text style={styles.footnote}>
-        Every meal of the day is laid out from the start, dinner included — so you can see at 09:00 whether the target is reachable, not at 22:00.
+        {t('Every meal of the day is laid out from the start, dinner included — so you can see at 09:00 whether the target is reachable, not at 22:00.')}
       </Text>
     </View>
   );

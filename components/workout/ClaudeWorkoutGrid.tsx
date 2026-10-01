@@ -1,6 +1,7 @@
 import React from 'react';
 import { Image, StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../lib/i18n';
 import CrossPlatformWebView from '../CrossPlatformWebView';
 
 export interface GridWorkoutItem {
@@ -65,6 +66,7 @@ export default function ClaudeWorkoutGrid({
   onAskCoach,
 }: ClaudeWorkoutGridProps) {
   const { colors, isDark } = useTheme();
+  const { t } = useLanguage();
 
   return (
     <View style={styles.container}>
@@ -117,7 +119,7 @@ export default function ClaudeWorkoutGrid({
               <View style={styles.playCircle}>
                 <View style={styles.playArrow} />
               </View>
-              {w.completed ? <Text style={styles.completedBadge}>✓ Done</Text> : null}
+              {w.completed ? <Text style={styles.completedBadge}>✓ {t('Done')}</Text> : null}
               <Text style={styles.badge}>{w.badge}</Text>
             </View>
 
@@ -129,7 +131,7 @@ export default function ClaudeWorkoutGrid({
 
       {/* Footnote */}
       <Text style={[styles.footnote, { color: colors.textMuted }]}>
-        Every workout streams from Vimeo, quality stepped down automatically on slow connections. Downloaded workouts play with no signal at all.
+        {t('Every workout streams from Vimeo, quality stepped down automatically on slow connections. Downloaded workouts play with no signal at all.')}
       </Text>
 
       {/* Coach Teaser Card */}
@@ -144,10 +146,10 @@ export default function ClaudeWorkoutGrid({
           onPress={onAskCoach}
         >
           <View style={styles.coachTextCol}>
-            <Text style={[styles.coachTitle, { color: colors.text }]}>None of these fit today?</Text>
-            <Text style={[styles.coachSub, { color: colors.textSecondary }]}>Tell your coach your time and kit</Text>
+            <Text style={[styles.coachTitle, { color: colors.text }]}>{t('None of these fit today?')}</Text>
+            <Text style={[styles.coachSub, { color: colors.textSecondary }]}>{t('Tell your coach your time and kit')}</Text>
           </View>
-          <Text style={styles.coachCta}>Ask coach</Text>
+          <Text style={styles.coachCta}>{t('Ask coach')}</Text>
         </Pressable>
       ) : null}
     </View>

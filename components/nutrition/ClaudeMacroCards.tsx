@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, Platform } from 'react-native';
+import { useLanguage } from '../../lib/i18n';
 
 interface MacroItem {
   k: string;
@@ -40,32 +41,33 @@ export default function ClaudeMacroCards({
   kcalCurrent = 0,
   kcalTarget = 0,
 }: ClaudeMacroCardsProps) {
+  const { t } = useLanguage();
   const macros: MacroItem[] = [
     {
-      k: 'Protein',
+      k: t('Protein'),
       v: `${proteinCurrent}`,
-      of: `of ${proteinTarget} g`,
+      of: t('of {target} g', { target: proteinTarget }),
       color: GOLD,
       pct: proteinTarget > 0 ? Math.min(100, Math.round((proteinCurrent / proteinTarget) * 100)) : 0,
     },
     {
-      k: 'Carbs',
+      k: t('Carbs'),
       v: `${carbsCurrent}`,
-      of: `of ${carbsTarget} g`,
+      of: t('of {target} g', { target: carbsTarget }),
       color: COPPER,
       pct: carbsTarget > 0 ? Math.min(100, Math.round((carbsCurrent / carbsTarget) * 100)) : 0,
     },
     {
-      k: 'Fat',
+      k: t('Fat'),
       v: `${fatCurrent}`,
-      of: `of ${fatTarget} g`,
+      of: t('of {target} g', { target: fatTarget }),
       color: IVORY,
       pct: fatTarget > 0 ? Math.min(100, Math.round((fatCurrent / fatTarget) * 100)) : 0,
     },
     {
-      k: 'Calories',
+      k: t('Calories'),
       v: kcalCurrent >= 1000 ? `${Math.floor(kcalCurrent / 1000)} ${kcalCurrent % 1000}` : `${kcalCurrent}`,
-      of: kcalTarget >= 1000 ? `of ${Math.floor(kcalTarget / 1000)} ${kcalTarget % 1000}` : `of ${kcalTarget}`,
+      of: kcalTarget >= 1000 ? t('of {target}', { target: `${Math.floor(kcalTarget / 1000)} ${kcalTarget % 1000}` }) : t('of {target}', { target: kcalTarget }),
       color: GREEN,
       pct: kcalTarget > 0 ? Math.min(100, Math.round((kcalCurrent / kcalTarget) * 100)) : 0,
     },
@@ -97,7 +99,7 @@ export default function ClaudeMacroCards({
               <Text
                 style={[
                   styles.valueText,
-                  { color: m.k === 'Fat' ? IVORY : m.color },
+                  { color: m.k === t('Fat') ? IVORY : m.color },
                 ]}
               >
                 {m.v}
@@ -111,7 +113,7 @@ export default function ClaudeMacroCards({
 
       {/* Color System Explainer Footnote matching line 1015 */}
       <Text style={styles.footnote}>
-        Gold is protein, copper is carbs, ivory is fat, green is calories — the same four colours everywhere in the app.
+        {t('Gold is protein, copper is carbs, ivory is fat, green is calories — the same four colours everywhere in the app.')}
       </Text>
     </View>
   );

@@ -13,6 +13,7 @@ import {
   Alert,
 } from 'react-native';
 import { analyzeMealImage, MealImageAnalysisResponse } from '../../lib/nutrition';
+import { useLanguage } from '../../lib/i18n';
 
 interface MacroSnapshot {
   k: string;
@@ -65,6 +66,7 @@ export default function ClaudeMealAnalysisModal({
   mimeType,
   fileName,
 }: ClaudeMealAnalysisModalProps) {
+  const { t } = useLanguage();
   const [analysis, setAnalysis] = React.useState<MealImageAnalysisResponse | null>(null);
   const [isAnalyzing, setIsAnalyzing] = React.useState(false);
   const [analysisError, setAnalysisError] = React.useState('');
@@ -187,7 +189,7 @@ export default function ClaudeMealAnalysisModal({
             {isAnalyzing ? 'Analysing your meal...' : analysis?.meal_name_guess || 'Meal analysis'}
           </Text>
           <Text style={styles.portionText}>
-            {analysisError || (analysis ? `${analysis.confidence} confidence · saved to your history` : 'Choose a meal photo to analyse it')}
+            {analysisError || (analysis ? `${analysis.confidence} ${t('confidence · saved to your history')}` : t('Choose a meal photo to analyse it'))}
           </Text>
 
           {/* 4 Macro Boxes Row */}
@@ -231,15 +233,15 @@ export default function ClaudeMealAnalysisModal({
           {isAnalyzing ? (
             <View style={styles.loadingRow}>
               <ActivityIndicator color={GOLD} />
-              <Text style={styles.loadingText}>Reading the plate from the backend...</Text>
+              <Text style={styles.loadingText}>{t('Reading the plate from the backend...')}</Text>
             </View>
           ) : null}
 
           {/* What to do about it Card */}
           <View style={styles.adviceCard}>
-            <Text style={styles.adviceKicker}>WHAT TO DO ABOUT IT</Text>
+            <Text style={styles.adviceKicker}>{t('WHAT TO DO ABOUT IT')}</Text>
             <Text style={styles.adviceText}>
-              {analysis?.summary || analysisError || 'Your backend analysis appears here after the photo is processed.'}
+              {analysis?.summary || analysisError || t('Your backend analysis appears here after the photo is processed.')}
             </Text>
 
             {(analysis?.notes || []).slice(0, 3).map((note, idx) => (
@@ -253,16 +255,16 @@ export default function ClaudeMealAnalysisModal({
           {/* Action CTAs */}
           <View style={styles.actionsRow}>
             <Pressable style={[styles.logBtn, (!analysis || isLogging) && styles.logBtnDisabled]} onPress={handleLog} disabled={!analysis || isLogging}>
-              <Text style={styles.logBtnText}>{isLogging ? 'Logging...' : 'Log this meal'}</Text>
+              <Text style={styles.logBtnText}>{isLogging ? t('Logging...') : t('Log this meal')}</Text>
             </Pressable>
             <Pressable style={styles.editBtn} onPress={() => setIsEditingMacros((prev) => !prev)} disabled={!analysis}>
-              <Text style={styles.editBtnText}>{isEditingMacros ? 'Done' : 'Edit'}</Text>
+              <Text style={styles.editBtnText}>{isEditingMacros ? t('Done') : t('Edit')}</Text>
             </Pressable>
           </View>
 
           {/* Privacy Footnote */}
           <Text style={styles.footnote}>
-            Estimates from a photo, not laboratory numbers. Correct the portion and it learns your plates — and your photos are deleted once the meal is logged.
+            {t('Estimates from a photo, not laboratory numbers. Correct the portion and it learns your plates — and your photos are deleted once the meal is logged.')}
           </Text>
         </ScrollView>
       </View>

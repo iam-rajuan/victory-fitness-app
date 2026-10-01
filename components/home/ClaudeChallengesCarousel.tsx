@@ -14,6 +14,7 @@ import {
 import { useRouter } from 'expo-router';
 import { pushRoute } from '../../lib/navigation';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../lib/i18n';
 
 export interface ChallengeItem {
   id?: string;
@@ -68,6 +69,7 @@ export default function ClaudeChallengesCarousel({
 }: ClaudeChallengesCarouselProps) {
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const { t } = useLanguage();
   const [activeIdx, setActiveIdx] = useState(0);
   const [containerWidth, setContainerWidth] = useState(0);
 
@@ -193,9 +195,11 @@ export default function ClaudeChallengesCarousel({
     <View style={styles.container} onLayout={handleLayout}>
       {/* Header with counter and arrows */}
       <View style={styles.headerRow}>
-        <Text style={[styles.sectionKicker, { color: colors.textMuted }]}>YOUR CHALLENGES</Text>
+        <Text style={[styles.sectionKicker, { color: colors.textMuted }]}>{t('YOUR CHALLENGES')}</Text>
         <View style={styles.controlsRow}>
-          <Text style={[styles.countText, { color: colors.textMuted }]}>{`${activeIdx + 1} of ${list.length} active`}</Text>
+          <Text style={[styles.countText, { color: colors.textMuted }]}>
+            {t('{active} of {total} active', { active: activeIdx + 1, total: list.length })}
+          </Text>
           {list.length > 1 && (
             <>
               <Pressable hitSlop={10} onPress={goPrev}>
@@ -253,8 +257,8 @@ export default function ClaudeChallengesCarousel({
             onPress={() => handleCardPress(c)}
           >
             <View style={styles.cardTopRow}>
-              <Text style={[styles.challengeName, { color: isDark ? IVORY : NAVY }]}>{c.n}</Text>
-              <Text style={styles.rankBadge}>{c.rank}</Text>
+              <Text style={[styles.challengeName, { color: isDark ? IVORY : NAVY }]}>{t(c.n)}</Text>
+              <Text style={styles.rankBadge}>{t(c.rank)}</Text>
             </View>
 
             <Text
@@ -263,7 +267,7 @@ export default function ClaudeChallengesCarousel({
                 { color: isDark ? 'rgba(247, 243, 238, 0.6)' : 'rgba(13, 43, 69, 0.55)' },
               ]}
             >
-              {c.d}
+              {t(c.d)}
             </Text>
 
             {/* Progress Bar */}
@@ -278,7 +282,7 @@ export default function ClaudeChallengesCarousel({
               <View style={[styles.progressFill, { width: `${Math.min(100, Math.max(0, c.pct))}%` }]} />
             </View>
 
-            <Text style={[styles.noteText, { color: isDark ? GOLD : '#B5651D' }]}>{c.note}</Text>
+            <Text style={[styles.noteText, { color: isDark ? GOLD : '#B5651D' }]}>{t(c.note)}</Text>
           </Pressable>
         ))}
       </ScrollView>

@@ -22,6 +22,7 @@ import { normalizeSubscriptionTier } from '../../lib/access';
 import { pushRoute } from '../../lib/navigation';
 import { useModuleAccessGuard } from '../../lib/useModuleAccessGuard';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../lib/i18n';
 
 // Modular Claude Workout Components
 import ClaudeTrainHeader from '../../components/workout/ClaudeTrainHeader';
@@ -212,6 +213,7 @@ export default function WorkoutScreen() {
   const params = useLocalSearchParams<{ workoutId?: string; open?: string }>();
   const checkingAccess = useModuleAccessGuard('/workout');
   const { isDark, colors } = useTheme();
+  const { t } = useLanguage();
   const openedParamWorkoutRef = useRef('');
 
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
@@ -377,7 +379,7 @@ export default function WorkoutScreen() {
     });
   }, [libraryWorkouts, searchQuery, selectedPurpose, selectedDifficulty, selectedKit, selectedDuration]);
 
-  const resultCountText = `${filteredWorkouts.length} of ${libraryWorkouts.length} workouts · shortest first`;
+  const resultCountText = t('{shown} of {total} workouts · shortest first', { shown: filteredWorkouts.length, total: libraryWorkouts.length });
   const forYouWorkouts = useMemo(() => filteredWorkouts.slice(0, 4).map((workout, idx) => {
     return mapRowWorkout(workout, buildWorkoutReason(workout, preferredKitWords, preferredMinutes));
   }), [filteredWorkouts, preferredKitWords, preferredMinutes]);
@@ -622,8 +624,8 @@ export default function WorkoutScreen() {
 
         {/* 3. Pick Up Where You Left Off */}
         <ClaudeResumeSessionCard
-          sessionTitle={selectedWorkout?.name || 'No published workout yet'}
-          sessionLine={selectedWorkout?.meta || 'Publish workouts in the dashboard to start training here'}
+          sessionTitle={selectedWorkout?.name || t('No published workout yet')}
+          sessionLine={selectedWorkout?.meta || t('Publish workouts in the dashboard to start training here')}
           minutesLeft={
             selectedWorkout
               ? formatDurationBadge(selectedWorkout.durationSeconds || 0, selectedWorkout.durationMinutes || 0)
@@ -639,8 +641,8 @@ export default function WorkoutScreen() {
 
         {/* 4. Workout categories */}
         <ClaudeWorkoutRowCarousel
-          title="Workout categories"
-          actionText="All ›"
+          title={t('Workout categories')}
+          actionText={t('All ›')}
           onActionPress={() => {
             pushRoute(router, '/workout-library/categories');
           }}
@@ -658,7 +660,7 @@ export default function WorkoutScreen() {
 
         {/* 5. Because of how you train */}
         <ClaudeWorkoutRowCarousel
-          title="Because of how you train"
+          title={t('Because of how you train')}
           subtitle={trainingContextLine}
           type="workouts"
           workouts={forYouWorkouts}
@@ -674,7 +676,7 @@ export default function WorkoutScreen() {
 
         {/* 6. New from Victor */}
         <ClaudeWorkoutRowCarousel
-          title="New from Victor"
+          title={t('New from Victor')}
           type="workouts"
           workouts={newWorkouts}
           onSelectWorkout={(w) => {

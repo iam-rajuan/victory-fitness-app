@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../lib/i18n';
 
 interface ClaudePlanBuildBannerProps {
   planBuilt?: boolean;
@@ -22,13 +23,14 @@ export default function ClaudePlanBuildBanner({
   hasCoach = true,
   onPress,
 }: ClaudePlanBuildBannerProps) {
-  const kicker = hasCoach ? 'YOUR CUSTOMISED PLAN' : 'GOLD FEATURE';
+  const { t } = useLanguage();
+  const kicker = hasCoach ? t('YOUR CUSTOMISED PLAN') : t('GOLD FEATURE');
   const title = hasCoach
-    ? (planBuilt ? 'Rebuild your plan' : 'Build a plan around your week')
-    : 'A plan built around your week';
+    ? (planBuilt ? t('Rebuild your plan') : t('Build a plan around your week'))
+    : t('A plan built around your week');
   const note = hasCoach
-    ? (planBuilt ? planBuiltLine : 'Four questions — goal, days, session length, equipment. Two minutes and you have six weeks.')
-    : 'Four questions and your coach builds six weeks. Part of Gold.';
+    ? (planBuilt ? planBuiltLine : t('Four questions — goal, days, session length, equipment. Two minutes and you have six weeks.'))
+    : t('Four questions and your coach builds six weeks. Part of Gold.');
 
   return (
     <View style={styles.container}>

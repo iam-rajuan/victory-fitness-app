@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
+import { useLanguage } from '../../lib/i18n';
 
 interface ClaudeFreshPlanBannerProps {
   visible: boolean;
@@ -19,6 +20,8 @@ export default function ClaudeFreshPlanBanner({
   line,
   onDismiss,
 }: ClaudeFreshPlanBannerProps) {
+  const { t } = useLanguage();
+
   if (!visible) return null;
 
   return (
@@ -31,8 +34,8 @@ export default function ClaudeFreshPlanBanner({
 
         {/* Text Content */}
         <View style={styles.textWrap}>
-          <Text style={styles.title}>Your plan is ready — six weeks</Text>
-          <Text style={styles.subtitle}>{line}</Text>
+          <Text style={styles.title}>{t('Your plan is ready — six weeks')}</Text>
+          <Text style={styles.subtitle}>{t(line)}</Text>
         </View>
 
         {/* Dismiss Button */}

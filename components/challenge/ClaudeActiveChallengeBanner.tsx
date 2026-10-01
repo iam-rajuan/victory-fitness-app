@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../lib/i18n';
 import { ChallengeItem } from './ClaudeChallengeDirectory';
 
 interface ClaudeActiveChallengeBannerProps {
@@ -31,6 +32,7 @@ export default function ClaudeActiveChallengeBanner({
   completingToday = false,
 }: ClaudeActiveChallengeBannerProps) {
   const { isDark } = useTheme();
+  const { t } = useLanguage();
 
   if (!challenge) {
     return null;
@@ -49,12 +51,12 @@ export default function ClaudeActiveChallengeBanner({
   const pointsText = isJoined ? `${challenge.p.toUpperCase()} AT STAKE` : challenge.p;
   const loggedAt = formatLoggedTime(challenge.completedTodayAt);
   const checkTitle = isCompleted
-    ? 'Challenge complete'
+    ? t('Challenge complete')
     : isTodayDone
-    ? `Day ${currentDay} done`
+    ? t('Day {current} done', { current: currentDay })
     : isJoined
-    ? `Day ${currentDay} in progress`
-    : 'Join this challenge';
+    ? t('Day {current} in progress', { current: currentDay })
+    : t('Join this challenge');
   const checkNote = isTodayDone
     ? `${loggedAt ? `Logged at ${loggedAt}. ` : ''}${daysLeft > 0 ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} to go - ` : ''}tap to undo.`
     : isJoined
@@ -164,7 +166,7 @@ export default function ClaudeActiveChallengeBanner({
         {/* Action Buttons matching lines 845-848 */}
         <View style={styles.actionsRow}>
           <TouchableOpacity style={styles.cohortBtn} activeOpacity={0.8} onPress={isJoined ? onOpenCohort : onOpenChallenge}>
-            <Text style={styles.cohortBtnText}>{isJoined ? 'Cohort chat' : 'Details'}</Text>
+            <Text style={styles.cohortBtnText}>{isJoined ? t('Cohort chat') : t('Details')}</Text>
             {unreadCount > 0 && (
               <View style={styles.unreadBadge}>
                 <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
@@ -173,7 +175,7 @@ export default function ClaudeActiveChallengeBanner({
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.inviteBtn} activeOpacity={0.8} onPress={onInvite}>
-            <Text style={styles.inviteBtnText}>Invite someone</Text>
+            <Text style={styles.inviteBtnText}>{t('Invite someone')}</Text>
           </TouchableOpacity>
         </View>
       </View>

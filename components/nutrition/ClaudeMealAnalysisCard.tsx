@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
+import { useLanguage } from '../../lib/i18n';
 
 interface ClaudeMealAnalysisCardProps {
   onTakePhoto: () => void;
@@ -20,6 +21,8 @@ export default function ClaudeMealAnalysisCard({
   onTakePhoto,
   onUploadPhoto,
 }: ClaudeMealAnalysisCardProps) {
+  const { t } = useLanguage();
+
   return (
     <View style={styles.container}>
       <View style={styles.card}>
@@ -33,10 +36,10 @@ export default function ClaudeMealAnalysisCard({
           </View>
 
           <View style={styles.textCol}>
-            <Text style={styles.kicker}>MEAL ANALYSIS</Text>
-            <Text style={styles.title}>Photograph it instead of typing it</Text>
+            <Text style={styles.kicker}>{t('MEAL ANALYSIS')}</Text>
+            <Text style={styles.title}>{t('Photograph it instead of typing it')}</Text>
             <Text style={styles.sub}>
-              Point your camera at the plate, or upload a photo. You get protein, carbs, fat and calories back — and one sentence on what to do about it.
+              {t('Point your camera at the plate, or upload a photo. You get protein, carbs, fat and calories back — and one sentence on what to do about it.')}
             </Text>
           </View>
         </View>
@@ -48,7 +51,7 @@ export default function ClaudeMealAnalysisCard({
             style={styles.takePhotoBtn}
             onPress={onTakePhoto}
           >
-            <Text style={styles.takePhotoBtnText}>Take a photo</Text>
+            <Text style={styles.takePhotoBtnText}>{t('Take a photo')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -56,7 +59,7 @@ export default function ClaudeMealAnalysisCard({
             style={styles.uploadBtn}
             onPress={onUploadPhoto}
           >
-            <Text style={styles.uploadBtnText}>Upload</Text>
+            <Text style={styles.uploadBtnText}>{t('Upload')}</Text>
           </TouchableOpacity>
         </View>
       </View>

@@ -748,7 +748,7 @@ export default function HomeScreen() {
             ]}
           >
             <View style={styles.weightReminderHeader}>
-              <Text style={styles.weightReminderEyebrow}>PERIODIC CHECK-IN</Text>
+              <Text style={styles.weightReminderEyebrow}>{t('PERIODIC CHECK-IN')}</Text>
               <TouchableOpacity
                 onPress={() => void handleSnoozeWeightPrompt()}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -758,8 +758,8 @@ export default function HomeScreen() {
             </View>
             <Text style={[styles.weightReminderTitle, { color: isDark ? IVORY : NAVY }]}>
               {currentWeight
-                ? `Is your weight still ${currentWeight} kg?`
-                : 'Confirm your current weight'}
+                ? t('Is your weight still {weight} kg?', { weight: currentWeight })
+                : t('Confirm your current weight')}
             </Text>
             <Text
               style={[
@@ -767,7 +767,7 @@ export default function HomeScreen() {
                 { color: isDark ? 'rgba(247, 243, 238, 0.65)' : 'rgba(13, 43, 69, 0.65)' },
               ]}
             >
-              Confirm or update your weight to keep your training and nutrition accurate.
+              {t('Confirm or update your weight to keep your training and nutrition accurate.')}
             </Text>
 
             {weightPromptEditing ? (
@@ -775,7 +775,7 @@ export default function HomeScreen() {
                 <TextInput
                   value={weightDraft}
                   onChangeText={setWeightDraft}
-                  placeholder="Enter current weight"
+                  placeholder={t('Enter current weight')}
                   placeholderTextColor={isDark ? 'rgba(247, 243, 238, 0.4)' : 'rgba(13, 43, 69, 0.4)'}
                   keyboardType="numeric"
                   style={[
@@ -793,7 +793,7 @@ export default function HomeScreen() {
                     onPress={() => void handleSaveWeightPrompt()}
                     disabled={weightPromptSaving}
                   >
-                    <Text style={styles.weightSaveBtnText}>Save Weight</Text>
+                    <Text style={styles.weightSaveBtnText}>{t('Save Weight')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.weightCancelBtn}
@@ -805,7 +805,7 @@ export default function HomeScreen() {
                         { color: isDark ? 'rgba(247, 243, 238, 0.6)' : 'rgba(13, 43, 69, 0.6)' },
                       ]}
                     >
-                      Cancel
+                      {t('Cancel')}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -818,7 +818,7 @@ export default function HomeScreen() {
                     onPress={() => void handleConfirmCurrentWeight()}
                     disabled={weightPromptSaving}
                   >
-                    <Text style={styles.weightConfirmBtnText}>{`Keep ${currentWeight} kg`}</Text>
+                    <Text style={styles.weightConfirmBtnText}>{t('Keep {weight} kg', { weight: currentWeight })}</Text>
                   </TouchableOpacity>
                 ) : null}
                 <TouchableOpacity
@@ -830,7 +830,7 @@ export default function HomeScreen() {
                   ]}
                   onPress={() => setWeightPromptEditing(true)}
                 >
-                  <Text style={[styles.weightUpdateBtnText, { color: isDark ? IVORY : NAVY }]}>Update Weight</Text>
+                  <Text style={[styles.weightUpdateBtnText, { color: isDark ? IVORY : NAVY }]}>{t('Update Weight')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.weightSnoozeBtn}
@@ -843,7 +843,7 @@ export default function HomeScreen() {
                       { color: isDark ? 'rgba(247, 243, 238, 0.5)' : 'rgba(13, 43, 69, 0.5)' },
                     ]}
                   >
-                    Remind in 7 days
+                    {t('Remind in 7 days')}
                   </Text>
                 </TouchableOpacity>
               </View>

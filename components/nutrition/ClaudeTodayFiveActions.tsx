@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
 import RequirementAuditBoundary from '../audit/RequirementAuditBoundary';
+import { useLanguage } from '../../lib/i18n';
 
 export interface ActionItem {
   id: string;
@@ -26,6 +27,7 @@ const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", defau
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 export default function ClaudeTodayFiveActions({ actions: backendActions, onActionToggle }: ClaudeTodayFiveActionsProps) {
+  const { t } = useLanguage();
   const [localDone, setLocalDone] = useState<Record<string, boolean>>({});
   const actions = (backendActions || []).slice(0, 5).map((action) => ({
     ...action,
@@ -45,14 +47,14 @@ export default function ClaudeTodayFiveActions({ actions: backendActions, onActi
     <View style={styles.container}>
       <RequirementAuditBoundary auditId="APP-EXTRA-015" status="extra">
         <View style={styles.headerRow}>
-        <Text style={styles.kicker}>TODAY'S FIVE ACTIONS</Text>
-        <Text style={styles.trackBadge}>{`${doneCount} of 5 done`}</Text>
+        <Text style={styles.kicker}>{t("TODAY'S FIVE ACTIONS")}</Text>
+        <Text style={styles.trackBadge}>{t('{done} of {total} done', { done: doneCount, total: 5 })}</Text>
       </View>
 
       <View style={styles.card}>
         {actions.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>Your plan actions will appear after the backend meal plan loads.</Text>
+            <Text style={styles.emptyText}>{t('Your plan actions will appear after the backend meal plan loads.')}</Text>
           </View>
         ) : actions.map((a, idx) => {
           const isLast = idx === actions.length - 1;
@@ -104,7 +106,7 @@ export default function ClaudeTodayFiveActions({ actions: backendActions, onActi
       </View>
 
       <Text style={styles.footnote}>
-        Written each morning from the meals you have logged before — not a generic checklist. Do three and you land on target.
+        {t('Written each morning from the meals you have logged before — not a generic checklist. Do three and you land on target.')}
       </Text>
       </RequirementAuditBoundary>
     </View>

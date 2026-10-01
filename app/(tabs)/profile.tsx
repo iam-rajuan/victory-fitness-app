@@ -406,7 +406,7 @@ export default function ProfileScreen() {
         {/* Daily Journal Teaser Card matching lines 1143-1156 */}
         <RequirementAuditBoundary auditId="APP-EXTRA-001" status="extra">
           <View style={styles.sectionWrap}>
-            <Text style={[styles.sectionKicker, { color: colors.copper }]}>JOURNAL</Text>
+            <Text style={[styles.sectionKicker, { color: colors.copper }]}>{t('JOURNAL')}</Text>
             <TouchableOpacity
               style={[
                 styles.journalCard,
@@ -420,13 +420,13 @@ export default function ProfileScreen() {
               onPress={() => router.push('/journal')}
             >
               <View style={styles.journalTopRow}>
-                <Text style={styles.journalPromptKicker}>TODAY'S PROMPT</Text>
+                <Text style={styles.journalPromptKicker}>{t("TODAY'S PROMPT")}</Text>
                 <Text style={styles.journalRunningBadge}>{journalRunningText}</Text>
               </View>
               <Text style={[styles.journalTitle, { color: colors.text }]}>{journalPrompt}</Text>
               <View style={styles.journalBottomRow}>
-                <Text style={[styles.journalSub, { color: colors.textSecondary }]}>Two minutes. Nobody else sees it.</Text>
-                <Text style={styles.journalWriteLink}>Write ›</Text>
+                <Text style={[styles.journalSub, { color: colors.textSecondary }]}>{t('Two minutes. Nobody else sees it.')}</Text>
+                <Text style={styles.journalWriteLink}>{t('Write ›')}</Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -471,8 +471,8 @@ export default function ProfileScreen() {
               onPress={() => setShowDigestModal(true)}
             >
               <View style={styles.digestTextCol}>
-                <Text style={[styles.digestTitle, { color: colors.text }]}>Your week, in your own words</Text>
-                <Text style={[styles.digestSub, { color: colors.textSecondary }]}>Monday 08:00 habit and training digest</Text>
+                <Text style={[styles.digestTitle, { color: colors.text }]}>{t('Your week, in your own words')}</Text>
+                <Text style={[styles.digestSub, { color: colors.textSecondary }]}>{t('Monday 08:00 habit and training digest')}</Text>
               </View>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>

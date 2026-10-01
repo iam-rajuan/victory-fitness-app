@@ -8,6 +8,7 @@ import {
   Platform,
 } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../lib/i18n';
 
 export interface ChallengeItem {
   id: string;
@@ -142,6 +143,7 @@ export default function ClaudeChallengeDirectory({
   onOpenInviteGuest,
 }: ClaudeChallengeDirectoryProps) {
   const { colors, isDark } = useTheme();
+  const { t } = useLanguage();
   const [selectedDay, setSelectedDay] = useState('All');
   const [selectedCat, setSelectedCat] = useState('All');
   const railScroll = useHorizontalWebScroll();
@@ -193,9 +195,9 @@ export default function ClaudeChallengeDirectory({
     <View style={styles.container}>
       {/* Horizontal Rail: Most joined this week matching line 851-874 */}
       <View style={styles.railHeader}>
-        <Text style={[styles.railTitle, { color: colors.text }]}>Most joined this week</Text>
+        <Text style={[styles.railTitle, { color: colors.text }]}>{t('Most joined this week')}</Text>
         <TouchableOpacity activeOpacity={0.7} onPress={handleSlideRail}>
-          <Text style={styles.railAllLink}>All ›</Text>
+          <Text style={styles.railAllLink}>{t('All ›')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -269,7 +271,7 @@ export default function ClaudeChallengeDirectory({
 
       {/* HOW MANY DAYS? Filter Chips matching lines 876-881 */}
       <View style={styles.filterSection}>
-        <Text style={[styles.filterLabel, { color: colors.textMuted }]}>HOW MANY DAYS?</Text>
+        <Text style={[styles.filterLabel, { color: colors.textMuted }]}>{t('HOW MANY DAYS?')}</Text>
         <ScrollView
           ref={daysScroll.scrollRef}
           horizontal
@@ -314,7 +316,7 @@ export default function ClaudeChallengeDirectory({
 
       {/* WHAT KIND? Filter Chips matching lines 882-887 */}
       <View style={styles.filterSectionSmall}>
-        <Text style={[styles.filterLabel, { color: colors.textMuted }]}>WHAT KIND?</Text>
+        <Text style={[styles.filterLabel, { color: colors.textMuted }]}>{t('WHAT KIND?')}</Text>
         <ScrollView
           ref={catScroll.scrollRef}
           horizontal
@@ -348,7 +350,7 @@ export default function ClaudeChallengeDirectory({
                     isSelected && styles.chipTextActive,
                   ]}
                 >
-                  {cat}
+                  {t(cat)}
                 </Text>
               </TouchableOpacity>
             );
@@ -359,16 +361,16 @@ export default function ClaudeChallengeDirectory({
       {/* Count Line matching line 889 & 3354 */}
       <Text style={[styles.countLine, { color: GOLD }]}>
         {isLoading
-          ? 'Loading challenges...'
-          : `${filteredChallenges.length} of ${allChallenges.length} challenges${selectedDay === 'All' ? ' · from backend' : ` · ${selectedDay} days`}`}
+          ? t('Loading challenges...')
+          : t('{active} of {total} challenges', { active: filteredChallenges.length, total: allChallenges.length })}
       </Text>
 
       {/* Challenge List matching lines 891-906 */}
       <View style={styles.challengeList}>
         {!isLoading && filteredChallenges.length === 0 && (
           <View style={[styles.emptyCard, { backgroundColor: isDark ? NAVY : '#FFFFFF' }]}>
-            <Text style={[styles.emptyTitle, { color: isDark ? IVORY : NAVY }]}>No challenges available</Text>
-            <Text style={styles.emptyBody}>Active challenges from the dashboard will appear here.</Text>
+            <Text style={[styles.emptyTitle, { color: isDark ? IVORY : NAVY }]}>{t('No challenges available')}</Text>
+            <Text style={styles.emptyBody}>{t('Active challenges from the dashboard will appear here.')}</Text>
           </View>
         )}
         {filteredChallenges.map((c) => (
@@ -398,7 +400,7 @@ export default function ClaudeChallengeDirectory({
                   { color: isDark ? 'rgba(247, 243, 238, 0.45)' : 'rgba(13, 43, 69, 0.55)' },
                 ]}
               >
-                DAYS
+                {t('DAYS')}
               </Text>
             </View>
 

@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { pushRoute } from '../../lib/navigation';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../lib/i18n';
 import RequirementAuditBoundary from '../audit/RequirementAuditBoundary';
 
 interface ClaudeTierPerksCardProps {
@@ -21,6 +22,7 @@ const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' })
 export default function ClaudeTierPerksCard({ tier }: ClaudeTierPerksCardProps) {
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const { t } = useLanguage();
 
   if (tier !== 'PLATINUM' && tier !== 'INNER_CIRCLE') {
     return null;
@@ -31,7 +33,7 @@ export default function ClaudeTierPerksCard({ tier }: ClaudeTierPerksCardProps) 
   return (
     <View style={styles.container}>
       <Text style={[styles.sectionKicker, { color: colors.textMuted }]}>
-        {isInnerCircle ? 'INNER CIRCLE EXCLUSIVES' : 'PLATINUM PRIVILEGES'}
+        {isInnerCircle ? t('INNER CIRCLE EXCLUSIVES') : t('PLATINUM PRIVILEGES')}
       </Text>
 
       <View
@@ -62,14 +64,14 @@ export default function ClaudeTierPerksCard({ tier }: ClaudeTierPerksCardProps) 
           >
             <View style={styles.syncedDot} />
             <View style={styles.textCol}>
-              <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]}>Wearables synced</Text>
+              <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]}>{t('Wearables synced')}</Text>
               <Text
                 style={[
                   styles.itemSub,
                   { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
                 ]}
               >
-                Resting HR, sleep, calories and heart-rate zones
+                {t('Resting HR, sleep, calories and heart-rate zones')}
               </Text>
             </View>
             <Text style={styles.arrowChevron}>›</Text>
@@ -88,7 +90,7 @@ export default function ClaudeTierPerksCard({ tier }: ClaudeTierPerksCardProps) 
           <View style={styles.goldDot} />
           <View style={styles.textCol}>
             <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]}>
-              {isInnerCircle ? '1-to-1 coaching with Victor' : 'Monthly 1-to-1 coaching session'}
+              {isInnerCircle ? t('1-to-1 coaching with Victor') : t('Monthly 1-to-1 coaching session')}
             </Text>
             <Text
               style={[
@@ -97,8 +99,8 @@ export default function ClaudeTierPerksCard({ tier }: ClaudeTierPerksCardProps) 
               ]}
             >
               {isInnerCircle
-                ? 'Coach sees your habit brief before every session'
-                : 'Next available Thursday 19:00 · Included in your plan'}
+                ? t('Coach sees your habit brief before every session')
+                : t('Next available Thursday 19:00 · Included in your plan')}
             </Text>
           </View>
           <Text style={styles.arrowChevron}>›</Text>
@@ -111,14 +113,14 @@ export default function ClaudeTierPerksCard({ tier }: ClaudeTierPerksCardProps) 
         >
           <View style={styles.copperDot} />
           <View style={styles.textCol}>
-            <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]}>Weekly habit digest</Text>
+            <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]}>{t('Weekly habit digest')}</Text>
             <Text
               style={[
                 styles.itemSub,
                 { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
               ]}
             >
-              Monday 08:00, built from your four habit fields
+              {t('Monday 08:00, built from your four habit fields')}
             </Text>
           </View>
           <Text style={styles.arrowChevron}>›</Text>

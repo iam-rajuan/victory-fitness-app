@@ -19,6 +19,7 @@ import ClaudeCohortModal from '../../components/challenge/ClaudeCohortModal';
 import ClaudeInviteModal from '../../components/challenge/ClaudeInviteModal';
 import ClaudeCommunityFeed, { CommunityComment, CommunityPost, CommunityPostDraft } from '../../components/challenge/ClaudeCommunityFeed';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../lib/i18n';
 
 const OBSIDIAN = '#0D0D0D';
 const IVORY = '#F7F3EE';
@@ -142,6 +143,7 @@ function mapCommunityPost(raw: Record<string, any>): CommunityPost {
 export default function ChallengeScreen() {
   const router = useRouter();
   const { isDark, colors } = useTheme();
+  const { t } = useLanguage();
 
   const [activeTab, setActiveTab] = useState<ChallengeTabType>('challenges');
   const [selectedChallenge, setSelectedChallenge] = useState<ChallengeItem | null>(null);
@@ -407,7 +409,7 @@ export default function ChallengeScreen() {
         }
       >
         {/* Screen Title matching line 824 */}
-        <Text style={[styles.screenTitle, { color: colors.text }]}>Challenges</Text>
+        <Text style={[styles.screenTitle, { color: colors.text }]}>{t('Challenges')}</Text>
 
         {/* Top Tab Toggle: Challenges vs Community matching lines 825-827 */}
         <ClaudeChallengeTabs activeTab={activeTab} onChangeTab={setActiveTab} />

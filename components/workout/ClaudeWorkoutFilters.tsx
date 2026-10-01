@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View, TextInput, ScrollView, Pressable, Platform } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../lib/i18n';
 
 interface ClaudeWorkoutFiltersProps {
   searchQuery: string;
@@ -41,16 +42,17 @@ export default function ClaudeWorkoutFilters({
   onSelectDuration,
   selectedKit,
   onSelectKit,
-  resultCountText = '170 of 170 workouts · shortest first',
+  resultCountText,
 }: ClaudeWorkoutFiltersProps) {
   const { isDark } = useTheme();
+  const { t } = useLanguage();
 
   return (
     <View style={styles.container}>
       {/* Header with Title & Count */}
       <View style={styles.headerRow}>
-        <Text style={styles.sectionTitle}>The whole library</Text>
-        <Text style={styles.totalBadge}>170 workouts</Text>
+        <Text style={styles.sectionTitle}>{t('The whole library')}</Text>
+        <Text style={styles.totalBadge}>{t('170 workouts')}</Text>
       </View>
 
       {/* Search Input */}
@@ -69,7 +71,7 @@ export default function ClaudeWorkoutFilters({
               } as any,
             }),
           ]}
-          placeholder="Search by name, muscle or kit…"
+          placeholder={t('Search by name, muscle or kit…')}
           placeholderTextColor="rgba(247, 243, 238, 0.45)"
           value={searchQuery}
           onChangeText={onSearchChange}
@@ -112,7 +114,7 @@ export default function ClaudeWorkoutFilters({
       />
 
       {/* Result Count Banner */}
-      <Text style={styles.resultCount}>{resultCountText}</Text>
+      <Text style={styles.resultCount}>{resultCountText || t('170 of 170 workouts · shortest first')}</Text>
     </View>
   );
 }
@@ -132,6 +134,7 @@ function SlideableChipsRow({
   onSelect,
   paddingTop = 16,
 }: SlideableChipsRowProps) {
+  const { t } = useLanguage();
   const scrollRef = React.useRef<ScrollView>(null);
   const isMouseDown = React.useRef(false);
   const startX = React.useRef(0);
@@ -191,7 +194,7 @@ function SlideableChipsRow({
 
   return (
     <View style={[styles.filterRow, { paddingTop }]}>
-      <Text style={styles.filterLabel}>{label}</Text>
+      <Text style={styles.filterLabel}>{t(label)}</Text>
       <ScrollView
         ref={scrollRef}
         horizontal
@@ -227,7 +230,7 @@ function SlideableChipsRow({
               style={[styles.chip, active && styles.chipActive]}
             >
               <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                {item}
+                {t(item)}
               </Text>
             </Pressable>
           );

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../lib/i18n';
 import { fetchHomepageQuote } from '../../lib/api';
 
 interface ClaudeInspirationCardProps {
@@ -21,6 +22,7 @@ export default function ClaudeInspirationCard({
   userName: _userName = '',
 }: ClaudeInspirationCardProps) {
   const { colors } = useTheme();
+  const { t } = useLanguage();
   const [quote, setQuote] = useState({
     text: 'Every rep is a reminder that growth takes patience.',
     author: 'Victor Akko',
@@ -47,9 +49,9 @@ export default function ClaudeInspirationCard({
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.kicker, { color: colors.textMuted }]}>DAILY INSPIRATION</Text>
+      <Text style={[styles.kicker, { color: colors.textMuted }]}>{t('DAILY INSPIRATION')}</Text>
       <View style={styles.quoteBox}>
-        <Text style={[styles.quoteText, { color: colors.text }]}>{`“${quote.text.replace(/^["“]|["”]$/g, '')}”`}</Text>
+        <Text style={[styles.quoteText, { color: colors.text }]}>{`“${t(quote.text).replace(/^["“]|["”]$/g, '')}”`}</Text>
         <Text style={styles.authorText}>{quote.author.toUpperCase()}</Text>
       </View>
     </View>

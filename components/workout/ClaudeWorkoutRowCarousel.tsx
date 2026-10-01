@@ -1,6 +1,7 @@
 import React from 'react';
 import { Image, StyleSheet, Text, View, ScrollView, Pressable, Platform } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../lib/i18n';
 import CrossPlatformWebView from '../CrossPlatformWebView';
 
 export interface ProgramCardItem {
@@ -67,6 +68,7 @@ export default function ClaudeWorkoutRowCarousel({
   onSelectWorkout,
 }: ClaudeWorkoutRowCarouselProps) {
   const { isDark } = useTheme();
+  const { t } = useLanguage();
   const scrollRef = React.useRef<ScrollView>(null);
 
   const isMouseDown = React.useRef(false);
@@ -142,13 +144,13 @@ export default function ClaudeWorkoutRowCarousel({
       {/* Section Header */}
       <View style={styles.headerRow}>
         <View style={styles.titleWrap}>
-          <Text style={styles.title}>{title}</Text>
-          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+          <Text style={styles.title}>{t(title)}</Text>
+          {subtitle ? <Text style={styles.subtitle}>{t(subtitle)}</Text> : null}
         </View>
 
         {actionText ? (
           <Pressable onPress={handleAction} hitSlop={8}>
-            <Text style={styles.actionText}>{actionText}</Text>
+            <Text style={styles.actionText}>{t(actionText)}</Text>
           </Pressable>
         ) : null}
       </View>

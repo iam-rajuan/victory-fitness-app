@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { pushRoute } from '../../lib/navigation';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../lib/i18n';
 
 interface ClaudeTodayWorkoutCardProps {
   tier: 'SILVER' | 'GOLD' | 'GOLD_BETA' | 'PLATINUM' | 'INNER_CIRCLE' | 'NONE';
@@ -43,18 +44,19 @@ export default function ClaudeTodayWorkoutCard({
 }: ClaudeTodayWorkoutCardProps) {
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const { t } = useLanguage();
   const hasCoach = tier !== 'SILVER' && tier !== 'NONE';
 
   const planLabel = !hasActivePlan
-    ? 'YOUR PLAN'
+    ? t('YOUR PLAN')
     : hasCoach
-    ? (isPlanBuilt ? 'YOUR NEW PLAN · WEEK 1 OF 6' : 'YOUR PLAN · WEEK 2 OF 6')
-    : "TODAY'S WORKOUT";
-  const planSource = hasCoach ? 'BUILT BY YOUR COACH' : 'VIDEO · FROM THE LIBRARY';
-  const planDayLine = (hasCoach
-    ? (isPlanBuilt ? 'DAY 1 OF WEEK 1 · ' : 'DAY 3 OF WEEK 2 · ')
-    : 'PICKED FOR TODAY · ') + `${durationMinutes} MIN`;
-  const planAlt = hasCoach ? 'Adjust this plan with your coach' : 'Pick a different video instead';
+    ? (isPlanBuilt ? t('YOUR NEW PLAN · WEEK 1 OF 6') : t('YOUR PLAN · WEEK 2 OF 6'))
+    : t("TODAY'S WORKOUT");
+  const planSource = hasCoach ? t('BUILT BY YOUR COACH') : t('VIDEO · FROM THE LIBRARY');
+  const planDayLine = hasCoach
+    ? (isPlanBuilt ? t('DAY 1 OF WEEK 1 · {duration} MIN', { duration: durationMinutes }) : t('DAY 3 OF WEEK 2 · {duration} MIN', { duration: durationMinutes }))
+    : t('PICKED FOR TODAY · {duration} MIN', { duration: durationMinutes });
+  const planAlt = hasCoach ? t('Adjust this plan with your coach') : t('Pick a different video instead');
 
   const handleStart = () => {
     if (!hasActivePlan) {
@@ -104,10 +106,10 @@ export default function ClaudeTodayWorkoutCard({
         <View style={styles.accentGoldBar} />
 
         <Text style={[styles.dayKicker, { color: isDark ? GOLD : '#B5651D' }]}>
-          {hasActivePlan ? planDayLine : 'READY WHEN YOU ARE'}
+          {hasActivePlan ? planDayLine : t('READY WHEN YOU ARE')}
         </Text>
         <Text style={[styles.title, { color: isDark ? IVORY : NAVY }]}>
-          {hasActivePlan ? workoutTitle : 'Create your 7 day workout plan'}
+          {hasActivePlan ? t(workoutTitle) : t('Create your 7 day workout plan')}
         </Text>
 
         {/* Stats row */}
@@ -120,7 +122,7 @@ export default function ClaudeTodayWorkoutCard({
                 { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
               ]}
             >
-              MINUTES
+              {t('MINUTES')}
             </Text>
           </View>
           <View style={styles.statCol}>
@@ -131,18 +133,18 @@ export default function ClaudeTodayWorkoutCard({
                 { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
               ]}
             >
-              EXERCISES
+              {t('EXERCISES')}
             </Text>
           </View>
           <View style={styles.statCol}>
-            <Text style={[styles.statVal, { color: isDark ? IVORY : NAVY }]}>{equipment.toUpperCase()}</Text>
+            <Text style={[styles.statVal, { color: isDark ? IVORY : NAVY }]}>{t(equipment).toUpperCase()}</Text>
             <Text
               style={[
                 styles.statLabel,
                 { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
               ]}
             >
-              EQUIPMENT
+              {t('EQUIPMENT')}
             </Text>
           </View>
         </View> : null}
@@ -150,7 +152,7 @@ export default function ClaudeTodayWorkoutCard({
         {/* Primary CTA */}
         <Pressable style={[styles.startBtn, isGeneratingPlan && styles.startBtnDisabled]} onPress={handleStart} disabled={isGeneratingPlan}>
           <Text style={styles.startBtnText}>
-            {hasActivePlan ? 'Start my session' : isGeneratingPlan ? 'Creating plan...' : 'Create 7 day workout plan'}
+            {hasActivePlan ? t('Start my session') : isGeneratingPlan ? t('Generating plan...') : t('Create your 7 day workout plan')}
           </Text>
         </Pressable>
 

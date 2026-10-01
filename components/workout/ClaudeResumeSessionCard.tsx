@@ -1,6 +1,7 @@
 import React from 'react';
 import { Image, StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../lib/i18n';
 import CrossPlatformWebView from '../CrossPlatformWebView';
 
 interface ClaudeResumeSessionCardProps {
@@ -45,11 +46,12 @@ export default function ClaudeResumeSessionCard({
   onResume,
 }: ClaudeResumeSessionCardProps) {
   const { colors, isDark } = useTheme();
+  const { t } = useLanguage();
 
   return (
     <View style={styles.container}>
       <Text style={[styles.eyebrow, { color: colors.textMuted }]}>
-        {completed ? 'COMPLETED BEFORE' : 'PICK UP WHERE YOU LEFT OFF'}
+        {completed ? t('COMPLETED BEFORE') : t('PICK UP WHERE YOU LEFT OFF')}
       </Text>
 
       <Pressable

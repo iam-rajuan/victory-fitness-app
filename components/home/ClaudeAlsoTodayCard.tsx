@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { pushRoute } from '../../lib/navigation';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../lib/i18n';
 import RequirementAuditBoundary from '../audit/RequirementAuditBoundary';
 
 interface ClaudeAlsoTodayCardProps {
@@ -33,17 +34,18 @@ export default function ClaudeAlsoTodayCard({
 }: ClaudeAlsoTodayCardProps) {
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const { t } = useLanguage();
 
   const duoTitle = partnerName
-    ? (partnerTrainedToday ? `${partnerName} trained today` : `${partnerName} has not trained yet`)
-    : 'No accountability duo yet';
+    ? (partnerTrainedToday ? t('{name} trained today', { name: partnerName }) : t('{name} has not trained yet', { name: partnerName }))
+    : t('No accountability duo yet');
   const duoNote = partnerName
-    ? 'Your duo · your turn, they will see the tick'
-    : 'Two people, one tick a day. Set it up in a minute.';
+    ? t('Your duo · your turn, they will see the tick')
+    : t('Two people, one tick a day. Set it up in a minute.');
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.sectionKicker, { color: colors.textMuted }]}>ALSO TODAY</Text>
+      <Text style={[styles.sectionKicker, { color: colors.textMuted }]}>{t('ALSO TODAY')}</Text>
 
       <View
         style={[
@@ -105,7 +107,7 @@ export default function ClaudeAlsoTodayCard({
 
             <View style={styles.textCol}>
               <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]}>
-                {journalWrittenToday ? 'Journal completed for today' : 'Journal not written yet'}
+                {journalWrittenToday ? t('Done today · tap to read') : t('Daily Journal')}
               </Text>
               <Text
                 style={[
@@ -113,7 +115,7 @@ export default function ClaudeAlsoTodayCard({
                   { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
                 ]}
               >
-                One prompt a day · lives in your profile
+                {t('Write one line before bed')}
               </Text>
             </View>
 
@@ -134,7 +136,7 @@ export default function ClaudeAlsoTodayCard({
         >
           <View style={styles.textCol}>
             <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]}>
-              {`${sessionsDoneThisWeek} of ${sessionsTargetThisWeek} sessions this week`}
+              {t('{done} of {target} sessions done', { done: sessionsDoneThisWeek, target: sessionsTargetThisWeek })}
             </Text>
             <Text
               style={[
@@ -142,7 +144,7 @@ export default function ClaudeAlsoTodayCard({
                 { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
               ]}
             >
-              Browse the library for a short one
+              {t('Weekly target')}
             </Text>
           </View>
 

@@ -32,6 +32,7 @@ import ClaudeMealAnalysisModal from '../../components/nutrition/ClaudeMealAnalys
 import ClaudeWeekPlanModal from '../../components/nutrition/ClaudeWeekPlanModal';
 import ClaudeShoppingListModal from '../../components/nutrition/ClaudeShoppingListModal';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../lib/i18n';
 
 const OBSIDIAN = '#0D0D0D';
 const NAVY = '#0D2B45';
@@ -47,6 +48,7 @@ const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Jet
 
 export default function MealPlanScreen() {
   const { isDark, colors } = useTheme();
+  const { t } = useLanguage();
 
   // Current user & tier state
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
@@ -430,7 +432,7 @@ export default function MealPlanScreen() {
         {/* Header matching line 998-1001 */}
         <View style={styles.headerRow}>
           <View>
-            <Text style={[styles.screenTitle, { color: colors.text }]}>Food</Text>
+            <Text style={[styles.screenTitle, { color: colors.text }]}>{t('Food')}</Text>
             <Text style={[styles.screenDate, { color: colors.textMuted }]}>{getFormattedDate()}</Text>
           </View>
 
@@ -439,7 +441,7 @@ export default function MealPlanScreen() {
             activeOpacity={0.8}
             onPress={handleUploadPhoto}
           >
-            <Text style={styles.logFoodBtnText}>+ Log food</Text>
+            <Text style={styles.logFoodBtnText}>+ {t('Log food')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -476,20 +478,20 @@ export default function MealPlanScreen() {
         {/* Week Plan Builder Banner matching lines 1065-1070 */}
         <View style={styles.weekPlanBannerCard}>
           <Text style={styles.weekPlanKicker}>
-            NUTRITION PLANNER · SIX WEEKS
+            {t('NUTRITION PLANNER · SIX WEEKS')}
           </Text>
           <Text style={styles.weekPlanTitle}>
-            A week of food you actually like
+            {t('A week of food you actually like')}
           </Text>
           <Text style={styles.weekPlanSub}>
-            Six questions about the dishes you love, the cuisines you cook, and anything you cannot eat. Then a full week with preparation steps and a shopping list.
+            {t('Six questions about the dishes you love, the cuisines you cook, and anything you cannot eat. Then a full week with preparation steps and a shopping list.')}
           </Text>
           <TouchableOpacity
             style={styles.buildPlanBtn}
             activeOpacity={0.85}
             onPress={() => setShowWeekPlanModal(true)}
           >
-            <Text style={styles.buildPlanBtnText}>Build my plan</Text>
+            <Text style={styles.buildPlanBtnText}>{t('Build my plan')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

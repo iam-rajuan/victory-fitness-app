@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { pushRoute } from '../../lib/navigation';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../lib/i18n';
 
 interface ClaudeFoodTodayCardProps {
   tier: 'SILVER' | 'GOLD' | 'GOLD_BETA' | 'PLATINUM' | 'INNER_CIRCLE' | 'NONE';
@@ -37,18 +38,19 @@ export default function ClaudeFoodTodayCard({
 }: ClaudeFoodTodayCardProps) {
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const { t } = useLanguage();
   const hasFoodPlanner = tier !== 'SILVER' && tier !== 'NONE';
   const [fallbackDinnerLogged, setFallbackDinnerLogged] = useState(false);
 
   const visibleMeals = meals && meals.length > 0
     ? meals.slice(0, 3)
     : [
-        { key: 'breakfast', title: 'No breakfast planned', subtitle: 'Breakfast · open food screen', completed: false },
-        { key: 'lunch', title: 'No lunch planned', subtitle: 'Lunch · open food screen', completed: false },
+        { key: 'breakfast', title: t('No breakfast planned'), subtitle: t('Breakfast · open food screen'), completed: false },
+        { key: 'lunch', title: t('No lunch planned'), subtitle: t('Lunch · open food screen'), completed: false },
         {
           key: 'dinner',
-          title: 'No dinner planned',
-          subtitle: fallbackDinnerLogged ? 'Dinner · eaten' : 'Dinner · open food screen',
+          title: t('No dinner planned'),
+          subtitle: fallbackDinnerLogged ? t('Dinner · eaten') : t('Dinner · open food screen'),
           completed: fallbackDinnerLogged,
           canLog: true,
         },
@@ -84,9 +86,9 @@ export default function ClaudeFoodTodayCard({
     <View style={styles.container}>
       {/* Header Row */}
       <View style={styles.headerRow}>
-        <Text style={[styles.sectionKicker, { color: colors.textMuted }]}>FOOD TODAY</Text>
+        <Text style={[styles.sectionKicker, { color: colors.textMuted }]}>{t('FOOD TODAY')}</Text>
         <Pressable hitSlop={8} onPress={handleOpenFood}>
-          <Text style={styles.screenLink}>Food screen ›</Text>
+          <Text style={styles.screenLink}>{t('Food screen ›')}</Text>
         </Pressable>
       </View>
 
@@ -122,14 +124,14 @@ export default function ClaudeFoodTodayCard({
                   <View style={styles.goldRingDot} />
                 )}
                 <View style={styles.mealTextCol}>
-                  <Text style={[styles.mealTitle, { color: isDark ? IVORY : NAVY }]}>{meal.title}</Text>
+                  <Text style={[styles.mealTitle, { color: isDark ? IVORY : NAVY }]}>{t(meal.title)}</Text>
                   <Text
                     style={[
                       styles.mealSub,
                       { color: isDark ? 'rgba(247, 243, 238, 0.5)' : 'rgba(13, 43, 69, 0.55)' },
                     ]}
                   >
-                    {meal.subtitle}
+                    {t(meal.subtitle)}
                   </Text>
                 </View>
                 {(meal.canLog || isLastMeal) ? (
@@ -140,7 +142,7 @@ export default function ClaudeFoodTodayCard({
                     onPress={() => handleToggleMeal(meal.key, meal.completed)}
                   >
                     <Text style={styles.logBtnText}>
-                      {isUpdating ? '...' : meal.completed ? 'DONE' : 'LOG'}
+                      {isUpdating ? '...' : meal.completed ? t('DONE') : t('LOG')}
                     </Text>
                   </Pressable>
                 ) : null}
@@ -156,7 +158,7 @@ export default function ClaudeFoodTodayCard({
                 { color: isDark ? 'rgba(247, 243, 238, 0.7)' : 'rgba(13, 43, 69, 0.75)' },
               ]}
             >
-              This week's food plan
+              {t("This week's food plan")}
             </Text>
             <Text style={styles.weekPlanArrow}>›</Text>
           </Pressable>
@@ -178,17 +180,19 @@ export default function ClaudeFoodTodayCard({
             <View style={styles.lockIconGraphic} />
           </View>
           <View style={styles.lockedTextCol}>
-            <Text style={[styles.lockedTitle, { color: isDark ? IVORY : NAVY }]}>The nutrition planner lives on Gold</Text>
+            <Text style={[styles.lockedTitle, { color: isDark ? IVORY : NAVY }]}>
+              {t('The nutrition planner lives on Gold')}
+            </Text>
             <Text
               style={[
                 styles.lockedSub,
                 { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
               ]}
             >
-              A full week of meals built from your favourites list, hitting your protein target.
+              {t('A full week of meals built from your favourites list, hitting your protein target.')}
             </Text>
           </View>
-          <Text style={styles.lockedActionText}>See ›</Text>
+          <Text style={styles.lockedActionText}>{t('See ›')}</Text>
         </Pressable>
       )}
     </View>

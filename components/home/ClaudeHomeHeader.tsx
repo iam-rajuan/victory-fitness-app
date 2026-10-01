@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { pushRoute } from '../../lib/navigation';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../lib/i18n';
 
 interface ClaudeHomeHeaderProps {
   name: string;
@@ -24,15 +25,23 @@ export default function ClaudeHomeHeader({
 }: ClaudeHomeHeaderProps) {
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const { language, t } = useLanguage();
 
-  // Format today's date: "FRIDAY, 8 MAY"
+  // Format today's date localized
   const formattedDate = React.useMemo(() => {
     const d = new Date();
-    const weekday = d.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
-    const day = d.getDate();
-    const month = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
-    return `${weekday}, ${day} ${month}`;
-  }, []);
+    try {
+      const weekday = d.toLocaleDateString(language || 'en-US', { weekday: 'long' }).toUpperCase();
+      const day = d.getDate();
+      const month = d.toLocaleDateString(language || 'en-US', { month: 'short' }).toUpperCase();
+      return `${weekday}, ${day} ${month}`;
+    } catch {
+      const weekday = d.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+      const day = d.getDate();
+      const month = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+      return `${weekday}, ${day} ${month}`;
+    }
+  }, [language]);
 
   const firstName = name ? name.split(' ')[0] : 'there';
 
@@ -44,7 +53,7 @@ export default function ClaudeHomeHeader({
           {formattedDate}
         </Text>
         <Text style={[styles.greetingTitle, { color: colors.text }]}>
-          {`Hello ${firstName},`}
+          {t('Hello {name},', { name: firstName })}
         </Text>
       </View>
 

@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { pushRoute } from '../../lib/navigation';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../lib/i18n';
 
 interface ClaudeCoachBarProps {
   tier: 'SILVER' | 'GOLD' | 'GOLD_BETA' | 'PLATINUM' | 'INNER_CIRCLE' | 'NONE';
@@ -18,6 +19,7 @@ const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' })
 export default function ClaudeCoachBar({ tier }: ClaudeCoachBarProps) {
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const { t } = useLanguage();
   const hasCoach = tier !== 'SILVER' && tier !== 'NONE';
   const isPriority = tier === 'PLATINUM' || tier === 'INNER_CIRCLE';
 
@@ -40,11 +42,11 @@ export default function ClaudeCoachBar({ tier }: ClaudeCoachBarProps) {
                 { color: isDark ? 'rgba(247, 243, 238, 0.65)' : 'rgba(13, 43, 69, 0.65)' },
               ]}
             >
-              Ask your coach anything…
+              {t('Ask your coach anything…')}
             </Text>
             {isPriority ? (
               <View style={styles.priorityPill}>
-                <Text style={styles.priorityText}>PRIORITY RESPONSES</Text>
+                <Text style={styles.priorityText}>{t('PRIORITY RESPONSES')}</Text>
               </View>
             ) : null}
           </View>
@@ -75,13 +77,13 @@ export default function ClaudeCoachBar({ tier }: ClaudeCoachBarProps) {
         </View>
 
         <View style={styles.lockedTextCol}>
-          <Text style={[styles.lockedTitle, { color: colors.text }]}>AI Coach is part of Gold</Text>
+          <Text style={[styles.lockedTitle, { color: colors.text }]}>{t('AI Coach is part of Gold')}</Text>
           <Text style={[styles.lockedSub, { color: colors.textSecondary }]}>
-            Workouts, journal and challenges stay open either way
+            {t('Workouts, journal and challenges stay open either way')}
           </Text>
         </View>
 
-        <Text style={styles.lockedActionLink}>See</Text>
+        <Text style={styles.lockedActionLink}>{t('See')}</Text>
       </Pressable>
     </View>
   );

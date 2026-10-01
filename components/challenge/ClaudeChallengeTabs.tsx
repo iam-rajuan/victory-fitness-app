@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../lib/i18n';
 
 export type ChallengeTabType = 'challenges' | 'community';
 
@@ -22,6 +23,7 @@ export default function ClaudeChallengeTabs({
   onChangeTab,
 }: ClaudeChallengeTabsProps) {
   const { isDark } = useTheme();
+  const { t } = useLanguage();
 
   return (
     <View style={styles.container}>
@@ -49,7 +51,7 @@ export default function ClaudeChallengeTabs({
                 : { color: isDark ? 'rgba(247, 243, 238, 0.6)' : 'rgba(13, 43, 69, 0.6)' },
             ]}
           >
-            Challenges
+            {t('Challenges')}
           </Text>
         </TouchableOpacity>
 
@@ -69,7 +71,7 @@ export default function ClaudeChallengeTabs({
                 : { color: isDark ? 'rgba(247, 243, 238, 0.6)' : 'rgba(13, 43, 69, 0.6)' },
             ]}
           >
-            Community
+            {t('Community')}
           </Text>
         </TouchableOpacity>
       </View>
