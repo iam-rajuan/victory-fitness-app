@@ -363,16 +363,27 @@ export default function ClaudeChallengeDirectory({
       {/* Count Line matching line 889 & 3354 */}
       <Text style={[styles.countLine, { color: GOLD }]}>
         {isLoading
-          ? t('Loading challenges...')
+          ? t('Preparing your challenges')
           : t('{active} of {total} challenges', { active: filteredChallenges.length, total: allChallenges.length })}
       </Text>
 
       {/* Challenge List matching lines 891-906 */}
       <View style={styles.challengeList}>
+        {isLoading && filteredChallenges.length === 0 && [0, 1, 2].map((item) => (
+          <View key={`challenge-skeleton-${item}`} style={[styles.challengeCard, styles.skeletonCard, { backgroundColor: isDark ? NAVY : '#FFFFFF' }]}>
+            <View style={styles.skeletonDays} />
+            <View style={[styles.challengeDivider, { backgroundColor: isDark ? 'rgba(247, 243, 238, 0.12)' : 'rgba(13, 43, 69, 0.08)' }]} />
+            <View style={styles.challengeInfoCol}>
+              <View style={styles.skeletonTitle} />
+              <View style={styles.skeletonMeta} />
+              <View style={styles.skeletonBody} />
+            </View>
+          </View>
+        ))}
         {!isLoading && filteredChallenges.length === 0 && (
           <View style={[styles.emptyCard, { backgroundColor: isDark ? NAVY : '#FFFFFF' }]}>
-            <Text style={[styles.emptyTitle, { color: isDark ? IVORY : NAVY }]}>{t('No challenges available')}</Text>
-            <Text style={styles.emptyBody}>{t('Active challenges from the dashboard will appear here.')}</Text>
+            <Text style={[styles.emptyTitle, { color: isDark ? IVORY : NAVY }]}>{t('Your next challenge is being prepared')}</Text>
+            <Text style={styles.emptyBody}>{t('Check back soon or ask your coach what to start with today.')}</Text>
           </View>
         )}
         {filteredChallenges.map((c) => (
@@ -653,6 +664,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
+  },
+  skeletonCard: {
+    minHeight: 92,
+    borderLeftColor: 'rgba(201, 148, 58, 0.45)',
+  },
+  skeletonDays: {
+    width: 40,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: 'rgba(247, 243, 238, 0.1)',
+  },
+  skeletonTitle: {
+    width: '72%',
+    height: 16,
+    borderRadius: 999,
+    backgroundColor: 'rgba(247, 243, 238, 0.12)',
+    marginBottom: 9,
+  },
+  skeletonMeta: {
+    width: '48%',
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(247, 243, 238, 0.08)',
+    marginBottom: 10,
+  },
+  skeletonBody: {
+    width: '92%',
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(247, 243, 238, 0.08)',
   },
   challengeDaysCol: {
     width: 40,

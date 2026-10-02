@@ -5,6 +5,15 @@ export const COMMUNITY_POSTS_CACHE_KEY = 'community-posts';
 export const NUTRITION_PLAN_LATEST_CACHE_KEY = 'nutrition-plan-latest';
 export const COACH_VICTOR_HISTORY_CACHE_KEY = 'coach-victor-history';
 export const INTEGRATIONS_CACHE_KEY = 'integrations';
+export const HOME_WORKOUT_SUMMARY_CACHE_KEY = 'home-workout-summary';
+
+export function getCommunityPostsCacheKey(scope = 'auto') {
+  return `community-posts:${scope || 'auto'}`;
+}
+
+export function getNutritionMealLogsCacheKey(date: string) {
+  return `nutrition-meal-logs:${date || 'today'}`;
+}
 
 export function getLongevityDashboardCacheKey(language = '') {
   return `longevity-dashboard:${language || 'default'}`;

@@ -36,10 +36,28 @@ export default function ClaudeFullDayMeals({ meals, updatingMealKey, onToggleMea
   const { t } = useLanguage();
   const visibleMeals = meals.length > 0 ? meals : [
     {
-      id: 'empty',
+      id: 'empty-breakfast',
       mealKey: 'breakfast',
-      name: t('No backend meals yet'),
-      sub: t('Saved meal plan meals appear here'),
+      name: t('Breakfast will appear here'),
+      sub: t('Build or refresh your food plan'),
+      proteinG: 0,
+      kcal: 0,
+      logged: false,
+    },
+    {
+      id: 'empty-lunch',
+      mealKey: 'lunch',
+      name: t('Lunch will appear here'),
+      sub: t('Your full day stays ready here'),
+      proteinG: 0,
+      kcal: 0,
+      logged: false,
+    },
+    {
+      id: 'empty-dinner',
+      mealKey: 'dinner',
+      name: t('Dinner will appear here'),
+      sub: t('Plan meals once and track them here'),
       proteinG: 0,
       kcal: 0,
       logged: false,
@@ -62,7 +80,7 @@ export default function ClaudeFullDayMeals({ meals, updatingMealKey, onToggleMea
           const isHighlight = m.isDinnerPlanned && !m.logged;
           const isLast = idx === visibleMeals.length - 1;
           const isUpdating = updatingMealKey === (m.mealKey || m.id);
-          const canToggle = m.id !== 'empty' && Boolean(onToggleMeal);
+          const canToggle = !m.id.startsWith('empty-') && Boolean(onToggleMeal);
 
           return (
             <TouchableOpacity

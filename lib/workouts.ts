@@ -1,5 +1,6 @@
 import { apiRequest, resolveRemoteAssetUrl } from './api';
 import { fetchCachedResource, getCachedResourceSnapshot, hydrateCachedResource } from './resourceCache';
+import { HOME_WORKOUT_SUMMARY_CACHE_KEY } from './cacheKeys';
 
 export type WorkoutLibraryItem = {
   id: string;
@@ -195,7 +196,9 @@ export async function fetchWorkoutLibrary(query = '') {
 }
 
 export async function fetchHomeWorkoutPlanSummary() {
-  return apiRequest<HomeWorkoutPlanSummary>('/workouts/home-plan-summary');
+  return fetchCachedResource(HOME_WORKOUT_SUMMARY_CACHE_KEY, () =>
+    apiRequest<HomeWorkoutPlanSummary>('/workouts/home-plan-summary')
+  );
 }
 
 export function getCachedWorkoutLibrary(query = '') {

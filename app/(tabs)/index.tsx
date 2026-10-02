@@ -45,12 +45,15 @@ import { getLatestNutritionPlan, NutritionPlanApiResponse, updateNutritionMealCo
 import {
   createHomeSevenDayWorkoutPlan,
   fetchLatestStrengthWorkoutPlan,
+  loadLatestStrengthWorkoutPlan,
   StrengthPlanDay,
   StrengthPlanExercise,
   StrengthPlanResponse,
   updateStrengthWorkoutPlanProgress,
 } from '../../lib/workout-plans';
-import { fetchHomeWorkoutPlanSummary, fetchWorkoutLibrary, HomeWorkoutPlanSummary } from '../../lib/workouts';
+import { fetchHomeWorkoutPlanSummary, fetchWorkoutLibrary, hydrateCachedWorkoutLibrary, HomeWorkoutPlanSummary } from '../../lib/workouts';
+import { CHALLENGE_OVERVIEW_CACHE_KEY, HOME_WORKOUT_SUMMARY_CACHE_KEY, JOURNAL_ENTRIES_CACHE_KEY, NUTRITION_PLAN_LATEST_CACHE_KEY } from '../../lib/cacheKeys';
+import { hydrateCachedResource } from '../../lib/resourceCache';
 
 import ClaudeHomeHeader from '../../components/home/ClaudeHomeHeader';
 import ClaudeInspirationCard from '../../components/home/ClaudeInspirationCard';
@@ -293,6 +296,51 @@ export default function HomeScreen() {
     await dismissFreshPlanBanner();
   }, []);
 
+  const hydrateHomeCache = useCallback(async () => {
+    const [cachedChallengeData, cachedNutritionPlan, cachedStrengthPlan, cachedJournalData, cachedWorkoutLibrary, cachedHomeSummary] = await Promise.all([
+      hydrateCachedResource<any>(CHALLENGE_OVERVIEW_CACHE_KEY),
+      hydrateCachedResource<NutritionPlanApiResponse>(NUTRITION_PLAN_LATEST_CACHE_KEY),
+      loadLatestStrengthWorkoutPlan().catch(() => null),
+      hydrateCachedResource<any>(JOURNAL_ENTRIES_CACHE_KEY),
+      hydrateCachedWorkoutLibrary().catch(() => null),
+      hydrateCachedResource<HomeWorkoutPlanSummary>(HOME_WORKOUT_SUMMARY_CACHE_KEY),
+    ]);
+
+    if (cachedNutritionPlan) {
+      setNutritionPlan(cachedNutritionPlan);
+    }
+    if (cachedStrengthPlan) {
+      setStrengthPlan(cachedStrengthPlan);
+    }
+    if (cachedWorkoutLibrary) {
+      setHomeLibraryWorkout(cachedWorkoutLibrary.featuredWorkout || cachedWorkoutLibrary.workouts?.[0] || null);
+    }
+    if (cachedHomeSummary) {
+      setHomeWorkoutSummary(cachedHomeSummary);
+    }
+    if (Array.isArray(cachedJournalData?.entries)) {
+      setJournalWrittenToday(cachedJournalData.entries.some((entry: any) => isSameLocalDay(entry.created_at)));
+    }
+    if (Array.isArray(cachedChallengeData?.active_challenges)) {
+      const joinedMapped = cachedChallengeData.active_challenges.map((ch: any) => {
+        const totalDays = Number(ch.total_days || ch.duration_days || 21);
+        const daysLeft = Number(ch.days_left || 0);
+        const currentDay = Math.max(1, totalDays - daysLeft);
+        const rawProgress = Number(ch.progress || 0);
+        const pct = Math.min(100, Math.max(0, Math.round(rawProgress <= 1 ? rawProgress * 100 : rawProgress)));
+        return {
+          id: ch.challenge_id || ch.id,
+          n: ch.title || 'Active Challenge',
+          d: `Day ${currentDay} of ${totalDays}`,
+          pct,
+          rank: ch.points ? `${ch.points} pts` : 'Active',
+          note: ch.why_it_matters || ch.description || 'Finish today to keep the streak bonus.',
+        };
+      });
+      setChallenges(joinedMapped);
+    }
+  }, []);
+
   const loadHomeData = useCallback(async () => {
     try {
       const [
@@ -332,13 +380,15 @@ export default function HomeScreen() {
         setCurrentWeight(String(existingWeight));
       }
 
-      setNutritionPlan(latestNutritionPlan);
-      setStrengthPlan(latestStrengthPlan);
-      setWorkoutLogs(Array.isArray(logsData?.items) ? logsData.items : []);
-      setHydration(hydrationData);
-      setHomeLibraryWorkout(workoutLibrary?.featuredWorkout || workoutLibrary?.workouts?.[0] || null);
-      setHomeWorkoutSummary(homePlanSummary);
-      setAccountabilityPartner(accountabilityData);
+      if (latestNutritionPlan) setNutritionPlan(latestNutritionPlan);
+      if (latestStrengthPlan) setStrengthPlan(latestStrengthPlan);
+      if (Array.isArray(logsData?.items)) setWorkoutLogs(logsData.items);
+      if (hydrationData) setHydration(hydrationData);
+      if (workoutLibrary?.featuredWorkout || workoutLibrary?.workouts?.[0]) {
+        setHomeLibraryWorkout(workoutLibrary.featuredWorkout || workoutLibrary.workouts?.[0] || null);
+      }
+      if (homePlanSummary) setHomeWorkoutSummary(homePlanSummary);
+      if (accountabilityData) setAccountabilityPartner(accountabilityData);
       setUnreadNotifications(Array.isArray(notifications) ? notifications.filter((item: any) => !item.read).length : 0);
 
       if (Array.isArray(journalData?.entries)) {
@@ -400,8 +450,10 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    void loadHomeData();
-  }, [loadHomeData]);
+    void hydrateHomeCache().finally(() => {
+      void loadHomeData();
+    });
+  }, [hydrateHomeCache, loadHomeData]);
 
   useFocusEffect(
     useCallback(() => {

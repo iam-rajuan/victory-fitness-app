@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,8 @@ import {
 import { useRouter } from 'expo-router';
 import { apiRequest, fetchCurrentUser, resolveRemoteAssetUrl } from '../../lib/api';
 import { fetchChallengeOverviewData } from '../../lib/screenData';
+import { CHALLENGE_OVERVIEW_CACHE_KEY, getCommunityPostsCacheKey } from '../../lib/cacheKeys';
+import { fetchCachedResource, hydrateCachedResource } from '../../lib/resourceCache';
 import ClaudeChallengeTabs, { ChallengeTabType } from '../../components/challenge/ClaudeChallengeTabs';
 import ClaudeActiveChallengeBanner from '../../components/challenge/ClaudeActiveChallengeBanner';
 import ClaudeChallengeDirectory, { ChallengeItem } from '../../components/challenge/ClaudeChallengeDirectory';
@@ -176,6 +178,11 @@ export default function ChallengeScreen() {
   const [userTier, setUserTier] = useState('GOLD');
   const [userName, setUserName] = useState('Member');
   const [userInitials, setUserInitials] = useState('ME');
+  const challengeItemsCountRef = useRef(0);
+
+  useEffect(() => {
+    challengeItemsCountRef.current = challengeItems.length;
+  }, [challengeItems.length]);
 
   useEffect(() => {
     let cancelled = false;
@@ -207,7 +214,9 @@ export default function ChallengeScreen() {
   }, []);
 
   const loadChallenges = useCallback(async ({ forceRefresh = false } = {}) => {
-    setIsLoadingChallenges(true);
+    if (challengeItemsCountRef.current === 0) {
+      setIsLoadingChallenges(true);
+    }
     try {
       const overview = (await fetchChallengeOverviewData({ forceRefresh })) as ChallengeOverviewPayload;
       const unreadByChallenge = new Map<string, number>();
@@ -227,9 +236,9 @@ export default function ChallengeScreen() {
       setActiveChallenge(active[0] || null);
       setChallengeItems(combined);
     } catch (error: any) {
-      setActiveChallenge(null);
-      setChallengeItems([]);
-      Alert.alert('Failed to load challenges', error?.message || 'Please try again.');
+      if (challengeItemsCountRef.current === 0) {
+        Alert.alert('Failed to load challenges', error?.message || 'Please try again.');
+      }
     } finally {
       setIsLoadingChallenges(false);
     }
@@ -248,19 +257,50 @@ export default function ChallengeScreen() {
           : 'GOLD';
         params.set('audience', normalizedTier);
       }
-      const response = await apiRequest<{ posts?: Array<Record<string, any>> }>(`/community/posts?${params.toString()}`);
+      const response = await fetchCachedResource(getCommunityPostsCacheKey(scope), async () => {
+        const next = await apiRequest<{ posts?: Array<Record<string, any>> }>(`/community/posts?${params.toString()}`);
+        return { posts: Array.isArray(next.posts) ? next.posts : [] };
+      }, { forceRefresh: true });
       setCommunityPosts((response.posts || []).map(mapCommunityPost).filter((post) => post.id));
     } catch {
-      setCommunityPosts([]);
+      // Keep the current/cached feed visible.
     }
   }, [userTier]);
 
   useEffect(() => {
-    void loadChallenges();
+    let cancelled = false;
+    hydrateCachedResource<ChallengeOverviewPayload>(CHALLENGE_OVERVIEW_CACHE_KEY)
+      .then((overview) => {
+        if (cancelled || !overview) return;
+        const active = (overview.active_challenges || []).map((item) => buildChallengeItem(item, 'active'));
+        const ready = (overview.ready_to_start || []).map((item) => buildChallengeItem(item, 'ready'));
+        const completed = (overview.completed_challenges || []).map((item) => buildChallengeItem(item, 'completed'));
+        const combined = [...active, ...ready, ...completed].filter((item) => item.challengeId);
+        setActiveChallenge(active[0] || null);
+        setChallengeItems(combined);
+        setIsLoadingChallenges(false);
+      })
+      .finally(() => {
+        if (!cancelled) void loadChallenges();
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [loadChallenges]);
 
   useEffect(() => {
-    void loadCommunityPosts(communityScope);
+    let cancelled = false;
+    hydrateCachedResource<{ posts?: Array<Record<string, any>> }>(getCommunityPostsCacheKey(communityScope))
+      .then((response) => {
+        if (cancelled || !response) return;
+        setCommunityPosts((response.posts || []).map(mapCommunityPost).filter((post) => post.id));
+      })
+      .finally(() => {
+        if (!cancelled) void loadCommunityPosts(communityScope);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [communityScope, loadCommunityPosts]);
 
   const handleSelectChallenge = (c: ChallengeItem) => {

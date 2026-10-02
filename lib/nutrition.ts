@@ -1,6 +1,6 @@
 import { apiRequest } from './api';
 import { fetchCachedResource, getCachedResourceSnapshot, primeCachedResource } from './resourceCache';
-import { NUTRITION_PLAN_LATEST_CACHE_KEY } from './cacheKeys';
+import { getNutritionMealLogsCacheKey, NUTRITION_PLAN_LATEST_CACHE_KEY } from './cacheKeys';
 
 export type NutritionMealEntry = {
   name: string;
@@ -174,7 +174,12 @@ export async function updateProgressiveNutritionMealCompletion(payload: {
 }
 
 export async function getNutritionMealLogs(date: string) {
-  return apiRequest<{ logs: NutritionMealLog[] }>(`/ai/nutrition/meal-logs?date=${encodeURIComponent(date)}`);
+  return fetchCachedResource(getNutritionMealLogsCacheKey(date), async () => {
+    const response = await apiRequest<{ logs: NutritionMealLog[] }>(`/ai/nutrition/meal-logs?date=${encodeURIComponent(date)}`);
+    return {
+      logs: Array.isArray(response.logs) ? response.logs : [],
+    };
+  });
 }
 
 export async function createNutritionMealLog(payload: {
@@ -188,17 +193,33 @@ export async function createNutritionMealLog(payload: {
   logged_date?: string;
   completed?: boolean;
 }) {
-  return apiRequest<NutritionMealLog>('/ai/nutrition/meal-logs', {
+  const created = await apiRequest<NutritionMealLog>('/ai/nutrition/meal-logs', {
     method: 'POST',
     body: payload,
   });
+  const date = created.logged_date || payload.logged_date || new Date().toISOString().slice(0, 10);
+  const current = getCachedResourceSnapshot<{ logs: NutritionMealLog[] }>(getNutritionMealLogsCacheKey(date));
+  if (current) {
+    await primeCachedResource(getNutritionMealLogsCacheKey(date), {
+      logs: [created, ...(current.logs || []).filter((log) => log.id !== created.id)],
+    });
+  }
+  return created;
 }
 
 export async function updateNutritionMealLog(logId: string, payload: { completed: boolean }) {
-  return apiRequest<NutritionMealLog>(`/ai/nutrition/meal-logs/${encodeURIComponent(logId)}`, {
+  const updated = await apiRequest<NutritionMealLog>(`/ai/nutrition/meal-logs/${encodeURIComponent(logId)}`, {
     method: 'PATCH',
     body: payload,
   });
+  const date = updated.logged_date || new Date().toISOString().slice(0, 10);
+  const current = getCachedResourceSnapshot<{ logs: NutritionMealLog[] }>(getNutritionMealLogsCacheKey(date));
+  if (current) {
+    await primeCachedResource(getNutritionMealLogsCacheKey(date), {
+      logs: (current.logs || []).map((log) => log.id === updated.id ? updated : log),
+    });
+  }
+  return updated;
 }
 
 export async function deleteNutritionMealLog(logId: string) {

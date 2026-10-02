@@ -31,6 +31,8 @@ import ClaudeWeekPlanModal from '../../components/nutrition/ClaudeWeekPlanModal'
 import ClaudeShoppingListModal from '../../components/nutrition/ClaudeShoppingListModal';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../lib/i18n';
+import { getNutritionMealLogsCacheKey, NUTRITION_PLAN_LATEST_CACHE_KEY } from '../../lib/cacheKeys';
+import { hydrateCachedResource } from '../../lib/resourceCache';
 
 const OBSIDIAN = '#0D0D0D';
 const NAVY = '#0D2B45';
@@ -71,12 +73,29 @@ export default function MealPlanScreen() {
   useEffect(() => {
     let cancelled = false;
 
+    const hydrateCachedData = async () => {
+      const [cachedPlan, cachedLogs] = await Promise.all([
+        hydrateCachedResource<NutritionPlanApiResponse>(NUTRITION_PLAN_LATEST_CACHE_KEY),
+        hydrateCachedResource<{ logs: NutritionMealLog[] }>(getNutritionMealLogsCacheKey(todayIsoDate)),
+      ]);
+      if (cancelled) return;
+      if (cachedPlan) {
+        setNutritionPlan(cachedPlan);
+        if (cachedPlan.daily_protein_target) setProteinTarget(cachedPlan.daily_protein_target);
+        if (cachedPlan.baseline_weight) setUserWeight(cachedPlan.baseline_weight);
+      }
+      if (cachedLogs?.logs) {
+        setMealLogs(cachedLogs.logs);
+      }
+    };
+
     const loadData = async () => {
       try {
+        await hydrateCachedData();
         const [user, metrics, plan, logsResponse] = await Promise.all([
           fetchCurrentUser().catch(() => null),
           fetchCurrentUserBodyMetrics().catch(() => null),
-          getLatestNutritionPlan({ forceRefresh: true }).catch(() => null),
+          getLatestNutritionPlan().catch(() => null),
           getNutritionMealLogs(todayIsoDate).catch(() => ({ logs: [] })),
         ]);
 

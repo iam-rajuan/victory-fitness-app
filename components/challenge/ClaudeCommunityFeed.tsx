@@ -662,8 +662,8 @@ export default function ClaudeCommunityFeed({
       <View style={styles.postsList}>
         {feed.length === 0 && (
           <View style={[styles.emptyPostCard, { backgroundColor: isDark ? NAVY : '#FFFFFF' }]}>
-            <Text style={[styles.emptyPostTitle, { color: isDark ? IVORY : NAVY }]}>No community posts yet</Text>
-            <Text style={styles.emptyPostBody}>Posts from the backend community feed will appear here.</Text>
+            <Text style={[styles.emptyPostTitle, { color: isDark ? IVORY : NAVY }]}>Your circle is quiet right now</Text>
+            <Text style={styles.emptyPostBody}>Share a win, a question, or a quick training note to start the conversation.</Text>
           </View>
         )}
         {feed.map((p) => (
