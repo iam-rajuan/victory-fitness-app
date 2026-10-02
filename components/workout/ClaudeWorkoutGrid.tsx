@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, StyleSheet, Text, View, Pressable, Platform } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../lib/i18n';
 import CrossPlatformWebView from '../CrossPlatformWebView';
@@ -68,6 +68,16 @@ export default function ClaudeWorkoutGrid({
 }: ClaudeWorkoutGridProps) {
   const { colors, isDark } = useTheme();
   const { t } = useLanguage();
+  const [loadedImages, setLoadedImages] = React.useState<Record<string, boolean>>({});
+  const markImageLoaded = (url?: string) => {
+    const key = String(url || '').trim();
+    if (!key) return;
+    setLoadedImages((current) => current[key] ? current : { ...current, [key]: true });
+  };
+  const isImageLoaded = (url?: string) => {
+    const key = String(url || '').trim();
+    return !key || Boolean(loadedImages[key]);
+  };
 
   return (
     <View style={styles.container}>
@@ -81,11 +91,20 @@ export default function ClaudeWorkoutGrid({
           >
             <View style={styles.mediaWrap}>
               {w.thumbnail ? (
-                <Image
-                  source={{ uri: w.thumbnail }}
-                  style={styles.thumbnail}
-                  resizeMode="cover"
-                />
+                <>
+                  {!isImageLoaded(w.thumbnail) ? (
+                    <View style={styles.thumbnailLoading}>
+                      <ActivityIndicator size="small" color={GOLD} />
+                    </View>
+                  ) : null}
+                  <Image
+                    source={{ uri: w.thumbnail }}
+                    style={[styles.thumbnail, !isImageLoaded(w.thumbnail) && styles.thumbnailHidden]}
+                    resizeMode="cover"
+                    onLoad={() => markImageLoaded(w.thumbnail)}
+                    onError={() => markImageLoaded(w.thumbnail)}
+                  />
+                </>
               ) : w.videoUrl && (w.videoSource === 'UPLOAD' || isDirectVideoUrl(w.videoUrl)) ? (
                 Platform.OS === 'web' ? (
                   React.createElement('video', {
@@ -116,12 +135,14 @@ export default function ClaudeWorkoutGrid({
                   </View>
                 )
               ) : null}
-              {w.thumbnail || w.videoUrl ? <View style={styles.thumbnailOverlay} pointerEvents="none" /> : null}
-              <View style={styles.playCircle}>
-                <View style={styles.playArrow} />
-              </View>
+              {(w.thumbnail && isImageLoaded(w.thumbnail)) || (!w.thumbnail && w.videoUrl) ? <View style={styles.thumbnailOverlay} pointerEvents="none" /> : null}
+              {isImageLoaded(w.thumbnail) ? (
+                <View style={styles.playCircle}>
+                  <View style={styles.playArrow} />
+                </View>
+              ) : null}
               {w.completed ? <Text style={styles.completedBadge}>✓ {t('Done')}</Text> : null}
-              <Text style={styles.badge}>{w.badge}</Text>
+              {isImageLoaded(w.thumbnail) ? <Text style={styles.badge}>{w.badge}</Text> : null}
             </View>
 
             <Text style={[styles.workoutName, { color: colors.text }]}>{w.name}</Text>
@@ -185,6 +206,15 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     width: '100%',
     height: '100%',
+  },
+  thumbnailHidden: {
+    opacity: 0,
+  },
+  thumbnailLoading: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: NAVY,
   },
   thumbnailOverlay: {
     ...StyleSheet.absoluteFillObject,

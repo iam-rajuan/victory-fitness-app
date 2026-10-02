@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, StyleSheet, Text, View, ScrollView, Pressable, Platform } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, View, ScrollView, Pressable, Platform } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../lib/i18n';
 import CrossPlatformWebView from '../CrossPlatformWebView';
@@ -70,6 +70,7 @@ export default function ClaudeWorkoutRowCarousel({
   const { isDark } = useTheme();
   const { t } = useLanguage();
   const scrollRef = React.useRef<ScrollView>(null);
+  const [loadedImages, setLoadedImages] = React.useState<Record<string, boolean>>({});
 
   const isMouseDown = React.useRef(false);
   const startX = React.useRef(0);
@@ -77,6 +78,15 @@ export default function ClaudeWorkoutRowCarousel({
   const hasDragged = React.useRef(false);
 
   const snapInterval = type === 'programs' ? 170 : 208;
+  const markImageLoaded = (url?: string) => {
+    const key = String(url || '').trim();
+    if (!key) return;
+    setLoadedImages((current) => current[key] ? current : { ...current, [key]: true });
+  };
+  const isImageLoaded = (url?: string) => {
+    const key = String(url || '').trim();
+    return !key || Boolean(loadedImages[key]);
+  };
 
   const handleAction = () => {
     if (onActionPress) {
@@ -186,7 +196,20 @@ export default function ClaudeWorkoutRowCarousel({
             >
               <View style={styles.programMedia}>
                 {p.image ? (
-                  <Image source={{ uri: p.image }} style={styles.mediaImage} resizeMode="cover" />
+                  <>
+                    {!isImageLoaded(p.image) ? (
+                      <View style={styles.thumbnailLoading}>
+                        <ActivityIndicator size="small" color={GOLD} />
+                      </View>
+                    ) : null}
+                    <Image
+                      source={{ uri: p.image }}
+                      style={[styles.mediaImage, !isImageLoaded(p.image) && styles.mediaImageHidden]}
+                      resizeMode="cover"
+                      onLoad={() => markImageLoaded(p.image)}
+                      onError={() => markImageLoaded(p.image)}
+                    />
+                  </>
                 ) : null}
                 {/* Gradient overlay from prototype: linear-gradient(180deg, rgba(201,148,58,.14) 0%, rgba(13,43,69,0) 55%) */}
                 <View
@@ -229,7 +252,20 @@ export default function ClaudeWorkoutRowCarousel({
             >
               <View style={styles.workoutMedia}>
                 {w.thumbnail ? (
-                  <Image source={{ uri: w.thumbnail }} style={styles.mediaImage} resizeMode="cover" />
+                  <>
+                    {!isImageLoaded(w.thumbnail) ? (
+                      <View style={styles.thumbnailLoading}>
+                        <ActivityIndicator size="small" color={GOLD} />
+                      </View>
+                    ) : null}
+                    <Image
+                      source={{ uri: w.thumbnail }}
+                      style={[styles.mediaImage, !isImageLoaded(w.thumbnail) && styles.mediaImageHidden]}
+                      resizeMode="cover"
+                      onLoad={() => markImageLoaded(w.thumbnail)}
+                      onError={() => markImageLoaded(w.thumbnail)}
+                    />
+                  </>
                 ) : w.videoUrl && (w.videoSource === 'UPLOAD' || isDirectVideoUrl(w.videoUrl)) ? (
                   Platform.OS === 'web' ? (
                     React.createElement('video', {
@@ -260,12 +296,14 @@ export default function ClaudeWorkoutRowCarousel({
                     </View>
                   )
                 ) : null}
-                {w.thumbnail || w.videoUrl ? <View style={styles.workoutImageOverlay} pointerEvents="none" /> : null}
-                <View style={styles.playCircle}>
-                  <View style={styles.playArrow} />
-                </View>
+                {(w.thumbnail && isImageLoaded(w.thumbnail)) || (!w.thumbnail && w.videoUrl) ? <View style={styles.workoutImageOverlay} pointerEvents="none" /> : null}
+                {isImageLoaded(w.thumbnail) ? (
+                  <View style={styles.playCircle}>
+                    <View style={styles.playArrow} />
+                  </View>
+                ) : null}
                 {w.completed ? <Text style={styles.completedBadge}>✓ Done</Text> : null}
-                <Text style={styles.workoutBadge}>{w.t}</Text>
+                {isImageLoaded(w.thumbnail) ? <Text style={styles.workoutBadge}>{w.t}</Text> : null}
               </View>
               <Text style={styles.workoutName}>{w.n}</Text>
               <Text style={styles.workoutMeta}>{w.m}</Text>
@@ -343,6 +381,15 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     width: '100%',
     height: '100%',
+  },
+  mediaImageHidden: {
+    opacity: 0,
+  },
+  thumbnailLoading: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: NAVY,
   },
   programTag: {
     position: 'absolute',

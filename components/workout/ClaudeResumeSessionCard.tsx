@@ -1,5 +1,5 @@
-import React from 'react';
-import { Image, StyleSheet, Text, View, Pressable, Platform } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Image, StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../lib/i18n';
 import CrossPlatformWebView from '../CrossPlatformWebView';
@@ -47,6 +47,11 @@ export default function ClaudeResumeSessionCard({
 }: ClaudeResumeSessionCardProps) {
   const { colors, isDark } = useTheme();
   const { t } = useLanguage();
+  const [thumbnailLoaded, setThumbnailLoaded] = useState(!thumbnail);
+
+  useEffect(() => {
+    setThumbnailLoaded(!thumbnail);
+  }, [thumbnail]);
 
   return (
     <View style={styles.container}>
@@ -72,7 +77,20 @@ export default function ClaudeResumeSessionCard({
         {/* Top media container */}
         <View style={styles.mediaWrap}>
           {thumbnail ? (
-            <Image source={{ uri: thumbnail }} style={styles.mediaImage} resizeMode="cover" />
+            <>
+              {!thumbnailLoaded ? (
+                <View style={styles.thumbnailLoading}>
+                  <ActivityIndicator size="small" color={GOLD} />
+                </View>
+              ) : null}
+              <Image
+                source={{ uri: thumbnail }}
+                style={[styles.mediaImage, !thumbnailLoaded && styles.mediaImageHidden]}
+                resizeMode="cover"
+                onLoad={() => setThumbnailLoaded(true)}
+                onError={() => setThumbnailLoaded(true)}
+              />
+            </>
           ) : videoUrl && (videoSource === 'UPLOAD' || isDirectVideoUrl(videoUrl)) ? (
             Platform.OS === 'web' ? (
               React.createElement('video', {
@@ -120,12 +138,14 @@ export default function ClaudeResumeSessionCard({
           />
 
           {/* Big gold play circle */}
-          <View style={styles.playCircle}>
-            <View style={styles.playArrow} />
-          </View>
+          {thumbnailLoaded ? (
+            <View style={styles.playCircle}>
+              <View style={styles.playArrow} />
+            </View>
+          ) : null}
 
           {/* Time remaining pill badge */}
-          <Text style={styles.timeBadge}>{minutesLeft}</Text>
+          {thumbnailLoaded ? <Text style={styles.timeBadge}>{minutesLeft}</Text> : null}
           {completed ? <Text style={styles.completedBadge}>✓ Done</Text> : null}
 
           {/* Bottom progress bar */}
@@ -180,7 +200,7 @@ const styles = StyleSheet.create({
   mediaWrap: {
     position: 'relative',
     height: 168,
-    backgroundColor: OBSIDIAN,
+    backgroundColor: NAVY,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(247, 243, 238, 0.12)',
     alignItems: 'center',
@@ -190,6 +210,15 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     width: '100%',
     height: '100%',
+  },
+  mediaImageHidden: {
+    opacity: 0,
+  },
+  thumbnailLoading: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: NAVY,
   },
   playCircle: {
     width: 60,

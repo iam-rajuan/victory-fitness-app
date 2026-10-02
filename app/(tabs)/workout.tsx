@@ -193,17 +193,37 @@ function mapLibraryCategory(category: WorkoutLibraryCategory, idx: number): Prog
   };
 }
 
-function prefetchWorkoutImages(library: WorkoutLibraryResponse) {
-  const urls = [
+function getWorkoutImageUrls(library: WorkoutLibraryResponse, limit = 18) {
+  return [
     ...library.workouts.map((workout) => workout.thumbnail),
     ...library.categories.map((category) => category.image),
   ]
     .map((url) => String(url || '').trim())
     .filter(Boolean)
-    .slice(0, 18);
-  urls.forEach((url) => {
-    Image.prefetch(url).catch(() => undefined);
-  });
+    .slice(0, limit);
+}
+
+async function prefetchWorkoutImages(library: WorkoutLibraryResponse, limit = 18) {
+  const urls = getWorkoutImageUrls(library, limit);
+  await Promise.allSettled(urls.map((url) => Image.prefetch(url)));
+}
+
+async function prefetchCriticalWorkoutImages(library: WorkoutLibraryResponse) {
+  const urls = [
+    library.featuredWorkout?.thumbnail,
+    ...library.workouts.map((workout) => workout.thumbnail),
+    ...library.categories.map((category) => category.image),
+  ]
+    .map((url) => String(url || '').trim())
+    .filter(Boolean)
+    .slice(0, 8);
+
+  if (!urls.length) return;
+
+  await Promise.race([
+    Promise.allSettled(urls.map((url) => Image.prefetch(url))),
+    new Promise((resolve) => setTimeout(resolve, 1400)),
+  ]);
 }
 
 function parsePositiveInt(value: unknown, fallback: number) {
@@ -286,15 +306,16 @@ export default function WorkoutScreen() {
       if (!existing?.id) return mappedWorkouts[0] || existing || null;
       return mappedWorkouts.find((workout) => workout.id === existing.id) || existing;
     });
-    prefetchWorkoutImages(library);
+    void prefetchWorkoutImages(library).catch(() => undefined);
     return mappedWorkouts;
   };
 
   const loadData = async () => {
     try {
       hydrateCachedWorkoutLibrary()
-        .then((cachedLibrary) => {
+        .then(async (cachedLibrary) => {
           if (cachedLibrary?.workouts?.length) {
+            await prefetchCriticalWorkoutImages(cachedLibrary);
             applyWorkoutLibrary(cachedLibrary);
           }
         })
@@ -341,6 +362,7 @@ export default function WorkoutScreen() {
       );
       localCompletedIds.forEach((id) => completedWorkoutIds.add(id));
       completedWorkoutIdsRef.current.forEach((id) => completedWorkoutIds.add(id));
+      await prefetchCriticalWorkoutImages(library);
       const mappedWorkouts = applyWorkoutLibrary(library, completedWorkoutIds, completedWorkoutTitles);
       const requestedWorkoutId = typeof params.workoutId === 'string' ? params.workoutId : '';
       if (params.open === '1' && requestedWorkoutId && openedParamWorkoutRef.current !== requestedWorkoutId) {
