@@ -27,8 +27,8 @@ const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' })
 export default function ClaudeAlsoTodayCard({
   partnerName,
   partnerTrainedToday = true,
-  sessionsDoneThisWeek = 3,
-  sessionsTargetThisWeek = 4,
+  sessionsDoneThisWeek = 0,
+  sessionsTargetThisWeek = 0,
   journalWrittenToday = false,
   onNavigateWorkout,
 }: ClaudeAlsoTodayCardProps) {
@@ -65,7 +65,12 @@ export default function ClaudeAlsoTodayCard({
             styles.itemRowBorder,
             { borderBottomColor: isDark ? 'rgba(247, 243, 238, 0.1)' : 'rgba(13, 43, 69, 0.08)' },
           ]}
-          onPress={() => pushRoute(router, '/duo')}
+          onPress={() =>
+            pushRoute(router, {
+              pathname: '/(tabs)/profile',
+              params: { openDuo: '1' },
+            })
+          }
         >
           {partnerName ? (
             <View style={[styles.dot, partnerTrainedToday ? styles.dotGreen : styles.dotGoldRing]} />

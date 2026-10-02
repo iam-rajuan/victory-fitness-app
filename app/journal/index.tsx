@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { apiRequest } from '../../lib/api';
-import { JournalEntry } from '../../lib/screenData';
+import { JOURNAL_ENTRIES_CACHE_KEY, JournalEntry } from '../../lib/screenData';
+import { primeCachedResource } from '../../lib/resourceCache';
 import RequirementAuditBoundary from '../../components/audit/RequirementAuditBoundary';
 
 const OBSIDIAN = '#0D0D0D';
@@ -60,24 +61,8 @@ export default function JournalScreen() {
           }
         }
       } catch {
-        // Fallback demo entries matching prototype
         if (!cancelled) {
-          setPastEntries([
-            {
-              id: 'j1',
-              title: 'Yesterday',
-              prompt: 'What did you avoid, and why?',
-              content: 'Put the session off until 21:00 because of work. Did it anyway. The trigger held.',
-              created_at: new Date(Date.now() - 86400000).toISOString(),
-            } as any,
-            {
-              id: 'j2',
-              title: 'Wednesday',
-              prompt: 'Who did you show up for?',
-              content: 'Called my brother instead of scrolling. Twenty minutes, no phone on the table.',
-              created_at: new Date(Date.now() - 172800000).toISOString(),
-            } as any,
-          ]);
+          setPastEntries([]);
         }
       } finally {
         if (!cancelled) setLoadingHistory(false);
@@ -99,7 +84,7 @@ export default function JournalScreen() {
 
     setSaving(true);
     try {
-      await apiRequest('/journal/entries', {
+      const savedEntry = await apiRequest<JournalEntry>('/journal/entries', {
         method: 'POST',
         body: {
           mood: 'VICTORIOUS',
@@ -107,6 +92,9 @@ export default function JournalScreen() {
           prompt: currentPrompt,
         },
       });
+      const nextEntries = [savedEntry, ...pastEntries.filter((item) => item.id !== savedEntry.id)];
+      setPastEntries(nextEntries);
+      await primeCachedResource(JOURNAL_ENTRIES_CACHE_KEY, { entries: nextEntries }, true);
       setEntryText('');
       setStreakDays((prev) => prev + 1);
       Alert.alert('Saved', 'Your reflection is securely saved.');
@@ -116,13 +104,7 @@ export default function JournalScreen() {
         router.replace('/(tabs)');
       }
     } catch {
-      // Offline fallback
-      Alert.alert('Saved', 'Your reflection is saved to your daily log.');
-      if (router.canGoBack()) {
-        router.back();
-      } else {
-        router.replace('/(tabs)');
-      }
+      Alert.alert('Unable to save', 'Please check your connection and try again.');
     } finally {
       setSaving(false);
     }

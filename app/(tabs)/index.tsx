@@ -575,8 +575,19 @@ export default function HomeScreen() {
   }, [nutritionPlan]);
 
   const sessionsDoneThisWeek = useMemo(() => {
+    if (typeof homeWorkoutSummary?.week?.doneCount === 'number') {
+      return Math.max(0, homeWorkoutSummary.week.doneCount);
+    }
     return workoutLogs.filter((log) => isThisLocalWeek(log.completed_at || log.started_at)).length;
-  }, [workoutLogs]);
+  }, [homeWorkoutSummary?.week?.doneCount, workoutLogs]);
+
+  const sessionsTargetThisWeek = useMemo(() => {
+    const backendTarget = homeWorkoutSummary?.week?.targetCount;
+    if (typeof backendTarget === 'number') {
+      return Math.max(0, backendTarget);
+    }
+    return 4;
+  }, [homeWorkoutSummary?.week?.targetCount]);
 
   const latestCompletedToday = useMemo(() => {
     return workoutLogs.find((log) => isSameLocalDay(log.completed_at || log.started_at));
@@ -932,7 +943,7 @@ export default function HomeScreen() {
           partnerName={accountabilityPartner?.partner?.name}
           partnerTrainedToday={Boolean(accountabilityPartner?.partner?.trained_today)}
           sessionsDoneThisWeek={sessionsDoneThisWeek}
-          sessionsTargetThisWeek={4}
+          sessionsTargetThisWeek={sessionsTargetThisWeek}
           journalWrittenToday={journalWrittenToday}
           onNavigateWorkout={() => pushRoute(router, '/workout')}
         />

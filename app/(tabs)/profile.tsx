@@ -12,7 +12,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   fetchAccountabilityPartner,
   fetchCurrentUser,
@@ -176,6 +176,7 @@ function calculateWorkoutConsistency(items: any[], fallbackScore: number) {
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ openDuo?: string }>();
   const { isDark, colors, theme } = useTheme();
   const { language, setLanguage, t } = useLanguage();
 
@@ -229,6 +230,12 @@ export default function ProfileScreen() {
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const [feedbackWouldPay, setFeedbackWouldPay] = useState<boolean | null>(null);
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
+
+  useEffect(() => {
+    if (params.openDuo === '1') {
+      setShowDuoModal(true);
+    }
+  }, [params.openDuo]);
 
   const handleLanguageSelect = async (nextLanguage: LanguageCode) => {
     if (savingLanguage) return;

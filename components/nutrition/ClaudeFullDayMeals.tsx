@@ -21,11 +21,11 @@ interface ClaudeFullDayMealsProps {
   updatingMealKey?: string | null;
   onToggleMeal?: (meal: MealRecord) => void;
   onRemoveMeal?: (meal: MealRecord) => void;
-  onLogMeal?: (mealId: string) => void;
 }
 
 const NAVY = '#0D2B45';
 const GOLD = '#C9943A';
+const COPPER = '#B5651D';
 const GREEN = '#1A7A4A';
 const IVORY = '#F7F3EE';
 
@@ -33,7 +33,7 @@ const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", de
 const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
-export default function ClaudeFullDayMeals({ meals, updatingMealKey, onToggleMeal, onRemoveMeal, onLogMeal }: ClaudeFullDayMealsProps) {
+export default function ClaudeFullDayMeals({ meals, updatingMealKey, onToggleMeal, onRemoveMeal }: ClaudeFullDayMealsProps) {
   const { t } = useLanguage();
   const visibleMeals = meals.length > 0 ? meals : [
     {
@@ -46,79 +46,83 @@ export default function ClaudeFullDayMeals({ meals, updatingMealKey, onToggleMea
       logged: false,
     },
   ];
+  const doneCount = meals.filter((meal) => meal.logged).length;
+  const totalCount = meals.length;
+
   return (
     <View style={styles.container}>
-      <Text style={styles.kicker}>{t('YOUR FULL DAY')}</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.kicker}>{t('YOUR FULL DAY')}</Text>
+        {totalCount > 0 ? (
+          <Text style={styles.trackBadge}>{t('{done} of {total} done', { done: doneCount, total: totalCount })}</Text>
+        ) : null}
+      </View>
 
       <View style={styles.card}>
         {visibleMeals.map((m, idx) => {
           const isHighlight = m.isDinnerPlanned && !m.logged;
           const isLast = idx === visibleMeals.length - 1;
           const isUpdating = updatingMealKey === (m.mealKey || m.id);
+          const canToggle = m.id !== 'empty' && Boolean(onToggleMeal);
 
           return (
-            <View
+            <TouchableOpacity
               key={m.id}
+              activeOpacity={canToggle ? 0.82 : 1}
               style={[
                 styles.mealRow,
                 !isLast && styles.mealRowBorder,
                 isHighlight && styles.highlightRow,
+                m.logged && styles.mealRowDone,
               ]}
+              onPress={() => {
+                if (!canToggle || isUpdating) return;
+                onToggleMeal?.(m);
+              }}
+              disabled={!canToggle || isUpdating}
             >
-              {/* Status Indicator Dot matching prototype */}
-              {m.logged ? (
-                <View style={styles.greenDot} />
-              ) : isHighlight ? (
-                <View style={styles.goldRingDot} />
-              ) : (
-                <View style={styles.grayRingDot} />
-              )}
+              <View
+                style={[
+                  styles.checkBox,
+                  m.logged ? styles.checkBoxDone : styles.checkBoxPending,
+                ]}
+              >
+                {m.logged ? <Text style={styles.checkMark}>✓</Text> : null}
+              </View>
 
-              {/* Meal Name & Sub */}
               <View style={styles.mealTextCol}>
-                <Text style={styles.mealName}>{m.name}</Text>
+                <Text style={[styles.mealName, m.logged && styles.mealNameDone]}>{m.name}</Text>
                 <Text style={styles.mealSub}>{m.sub}</Text>
               </View>
 
-              {/* Right Macro & CTA */}
               <View style={styles.rightCol}>
                 <Text
                   style={[
                     styles.proteinVal,
+                    m.logged && styles.proteinValDone,
                     !m.logged && !isHighlight && { color: 'rgba(247, 243, 238, 0.6)' },
                   ]}
                 >
-                  {`${m.proteinG} g`}
+                  {m.logged ? t('Eaten') : `+${m.proteinG} g`}
                 </Text>
-                {m.logged ? (
-                  <>
-                    <Text style={styles.kcalVal}>{`${m.kcal} kcal`}</Text>
+                <Text style={styles.kcalVal}>{`${m.kcal || 0} kcal`}</Text>
+                {m.isExtraLog ? (
                     <TouchableOpacity
                       activeOpacity={0.72}
-                      onPress={() => onRemoveMeal?.(m)}
+                      onPress={(event) => {
+                        event.stopPropagation?.();
+                        onRemoveMeal?.(m);
+                      }}
                       style={styles.removeBtn}
                       disabled={isUpdating}
                     >
                       <Text style={styles.removeText}>{isUpdating ? '...' : t('REMOVE')}</Text>
                     </TouchableOpacity>
-                  </>
-                ) : (
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      onToggleMeal?.(m);
-                      onLogMeal?.(m.id);
-                    }}
-                    style={styles.actionBtn}
-                    disabled={isUpdating || m.id === 'empty'}
-                  >
-                    <Text style={styles.actionText}>
-                      {isUpdating ? '...' : t('ADD')}
-                    </Text>
-                  </TouchableOpacity>
-                )}
+                ) : isUpdating ? (
+                  <Text style={styles.updatingText}>...</Text>
+                ) : null}
               </View>
-            </View>
+            </TouchableOpacity>
           );
         })}
       </View>
@@ -135,22 +139,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 10,
+  },
   kicker: {
     fontFamily: DMSANS,
     fontSize: 10.5,
     fontWeight: '500',
     letterSpacing: 1.4,
     color: 'rgba(247, 243, 238, 0.42)',
-    marginBottom: 10,
+  },
+  trackBadge: {
+    fontFamily: MONO,
+    fontSize: 11,
+    fontWeight: '500',
+    color: GOLD,
   },
   card: {
     backgroundColor: NAVY,
     borderRadius: 18,
+    borderLeftWidth: 4,
+    borderLeftColor: COPPER,
     overflow: 'hidden',
   },
   mealRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 13,
     paddingVertical: 15,
     paddingHorizontal: 16,
@@ -162,28 +180,31 @@ const styles = StyleSheet.create({
   highlightRow: {
     backgroundColor: 'rgba(201, 148, 58, 0.09)',
   },
-  greenDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 99,
+  mealRowDone: {
+    backgroundColor: 'rgba(26, 122, 74, 0.1)',
+  },
+  checkBox: {
+    width: 19,
+    height: 19,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+    flexShrink: 0,
+  },
+  checkBoxPending: {
+    borderWidth: 1.5,
+    borderColor: 'rgba(201, 148, 58, 0.6)',
+  },
+  checkBoxDone: {
     backgroundColor: GREEN,
-    flexShrink: 0,
   },
-  goldRingDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 99,
-    borderWidth: 1.5,
-    borderColor: GOLD,
-    flexShrink: 0,
-  },
-  grayRingDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 99,
-    borderWidth: 1.5,
-    borderColor: 'rgba(247, 243, 238, 0.3)',
-    flexShrink: 0,
+  checkMark: {
+    fontFamily: DMSANS,
+    fontSize: 12,
+    fontWeight: '800',
+    color: IVORY,
+    lineHeight: 15,
   },
   mealTextCol: {
     flex: 1,
@@ -195,6 +216,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: IVORY,
   },
+  mealNameDone: {
+    fontWeight: '500',
+    color: 'rgba(247, 243, 238, 0.55)',
+    textDecorationLine: 'line-through',
+  },
   mealSub: {
     fontFamily: INTER,
     fontSize: 12.5,
@@ -203,12 +229,16 @@ const styles = StyleSheet.create({
   },
   rightCol: {
     alignItems: 'flex-end',
+    flexShrink: 0,
   },
   proteinVal: {
     fontFamily: MONO,
     fontSize: 15,
     fontWeight: '700',
     color: GOLD,
+  },
+  proteinValDone: {
+    color: 'rgba(247, 243, 238, 0.4)',
   },
   kcalVal: {
     fontFamily: MONO,
@@ -232,16 +262,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.7,
     color: GOLD,
   },
-  actionBtn: {
-    marginTop: 2,
-    paddingVertical: 2,
-  },
-  actionText: {
+  updatingText: {
     fontFamily: DMSANS,
-    fontSize: 11.5,
+    fontSize: 11,
     fontWeight: '700',
-    color: GOLD,
-    letterSpacing: 0.8,
+    color: 'rgba(247, 243, 238, 0.45)',
+    marginTop: 5,
   },
   footnote: {
     fontFamily: INTER,

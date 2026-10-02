@@ -26,7 +26,6 @@ import {
 } from '../../lib/nutrition';
 import ClaudeMacroCards from '../../components/nutrition/ClaudeMacroCards';
 import ClaudeFullDayMeals, { MealRecord } from '../../components/nutrition/ClaudeFullDayMeals';
-import ClaudeTodayFiveActions, { ActionItem } from '../../components/nutrition/ClaudeTodayFiveActions';
 import ClaudeMealAnalysisCard from '../../components/nutrition/ClaudeMealAnalysisCard';
 import ClaudeMealAnalysisModal from '../../components/nutrition/ClaudeMealAnalysisModal';
 import ClaudeWeekPlanModal from '../../components/nutrition/ClaudeWeekPlanModal';
@@ -207,19 +206,6 @@ export default function MealPlanScreen() {
     });
     return { target, current };
   }, [mealEntries, mealLogs, todayCompletions]);
-
-  const todayActions = useMemo<ActionItem[]>(() => {
-    return mealEntries.slice(0, 5).map((entry, index) => {
-      const meal = entry.meal as NutritionMealEntry;
-      return {
-        id: `meal-action-${entry.key}`,
-        t: entry.key === 'pre_workout' || entry.key === 'post_workout' ? `Use ${meal.name}` : `Eat ${meal.name}`,
-        why: meal.desc || `${entry.label} from your saved plan`,
-        g: `+${Math.max(0, Number(meal.p || 0))} g`,
-        done: Boolean(todayCompletions[entry.key]) || index < 0,
-      };
-    });
-  }, [mealEntries, todayCompletions]);
 
   const shoppingCategories = useMemo(() => {
     return (nutritionPlan?.shopping_list || []).map((section) => ({
@@ -463,11 +449,7 @@ export default function MealPlanScreen() {
           updatingMealKey={updatingMealKey}
           onToggleMeal={handleToggleMeal}
           onRemoveMeal={handleRemoveMeal}
-          onLogMeal={() => undefined}
         />
-
-        {/* TODAY'S FIVE ACTIONS matching lines 1028-1046 */}
-        <ClaudeTodayFiveActions actions={todayActions} />
 
         {/* MEAL ANALYSIS Photo Card matching lines 1048-1063 */}
         <ClaudeMealAnalysisCard

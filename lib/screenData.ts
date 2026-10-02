@@ -32,6 +32,7 @@ export type JournalEntry = {
   user_id: string;
   mood: string;
   content: string;
+  prompt?: string | null;
   created_at: string;
   updated_at: string;
 };
