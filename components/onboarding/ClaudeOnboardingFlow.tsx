@@ -3069,8 +3069,8 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 18,
     marginBottom: 22,
-    borderWidth: 2,
-    borderColor: '#E53935',
+    borderWidth: 1,
+    borderColor: 'rgba(247,243,238,0.12)',
   },
   nudgeHeader: {
     flexDirection: 'row',
