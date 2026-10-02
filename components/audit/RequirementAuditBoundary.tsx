@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Platform, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { apiRequest } from '../../lib/api';
 
 type AuditStatus = 'extra' | 'uncertain' | 'mismatch';
 
@@ -11,22 +13,96 @@ type RequirementAuditBoundaryProps = {
   style?: ViewStyle;
 };
 
-function isAuditModeEnabled(): boolean {
-  if (process.env.EXPO_PUBLIC_REQUIREMENT_AUDIT === 'true') {
-    return true;
-  }
+const APP_AUDIT_FLAG_KEY = 'requirement_audit_app_marks';
+const APP_AUDIT_STORAGE_KEY = 'victoryRequirementAuditAppMarks';
+let cachedAuditMode: boolean | null = null;
+let auditModePromise: Promise<boolean> | null = null;
 
+function parseStoredAuditMode(value: string | null | undefined): boolean | null {
+  if (value === '1' || value === 'true') return true;
+  if (value === '0' || value === 'false') return false;
+  return null;
+}
+
+async function readStoredAuditMode(): Promise<boolean | null> {
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    const searchParams = new URLSearchParams(window.location.search);
-    if (searchParams.get('requirementAudit') === '1') {
-      return true;
-    }
-    if (window.localStorage && window.localStorage.getItem('requirementAudit') === '1') {
-      return true;
+    try {
+      return parseStoredAuditMode(window.localStorage?.getItem(APP_AUDIT_STORAGE_KEY));
+    } catch {
+      return null;
     }
   }
 
-  return false;
+  try {
+    return parseStoredAuditMode(await AsyncStorage.getItem(APP_AUDIT_STORAGE_KEY));
+  } catch {
+    return null;
+  }
+}
+
+async function writeStoredAuditMode(enabled: boolean): Promise<void> {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    try {
+      window.localStorage?.setItem(APP_AUDIT_STORAGE_KEY, enabled ? '1' : '0');
+    } catch {
+      // Storage is only a cache; backend remains the source of truth.
+    }
+    return;
+  }
+
+  try {
+    await AsyncStorage.setItem(APP_AUDIT_STORAGE_KEY, enabled ? '1' : '0');
+  } catch {
+    // Storage is only a cache; backend remains the source of truth.
+  }
+}
+
+async function loadAuditMode(): Promise<boolean> {
+  if (cachedAuditMode !== null) {
+    return cachedAuditMode;
+  }
+
+  const stored = await readStoredAuditMode();
+  if (stored !== null) {
+    cachedAuditMode = stored;
+  }
+
+  try {
+    const response = await apiRequest<{ items: { key: string; enabled: boolean }[] }>('/me/feature-flags', {
+      skipResponseCache: true,
+    });
+    const item = response.items.find((flag) => flag.key === APP_AUDIT_FLAG_KEY);
+    const enabled = Boolean(item?.enabled);
+    cachedAuditMode = enabled;
+    await writeStoredAuditMode(enabled);
+    return enabled;
+  } catch {
+    cachedAuditMode = stored ?? false;
+    return cachedAuditMode;
+  }
+}
+
+function useAuditModeEnabled(): boolean {
+  const [enabled, setEnabled] = useState(() => cachedAuditMode ?? false);
+
+  useEffect(() => {
+    let mounted = true;
+    if (!auditModePromise) {
+      auditModePromise = loadAuditMode().finally(() => {
+        auditModePromise = null;
+      });
+    }
+    auditModePromise.then((nextEnabled) => {
+      if (mounted) {
+        setEnabled(nextEnabled);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  return enabled;
 }
 
 function getLabel(status: AuditStatus, label?: string): string {
@@ -49,7 +125,9 @@ export default function RequirementAuditBoundary({
   children,
   style,
 }: RequirementAuditBoundaryProps) {
-  if (!isAuditModeEnabled()) {
+  const auditModeEnabled = useAuditModeEnabled();
+
+  if (!auditModeEnabled) {
     return <>{children}</>;
   }
 
