@@ -888,7 +888,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 34,
+    paddingTop: 14,
     paddingBottom: 14,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(247, 243, 238, 0.12)',

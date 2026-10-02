@@ -1153,7 +1153,7 @@ const styles = StyleSheet.create({
     backgroundColor: OBSIDIAN,
   },
   scrollContent: {
-    paddingTop: 20,
+    paddingTop: 12,
     paddingBottom: 60,
     maxWidth: 600,
     width: '100%',

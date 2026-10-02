@@ -577,7 +577,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingTop: Platform.OS === 'web' ? 24 : 22,
+    paddingTop: 12,
     paddingBottom: 110,
   },
   headerRow: {
@@ -585,7 +585,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 12,
+    paddingTop: 4,
   },
   screenTitle: {
     fontFamily: CLASH,
@@ -662,7 +662,7 @@ const styles = StyleSheet.create({
 
   // Silver Lock Paywall styles (matching prototype lines 1112-1128)
   silverLockContainer: {
-    paddingTop: 20,
+    paddingTop: 4,
     paddingBottom: 40,
     paddingHorizontal: 24,
   },

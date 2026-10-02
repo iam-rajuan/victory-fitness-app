@@ -919,7 +919,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   scrollContent: {
-    paddingTop: 22,
+    paddingTop: 12,
     paddingBottom: 96,
   },
 });

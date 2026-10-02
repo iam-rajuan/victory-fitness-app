@@ -579,7 +579,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingTop: Platform.OS === 'web' ? 24 : 22,
+    paddingTop: 12,
     paddingBottom: 110,
   },
   screenTitle: {
@@ -588,6 +588,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: IVORY,
     paddingHorizontal: 20,
-    paddingTop: 12,
+    paddingTop: 4,
   },
 });
