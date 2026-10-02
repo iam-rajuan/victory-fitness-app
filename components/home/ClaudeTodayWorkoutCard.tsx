@@ -136,8 +136,15 @@ export default function ClaudeTodayWorkoutCard({
               {t('EXERCISES')}
             </Text>
           </View>
-          <View style={styles.statCol}>
-            <Text style={[styles.statVal, { color: isDark ? IVORY : NAVY }]}>{t(equipment).toUpperCase()}</Text>
+          <View style={[styles.statCol, styles.equipmentStatCol]}>
+            <Text
+              style={[styles.statVal, styles.equipmentStatVal, { color: isDark ? IVORY : NAVY }]}
+              numberOfLines={2}
+              adjustsFontSizeToFit
+              minimumFontScale={0.72}
+            >
+              {t(equipment).toUpperCase()}
+            </Text>
             <Text
               style={[
                 styles.statLabel,
@@ -234,11 +241,20 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: 'row',
-    gap: 22,
+    alignItems: 'flex-start',
+    gap: 14,
     marginBottom: 20,
   },
   statCol: {
     alignItems: 'flex-start',
+    width: 52,
+    flexShrink: 0,
+  },
+  equipmentStatCol: {
+    flex: 1,
+    minWidth: 0,
+    maxWidth: '100%',
+    width: undefined,
   },
   statVal: {
     fontFamily: MONO,
@@ -246,6 +262,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: IVORY,
     marginBottom: 2,
+  },
+  equipmentStatVal: {
+    maxWidth: '100%',
+    lineHeight: 21,
+    flexShrink: 1,
   },
   statLabel: {
     fontFamily: DMSANS,
