@@ -23,6 +23,7 @@ import {
   CoachWorkoutPlanAction,
 } from '../../lib/api';
 import { savePlanBuiltData } from '../../lib/planStorage';
+import { saveLatestStrengthWorkoutPlan } from '../../lib/workout-plans';
 import { normalizeSubscriptionTier } from '../../lib/access';
 import { pushRoute, goBackOrReplace } from '../../lib/navigation';
 
@@ -577,6 +578,7 @@ export default function ClaudeCoachScreen() {
         target_minutes: action.targetMinutes ?? null,
         summary: action.summary || '',
       });
+      await saveLatestStrengthWorkoutPlan(plan);
       await savePlanBuiltData({
         line: plan.summary || action.summary || planSummaryLineFromPrompt(action.sourcePrompt),
         kit: action.sourcePrompt.toLowerCase().includes('bodyweight') || action.sourcePrompt.toLowerCase().includes('no equipment') ? 'Bodyweight' : 'Profile kit',

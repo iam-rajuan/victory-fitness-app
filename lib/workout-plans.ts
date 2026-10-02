@@ -89,6 +89,10 @@ async function persistLatestStrengthPlan(plan: StrengthPlanResponse | null) {
   }
 }
 
+export async function saveLatestStrengthWorkoutPlan(plan: StrengthPlanResponse | null) {
+  await persistLatestStrengthPlan(plan);
+}
+
 export async function createStrengthWorkoutPlan(payload: Record<string, unknown>) {
   const plan = await apiRequest<StrengthPlanResponse>('/ai/workout-plan/strength', {
     method: 'POST',
@@ -100,7 +104,9 @@ export async function createStrengthWorkoutPlan(payload: Record<string, unknown>
 }
 
 export async function fetchLatestStrengthWorkoutPlan() {
-  const response = await apiRequest<StrengthPlanListResponse>('/ai/workout-plan/strength');
+  const response = await apiRequest<StrengthPlanListResponse>('/ai/workout-plan/strength', {
+    skipResponseCache: true,
+  });
   const plan = response.items[0] ?? null;
   await persistLatestStrengthPlan(plan);
   return plan;
@@ -117,7 +123,9 @@ export async function createHomeSevenDayWorkoutPlan(payload: Record<string, unkn
 }
 
 export async function fetchStrengthWorkoutPlans() {
-  const response = await apiRequest<StrengthPlanListResponse>('/ai/workout-plan/strength');
+  const response = await apiRequest<StrengthPlanListResponse>('/ai/workout-plan/strength', {
+    skipResponseCache: true,
+  });
   const latest = response.items[0] ?? null;
   await persistLatestStrengthPlan(latest);
   return response.items;
