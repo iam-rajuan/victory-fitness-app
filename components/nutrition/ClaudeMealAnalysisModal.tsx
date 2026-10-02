@@ -110,7 +110,7 @@ export default function ClaudeMealAnalysisModal({
       } catch (error: any) {
         if (!cancelled) {
           setAnalysis(null);
-          setAnalysisError(error?.message || 'Unable to analyse this meal right now.');
+          setAnalysisError('AI meal analysis is unavailable right now. Please try again with a clear food photo.');
         }
       } finally {
         if (!cancelled) setIsAnalyzing(false);

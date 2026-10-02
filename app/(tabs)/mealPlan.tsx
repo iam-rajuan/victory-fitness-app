@@ -224,33 +224,62 @@ export default function MealPlanScreen() {
     return `${weekday}, ${day} ${month}`;
   };
 
-  const handleWebPhotoFile = (file: File | null) => {
+  const convertWebImageFileToJpeg = (file: File) => {
+    return new Promise<{ uri: string; base64: string; fileName: string }>((resolve, reject) => {
+      const objectUrl = URL.createObjectURL(file);
+      const image = new Image();
+      image.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const maxSide = 1400;
+          const scale = Math.min(1, maxSide / Math.max(image.naturalWidth || image.width, image.naturalHeight || image.height));
+          canvas.width = Math.max(1, Math.round((image.naturalWidth || image.width) * scale));
+          canvas.height = Math.max(1, Math.round((image.naturalHeight || image.height) * scale));
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            throw new Error('Canvas is unavailable');
+          }
+          ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+          const uri = canvas.toDataURL('image/jpeg', 0.88);
+          const base64 = uri.includes(',') ? uri.split(',')[1] : '';
+          if (!base64) {
+            throw new Error('Converted image was empty');
+          }
+          const stem = (file.name || `meal-photo-${Date.now()}`).replace(/\.[^.]+$/, '');
+          resolve({ uri, base64, fileName: `${stem}.jpg` });
+        } catch (error) {
+          reject(error);
+        } finally {
+          URL.revokeObjectURL(objectUrl);
+        }
+      };
+      image.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error('The selected image could not be read.'));
+      };
+      image.src = objectUrl;
+    });
+  };
+
+  const handleWebPhotoFile = async (file: File | null) => {
     if (!file) return;
     if (!file.type.startsWith('image/')) {
       Alert.alert('Photo required', 'Please choose an image of your meal.');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = String(reader.result || '');
-      const base64 = result.includes(',') ? result.split(',')[1] : '';
-      if (!base64) {
-        Alert.alert('Photo error', 'The selected image could not be read.');
-        return;
-      }
+    try {
+      const converted = await convertWebImageFileToJpeg(file);
       setSelectedMealPhoto({
-        uri: result,
-        base64,
-        mimeType: file.type || 'image/jpeg',
-        fileName: file.name || `meal-photo-${Date.now()}.jpg`,
+        uri: converted.uri,
+        base64: converted.base64,
+        mimeType: 'image/jpeg',
+        fileName: converted.fileName,
       });
       setShowMealAnalysisModal(true);
-    };
-    reader.onerror = () => {
-      Alert.alert('Photo error', 'The selected image could not be read.');
-    };
-    reader.readAsDataURL(file);
+    } catch {
+      Alert.alert('Photo error', 'The selected image could not be converted. Please choose a JPEG, PNG, WEBP, or GIF image.');
+    }
   };
 
   const openWebImagePicker = (source: 'camera' | 'library') => {
