@@ -20,7 +20,6 @@ interface ClaudeFullDayMealsProps {
   meals: MealRecord[];
   updatingMealKey?: string | null;
   onToggleMeal?: (meal: MealRecord) => void;
-  onRemoveMeal?: (meal: MealRecord) => void;
 }
 
 const NAVY = '#0D2B45';
@@ -33,7 +32,7 @@ const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", de
 const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
-export default function ClaudeFullDayMeals({ meals, updatingMealKey, onToggleMeal, onRemoveMeal }: ClaudeFullDayMealsProps) {
+export default function ClaudeFullDayMeals({ meals, updatingMealKey, onToggleMeal }: ClaudeFullDayMealsProps) {
   const { t } = useLanguage();
   const visibleMeals = meals.length > 0 ? meals : [
     {
@@ -86,9 +85,7 @@ export default function ClaudeFullDayMeals({ meals, updatingMealKey, onToggleMea
                   styles.checkBox,
                   m.logged ? styles.checkBoxDone : styles.checkBoxPending,
                 ]}
-              >
-                {m.logged ? <Text style={styles.checkMark}>✓</Text> : null}
-              </View>
+              />
 
               <View style={styles.mealTextCol}>
                 <Text style={[styles.mealName, m.logged && styles.mealNameDone]}>{m.name}</Text>
@@ -106,19 +103,7 @@ export default function ClaudeFullDayMeals({ meals, updatingMealKey, onToggleMea
                   {m.logged ? t('Eaten') : `+${m.proteinG} g`}
                 </Text>
                 <Text style={styles.kcalVal}>{`${m.kcal || 0} kcal`}</Text>
-                {m.isExtraLog ? (
-                    <TouchableOpacity
-                      activeOpacity={0.72}
-                      onPress={(event) => {
-                        event.stopPropagation?.();
-                        onRemoveMeal?.(m);
-                      }}
-                      style={styles.removeBtn}
-                      disabled={isUpdating}
-                    >
-                      <Text style={styles.removeText}>{isUpdating ? '...' : t('REMOVE')}</Text>
-                    </TouchableOpacity>
-                ) : isUpdating ? (
+                {isUpdating ? (
                   <Text style={styles.updatingText}>...</Text>
                 ) : null}
               </View>
@@ -199,13 +184,6 @@ const styles = StyleSheet.create({
   checkBoxDone: {
     backgroundColor: GREEN,
   },
-  checkMark: {
-    fontFamily: DMSANS,
-    fontSize: 12,
-    fontWeight: '800',
-    color: IVORY,
-    lineHeight: 15,
-  },
   mealTextCol: {
     flex: 1,
     minWidth: 0,
@@ -246,21 +224,6 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: 'rgba(247, 243, 238, 0.45)',
     marginTop: 2,
-  },
-  removeBtn: {
-    marginTop: 5,
-    borderRadius: 7,
-    borderWidth: 1,
-    borderColor: 'rgba(201, 148, 58, 0.45)',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-  },
-  removeText: {
-    fontFamily: DMSANS,
-    fontSize: 9.5,
-    fontWeight: '700',
-    letterSpacing: 0.7,
-    color: GOLD,
   },
   updatingText: {
     fontFamily: DMSANS,

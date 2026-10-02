@@ -14,7 +14,6 @@ import { normalizeSubscriptionTier, SubscriptionTier } from '../../lib/access';
 import {
   calculateProteinTarget,
   createNutritionMealLog,
-  deleteNutritionMealLog,
   getLatestNutritionPlan,
   getNutritionMealLogs,
   NutritionDayPlan,
@@ -376,38 +375,6 @@ export default function MealPlanScreen() {
     }
   };
 
-  const handleRemoveMeal = async (meal: MealRecord) => {
-    if (meal.logId) {
-      if (updatingMealKey) return;
-      setUpdatingMealKey(meal.id);
-      try {
-        await deleteNutritionMealLog(meal.logId);
-        setMealLogs((prev) => prev.filter((log) => log.id !== meal.logId));
-      } catch (error: any) {
-        Alert.alert('Unable to remove meal', error?.message || 'Please try again.');
-      } finally {
-        setUpdatingMealKey(null);
-      }
-      return;
-    }
-    const mealKey = meal.mealKey || meal.id;
-    const day = todayPlan?.day || todayKey;
-    if (!mealKey || updatingMealKey) return;
-    setUpdatingMealKey(mealKey);
-    try {
-      const updated = await updateNutritionMealCompletion({
-        day,
-        meal_key: mealKey,
-        completed: false,
-      });
-      setNutritionPlan(updated);
-    } catch (error: any) {
-      Alert.alert('Unable to remove meal', error?.message || 'Please try again.');
-    } finally {
-      setUpdatingMealKey(null);
-    }
-  };
-
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
@@ -448,7 +415,6 @@ export default function MealPlanScreen() {
           meals={fullDayMeals}
           updatingMealKey={updatingMealKey}
           onToggleMeal={handleToggleMeal}
-          onRemoveMeal={handleRemoveMeal}
         />
 
         {/* MEAL ANALYSIS Photo Card matching lines 1048-1063 */}
