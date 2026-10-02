@@ -6,6 +6,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   Alert,
+  Image,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -41,7 +42,7 @@ import ClaudeSessionCompleteModal from '../../components/workout/ClaudeSessionCo
 import ClaudePlanBuildModal from '../../components/workout/ClaudePlanBuildModal';
 import ClaudeWorkoutDetailModal from '../../components/workout/ClaudeWorkoutDetailModal';
 import { getSavedPlanStatus, savePlanBuiltData } from '../../lib/planStorage';
-import { fetchWorkoutLibrary, WorkoutLibraryCategory, WorkoutLibraryItem } from '../../lib/workouts';
+import { fetchWorkoutLibrary, hydrateCachedWorkoutLibrary, WorkoutLibraryCategory, WorkoutLibraryItem, WorkoutLibraryResponse } from '../../lib/workouts';
 import { createHomeSevenDayWorkoutPlan } from '../../lib/workout-plans';
 
 const OBSIDIAN = '#0D0D0D';
@@ -66,7 +67,7 @@ function formatDurationText(seconds: number, minutes: number) {
 
 function formatWorkoutMeta(workout: WorkoutLibraryItem) {
   const duration = formatDurationText(workout.durationSeconds, workout.durationMinutes);
-  const tag = workout.tag || 'Workout';
+  const tag = workout.purposes?.length ? workout.purposes.join(', ') : workout.tag || 'Workout';
   const equipment = workout.equipment || 'Kit not set';
   return `${duration} · ${tag} · ${equipment}`;
 }
@@ -114,6 +115,7 @@ function mapLibraryWorkout(
     videoUrl: workout.videoUrl,
     videoSource: workout.videoSource,
     tag: workout.tag,
+    purposes: workout.purposes?.length ? workout.purposes : (workout.tag ? [workout.tag] : []),
     equipment: workout.equipment,
     durationMinutes: workout.durationMinutes,
     durationSeconds: workout.durationSeconds,
@@ -191,6 +193,19 @@ function mapLibraryCategory(category: WorkoutLibraryCategory, idx: number): Prog
   };
 }
 
+function prefetchWorkoutImages(library: WorkoutLibraryResponse) {
+  const urls = [
+    ...library.workouts.map((workout) => workout.thumbnail),
+    ...library.categories.map((category) => category.image),
+  ]
+    .map((url) => String(url || '').trim())
+    .filter(Boolean)
+    .slice(0, 18);
+  urls.forEach((url) => {
+    Image.prefetch(url).catch(() => undefined);
+  });
+}
+
 function parsePositiveInt(value: unknown, fallback: number) {
   const parsed = parseInt(String(value ?? '').replace(/[^\d]/g, ''), 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
@@ -259,14 +274,38 @@ export default function WorkoutScreen() {
 
   const hasCoach = tier !== 'SILVER' && tier !== 'NONE';
 
+  const applyWorkoutLibrary = (
+    library: WorkoutLibraryResponse,
+    completedWorkoutIds: Set<string> = completedWorkoutIdsRef.current,
+    completedWorkoutTitles: Set<string> = new Set()
+  ) => {
+    const mappedWorkouts = library.workouts.map((workout) => mapLibraryWorkout(workout, completedWorkoutIds, completedWorkoutTitles));
+    setLibraryWorkouts(mappedWorkouts);
+    setLibraryPrograms(library.categories.map(mapLibraryCategory));
+    setSelectedWorkout((existing) => {
+      if (!existing?.id) return mappedWorkouts[0] || existing || null;
+      return mappedWorkouts.find((workout) => workout.id === existing.id) || existing;
+    });
+    prefetchWorkoutImages(library);
+    return mappedWorkouts;
+  };
+
   const loadData = async () => {
     try {
+      hydrateCachedWorkoutLibrary()
+        .then((cachedLibrary) => {
+          if (cachedLibrary?.workouts?.length) {
+            applyWorkoutLibrary(cachedLibrary);
+          }
+        })
+        .catch(() => undefined);
+
       const user = await fetchCurrentUser();
       if (user) setCurrentUser(user);
 
       const [library, completedLogs, onboarding, localCompletedIds] = await Promise.all([
         fetchWorkoutLibrary(),
-        fetchWorkoutLogs(1, 200, 'completed').catch(() => ({ items: [] })),
+        fetchWorkoutLogs(1, 100, 'completed').catch(() => ({ items: [] })),
         fetchCurrentUserOnboarding().catch(() => null),
         readLocalCompletedWorkoutIds(),
       ]);
@@ -302,13 +341,7 @@ export default function WorkoutScreen() {
       );
       localCompletedIds.forEach((id) => completedWorkoutIds.add(id));
       completedWorkoutIdsRef.current.forEach((id) => completedWorkoutIds.add(id));
-      const mappedWorkouts = library.workouts.map((workout) => mapLibraryWorkout(workout, completedWorkoutIds, completedWorkoutTitles));
-      setLibraryWorkouts(mappedWorkouts);
-      setLibraryPrograms(library.categories.map(mapLibraryCategory));
-      setSelectedWorkout((existing) => {
-        if (!existing?.id) return mappedWorkouts[0] || existing || null;
-        return mappedWorkouts.find((workout) => workout.id === existing.id) || existing;
-      });
+      const mappedWorkouts = applyWorkoutLibrary(library, completedWorkoutIds, completedWorkoutTitles);
       const requestedWorkoutId = typeof params.workoutId === 'string' ? params.workoutId : '';
       if (params.open === '1' && requestedWorkoutId && openedParamWorkoutRef.current !== requestedWorkoutId) {
         const requestedWorkout = mappedWorkouts.find((workout) => workout.id === requestedWorkoutId);
@@ -359,7 +392,8 @@ export default function WorkoutScreen() {
       }
       // Purpose
       if (selectedPurpose !== 'All') {
-        if (normalizeWords(w.tag) !== normalizeWords(selectedPurpose)) return false;
+        const purposes = Array.isArray(w.purposes) && w.purposes.length ? w.purposes : (w.tag ? [w.tag] : []);
+        if (!purposes.some((purpose) => normalizeWords(purpose) === normalizeWords(selectedPurpose))) return false;
       }
       // Difficulty
       if (selectedDifficulty !== 'Any') {

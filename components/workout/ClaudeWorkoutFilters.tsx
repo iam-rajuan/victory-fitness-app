@@ -26,7 +26,7 @@ const DMSANS = Platform.select({ web: 'DM Sans', default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: 'Inter', default: 'Inter-Regular' });
 const MONO = Platform.select({ web: 'JetBrains Mono', default: 'JetBrainsMono-Bold' });
 
-const PURPOSES = ['All', 'Strength', 'Full Body Workout', 'Hypertrophy', 'Conditioning', 'Mobility', 'Core', 'Recovery'];
+const PURPOSES = ['All', 'Strength', 'Full Body Workout', 'Mobility', 'Core', 'Conditioning', 'Recovery', 'Lower body', 'Upper body'];
 const DIFFICULTIES = ['Any', 'Beginner', 'Intermediate', 'Advanced'];
 const DURATIONS = ['Any', '15', '30', '45', '60'];
 const KITS = ['Any', 'No kit', 'Dumbbells', 'Bands', 'Mat'];

@@ -15,6 +15,7 @@ export interface GridWorkoutItem {
   videoUrl?: string;
   videoSource?: string;
   tag?: string;
+  purposes?: string[];
   equipment?: string;
   durationMinutes?: number;
   durationSeconds?: number;

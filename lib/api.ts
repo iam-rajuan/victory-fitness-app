@@ -542,6 +542,7 @@ export type AdminChallengeItem = {
   durationDays: number;
   points: number;
   difficulty: string;
+  difficulties?: string[];
   status: string;
   thumbnail: string;
   participantCount: number;
@@ -562,6 +563,7 @@ export type AdminChallengePayload = {
   durationDays: number;
   points: number;
   difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+  difficulties?: Array<'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED'>;
   status: 'ACTIVE' | 'UPCOMING' | 'DRAFT' | 'ARCHIVED';
   thumbnail?: string;
   planText?: string;
@@ -1833,6 +1835,7 @@ export async function createAdminChallenge(payload: AdminChallengePayload) {
       durationDays: payload.durationDays,
       points: payload.points,
       difficulty: payload.difficulty,
+      difficulties: Array.isArray(payload.difficulties) ? payload.difficulties : [payload.difficulty],
       status: payload.status,
       thumbnail: payload.thumbnail || '',
       planText: payload.planText || '',

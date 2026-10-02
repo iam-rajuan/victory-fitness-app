@@ -82,6 +82,7 @@ type ChallengeProgressThread = {
   duration_days: number;
   points: number;
   difficulty: string;
+  difficulties?: string[];
   status: string;
   thumbnail: string;
   participant_count: number;
@@ -117,6 +118,19 @@ type ReportActionState = {
 
 const GOOGLE_PLAY_URL = 'https://play.google.com/store';
 const APP_STORE_URL = 'https://apps.apple.com/app';
+const DIFFICULTY_ORDER = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'];
+
+function formatChallengeDifficultyLabel(thread?: Pick<ChallengeProgressThread, 'difficulty' | 'difficulties'> | null) {
+  const candidates = Array.isArray(thread?.difficulties) && thread.difficulties.length
+    ? thread.difficulties
+    : thread?.difficulty
+      ? [thread.difficulty]
+      : [];
+  const sorted = DIFFICULTY_ORDER.filter((option) =>
+    candidates.some((item) => String(item || '').trim().toUpperCase() === option)
+  );
+  return sorted.length ? sorted.join(' / ') : '';
+}
 
 function buildWorkoutPlayerHtml(videoUrl: string) {
   const isDirectVideo =
@@ -1037,7 +1051,7 @@ export default function ChallengeProgressScreen() {
                   adjustsFontSizeToFit
                   minimumFontScale={0.58}
                 >
-                  {thread?.difficulty ? t(thread.difficulty) : t('WORKOUT_CARD_GOOD')}
+                  {formatChallengeDifficultyLabel(thread) || t('WORKOUT_CARD_GOOD')}
                 </Text>
               </View>
             </View>
@@ -1180,7 +1194,7 @@ export default function ChallengeProgressScreen() {
             <View style={styles.heroCard}>
               <Text style={styles.heroDescription}>{thread.description}</Text>
               <View style={styles.heroMetaRow}>
-                <Text style={styles.heroMeta}>{thread.difficulty}</Text>
+                <Text style={styles.heroMeta}>{formatChallengeDifficultyLabel(thread) || thread.difficulty}</Text>
                 <Text style={[styles.heroMeta, thread.status !== 'ACTIVE' && styles.heroMetaMuted]}>{thread.status}</Text>
                 <Text style={styles.heroMeta}>{thread.viewer_progress_days_completed}/{thread.duration_days} days</Text>
                 <Text style={styles.heroMeta}>{thread.viewer_points_earned}/{thread.points} pts</Text>

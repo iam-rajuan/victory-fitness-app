@@ -21,6 +21,8 @@ export interface ChallengeItem {
   faces: { i: string }[];
   desc?: string;
   why?: string;
+  difficulty?: string;
+  difficulties?: string[];
   status?: 'ready' | 'active' | 'completed' | 'upcoming' | string;
   canStart?: boolean;
   progress?: number;
@@ -417,6 +419,9 @@ export default function ClaudeChallengeDirectory({
               <Text style={[styles.challengeCardName, { color: isDark ? IVORY : NAVY }]}>{c.n}</Text>
               <View style={styles.challengeMetaRow}>
                 <Text style={styles.challengeMetaCategory}>{c.c}</Text>
+                <Text style={styles.challengeMetaCategory}>
+                  {(c.difficulties?.length ? c.difficulties : c.difficulty ? [c.difficulty] : []).join(' / ')}
+                </Text>
                 <Text style={styles.challengeMetaPoints}>{c.p}</Text>
               </View>
             </View>

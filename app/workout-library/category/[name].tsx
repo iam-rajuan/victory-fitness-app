@@ -53,6 +53,11 @@ function formatDuration(minutes: number, seconds: number): string {
   return 'SESSION';
 }
 
+function workoutMatchesCategory(workout: WorkoutLibraryItem, normalizedCategory: string) {
+  const purposes = workout.purposes?.length ? workout.purposes : (workout.tag ? [workout.tag] : []);
+  return purposes.some((purpose) => purpose.trim().toLowerCase() === normalizedCategory);
+}
+
 export default function WorkoutCategoryScreen() {
   const router = useRouter();
   const { t } = useLanguage();
@@ -68,9 +73,7 @@ export default function WorkoutCategoryScreen() {
   const cachedCategoryWorkouts = useMemo(() => {
     const normalizedCategory = categoryName.trim().toLowerCase();
     if (!normalizedCategory) return [];
-    return (cachedLibrary?.workouts || []).filter(
-      (workout) => workout.tag.trim().toLowerCase() === normalizedCategory
-    );
+    return (cachedLibrary?.workouts || []).filter((workout) => workoutMatchesCategory(workout, normalizedCategory));
   }, [cachedLibrary?.workouts, categoryName]);
 
   const {
@@ -84,9 +87,7 @@ export default function WorkoutCategoryScreen() {
     load: async () => {
       const response = await fetchWorkoutLibrary(categoryName);
       const normalizedCategory = categoryName.trim().toLowerCase();
-      return response.workouts.filter(
-        (workout) => workout.tag.trim().toLowerCase() === normalizedCategory
-      );
+      return response.workouts.filter((workout) => workoutMatchesCategory(workout, normalizedCategory));
     },
     getErrorMessage: (loadError) => formatAppError(loadError).message,
   });

@@ -1,5 +1,5 @@
-import { apiRequest } from './api';
-import { fetchCachedResource, getCachedResourceSnapshot } from './resourceCache';
+import { apiRequest, resolveRemoteAssetUrl } from './api';
+import { fetchCachedResource, getCachedResourceSnapshot, hydrateCachedResource } from './resourceCache';
 
 export type WorkoutLibraryItem = {
   id: string;
@@ -8,6 +8,7 @@ export type WorkoutLibraryItem = {
   videoUrl: string;
   videoSource: 'VIMEO' | 'YOUTUBE' | 'UPLOAD' | string;
   tag: string;
+  purposes: string[];
   equipment: string;
   level: string;
   levels: string[];
@@ -98,6 +99,11 @@ function normalizeWorkoutItem(value: unknown): WorkoutLibraryItem | null {
     videoUrl: String(item.videoUrl ?? ''),
     videoSource: String(item.videoSource ?? 'VIMEO'),
     tag: String(item.tag ?? 'Workout'),
+    purposes: Array.isArray(item.purposes)
+      ? item.purposes.map((purpose) => String(purpose).trim()).filter(Boolean)
+      : String(item.tag ?? '').trim()
+        ? [String(item.tag).trim()]
+        : [],
     equipment: String(item.equipment ?? ''),
     level: String(item.level ?? ''),
     levels: Array.isArray(item.levels)
@@ -107,7 +113,7 @@ function normalizeWorkoutItem(value: unknown): WorkoutLibraryItem | null {
         : [],
     durationMinutes: Math.max(Number(item.durationMinutes ?? 0) || 0, 0),
     durationSeconds: Math.max(Number(item.durationSeconds ?? 0) || 0, 0),
-    thumbnail: String(item.thumbnail ?? ''),
+    thumbnail: resolveRemoteAssetUrl(String(item.thumbnail ?? '')),
     movements: Array.isArray(item.movements)
       ? item.movements.map(normalizeWorkoutMovement).filter((movement): movement is WorkoutMovementItem => Boolean(movement))
       : [],
@@ -153,7 +159,7 @@ function normalizeWorkoutCategory(value: unknown): WorkoutLibraryCategory | null
     id,
     name,
     count: Math.max(Number(category.count ?? 0) || 0, 0),
-    image: String(category.image ?? ''),
+    image: resolveRemoteAssetUrl(String(category.image ?? '')),
   };
 }
 
@@ -194,4 +200,9 @@ export async function fetchHomeWorkoutPlanSummary() {
 
 export function getCachedWorkoutLibrary(query = '') {
   return getCachedResourceSnapshot<WorkoutLibraryResponse>(getWorkoutLibraryCacheKey(query));
+}
+
+export async function hydrateCachedWorkoutLibrary(query = '') {
+  const cached = await hydrateCachedResource<WorkoutLibraryResponse>(getWorkoutLibraryCacheKey(query));
+  return cached ? normalizeWorkoutLibraryResponse(cached) : null;
 }

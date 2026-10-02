@@ -57,6 +57,8 @@ export default function ClaudeChallengeDetailModal({
     setShowInvite(false);
     onClose();
   };
+  const difficultyLabel = (challenge.difficulties?.length ? challenge.difficulties : challenge.difficulty ? [challenge.difficulty] : [])
+    .join(' / ');
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={handleClose}>
@@ -77,6 +79,7 @@ export default function ClaudeChallengeDetailModal({
 
             <View style={styles.metaRow}>
               <Text style={styles.metaDays}>{`${challenge.d} DAYS`}</Text>
+              {difficultyLabel ? <Text style={styles.metaPoints}>{difficultyLabel}</Text> : null}
               <Text style={styles.metaPoints}>{challenge.p}</Text>
             </View>
 

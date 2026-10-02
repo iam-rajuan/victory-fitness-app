@@ -50,9 +50,23 @@ function formatJoined(value: unknown) {
   return `${joined} joined`;
 }
 
+const DIFFICULTY_ORDER = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'];
+
+function normalizeChallengeDifficulties(raw: Record<string, any>) {
+  const candidates = Array.isArray(raw.difficulties) && raw.difficulties.length
+    ? raw.difficulties
+    : raw.difficulty
+      ? [raw.difficulty]
+      : [];
+  return DIFFICULTY_ORDER.filter((option) =>
+    candidates.some((item) => String(item || '').trim().toUpperCase() === option)
+  );
+}
+
 function buildChallengeItem(raw: Record<string, any>, status: ChallengeItem['status'], unreadCount = 0): ChallengeItem {
   const challengeId = String(raw.challenge_id || raw.id || '').trim();
   const points = status === 'completed' ? raw.earned_points : raw.points;
+  const difficulties = normalizeChallengeDifficulties(raw);
   return {
     id: challengeId,
     challengeId,
@@ -64,6 +78,8 @@ function buildChallengeItem(raw: Record<string, any>, status: ChallengeItem['sta
     faces: [],
     desc: String(raw.description || '').trim(),
     why: String(raw.why_it_matters || '').trim(),
+    difficulty: difficulties[0] || String(raw.difficulty || '').trim().toUpperCase(),
+    difficulties,
     status,
     canStart: Boolean(raw.can_start),
     progress: Math.max(0, Math.min(1, Number(raw.progress || (status === 'completed' ? 1 : 0)))),
