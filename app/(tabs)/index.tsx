@@ -51,9 +51,10 @@ import {
   StrengthPlanResponse,
   updateStrengthWorkoutPlanProgress,
 } from '../../lib/workout-plans';
-import { fetchHomeWorkoutPlanSummary, fetchWorkoutLibrary, hydrateCachedWorkoutLibrary, HomeWorkoutPlanSummary } from '../../lib/workouts';
+import { fetchHomeWorkoutPlanSummary, fetchWorkoutLibrary, getWorkoutLibraryCacheKey, hydrateCachedWorkoutLibrary, HomeWorkoutPlanSummary, WorkoutLibraryResponse } from '../../lib/workouts';
 import { CHALLENGE_OVERVIEW_CACHE_KEY, HOME_WORKOUT_SUMMARY_CACHE_KEY, JOURNAL_ENTRIES_CACHE_KEY, NUTRITION_PLAN_LATEST_CACHE_KEY } from '../../lib/cacheKeys';
 import { hydrateCachedResource } from '../../lib/resourceCache';
+import { useResourceStore } from '../../lib/stores/resourceStore';
 
 import ClaudeHomeHeader from '../../components/home/ClaudeHomeHeader';
 import ClaudeInspirationCard from '../../components/home/ClaudeInspirationCard';
@@ -218,6 +219,24 @@ function getNutritionToday(plan: NutritionPlanApiResponse | null) {
   );
 }
 
+function mapHomeChallengeItems(challenges: Array<Record<string, any>> = []): ChallengeItem[] {
+  return challenges.map((ch: any) => {
+    const totalDays = Number(ch.total_days || ch.duration_days || 21);
+    const daysLeft = Number(ch.days_left || 0);
+    const currentDay = Math.max(1, totalDays - daysLeft);
+    const rawProgress = Number(ch.progress || 0);
+    const pct = Math.min(100, Math.max(0, Math.round(rawProgress <= 1 ? rawProgress * 100 : rawProgress)));
+    return {
+      id: ch.challenge_id || ch.id,
+      n: ch.title || 'Active Challenge',
+      d: `Day ${currentDay} of ${totalDays}`,
+      pct,
+      rank: ch.points ? `${ch.points} pts` : 'Active',
+      note: ch.why_it_matters || ch.description || 'Finish today to keep the streak bonus.',
+    };
+  });
+}
+
 export default function HomeScreen() {
   const checkingAccess = useModuleAccessGuard('/');
   const router = useRouter();
@@ -270,6 +289,41 @@ export default function HomeScreen() {
   const [planSummaryLine, setPlanSummaryLine] = useState('Get stronger · Mon, Wed, Fri · 40 min · built around your home gym.');
   const [planKit, setPlanKit] = useState('Home gym');
   const [planDuration, setPlanDuration] = useState('40 minutes');
+  const cachedChallengeData = useResourceStore((state) => state.resources[CHALLENGE_OVERVIEW_CACHE_KEY]?.data as any | undefined);
+  const cachedNutritionPlan = useResourceStore((state) => state.resources[NUTRITION_PLAN_LATEST_CACHE_KEY]?.data as NutritionPlanApiResponse | undefined);
+  const cachedJournalData = useResourceStore((state) => state.resources[JOURNAL_ENTRIES_CACHE_KEY]?.data as any | undefined);
+  const cachedWorkoutLibrary = useResourceStore((state) => state.resources[getWorkoutLibraryCacheKey()]?.data as WorkoutLibraryResponse | undefined);
+  const cachedHomeSummary = useResourceStore((state) => state.resources[HOME_WORKOUT_SUMMARY_CACHE_KEY]?.data as HomeWorkoutPlanSummary | undefined);
+
+  useEffect(() => {
+    if (cachedNutritionPlan) {
+      setNutritionPlan(cachedNutritionPlan);
+    }
+  }, [cachedNutritionPlan]);
+
+  useEffect(() => {
+    if (cachedWorkoutLibrary) {
+      setHomeLibraryWorkout(cachedWorkoutLibrary.featuredWorkout || cachedWorkoutLibrary.workouts?.[0] || null);
+    }
+  }, [cachedWorkoutLibrary]);
+
+  useEffect(() => {
+    if (cachedHomeSummary) {
+      setHomeWorkoutSummary(cachedHomeSummary);
+    }
+  }, [cachedHomeSummary]);
+
+  useEffect(() => {
+    if (Array.isArray(cachedJournalData?.entries)) {
+      setJournalWrittenToday(cachedJournalData.entries.some((entry: any) => isSameLocalDay(entry.created_at)));
+    }
+  }, [cachedJournalData]);
+
+  useEffect(() => {
+    if (Array.isArray(cachedChallengeData?.active_challenges)) {
+      setChallenges(mapHomeChallengeItems(cachedChallengeData.active_challenges));
+    }
+  }, [cachedChallengeData]);
 
   useFocusEffect(
     useCallback(() => {
@@ -322,22 +376,7 @@ export default function HomeScreen() {
       setJournalWrittenToday(cachedJournalData.entries.some((entry: any) => isSameLocalDay(entry.created_at)));
     }
     if (Array.isArray(cachedChallengeData?.active_challenges)) {
-      const joinedMapped = cachedChallengeData.active_challenges.map((ch: any) => {
-        const totalDays = Number(ch.total_days || ch.duration_days || 21);
-        const daysLeft = Number(ch.days_left || 0);
-        const currentDay = Math.max(1, totalDays - daysLeft);
-        const rawProgress = Number(ch.progress || 0);
-        const pct = Math.min(100, Math.max(0, Math.round(rawProgress <= 1 ? rawProgress * 100 : rawProgress)));
-        return {
-          id: ch.challenge_id || ch.id,
-          n: ch.title || 'Active Challenge',
-          d: `Day ${currentDay} of ${totalDays}`,
-          pct,
-          rank: ch.points ? `${ch.points} pts` : 'Active',
-          note: ch.why_it_matters || ch.description || 'Finish today to keep the streak bonus.',
-        };
-      });
-      setChallenges(joinedMapped);
+      setChallenges(mapHomeChallengeItems(cachedChallengeData.active_challenges));
     }
   }, []);
 
@@ -412,22 +451,7 @@ export default function HomeScreen() {
 
       // Map only joined challenges from backend overview
       if (Array.isArray(challengeData?.active_challenges)) {
-        const joinedMapped = challengeData.active_challenges.map((ch: any) => {
-          const totalDays = Number(ch.total_days || ch.duration_days || 21);
-          const daysLeft = Number(ch.days_left || 0);
-          const currentDay = Math.max(1, totalDays - daysLeft);
-          const rawProgress = Number(ch.progress || 0);
-          const pct = Math.min(100, Math.max(0, Math.round(rawProgress <= 1 ? rawProgress * 100 : rawProgress)));
-          return {
-            id: ch.challenge_id || ch.id,
-            n: ch.title || 'Active Challenge',
-            d: `Day ${currentDay} of ${totalDays}`,
-            pct,
-            rank: ch.points ? `${ch.points} pts` : 'Active',
-            note: ch.why_it_matters || ch.description || 'Finish today to keep the streak bonus.',
-          };
-        });
-        setChallenges(joinedMapped);
+        setChallenges(mapHomeChallengeItems(challengeData.active_challenges as Array<Record<string, any>>));
       }
 
       // Check periodic weight check-in prompt
@@ -1129,7 +1153,7 @@ const styles = StyleSheet.create({
     backgroundColor: OBSIDIAN,
   },
   scrollContent: {
-    paddingTop: 10,
+    paddingTop: 20,
     paddingBottom: 60,
     maxWidth: 600,
     width: '100%',

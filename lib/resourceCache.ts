@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useResourceStore } from './stores/resourceStore';
 
 type CacheEnvelope<T> = {
   data: T;
@@ -19,7 +20,7 @@ function isCacheFresh(key: string, maxAgeMs?: number) {
     return false;
   }
 
-  const entry = memoryCache.get(key);
+  const entry = memoryCache.get(key) || useResourceStore.getState().resources[key];
   if (!entry) {
     return false;
   }
@@ -28,7 +29,7 @@ function isCacheFresh(key: string, maxAgeMs?: number) {
 }
 
 export function getCachedResourceSnapshot<T>(key: string): T | undefined {
-  const entry = memoryCache.get(key);
+  const entry = memoryCache.get(key) || useResourceStore.getState().resources[key];
   return entry ? (entry.data as T) : undefined;
 }
 
@@ -54,6 +55,7 @@ export async function hydrateCachedResource<T>(key: string): Promise<T | null> {
       }
 
       memoryCache.set(key, envelope as CacheEnvelope<unknown>);
+      useResourceStore.getState().setResourceEnvelope(key, envelope as CacheEnvelope<unknown>);
       return envelope.data;
     })
     .catch(() => null)
@@ -72,6 +74,7 @@ export async function primeCachedResource<T>(key: string, data: T, persist = tru
   };
 
   memoryCache.set(key, envelope as CacheEnvelope<unknown>);
+  useResourceStore.getState().setResourceEnvelope(key, envelope as CacheEnvelope<unknown>);
 
   if (!persist) {
     return data;
@@ -85,6 +88,7 @@ export async function clearCachedResource(key: string) {
   memoryCache.delete(key);
   hydrationPromises.delete(key);
   requestPromises.delete(key);
+  useResourceStore.getState().removeResource(key);
   await AsyncStorage.removeItem(getStorageKey(key));
 }
 
@@ -94,6 +98,7 @@ export async function clearAllCachedResources() {
   memoryCache.clear();
   hydrationPromises.clear();
   requestPromises.clear();
+  useResourceStore.getState().clearResources();
   if (resourceKeys.length > 0) {
     await AsyncStorage.multiRemove(resourceKeys);
   }
@@ -113,6 +118,7 @@ export async function fetchCachedResource<T>(
     return (await existingPromise) as T;
   }
 
+  useResourceStore.getState().setResourceLoading(key, true);
   const nextPromise = load()
     .then(async (data) => {
       await primeCachedResource(key, data, options?.persist !== false);
@@ -120,6 +126,7 @@ export async function fetchCachedResource<T>(
     })
     .finally(() => {
       requestPromises.delete(key);
+      useResourceStore.getState().setResourceLoading(key, false);
     });
 
   requestPromises.set(key, nextPromise);

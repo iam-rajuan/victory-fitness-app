@@ -13,6 +13,7 @@ import { apiRequest, fetchCurrentUser, resolveRemoteAssetUrl } from '../../lib/a
 import { fetchChallengeOverviewData } from '../../lib/screenData';
 import { CHALLENGE_OVERVIEW_CACHE_KEY, getCommunityPostsCacheKey } from '../../lib/cacheKeys';
 import { fetchCachedResource, hydrateCachedResource } from '../../lib/resourceCache';
+import { useResourceStore } from '../../lib/stores/resourceStore';
 import ClaudeChallengeTabs, { ChallengeTabType } from '../../components/challenge/ClaudeChallengeTabs';
 import ClaudeActiveChallengeBanner from '../../components/challenge/ClaudeActiveChallengeBanner';
 import ClaudeChallengeDirectory, { ChallengeItem } from '../../components/challenge/ClaudeChallengeDirectory';
@@ -158,6 +159,24 @@ function mapCommunityPost(raw: Record<string, any>): CommunityPost {
   };
 }
 
+function mapChallengeOverview(overview: ChallengeOverviewPayload) {
+  const unreadByChallenge = new Map<string, number>();
+  (overview.active_chats || []).forEach((chat) => {
+    const id = String(chat.challenge_id || '').trim();
+    if (id) unreadByChallenge.set(id, Math.max(0, Number(chat.unread_count || 0)));
+  });
+  const active = (overview.active_challenges || []).map((item) => {
+    const id = String(item.challenge_id || item.id || '').trim();
+    return buildChallengeItem(item, 'active', unreadByChallenge.get(id) || 0);
+  });
+  const ready = (overview.ready_to_start || []).map((item) => buildChallengeItem(item, 'ready'));
+  const completed = (overview.completed_challenges || []).map((item) => buildChallengeItem(item, 'completed'));
+  return {
+    active,
+    combined: [...active, ...ready, ...completed].filter((item) => item.challengeId),
+  };
+}
+
 export default function ChallengeScreen() {
   const router = useRouter();
   const { isDark, colors } = useTheme();
@@ -179,6 +198,21 @@ export default function ChallengeScreen() {
   const [userName, setUserName] = useState('Member');
   const [userInitials, setUserInitials] = useState('ME');
   const challengeItemsCountRef = useRef(0);
+  const cachedChallengeOverview = useResourceStore((state) => state.resources[CHALLENGE_OVERVIEW_CACHE_KEY]?.data as ChallengeOverviewPayload | undefined);
+  const cachedCommunityPosts = useResourceStore((state) => state.resources[getCommunityPostsCacheKey(communityScope)]?.data as { posts?: Array<Record<string, any>> } | undefined);
+
+  useEffect(() => {
+    if (!cachedChallengeOverview) return;
+    const mapped = mapChallengeOverview(cachedChallengeOverview);
+    setActiveChallenge(mapped.active[0] || null);
+    setChallengeItems(mapped.combined);
+    setIsLoadingChallenges(false);
+  }, [cachedChallengeOverview]);
+
+  useEffect(() => {
+    if (!cachedCommunityPosts) return;
+    setCommunityPosts((cachedCommunityPosts.posts || []).map(mapCommunityPost).filter((post) => post.id));
+  }, [cachedCommunityPosts]);
 
   useEffect(() => {
     challengeItemsCountRef.current = challengeItems.length;
@@ -219,22 +253,9 @@ export default function ChallengeScreen() {
     }
     try {
       const overview = (await fetchChallengeOverviewData({ forceRefresh })) as ChallengeOverviewPayload;
-      const unreadByChallenge = new Map<string, number>();
-      (overview.active_chats || []).forEach((chat) => {
-        const id = String(chat.challenge_id || '').trim();
-        if (id) unreadByChallenge.set(id, Math.max(0, Number(chat.unread_count || 0)));
-      });
-
-      const active = (overview.active_challenges || []).map((item) => {
-        const id = String(item.challenge_id || item.id || '').trim();
-        return buildChallengeItem(item, 'active', unreadByChallenge.get(id) || 0);
-      });
-      const ready = (overview.ready_to_start || []).map((item) => buildChallengeItem(item, 'ready'));
-      const completed = (overview.completed_challenges || []).map((item) => buildChallengeItem(item, 'completed'));
-      const combined = [...active, ...ready, ...completed].filter((item) => item.challengeId);
-
-      setActiveChallenge(active[0] || null);
-      setChallengeItems(combined);
+      const mapped = mapChallengeOverview(overview);
+      setActiveChallenge(mapped.active[0] || null);
+      setChallengeItems(mapped.combined);
     } catch (error: any) {
       if (challengeItemsCountRef.current === 0) {
         Alert.alert('Failed to load challenges', error?.message || 'Please try again.');
@@ -272,12 +293,9 @@ export default function ChallengeScreen() {
     hydrateCachedResource<ChallengeOverviewPayload>(CHALLENGE_OVERVIEW_CACHE_KEY)
       .then((overview) => {
         if (cancelled || !overview) return;
-        const active = (overview.active_challenges || []).map((item) => buildChallengeItem(item, 'active'));
-        const ready = (overview.ready_to_start || []).map((item) => buildChallengeItem(item, 'ready'));
-        const completed = (overview.completed_challenges || []).map((item) => buildChallengeItem(item, 'completed'));
-        const combined = [...active, ...ready, ...completed].filter((item) => item.challengeId);
-        setActiveChallenge(active[0] || null);
-        setChallengeItems(combined);
+        const mapped = mapChallengeOverview(overview);
+        setActiveChallenge(mapped.active[0] || null);
+        setChallengeItems(mapped.combined);
         setIsLoadingChallenges(false);
       })
       .finally(() => {
@@ -561,7 +579,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingTop: Platform.OS === 'web' ? 32 : 54,
+    paddingTop: Platform.OS === 'web' ? 24 : 22,
     paddingBottom: 110,
   },
   screenTitle: {

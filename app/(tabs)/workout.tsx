@@ -42,8 +42,9 @@ import ClaudeSessionCompleteModal from '../../components/workout/ClaudeSessionCo
 import ClaudePlanBuildModal from '../../components/workout/ClaudePlanBuildModal';
 import ClaudeWorkoutDetailModal from '../../components/workout/ClaudeWorkoutDetailModal';
 import { getSavedPlanStatus, savePlanBuiltData } from '../../lib/planStorage';
-import { fetchWorkoutLibrary, hydrateCachedWorkoutLibrary, WorkoutLibraryCategory, WorkoutLibraryItem, WorkoutLibraryResponse } from '../../lib/workouts';
+import { fetchWorkoutLibrary, getWorkoutLibraryCacheKey, hydrateCachedWorkoutLibrary, WorkoutLibraryCategory, WorkoutLibraryItem, WorkoutLibraryResponse } from '../../lib/workouts';
 import { createHomeSevenDayWorkoutPlan } from '../../lib/workout-plans';
+import { useResourceStore } from '../../lib/stores/resourceStore';
 
 const OBSIDIAN = '#0D0D0D';
 const GOLD = '#C9943A';
@@ -256,6 +257,7 @@ export default function WorkoutScreen() {
   const [libraryWorkouts, setLibraryWorkouts] = useState<GridWorkoutItem[]>([]);
   const [libraryPrograms, setLibraryPrograms] = useState<ProgramCardItem[]>([]);
   const completedWorkoutIdsRef = useRef<Set<string>>(new Set());
+  const cachedWorkoutLibrary = useResourceStore((state) => state.resources[getWorkoutLibraryCacheKey()]?.data as WorkoutLibraryResponse | undefined);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
@@ -309,6 +311,15 @@ export default function WorkoutScreen() {
     void prefetchWorkoutImages(library).catch(() => undefined);
     return mappedWorkouts;
   };
+
+  useEffect(() => {
+    if (!cachedWorkoutLibrary?.workouts?.length) return;
+    void prefetchCriticalWorkoutImages(cachedWorkoutLibrary)
+      .finally(() => {
+        applyWorkoutLibrary(cachedWorkoutLibrary);
+      })
+      .catch(() => undefined);
+  }, [cachedWorkoutLibrary]);
 
   const loadData = async () => {
     try {
@@ -908,7 +919,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   scrollContent: {
-    paddingTop: 46,
+    paddingTop: 22,
     paddingBottom: 96,
   },
 });

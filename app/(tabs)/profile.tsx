@@ -930,7 +930,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingTop: Platform.OS === 'web' ? 24 : 50,
+    paddingTop: Platform.OS === 'web' ? 18 : 18,
     paddingBottom: 110,
   },
   sectionWrap: {

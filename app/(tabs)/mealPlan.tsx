@@ -33,6 +33,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../lib/i18n';
 import { getNutritionMealLogsCacheKey, NUTRITION_PLAN_LATEST_CACHE_KEY } from '../../lib/cacheKeys';
 import { hydrateCachedResource } from '../../lib/resourceCache';
+import { useResourceStore } from '../../lib/stores/resourceStore';
 
 const OBSIDIAN = '#0D0D0D';
 const NAVY = '#0D2B45';
@@ -69,6 +70,21 @@ export default function MealPlanScreen() {
   const [showWeekPlanModal, setShowWeekPlanModal] = useState(false);
   const [showShoppingModal, setShowShoppingModal] = useState(false);
   const todayIsoDate = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const cachedNutritionPlan = useResourceStore((state) => state.resources[NUTRITION_PLAN_LATEST_CACHE_KEY]?.data as NutritionPlanApiResponse | undefined);
+  const cachedMealLogs = useResourceStore((state) => state.resources[getNutritionMealLogsCacheKey(todayIsoDate)]?.data as { logs: NutritionMealLog[] } | undefined);
+
+  useEffect(() => {
+    if (!cachedNutritionPlan) return;
+    setNutritionPlan(cachedNutritionPlan);
+    if (cachedNutritionPlan.daily_protein_target) setProteinTarget(cachedNutritionPlan.daily_protein_target);
+    if (cachedNutritionPlan.baseline_weight) setUserWeight(cachedNutritionPlan.baseline_weight);
+  }, [cachedNutritionPlan]);
+
+  useEffect(() => {
+    if (Array.isArray(cachedMealLogs?.logs)) {
+      setMealLogs(cachedMealLogs.logs);
+    }
+  }, [cachedMealLogs]);
 
   useEffect(() => {
     let cancelled = false;
@@ -561,7 +577,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingTop: Platform.OS === 'web' ? 32 : 54,
+    paddingTop: Platform.OS === 'web' ? 24 : 22,
     paddingBottom: 110,
   },
   headerRow: {
