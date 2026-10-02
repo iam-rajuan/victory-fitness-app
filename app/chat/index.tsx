@@ -19,8 +19,9 @@ import {
   streamCoachVictorMessage,
   fetchCoachVictorHistory,
   clearCoachVictorHistory,
+  applyCoachWorkoutPlanAction,
+  CoachWorkoutPlanAction,
 } from '../../lib/api';
-import { createHomeSevenDayWorkoutPlan } from '../../lib/workout-plans';
 import { savePlanBuiltData } from '../../lib/planStorage';
 import { normalizeSubscriptionTier } from '../../lib/access';
 import { pushRoute, goBackOrReplace } from '../../lib/navigation';
@@ -42,6 +43,11 @@ interface ChatMessage {
   contextNote?: string;
   homePlanAction?: {
     sourcePrompt: string;
+    scope?: string;
+    targetDays?: string[];
+    targetMinutes?: number | null;
+    summary?: string;
+    buttonLabel?: string;
     status?: 'ready' | 'saving' | 'saved';
   };
 }
@@ -93,15 +99,6 @@ function detectLanguageOverride(text: string): string | null {
   return null;
 }
 
-function isWorkoutPlanRequest(text: string): boolean {
-  const lowered = text.toLowerCase();
-  return /(build|make|create|adjust|change|rebuild|replace|apply).{0,30}(workout|training|plan|split)|push.?pull|pull.?ups|squats|home workout plan/.test(lowered);
-}
-
-function isPlanInsertConfirmation(text: string): boolean {
-  return /^(yes|yeah|yep|ok|okay|confirm|apply|insert|save|replace|do it|sure|ja|sí|si|হ্যাঁ|হ্যা|हाँ)\b/i.test(text.trim());
-}
-
 function planSummaryLineFromPrompt(prompt: string) {
   const lowered = prompt.toLowerCase();
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -110,22 +107,6 @@ function planSummaryLineFromPrompt(prompt: string) {
   const minutes = lowered.match(/(\d{1,3})\s*(?:min|minute)/)?.[1];
   const kit = lowered.includes('no equipment') || lowered.includes('bodyweight') ? 'Bodyweight' : lowered.includes('dumbbell') ? 'Dumbbells' : 'Profile kit';
   return `Coach chat plan · ${days || 'your week'} · ${minutes ? `${minutes} min` : 'profile time'} · ${kit}.`;
-}
-
-function insertQuestionForLanguage(language?: string) {
-  if (language === 'de') {
-    return 'Soll ich diesen Plan in deinen Home-Workout-Plan einfügen? Antworte mit Ja.';
-  }
-  if (language === 'bn') {
-    return 'এই প্ল্যানটি কি Home workout plan-এ বসাব? হ্যাঁ লিখুন।';
-  }
-  if (language === 'hi') {
-    return 'क्या इसे आपके Home workout plan में डाल दूं? हाँ लिखें।';
-  }
-  if (language === 'es') {
-    return '¿Lo inserto en tu plan de Home? Responde sí.';
-  }
-  return 'Want me to insert this into your Home workout plan? Reply yes.';
 }
 
 function insertButtonLabel(language?: string) {
@@ -319,7 +300,6 @@ export default function ClaudeCoachScreen() {
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
   const [conversationLanguage, setConversationLanguage] = useState<string | null>(null);
-  const [pendingHomePlanPrompt, setPendingHomePlanPrompt] = useState('');
   const [insertingPlanMessageId, setInsertingPlanMessageId] = useState<string | null>(null);
   const autoPromptHandledRef = useRef(false);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -452,17 +432,7 @@ export default function ClaudeCoachScreen() {
     if (!text || sending) return;
     const requestedLanguage = detectLanguageOverride(text);
     const nextLanguage = requestedLanguage || conversationLanguage || currentUser?.preferred_language || undefined;
-    const asksForPlan = isWorkoutPlanRequest(text);
-    const confirmsPendingPlan = Boolean(pendingHomePlanPrompt && isPlanInsertConfirmation(text));
-    const backendMessage = confirmsPendingPlan
-      ? [
-          pendingHomePlanPrompt,
-          '',
-          'The user confirmed they want this routine generated now.',
-          'Generate the workout plan from the original request above.',
-          'Explicit user constraints override profile defaults. If the user said 10 minutes per day, every session must be 10 minutes. If the user named specific days, use only those days. If the user named specific exercise focus such as pull-ups or squats only, respect that focus.',
-        ].join('\n')
-      : text;
+    const backendMessage = text;
     if (requestedLanguage) {
       setConversationLanguage(requestedLanguage);
     }
@@ -484,14 +454,16 @@ export default function ClaudeCoachScreen() {
     // Call live backend or smart fallback
     try {
       let assistantText = '';
+      let planAction: CoachWorkoutPlanAction | null = null;
       await new Promise<void>(async (resolve) => {
         await streamCoachVictorMessage(
           backendMessage,
           (chunk) => {
             assistantText += chunk;
           },
-          (fullReply) => {
+          (fullReply, _threadId, action) => {
             assistantText = fullReply || assistantText;
+            planAction = action || null;
             resolve();
           },
           (err) => {
@@ -507,19 +479,19 @@ export default function ClaudeCoachScreen() {
         assistantText = `I hear you, ${currentUser?.name ? currentUser.name.split(' ')[0] : 'friend'}. Based on your target of ${currentUser?.daily_protein_target || 112} g protein and your training consistency, let's keep showing up. How does that sound?`;
       }
 
-      const isInsertHomePlanPrompt = /insert into my workout plan/i.test(text);
-      if (asksForPlan && !confirmsPendingPlan && !isInsertHomePlanPrompt) {
-        setPendingHomePlanPrompt(text);
-        assistantText = `${assistantText.trim()}\n\n${insertQuestionForLanguage(nextLanguage)}`;
-      }
-
+      const actionForReply = planAction as CoachWorkoutPlanAction | null;
       const coachReply: ChatMessage = {
         id: `coach-${Date.now()}`,
         sender: 'coach',
         text: assistantText,
-        homePlanAction: (confirmsPendingPlan || isInsertHomePlanPrompt)
+        homePlanAction: actionForReply
           ? {
-              sourcePrompt: pendingHomePlanPrompt || text,
+              sourcePrompt: actionForReply.source_prompt,
+              scope: actionForReply.scope,
+              targetDays: actionForReply.target_days || [],
+              targetMinutes: actionForReply.target_minutes ?? null,
+              summary: actionForReply.summary,
+              buttonLabel: actionForReply.button_label,
               status: 'ready',
             }
           : undefined,
@@ -539,9 +511,6 @@ export default function ClaudeCoachScreen() {
       };
 
       setMessages((prev) => [...prev, coachReply]);
-      if (confirmsPendingPlan) {
-        setPendingHomePlanPrompt('');
-      }
     } catch {
       const fallbackReply: ChatMessage = {
         id: `coach-${Date.now()}`,
@@ -590,7 +559,7 @@ export default function ClaudeCoachScreen() {
     });
   };
 
-  const handleInsertHomePlan = async (messageId: string, sourcePrompt: string) => {
+  const handleInsertHomePlan = async (messageId: string, action: NonNullable<ChatMessage['homePlanAction']>) => {
     if (insertingPlanMessageId) return;
     setInsertingPlanMessageId(messageId);
     setMessages((prev) =>
@@ -601,14 +570,20 @@ export default function ClaudeCoachScreen() {
       )
     );
     try {
-      const plan = await createHomeSevenDayWorkoutPlan({
-        custom_notes: sourcePrompt,
+      const plan = await applyCoachWorkoutPlanAction({
+        source_prompt: action.sourcePrompt,
+        scope: action.scope || 'full_plan',
+        target_days: action.targetDays || [],
+        target_minutes: action.targetMinutes ?? null,
+        summary: action.summary || '',
       });
       await savePlanBuiltData({
-        line: plan.summary || planSummaryLineFromPrompt(sourcePrompt),
-        kit: sourcePrompt.toLowerCase().includes('bodyweight') || sourcePrompt.toLowerCase().includes('no equipment') ? 'Bodyweight' : 'Profile kit',
-        duration: sourcePrompt.match(/(\d{1,3})\s*(?:min|minute)/i)?.[1]
-          ? `${sourcePrompt.match(/(\d{1,3})\s*(?:min|minute)/i)?.[1]} minutes`
+        line: plan.summary || action.summary || planSummaryLineFromPrompt(action.sourcePrompt),
+        kit: action.sourcePrompt.toLowerCase().includes('bodyweight') || action.sourcePrompt.toLowerCase().includes('no equipment') ? 'Bodyweight' : 'Profile kit',
+        duration: action.targetMinutes
+          ? `${action.targetMinutes} minutes`
+          : action.sourcePrompt.match(/(\d{1,3})\s*(?:min|minute)/i)?.[1]
+          ? `${action.sourcePrompt.match(/(\d{1,3})\s*(?:min|minute)/i)?.[1]} minutes`
           : 'Profile time',
       });
       setMessages((prev) =>
@@ -638,7 +613,6 @@ export default function ClaudeCoachScreen() {
     try {
       await clearCoachVictorHistory();
       setMessages([]);
-      setPendingHomePlanPrompt('');
       setConversationLanguage(null);
       autoPromptHandledRef.current = false;
     } catch {
@@ -772,10 +746,12 @@ export default function ClaudeCoachScreen() {
                     <Text style={styles.homePlanActionTitle}>
                       {m.homePlanAction.status === 'saved'
                         ? 'Home workout plan updated'
-                        : 'Ready to replace your Home workout plan'}
+                        : m.homePlanAction.summary || 'Ready to update your Home workout plan'}
                     </Text>
                     <Text style={styles.homePlanActionText}>
-                      This will replace your current Home workout plan with the plan from this chat.
+                      {m.homePlanAction.scope === 'day'
+                        ? 'This will update the selected day in your active Home workout plan.'
+                        : 'This will replace your current Home workout plan with the plan from this chat.'}
                     </Text>
                     <Pressable
                       style={[
@@ -784,7 +760,7 @@ export default function ClaudeCoachScreen() {
                         m.homePlanAction.status === 'saving' && styles.homePlanActionButtonDisabled,
                       ]}
                       disabled={m.homePlanAction.status === 'saving' || m.homePlanAction.status === 'saved'}
-                      onPress={() => void handleInsertHomePlan(m.id, m.homePlanAction!.sourcePrompt)}
+                      onPress={() => void handleInsertHomePlan(m.id, m.homePlanAction!)}
                     >
                       {m.homePlanAction.status === 'saving' ? (
                         <ActivityIndicator color={OBSIDIAN} size="small" />
@@ -792,7 +768,7 @@ export default function ClaudeCoachScreen() {
                         <Text style={styles.homePlanActionButtonText}>
                           {m.homePlanAction.status === 'saved'
                             ? 'Inserted'
-                            : insertButtonLabel(conversationLanguage || currentUser?.preferred_language)}
+                            : m.homePlanAction.buttonLabel || insertButtonLabel(conversationLanguage || currentUser?.preferred_language)}
                         </Text>
                       )}
                     </Pressable>

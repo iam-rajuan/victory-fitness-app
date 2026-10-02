@@ -888,7 +888,6 @@ export default function HomeScreen() {
                 pathname: '/chat',
                 params: {
                   initialPrompt: `Help me adjust my current Home workout plan. Today's session is ${workoutTitle}, around ${workoutDurationMinutes} minutes, with ${activeExercises.length || homeLibraryWorkout?.movements?.length || 0} exercises. Use my active Home plan as the starting point.`,
-                  autoSend: '1',
                   contextNote: 'used your active Home workout plan',
                 },
               });
@@ -979,7 +978,6 @@ export default function HomeScreen() {
             pathname: '/chat',
             params: {
               initialPrompt: `Help me adjust this session from my current Home workout plan: ${workoutTitle}, ${workoutDurationMinutes} minutes, ${activeExercises.length || detailExercises.length} exercises. Keep the routine compatible with my Home plan card and Start Session flow.`,
-              autoSend: '1',
               contextNote: 'used this session and your active Home workout plan',
             },
           });

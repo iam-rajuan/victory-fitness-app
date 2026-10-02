@@ -2086,10 +2086,20 @@ export async function recordAnalyticsEvent(
   }
 }
 
+export type CoachWorkoutPlanAction = {
+  type: 'home_workout_plan_update';
+  source_prompt: string;
+  scope: 'day' | 'full_plan' | string;
+  target_days: string[];
+  target_minutes?: number | null;
+  summary: string;
+  button_label?: string;
+};
+
 export async function streamCoachVictorMessage(
   message: string,
   onToken: (token: string) => void,
-  onDone: (fullReply: string, threadId: string) => void,
+  onDone: (fullReply: string, threadId: string, planAction?: CoachWorkoutPlanAction | null) => void,
   onError: (error: Error) => void,
   options: { languageOverride?: string } = {}
 ): Promise<() => void> {
@@ -2115,7 +2125,7 @@ export async function streamCoachVictorMessage(
       });
 
       if (!response.ok || !response.body) {
-        const fallbackRes = await apiRequest<{ reply: string; thread_id?: string }>('/ai/coach-victor/chat', {
+        const fallbackRes = await apiRequest<{ reply: string; thread_id?: string; plan_action?: CoachWorkoutPlanAction | null }>('/ai/coach-victor/chat', {
           method: 'POST',
           body: { message, language_override: options.languageOverride || undefined },
         });
@@ -2125,7 +2135,7 @@ export async function streamCoachVictorMessage(
           onToken(chunk);
           await new Promise((r) => setTimeout(r, 20));
         }
-        onDone(fallbackRes.reply, fallbackRes.thread_id || '');
+        onDone(fallbackRes.reply, fallbackRes.thread_id || '', fallbackRes.plan_action || null);
         return;
       }
 
@@ -2134,6 +2144,7 @@ export async function streamCoachVictorMessage(
       let buffer = '';
       let fullReply = '';
       let finalThreadId = '';
+      let finalPlanAction: CoachWorkoutPlanAction | null = null;
 
       while (true) {
         const { value, done } = await reader.read();
@@ -2154,7 +2165,7 @@ export async function streamCoachVictorMessage(
           if (raw === '[DONE]') {
             break;
           }
-          let data: { type?: string; token?: unknown; reply?: unknown; thread_id?: unknown; error?: unknown };
+          let data: { type?: string; token?: unknown; reply?: unknown; thread_id?: unknown; error?: unknown; plan_action?: unknown };
           try {
             data = JSON.parse(raw);
           } catch {
@@ -2166,13 +2177,16 @@ export async function streamCoachVictorMessage(
           } else if (data.type === 'done') {
             if (typeof data.reply === 'string') fullReply = data.reply;
             if (typeof data.thread_id === 'string') finalThreadId = data.thread_id;
+            if (data.plan_action && typeof data.plan_action === 'object') {
+              finalPlanAction = data.plan_action as CoachWorkoutPlanAction;
+            }
           } else if (data.type === 'error') {
             throw new Error(typeof data.error === 'string' ? data.error : 'Streaming error');
           }
         }
       }
 
-      onDone(fullReply, finalThreadId);
+      onDone(fullReply, finalThreadId, finalPlanAction);
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
         return;
@@ -2182,6 +2196,22 @@ export async function streamCoachVictorMessage(
   })();
 
   return () => controller.abort();
+}
+
+export async function applyCoachWorkoutPlanAction(payload: {
+  source_prompt: string;
+  scope: string;
+  target_days?: string[];
+  target_minutes?: number | null;
+  summary?: string;
+}) {
+  const plan = await apiRequest<import('./workout-plans').StrengthPlanResponse>('/ai/coach-victor/workout-plan-action/apply', {
+    method: 'POST',
+    body: payload,
+    timeoutMs: 120_000,
+    skipResponseCache: true,
+  });
+  return plan;
 }
 
 export type CoachVictorHistoryMessage = {
