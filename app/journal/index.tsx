@@ -35,6 +35,33 @@ const PROMPTS = [
   'What friction made training feel hard today?',
 ];
 
+function startOfLocalDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function getJournalEntryDayLabel(value?: string | null): string {
+  const entryDate = value ? new Date(value) : null;
+  if (!entryDate || Number.isNaN(entryDate.getTime())) {
+    return 'Today';
+  }
+
+  const today = startOfLocalDay(new Date());
+  const entryDay = startOfLocalDay(entryDate);
+  const diffDays = Math.round((today.getTime() - entryDay.getTime()) / 86_400_000);
+
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays > 1 && diffDays < 7) {
+    return entryDate.toLocaleDateString(undefined, { weekday: 'long' });
+  }
+
+  return entryDate.toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: entryDate.getFullYear() === today.getFullYear() ? undefined : 'numeric',
+  });
+}
+
 export default function JournalScreen() {
   const router = useRouter();
   const [entryText, setEntryText] = useState('');
@@ -199,14 +226,7 @@ export default function JournalScreen() {
                 >
                   <View style={styles.historyItemHeader}>
                     <Text style={styles.historyItemDay}>
-                      {(item as any).title ||
-                        (idx === 0
-                          ? 'Yesterday'
-                          : idx === 1
-                          ? 'Wednesday'
-                          : new Date(item.created_at || Date.now()).toLocaleDateString('en-GB', {
-                              weekday: 'long',
-                            }))}
+                      {(item as any).title || getJournalEntryDayLabel(item.created_at)}
                     </Text>
                     <Text style={styles.historyItemPrompt}>
                       {(item as any).prompt || 'Daily check-in'}
