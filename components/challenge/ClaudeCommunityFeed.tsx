@@ -87,9 +87,75 @@ function isDirectVideoUrl(value?: string) {
   return /\.(mp4|mov|m4v|webm|ogv)(\?.*)?$/i.test(normalized) || normalized.includes('/community-videos/');
 }
 
+function getYouTubeVideoId(value?: string) {
+  const normalized = String(value || '').trim();
+  if (!normalized) return '';
+  try {
+    const url = new URL(normalized);
+    const host = url.hostname.replace(/^www\./, '').toLowerCase();
+    if (host === 'youtu.be') return url.pathname.replace(/^\/+/, '').split('/')[0] || '';
+    if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'youtube-nocookie.com') {
+      if (url.pathname.startsWith('/watch')) return url.searchParams.get('v') || '';
+      if (url.pathname.startsWith('/embed/') || url.pathname.startsWith('/shorts/')) {
+        return url.pathname.split('/').filter(Boolean)[1] || '';
+      }
+    }
+  } catch {
+    const match = normalized.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([A-Za-z0-9_-]{6,})/);
+    return match?.[1] || '';
+  }
+  return '';
+}
+
+function getYouTubeThumbnailUrl(value?: string) {
+  const videoId = getYouTubeVideoId(value);
+  return videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : '';
+}
+
+function getVideoProviderLabel(value?: string) {
+  const normalized = String(value || '').toLowerCase();
+  if (normalized.includes('youtube.com') || normalized.includes('youtu.be')) return 'YouTube';
+  if (normalized.includes('vimeo.com')) return 'Vimeo';
+  return 'Video';
+}
+
+function normalizeExternalVideoEmbedUrl(value?: string) {
+  const normalized = String(value || '').trim();
+  if (!normalized || isDirectVideoUrl(normalized)) return normalized;
+
+  const youtubeVideoId = getYouTubeVideoId(normalized);
+  if (youtubeVideoId) {
+    return `https://www.youtube.com/embed/${youtubeVideoId}?playsinline=1&autoplay=1&rel=0&modestbranding=1`;
+  }
+
+  try {
+    const url = new URL(normalized);
+    const host = url.hostname.replace(/^www\./, '').toLowerCase();
+    if (host === 'player.vimeo.com' && url.pathname.startsWith('/video/')) {
+      url.searchParams.set('autoplay', '1');
+      url.searchParams.set('playsinline', '1');
+      return url.toString();
+    }
+    if (host === 'vimeo.com') {
+      const videoId = url.pathname.split('/').filter(Boolean)[0] || '';
+      if (videoId) {
+        return `https://player.vimeo.com/video/${videoId}?autoplay=1&playsinline=1`;
+      }
+    }
+  } catch {
+    const vimeoMatch = normalized.match(/vimeo\.com\/(?:video\/)?(\d+)/i);
+    if (vimeoMatch?.[1]) {
+      return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1&playsinline=1`;
+    }
+  }
+
+  return normalized;
+}
+
 function buildCommunityVideoHtml(videoUrl: string) {
-  const escapedUrl = escapeHtmlAttribute(videoUrl);
   const directVideo = isDirectVideoUrl(videoUrl);
+  const embeddedUrl = directVideo ? videoUrl : normalizeExternalVideoEmbedUrl(videoUrl);
+  const escapedUrl = escapeHtmlAttribute(embeddedUrl);
   return `<!doctype html>
 <html>
   <head>
@@ -142,6 +208,10 @@ function normalizePickedImageFileName(asset: ImagePicker.ImagePickerAsset, mimeT
 
 function CommunityVideoPlayer({ videoUrl }: { videoUrl?: string }) {
   const normalizedUrl = String(videoUrl || '').trim();
+  const playableUrl = normalizeExternalVideoEmbedUrl(normalizedUrl);
+  const thumbnailUrl = getYouTubeThumbnailUrl(normalizedUrl);
+  const providerLabel = getVideoProviderLabel(normalizedUrl);
+  const [isInlinePlaying, setIsInlinePlaying] = useState(false);
 
   if (!normalizedUrl) {
     return (
@@ -170,9 +240,48 @@ function CommunityVideoPlayer({ videoUrl }: { videoUrl?: string }) {
     });
   }
 
+  if (!isDirectVideoUrl(normalizedUrl)) {
+    if (isInlinePlaying) {
+      return (
+        <CrossPlatformWebView
+          source={{ html: buildCommunityVideoHtml(playableUrl) }}
+          style={StyleSheet.absoluteFill}
+          originWhitelist={['*']}
+          javaScriptEnabled
+          domStorageEnabled
+          allowsInlineMediaPlayback
+          mediaPlaybackRequiresUserAction={false}
+          scrollEnabled={false}
+          setSupportMultipleWindows={false}
+          javaScriptCanOpenWindowsAutomatically={false}
+          startInLoadingState
+        />
+      );
+    }
+
+    return (
+      <TouchableOpacity
+        activeOpacity={0.86}
+        style={styles.externalVideoPreview}
+        onPress={() => setIsInlinePlaying(true)}
+      >
+        {thumbnailUrl ? (
+          <Image source={{ uri: thumbnailUrl }} style={styles.externalVideoThumb} resizeMode="cover" />
+        ) : null}
+        <View style={styles.externalVideoShade} />
+        <View style={styles.externalVideoPlayBtn}>
+          <View style={styles.playTriangle} />
+        </View>
+        <View style={styles.externalVideoProviderPill}>
+          <Text style={styles.externalVideoProviderText}>{providerLabel}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  }
+
   return (
     <CrossPlatformWebView
-      source={{ html: buildCommunityVideoHtml(normalizedUrl) }}
+      source={{ html: buildCommunityVideoHtml(playableUrl) }}
       style={StyleSheet.absoluteFill}
       originWhitelist={['*']}
       javaScriptEnabled
@@ -607,8 +716,10 @@ export default function ClaudeCommunityFeed({
                   <CommunityVideoPlayer videoUrl={p.videoUrl} />
                 </View>
                 <View style={styles.videoMetaWrap}>
-                  <Text style={styles.videoTitleText}>{p.videoTitle}</Text>
-                  <Text style={styles.videoMetaText}>{p.videoMeta || p.videoUrl}</Text>
+                  <Text style={styles.videoTitleText}>{p.videoTitle || `${getVideoProviderLabel(p.videoUrl)} video`}</Text>
+                  <Text style={styles.videoMetaText} numberOfLines={1}>
+                    {p.videoMeta || `${getVideoProviderLabel(p.videoUrl)} link`}
+                  </Text>
                 </View>
               </View>
             )}
@@ -802,11 +913,17 @@ export default function ClaudeCommunityFeed({
                 {youtubeUrl.trim() ? (
                   <View style={styles.videoPreviewSnippet}>
                     <View style={styles.videoMiniThumb}>
-                      <View style={styles.miniPlayTriangle} />
+                      {getYouTubeThumbnailUrl(youtubeUrl) ? (
+                        <Image source={{ uri: getYouTubeThumbnailUrl(youtubeUrl) }} style={styles.videoMiniThumbImage} resizeMode="cover" />
+                      ) : null}
+                      <View style={styles.videoMiniThumbShade} />
+                      <View style={styles.miniPlayCircle}>
+                        <View style={styles.miniPlayTriangle} />
+                      </View>
                     </View>
                     <View style={styles.videoMiniInfo}>
-                      <Text style={styles.videoMiniTitle}>Preview ready</Text>
-                      <Text style={styles.videoMiniSub}>Publishes from the linked video</Text>
+                      <Text style={styles.videoMiniTitle}>{getVideoProviderLabel(youtubeUrl)} preview ready</Text>
+                      <Text style={styles.videoMiniSub} numberOfLines={1}>Tap post to share this link</Text>
                     </View>
                   </View>
                 ) : null}
@@ -1073,15 +1190,61 @@ const styles = StyleSheet.create({
     marginTop: 12,
     borderRadius: 14,
     overflow: 'hidden',
-    backgroundColor: '#0a2439',
+    backgroundColor: 'rgba(10, 36, 57, 0.92)',
+    borderWidth: 1,
+    borderColor: 'rgba(247, 243, 238, 0.08)',
   },
   videoPlayerBox: {
-    height: 150,
+    aspectRatio: 16 / 9,
+    width: '100%',
     backgroundColor: '#0D2B45',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
     position: 'relative',
+  },
+  externalVideoPreview: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#081B2B',
+  },
+  externalVideoThumb: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+  },
+  externalVideoShade: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(5, 12, 18, 0.24)',
+  },
+  externalVideoPlayBtn: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: GOLD,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  externalVideoProviderPill: {
+    position: 'absolute',
+    left: 10,
+    bottom: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(13, 13, 13, 0.72)',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  externalVideoProviderText: {
+    fontFamily: DMSANS,
+    fontSize: 10.5,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    color: IVORY,
   },
   videoPlaceholder: {
     ...StyleSheet.absoluteFillObject,
@@ -1100,7 +1263,7 @@ const styles = StyleSheet.create({
     width: 0,
     height: 0,
     borderLeftWidth: 13,
-    borderLeftColor: IVORY,
+    borderLeftColor: OBSIDIAN,
     borderTopWidth: 8,
     borderTopColor: 'transparent',
     borderBottomWidth: 8,
@@ -1108,11 +1271,12 @@ const styles = StyleSheet.create({
     marginLeft: 3,
   },
   videoMetaWrap: {
-    padding: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   videoTitleText: {
     fontFamily: DMSANS,
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: '600',
     color: IVORY,
   },
@@ -1481,28 +1645,49 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: 'rgba(247, 243, 238, 0.06)',
+    backgroundColor: 'rgba(247, 243, 238, 0.055)',
+    borderWidth: 1,
+    borderColor: 'rgba(247, 243, 238, 0.08)',
     borderRadius: 12,
-    padding: 11,
+    padding: 9,
   },
   videoMiniThumb: {
-    width: 54,
-    height: 38,
+    width: 72,
+    height: 45,
     borderRadius: 8,
-    backgroundColor: COPPER,
+    backgroundColor: '#081B2B',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  videoMiniThumbImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+  },
+  videoMiniThumbShade: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(5, 12, 18, 0.22)',
+  },
+  miniPlayCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: GOLD,
     alignItems: 'center',
     justifyContent: 'center',
   },
   miniPlayTriangle: {
     width: 0,
     height: 0,
-    borderLeftWidth: 11,
-    borderLeftColor: IVORY,
-    borderTopWidth: 7,
+    borderLeftWidth: 8,
+    borderLeftColor: OBSIDIAN,
+    borderTopWidth: 5,
     borderTopColor: 'transparent',
-    borderBottomWidth: 7,
+    borderBottomWidth: 5,
     borderBottomColor: 'transparent',
-    marginLeft: 3,
+    marginLeft: 2,
   },
   videoMiniInfo: {
     flex: 1,
