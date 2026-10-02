@@ -88,8 +88,12 @@ export default function ClaudeFullDayMeals({ meals, updatingMealKey, onToggleMea
               />
 
               <View style={styles.mealTextCol}>
-                <Text style={[styles.mealName, m.logged && styles.mealNameDone]}>{m.name}</Text>
-                <Text style={styles.mealSub}>{m.sub}</Text>
+                <Text style={[styles.mealName, m.logged && styles.mealNameDone]} numberOfLines={2}>
+                  {m.name}
+                </Text>
+                <Text style={styles.mealSub} numberOfLines={2}>
+                  {m.sub}
+                </Text>
               </View>
 
               <View style={styles.rightCol}>
@@ -103,9 +107,6 @@ export default function ClaudeFullDayMeals({ meals, updatingMealKey, onToggleMea
                   {m.logged ? t('Eaten') : `+${m.proteinG} g`}
                 </Text>
                 <Text style={styles.kcalVal}>{`${m.kcal || 0} kcal`}</Text>
-                {isUpdating ? (
-                  <Text style={styles.updatingText}>...</Text>
-                ) : null}
               </View>
             </TouchableOpacity>
           );
@@ -155,6 +156,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 13,
+    minHeight: 76,
     paddingVertical: 15,
     paddingHorizontal: 16,
   },
@@ -191,6 +193,7 @@ const styles = StyleSheet.create({
   mealName: {
     fontFamily: DMSANS,
     fontSize: 15,
+    lineHeight: 19,
     fontWeight: '600',
     color: IVORY,
   },
@@ -202,12 +205,15 @@ const styles = StyleSheet.create({
   mealSub: {
     fontFamily: INTER,
     fontSize: 12.5,
+    lineHeight: 16,
+    minHeight: 32,
     color: 'rgba(247, 243, 238, 0.5)',
     marginTop: 2,
   },
   rightCol: {
     alignItems: 'flex-end',
     flexShrink: 0,
+    minHeight: 37,
   },
   proteinVal: {
     fontFamily: MONO,
@@ -224,13 +230,6 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: 'rgba(247, 243, 238, 0.45)',
     marginTop: 2,
-  },
-  updatingText: {
-    fontFamily: DMSANS,
-    fontSize: 11,
-    fontWeight: '700',
-    color: 'rgba(247, 243, 238, 0.45)',
-    marginTop: 5,
   },
   footnote: {
     fontFamily: INTER,
