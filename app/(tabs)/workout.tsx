@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -239,7 +239,7 @@ export default function WorkoutScreen() {
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedPurpose, setSelectedPurpose] = useState('All');
+  const [selectedPurposes, setSelectedPurposes] = useState<string[]>(['All']);
   const [selectedDifficulty, setSelectedDifficulty] = useState('Any');
   const [selectedDuration, setSelectedDuration] = useState('Any');
   const [selectedKit, setSelectedKit] = useState('Any');
@@ -380,8 +380,27 @@ export default function WorkoutScreen() {
     setRefreshing(false);
   };
 
+  const handleSelectPurpose = useCallback((purpose: string) => {
+    setSelectedPurposes((current) => {
+      if (purpose === 'All') {
+        return ['All'];
+      }
+
+      const activePurposes = current.filter((item) => item !== 'All');
+      if (activePurposes.includes(purpose)) {
+        const next = activePurposes.filter((item) => item !== purpose);
+        return next.length ? next : ['All'];
+      }
+
+      return [...activePurposes, purpose];
+    });
+  }, []);
+
   // Filtered workouts
   const filteredWorkouts = useMemo(() => {
+    const activePurposes = selectedPurposes.filter((purpose) => purpose !== 'All');
+    const normalizedSelectedPurposes = activePurposes.map(normalizeWords).filter(Boolean);
+
     return libraryWorkouts.filter((w) => {
       // Search
       if (searchQuery.trim()) {
@@ -391,9 +410,9 @@ export default function WorkoutScreen() {
         if (!matchName && !matchMeta) return false;
       }
       // Purpose
-      if (selectedPurpose !== 'All') {
+      if (normalizedSelectedPurposes.length > 0) {
         const purposes = Array.isArray(w.purposes) && w.purposes.length ? w.purposes : (w.tag ? [w.tag] : []);
-        if (!purposes.some((purpose) => normalizeWords(purpose) === normalizeWords(selectedPurpose))) return false;
+        if (!purposes.some((purpose) => normalizedSelectedPurposes.includes(normalizeWords(purpose)))) return false;
       }
       // Difficulty
       if (selectedDifficulty !== 'Any') {
@@ -411,7 +430,7 @@ export default function WorkoutScreen() {
       }
       return true;
     });
-  }, [libraryWorkouts, searchQuery, selectedPurpose, selectedDifficulty, selectedKit, selectedDuration]);
+  }, [libraryWorkouts, searchQuery, selectedPurposes, selectedDifficulty, selectedKit, selectedDuration]);
 
   const resultCountText = t('{shown} of {total} workouts · shortest first', { shown: filteredWorkouts.length, total: libraryWorkouts.length });
   const forYouWorkouts = useMemo(() => filteredWorkouts.slice(0, 4).map((workout, idx) => {
@@ -491,7 +510,8 @@ export default function WorkoutScreen() {
       : preferredKitWords[0]
         ? preferredKitWords[0]
         : 'my available kit';
-    const purposeText = selectedPurpose !== 'All' ? selectedPurpose : 'today';
+    const activePurposes = selectedPurposes.filter((purpose) => purpose !== 'All');
+    const purposeText = activePurposes.length ? activePurposes.join(', ') : 'today';
     const prompt = [
       `I need a workout for ${purposeText}.`,
       `I have ${timeText} and ${kitText}.`,
@@ -727,8 +747,8 @@ export default function WorkoutScreen() {
         <ClaudeWorkoutFilters
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-          selectedPurpose={selectedPurpose}
-          onSelectPurpose={setSelectedPurpose}
+          selectedPurpose={selectedPurposes}
+          onSelectPurpose={handleSelectPurpose}
           selectedDifficulty={selectedDifficulty}
           onSelectDifficulty={setSelectedDifficulty}
           selectedDuration={selectedDuration}

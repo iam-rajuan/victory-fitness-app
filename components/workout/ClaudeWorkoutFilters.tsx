@@ -6,7 +6,7 @@ import { useLanguage } from '../../lib/i18n';
 interface ClaudeWorkoutFiltersProps {
   searchQuery: string;
   onSearchChange: (q: string) => void;
-  selectedPurpose: string;
+  selectedPurpose: string[];
   onSelectPurpose: (p: string) => void;
   selectedDifficulty: string;
   onSelectDifficulty: (d: string) => void;
@@ -122,7 +122,7 @@ export default function ClaudeWorkoutFilters({
 interface SlideableChipsRowProps {
   label: string;
   items: string[];
-  selectedItem: string;
+  selectedItem: string | string[];
   onSelect: (item: string) => void;
   paddingTop?: number;
 }
@@ -219,7 +219,7 @@ function SlideableChipsRow({
           : {})}
       >
         {items.map((item) => {
-          const active = item === selectedItem;
+          const active = Array.isArray(selectedItem) ? selectedItem.includes(item) : item === selectedItem;
           return (
             <Pressable
               key={item}
