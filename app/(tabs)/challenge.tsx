@@ -415,13 +415,8 @@ export default function ChallengeScreen() {
   }, [communityScope, loadChallenges, loadCommunityPosts]);
 
   const featuredChallenge = useMemo(() => {
-    return (
-      challengeItems.find((item) => item.featured && (item.status === 'active' || item.status === 'ready')) ||
-      activeChallenge ||
-      challengeItems.find((item) => item.status === 'ready') ||
-      null
-    );
-  }, [activeChallenge, challengeItems]);
+    return challengeItems.find((item) => item.featured && (item.status === 'active' || item.status === 'ready')) || null;
+  }, [challengeItems]);
 
   const openFeaturedChallenge = useCallback(() => {
     if (!featuredChallenge) return;
