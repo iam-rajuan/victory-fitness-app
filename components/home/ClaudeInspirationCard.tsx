@@ -4,6 +4,7 @@ import Constants from 'expo-constants';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../lib/i18n';
 import { fetchHomepageQuote } from '../../lib/api';
+import { Fonts } from '../../constants/Typography';
 
 interface ClaudeInspirationCardProps {
   tier: 'SILVER' | 'GOLD' | 'GOLD_BETA' | 'PLATINUM' | 'INNER_CIRCLE' | 'NONE';
@@ -13,8 +14,8 @@ interface ClaudeInspirationCardProps {
 
 const COPPER = '#B5651D';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
+const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: Fonts.heading });
+const INTER_SEMIBOLD = Platform.select({ web: "'Inter', 'DM Sans', sans-serif", default: Fonts.bodySemiBold });
 
 export default function ClaudeInspirationCard({
   tier: _tier,
@@ -77,11 +78,11 @@ const styles = StyleSheet.create({
     paddingLeft: 15,
   },
   quoteText: {
-    fontFamily: CLASH,
-    fontSize: 20,
-    lineHeight: 28,
+    fontFamily: INTER_SEMIBOLD,
+    fontSize: 19,
+    lineHeight: 31,
     fontWeight: '600',
-    letterSpacing: -0.2,
+    letterSpacing: 0,
   },
   authorText: {
     marginTop: 8,

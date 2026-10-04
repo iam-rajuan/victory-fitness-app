@@ -1,8 +1,8 @@
 /**
  * Victory Fitness - Brand Typography System (v7.0)
  * 
- * ROLE 1: Display / Hero -> Clash Display (Bold)
- *   Usage: App name on splash, large headings, hero sections
+ * ROLE 1: Display / Hero -> DM Sans (600 SemiBold)
+ *   Usage: large headings, hero sections, inspirational text
  * 
  * ROLE 2: Headings -> DM Sans (600 SemiBold)
  *   Usage: Section titles, card headers, navigation labels, modal titles
@@ -19,7 +19,7 @@
 
 export const Fonts = {
   // ROLE 1: Display / Hero
-  display: 'ClashDisplay-Bold',
+  display: 'DMSans-SemiBold',
 
   // ROLE 2: Headings
   heading: 'DMSans-SemiBold',
@@ -40,53 +40,53 @@ export const Typography = {
   heroTitle: {
     fontFamily: Fonts.display,
     fontSize: 28,
-    lineHeight: 34,
+    lineHeight: 38,
     fontWeight: '700' as const,
-    letterSpacing: 0.5,
+    letterSpacing: 0,
   },
   displayLarge: {
     fontFamily: Fonts.display,
     fontSize: 24,
-    lineHeight: 30,
+    lineHeight: 34,
     fontWeight: '700' as const,
-    letterSpacing: 0.4,
+    letterSpacing: 0,
   },
   displayMedium: {
     fontFamily: Fonts.display,
     fontSize: 20,
-    lineHeight: 26,
+    lineHeight: 29,
     fontWeight: '700' as const,
-    letterSpacing: 0.3,
+    letterSpacing: 0,
   },
 
   // Heading Presets
   h1: {
     fontFamily: Fonts.heading,
     fontSize: 20,
-    lineHeight: 26,
+    lineHeight: 28,
     fontWeight: '600' as const,
-    letterSpacing: 0.2,
+    letterSpacing: 0,
   },
   h2: {
     fontFamily: Fonts.heading,
     fontSize: 18,
-    lineHeight: 24,
+    lineHeight: 26,
     fontWeight: '600' as const,
-    letterSpacing: 0.2,
+    letterSpacing: 0,
   },
   h3: {
     fontFamily: Fonts.heading,
     fontSize: 16,
-    lineHeight: 22,
+    lineHeight: 23,
     fontWeight: '600' as const,
-    letterSpacing: 0.2,
+    letterSpacing: 0,
   },
   cardTitle: {
     fontFamily: Fonts.heading,
     fontSize: 17,
-    lineHeight: 22,
+    lineHeight: 24,
     fontWeight: '600' as const,
-    letterSpacing: 0.2,
+    letterSpacing: 0,
   },
   sectionEyebrow: {
     fontFamily: Fonts.heading,
