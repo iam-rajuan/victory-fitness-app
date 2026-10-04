@@ -1,5 +1,12 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  Platform,
+  useWindowDimensions,
+} from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../lib/i18n';
 import { ChallengeItem } from './ClaudeChallengeDirectory';
@@ -33,6 +40,10 @@ export default function ClaudeActiveChallengeBanner({
 }: ClaudeActiveChallengeBannerProps) {
   const { isDark } = useTheme();
   const { t } = useLanguage();
+  const { width: windowWidth } = useWindowDimensions();
+
+  const isSlim = windowWidth > 0 && windowWidth < 380;
+  const hPad = isSlim ? 14 : 20;
 
   if (!challenge) {
     return null;
@@ -64,7 +75,7 @@ export default function ClaudeActiveChallengeBanner({
     : challenge.desc || 'Featured from the admin dashboard. Tap to see details.';
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingHorizontal: hPad }]}>
       <View
         style={[
           styles.card,
@@ -72,6 +83,7 @@ export default function ClaudeActiveChallengeBanner({
             backgroundColor: isDark ? NAVY : '#FFFFFF',
             borderWidth: isDark ? 0 : 1,
             borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
+            paddingHorizontal: isSlim ? 14 : 18,
             shadowColor: '#0D2B45',
             shadowOffset: { width: 0, height: 4 },
             shadowRadius: 14,
@@ -87,7 +99,7 @@ export default function ClaudeActiveChallengeBanner({
 
         <Text style={[styles.title, { color: isDark ? IVORY : NAVY }]}>{challenge.n}</Text>
 
-        {/* Progress Bar matching line 2914 */}
+        {/* Progress Bar */}
         <View
           style={[
             styles.progressBarBg,
@@ -99,7 +111,7 @@ export default function ClaudeActiveChallengeBanner({
           <View style={[styles.progressBarFill, { width: `${progressPct}%` }]} />
         </View>
 
-        {/* 21 Day Pips matching line 2915-2922 */}
+        {/* Day Pips */}
         <View style={styles.pipsRow}>
           {Array.from({ length: daysTotal }).map((_, i) => {
             const isDone = i < doneTo;
@@ -124,7 +136,7 @@ export default function ClaudeActiveChallengeBanner({
           })}
         </View>
 
-        {/* Daily Check Card matching line 2923-2935 */}
+        {/* Daily Check Card */}
         <TouchableOpacity
           style={[
             styles.checkCard,
@@ -163,7 +175,7 @@ export default function ClaudeActiveChallengeBanner({
           </View>
         </TouchableOpacity>
 
-        {/* Action Buttons matching lines 845-848 */}
+        {/* Action Buttons */}
         <View style={styles.actionsRow}>
           <TouchableOpacity style={styles.cohortBtn} activeOpacity={0.8} onPress={isJoined ? onOpenCohort : onOpenChallenge}>
             <Text style={styles.cohortBtnText}>{isJoined ? t('Cohort chat') : t('Details')}</Text>
@@ -196,7 +208,6 @@ function formatLoggedTime(value?: string) {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 20,
     marginTop: 14,
   },
   card: {
@@ -205,12 +216,13 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: COPPER,
     paddingVertical: 16,
-    paddingHorizontal: 18,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 8,
     marginBottom: 10,
   },
   kicker: {
@@ -219,12 +231,14 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     letterSpacing: 1.3,
     color: GOLD,
+    flexShrink: 1,
   },
   pointsBadge: {
     fontFamily: MONO,
     fontSize: 12,
     fontWeight: '700',
     color: GOLD,
+    flexShrink: 0,
   },
   title: {
     fontFamily: CLASH,
@@ -279,6 +293,7 @@ const styles = StyleSheet.create({
     borderRadius: 7,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   checkBoxPending: {
     borderWidth: 2,
@@ -322,6 +337,7 @@ const styles = StyleSheet.create({
   },
   cohortBtn: {
     flex: 1,
+    minWidth: 0,
     height: 42,
     borderRadius: 11,
     backgroundColor: 'rgba(247, 243, 238, 0.1)',
@@ -350,9 +366,11 @@ const styles = StyleSheet.create({
   },
   inviteBtn: {
     flex: 1,
+    minWidth: 0,
     height: 42,
     borderRadius: 11,
-    borderWidth: 1.5,
+    backgroundColor: 'rgba(201, 148, 58, 0.18)',
+    borderWidth: 1,
     borderColor: GOLD,
     alignItems: 'center',
     justifyContent: 'center',

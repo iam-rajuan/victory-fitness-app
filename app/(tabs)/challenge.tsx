@@ -7,6 +7,7 @@ import {
   Platform,
   Alert,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { apiRequest, fetchCurrentUser, resolveRemoteAssetUrl } from '../../lib/api';
@@ -181,6 +182,9 @@ export default function ChallengeScreen() {
   const router = useRouter();
   const { isDark, colors } = useTheme();
   const { t } = useLanguage();
+  const { width: windowWidth } = useWindowDimensions();
+  const isSlim = windowWidth > 0 && windowWidth < 380;
+  const hPad = isSlim ? 14 : 20;
 
   const [activeTab, setActiveTab] = useState<ChallengeTabType>('challenges');
   const [selectedChallenge, setSelectedChallenge] = useState<ChallengeItem | null>(null);
@@ -477,10 +481,10 @@ export default function ChallengeScreen() {
           />
         }
       >
-        {/* Screen Title matching line 824 */}
-        <Text style={[styles.screenTitle, { color: colors.text }]}>{t('Challenges')}</Text>
+        {/* Screen Title */}
+        <Text style={[styles.screenTitle, { color: colors.text, paddingHorizontal: hPad }]}>{t('Challenges')}</Text>
 
-        {/* Top Tab Toggle: Challenges vs Community matching lines 825-827 */}
+        {/* Top Tab Toggle: Challenges vs Community */}
         <ClaudeChallengeTabs activeTab={activeTab} onChangeTab={setActiveTab} />
 
         {activeTab === 'challenges' ? (
@@ -502,7 +506,7 @@ export default function ChallengeScreen() {
             />
           </>
         ) : (
-          /* Community Feed matching lines 915-963 */
+          /* Community Feed */
           <ClaudeCommunityFeed
             userTier={userTier}
             userInitials={userInitials}
@@ -519,7 +523,7 @@ export default function ChallengeScreen() {
         )}
       </ScrollView>
 
-      {/* Challenge Detail Modal matching lines 1718-1769 */}
+      {/* Challenge Detail Modal */}
       <ClaudeChallengeDetailModal
         challenge={selectedChallenge}
         visible={showDetailModal}
@@ -538,7 +542,7 @@ export default function ChallengeScreen() {
         }}
       />
 
-      {/* Cohort Lobby Modal matching lines 1680-1717 */}
+      {/* Cohort Lobby Modal */}
       <ClaudeCohortModal
         visible={showCohortModal}
         onClose={() => setShowCohortModal(false)}
@@ -551,7 +555,7 @@ export default function ChallengeScreen() {
         challengeDays={inviteChallenge?.d || 1}
       />
 
-      {/* Guest Mode Invite Modal matching lines 1461-1502 */}
+      {/* Guest Mode Invite Modal */}
       <ClaudeInviteModal
         visible={showInviteModal}
         onClose={() => setShowInviteModal(false)}
@@ -582,7 +586,6 @@ const styles = StyleSheet.create({
     fontSize: 27,
     fontWeight: '600',
     color: IVORY,
-    paddingHorizontal: 20,
     paddingTop: 4,
   },
 });

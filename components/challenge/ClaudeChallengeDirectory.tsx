@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../lib/i18n';
@@ -54,6 +55,46 @@ const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Jet
 
 const DAY_FILTERS = ['All', '3', '5', '7', '14', '21'];
 const CAT_FILTERS = ['All', 'Physical', 'Mental', 'Relational', 'Nutrition'];
+
+export function formatDifficultyLabel(difficulties?: string[], singleDifficulty?: string): string {
+  const list = Array.isArray(difficulties) && difficulties.length > 0
+    ? difficulties
+    : singleDifficulty
+      ? [singleDifficulty]
+      : [];
+  const normalized = list.map((item) => String(item).trim().toUpperCase());
+
+  const hasBeg = normalized.includes('BEGINNER');
+  const hasInt = normalized.includes('INTERMEDIATE');
+  const hasAdv = normalized.includes('ADVANCED');
+
+  if ((hasBeg && hasInt && hasAdv) || normalized.includes('ALL') || normalized.includes('ALL LEVELS')) {
+    return 'All Levels';
+  }
+  if (hasBeg && hasInt) {
+    return 'Beg • Int';
+  }
+  if (hasInt && hasAdv) {
+    return 'Int • Adv';
+  }
+  if (hasBeg && hasAdv) {
+    return 'Beg & Adv';
+  }
+  if (hasAdv) {
+    return 'Advanced';
+  }
+  if (hasInt) {
+    return 'Intermediate';
+  }
+  if (hasBeg) {
+    return 'Beginner';
+  }
+  if (normalized.length > 0) {
+    const raw = normalized[0];
+    return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+  }
+  return 'All Levels';
+}
 
 function useHorizontalWebScroll() {
   const scrollRef = useRef<ScrollView>(null);
@@ -146,6 +187,12 @@ export default function ClaudeChallengeDirectory({
 }: ClaudeChallengeDirectoryProps) {
   const { colors, isDark } = useTheme();
   const { t } = useLanguage();
+  const { width: windowWidth } = useWindowDimensions();
+
+  const isSlim = windowWidth > 0 && windowWidth < 380;
+  const isUltraSlim = windowWidth > 0 && windowWidth < 330;
+  const hPad = isSlim ? 14 : 20;
+
   const [selectedDay, setSelectedDay] = useState('All');
   const [selectedCat, setSelectedCat] = useState('All');
   const railScroll = useHorizontalWebScroll();
@@ -195,8 +242,8 @@ export default function ClaudeChallengeDirectory({
 
   return (
     <View style={styles.container}>
-      {/* Horizontal Rail: Most joined this week matching line 851-874 */}
-      <View style={styles.railHeader}>
+      {/* Horizontal Rail: Most joined this week */}
+      <View style={[styles.railHeader, { paddingHorizontal: hPad }]}>
         <Text style={[styles.railTitle, { color: colors.text }]}>{t('Most joined this week')}</Text>
         <TouchableOpacity activeOpacity={0.7} onPress={handleSlideRail}>
           <Text style={styles.railAllLink}>{t('All ›')}</Text>
@@ -214,7 +261,7 @@ export default function ClaudeChallengeDirectory({
         nestedScrollEnabled
         onScroll={(e) => setRailOffset(e.nativeEvent.contentOffset.x)}
         scrollEventThrottle={16}
-        contentContainerStyle={styles.railScroll}
+        contentContainerStyle={[styles.railScroll, { paddingHorizontal: hPad }]}
         style={railScroll.webStyle}
         {...railScroll.webProps}
       >
@@ -271,14 +318,16 @@ export default function ClaudeChallengeDirectory({
         ))}
       </ScrollView>
 
-      {/* HOW MANY DAYS? Filter Chips matching lines 876-881 */}
+      {/* HOW MANY DAYS? Filter Chips */}
       <View style={styles.filterSection}>
-        <Text style={[styles.filterLabel, { color: colors.textMuted }]}>{t('HOW MANY DAYS?')}</Text>
+        <Text style={[styles.filterLabel, { color: colors.textMuted, paddingHorizontal: hPad }]}>
+          {t('HOW MANY DAYS?')}
+        </Text>
         <ScrollView
           ref={daysScroll.scrollRef}
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipRow}
+          contentContainerStyle={[styles.chipRow, { paddingHorizontal: hPad }]}
           style={daysScroll.webStyle}
           {...daysScroll.webProps}
         >
@@ -316,14 +365,16 @@ export default function ClaudeChallengeDirectory({
         </ScrollView>
       </View>
 
-      {/* WHAT KIND? Filter Chips matching lines 882-887 */}
+      {/* WHAT KIND? Filter Chips */}
       <View style={styles.filterSectionSmall}>
-        <Text style={[styles.filterLabel, { color: colors.textMuted }]}>{t('WHAT KIND?')}</Text>
+        <Text style={[styles.filterLabel, { color: colors.textMuted, paddingHorizontal: hPad }]}>
+          {t('WHAT KIND?')}
+        </Text>
         <ScrollView
           ref={catScroll.scrollRef}
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipRow}
+          contentContainerStyle={[styles.chipRow, { paddingHorizontal: hPad }]}
           style={catScroll.webStyle}
           {...catScroll.webProps}
         >
@@ -360,109 +411,255 @@ export default function ClaudeChallengeDirectory({
         </ScrollView>
       </View>
 
-      {/* Count Line matching line 889 & 3354 */}
-      <Text style={[styles.countLine, { color: GOLD }]}>
-        {isLoading
-          ? t('Preparing your challenges')
-          : t('{active} of {total} challenges', { active: filteredChallenges.length, total: allChallenges.length })}
-      </Text>
+      {/* Challenge Count Indicator */}
+      <View style={[styles.countLineRow, { paddingHorizontal: hPad }]}>
+        <Text style={[styles.countLine, { color: GOLD }]}>
+          {isLoading
+            ? t('Preparing your challenges')
+            : t('{active} of {total} challenges', { active: filteredChallenges.length, total: allChallenges.length })}
+        </Text>
+      </View>
 
-      {/* Challenge List matching lines 891-906 */}
-      <View style={styles.challengeList}>
+      {/* Challenge List - Robust, Unbreakable Responsive Card Architecture */}
+      <View style={[styles.challengeList, { paddingHorizontal: hPad }]}>
         {isLoading && filteredChallenges.length === 0 && [0, 1, 2].map((item) => (
-          <View key={`challenge-skeleton-${item}`} style={[styles.challengeCard, styles.skeletonCard, { backgroundColor: isDark ? NAVY : '#FFFFFF' }]}>
-            <View style={styles.skeletonDays} />
-            <View style={[styles.challengeDivider, { backgroundColor: isDark ? 'rgba(247, 243, 238, 0.12)' : 'rgba(13, 43, 69, 0.08)' }]} />
-            <View style={styles.challengeInfoCol}>
-              <View style={styles.skeletonTitle} />
-              <View style={styles.skeletonMeta} />
-              <View style={styles.skeletonBody} />
-            </View>
-          </View>
-        ))}
-        {!isLoading && filteredChallenges.length === 0 && (
-          <View style={[styles.emptyCard, { backgroundColor: isDark ? NAVY : '#FFFFFF' }]}>
-            <Text style={[styles.emptyTitle, { color: isDark ? IVORY : NAVY }]}>{t('Your next challenge is being prepared')}</Text>
-            <Text style={styles.emptyBody}>{t('Check back soon or ask your coach what to start with today.')}</Text>
-          </View>
-        )}
-        {filteredChallenges.map((c) => (
-          <TouchableOpacity
-            key={c.id}
+          <View
+            key={`challenge-skeleton-${item}`}
             style={[
               styles.challengeCard,
+              styles.skeletonCard,
               {
                 backgroundColor: isDark ? NAVY : '#FFFFFF',
-                borderWidth: isDark ? 0 : 1,
-                borderColor: isDark ? 'transparent' : 'rgba(13, 43, 69, 0.08)',
-                shadowColor: '#0D2B45',
-                shadowOffset: { width: 0, height: 4 },
-                shadowRadius: 10,
-                elevation: 2,
-                shadowOpacity: isDark ? 0.35 : 0.05,
+                paddingVertical: isSlim ? 12 : 14,
+                paddingHorizontal: isSlim ? 12 : 15,
               },
             ]}
-            activeOpacity={0.85}
-            onPress={() => onSelectChallenge(c)}
           >
-            <View style={styles.challengeDaysCol}>
-              <Text style={[styles.challengeDaysNum, { color: isDark ? IVORY : NAVY }]}>{c.d}</Text>
-              <Text
+            <View style={styles.cardHeaderRow}>
+              <View
                 style={[
-                  styles.challengeDaysLabel,
-                  { color: isDark ? 'rgba(247, 243, 238, 0.45)' : 'rgba(13, 43, 69, 0.55)' },
+                  styles.durationBadge,
+                  styles.skeletonBox,
+                  { width: isSlim ? 42 : 46, height: isSlim ? 42 : 46 },
                 ]}
-              >
-                {t('DAYS')}
-              </Text>
+              />
+              <View style={styles.cardContentCol}>
+                <View style={[styles.skeletonLine, { width: '70%', height: 16, marginBottom: 8 }]} />
+                <View style={[styles.skeletonLine, { width: '45%', height: 13 }]} />
+              </View>
             </View>
-
             <View
               style={[
-                styles.challengeDivider,
+                styles.cardDivider,
                 {
-                  backgroundColor: isDark ? 'rgba(247, 243, 238, 0.12)' : 'rgba(13, 43, 69, 0.08)',
+                  backgroundColor: isDark ? 'rgba(247, 243, 238, 0.08)' : 'rgba(13, 43, 69, 0.06)',
                 },
               ]}
             />
-
-            <View style={styles.challengeInfoCol}>
-              <Text style={[styles.challengeCardName, { color: isDark ? IVORY : NAVY }]}>{c.n}</Text>
-              <View style={styles.challengeMetaRow}>
-                <Text style={styles.challengeMetaCategory}>{c.c}</Text>
-                <Text style={styles.challengeMetaCategory}>
-                  {(c.difficulties?.length ? c.difficulties : c.difficulty ? [c.difficulty] : []).join(' / ')}
-                </Text>
-                <Text style={styles.challengeMetaPoints}>{c.p}</Text>
-              </View>
+            <View style={styles.cardFooterRow}>
+              <View style={[styles.skeletonLine, { width: 110, height: 16 }]} />
+              <View style={[styles.skeletonLine, { width: 56, height: 28, borderRadius: 8 }]} />
             </View>
+          </View>
+        ))}
 
+        {!isLoading && filteredChallenges.length === 0 && (
+          <View
+            style={[
+              styles.emptyCard,
+              {
+                backgroundColor: isDark ? NAVY : '#FFFFFF',
+                borderLeftColor: COPPER,
+              },
+            ]}
+          >
+            <Text style={[styles.emptyTitle, { color: isDark ? IVORY : NAVY }]}>
+              {t('Your next challenge is being prepared')}
+            </Text>
+            <Text
+              style={[
+                styles.emptyBody,
+                { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.6)' },
+              ]}
+            >
+              {t('Check back soon or ask your coach what to start with today.')}
+            </Text>
+          </View>
+        )}
+
+        {filteredChallenges.map((c) => {
+          const difficultyLabel = formatDifficultyLabel(c.difficulties, c.difficulty);
+          const isDone = c.status === 'completed';
+          const isActive = c.status === 'active';
+
+          return (
             <TouchableOpacity
-              style={styles.joinBtn}
-              activeOpacity={0.85}
+              key={c.id}
+              style={[
+                styles.challengeCard,
+                {
+                  backgroundColor: isDark ? NAVY : '#FFFFFF',
+                  borderColor: isDark ? 'rgba(247, 243, 238, 0.08)' : 'rgba(13, 43, 69, 0.08)',
+                  paddingVertical: isSlim ? 12 : 14,
+                  paddingHorizontal: isSlim ? 12 : 15,
+                  shadowColor: '#0D2B45',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowRadius: 10,
+                  elevation: 2,
+                  shadowOpacity: isDark ? 0.35 : 0.05,
+                },
+              ]}
+              activeOpacity={0.88}
               onPress={() => onSelectChallenge(c)}
             >
-              <Text style={styles.joinBtnText}>
-                {c.status === 'active' ? 'Open' : c.status === 'completed' ? 'Done' : 'Join'}
-              </Text>
+              {/* Top Section: Duration Badge + Title & Tags */}
+              <View style={styles.cardHeaderRow}>
+                <View
+                  style={[
+                    styles.durationBadge,
+                    {
+                      width: isSlim ? 42 : 46,
+                      height: isSlim ? 42 : 46,
+                      backgroundColor: isDark ? 'rgba(247, 243, 238, 0.06)' : 'rgba(13, 43, 69, 0.04)',
+                      borderColor: isDark ? 'rgba(247, 243, 238, 0.12)' : 'rgba(13, 43, 69, 0.1)',
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.durationNum,
+                      { color: isDark ? IVORY : NAVY, fontSize: isSlim ? 18 : 20 },
+                    ]}
+                  >
+                    {c.d}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.durationLabel,
+                      { color: isDark ? 'rgba(247, 243, 238, 0.5)' : 'rgba(13, 43, 69, 0.5)' },
+                    ]}
+                  >
+                    {t('DAYS')}
+                  </Text>
+                </View>
+
+                <View style={styles.cardContentCol}>
+                  <Text
+                    style={[
+                      styles.challengeTitle,
+                      { color: isDark ? IVORY : NAVY, fontSize: isSlim ? 15 : 16 },
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {c.n}
+                  </Text>
+
+                  <View style={styles.tagRow}>
+                    <View style={styles.categoryPill}>
+                      <Text style={styles.categoryPillText}>{c.c}</Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.difficultyPill,
+                        {
+                          backgroundColor: isDark ? 'rgba(247, 243, 238, 0.06)' : 'rgba(13, 43, 69, 0.04)',
+                          borderColor: isDark ? 'rgba(247, 243, 238, 0.12)' : 'rgba(13, 43, 69, 0.1)',
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.difficultyPillText,
+                          { color: isDark ? 'rgba(247, 243, 238, 0.72)' : 'rgba(13, 43, 69, 0.65)' },
+                        ]}
+                      >
+                        {t(difficultyLabel)}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+
+              {/* Hairline Divider */}
+              <View
+                style={[
+                  styles.cardDivider,
+                  {
+                    backgroundColor: isDark ? 'rgba(247, 243, 238, 0.08)' : 'rgba(13, 43, 69, 0.06)',
+                  },
+                ]}
+              />
+
+              {/* Bottom Row: Rewards & Social Proof + CTA */}
+              <View style={styles.cardFooterRow}>
+                <View style={styles.footerMetaGroup}>
+                  <View style={styles.pointsBadge}>
+                    <Text style={styles.pointsBadgeText}>{c.p}</Text>
+                  </View>
+                  <Text
+                    style={[
+                      styles.footerDot,
+                      { color: isDark ? 'rgba(247, 243, 238, 0.3)' : 'rgba(13, 43, 69, 0.3)' },
+                    ]}
+                  >
+                    •
+                  </Text>
+                  <Text
+                    style={[
+                      styles.joinedText,
+                      { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {c.joined}
+                  </Text>
+                </View>
+
+                <View
+                  style={[
+                    styles.actionBtn,
+                    isSlim && styles.actionBtnSlim,
+                    isActive && styles.actionBtnActive,
+                    isDone && styles.actionBtnCompleted,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.actionBtnText,
+                      isActive && styles.actionBtnTextActive,
+                      isDone && styles.actionBtnTextCompleted,
+                    ]}
+                  >
+                    {isActive ? t('Open ›') : isDone ? t('Done ✓') : t('Join')}
+                  </Text>
+                </View>
+              </View>
             </TouchableOpacity>
-          </TouchableOpacity>
-        ))}
+          );
+        })}
       </View>
 
-      {/* Guest pull-in card matching lines 908-911 */}
+      {/* Guest pull-in card */}
       <TouchableOpacity
-        style={styles.guestCard}
+        style={[
+          styles.guestCard,
+          {
+            marginHorizontal: hPad,
+            backgroundColor: isDark ? 'rgba(181, 101, 29, 0.04)' : 'rgba(181, 101, 29, 0.03)',
+          },
+        ]}
         activeOpacity={0.85}
         onPress={onOpenInviteGuest}
       >
         <View style={styles.guestTextCol}>
-          <Text style={[styles.guestTitle, { color: colors.text }]}>Pull someone in from outside</Text>
+          <Text style={[styles.guestTitle, { color: colors.text }]}>{t('Pull someone in from outside')}</Text>
           <Text style={[styles.guestSub, { color: colors.textSecondary }]}>
-            They don't need the app. They follow the challenge as a guest for its full length.
+            {t("They don't need the app. They follow the challenge as a guest for its full length.")}
           </Text>
         </View>
-        <Text style={styles.guestArrow}>Invite →</Text>
+        <View style={styles.guestArrowWrap}>
+          <Text style={styles.guestArrow}>{t('Invite →')}</Text>
+        </View>
       </TouchableOpacity>
     </View>
   );
@@ -476,7 +673,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'baseline',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
     marginBottom: 12,
   },
   railTitle: {
@@ -492,7 +688,6 @@ const styles = StyleSheet.create({
     color: GOLD,
   },
   railScroll: {
-    paddingHorizontal: 20,
     gap: 12,
     paddingBottom: 6,
   },
@@ -582,11 +777,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     letterSpacing: 1.4,
     color: 'rgba(247, 243, 238, 0.42)',
-    paddingHorizontal: 20,
     marginBottom: 9,
   },
   chipRow: {
-    paddingHorizontal: 20,
     gap: 8,
   },
   chip: {
@@ -623,22 +816,24 @@ const styles = StyleSheet.create({
     color: '#0D0D0D',
     fontWeight: '700',
   },
+  countLineRow: {
+    paddingTop: 18,
+    paddingBottom: 10,
+  },
   countLine: {
     fontFamily: MONO,
     fontSize: 12,
     fontWeight: '700',
-    color: GOLD,
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 10,
+    letterSpacing: 0.5,
   },
   challengeList: {
-    paddingHorizontal: 20,
-    gap: 9,
+    gap: 12,
   },
   emptyCard: {
     backgroundColor: NAVY,
     borderRadius: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: COPPER,
     padding: 18,
   },
   emptyTitle: {
@@ -651,149 +846,210 @@ const styles = StyleSheet.create({
     fontFamily: INTER,
     fontSize: 13,
     lineHeight: 19,
-    color: 'rgba(247, 243, 238, 0.55)',
     marginTop: 5,
   },
+
+  /* Master Challenge Card */
   challengeCard: {
     backgroundColor: NAVY,
     borderRadius: 16,
     borderLeftWidth: 4,
     borderLeftColor: COPPER,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    borderWidth: 1,
+  },
+  cardHeaderRow: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  durationBadge: {
+    borderRadius: 11,
+    borderWidth: 1,
     alignItems: 'center',
-    gap: 14,
+    justifyContent: 'center',
+    flexShrink: 0,
   },
-  skeletonCard: {
-    minHeight: 92,
-    borderLeftColor: 'rgba(201, 148, 58, 0.45)',
-  },
-  skeletonDays: {
-    width: 40,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: 'rgba(247, 243, 238, 0.1)',
-  },
-  skeletonTitle: {
-    width: '72%',
-    height: 16,
-    borderRadius: 999,
-    backgroundColor: 'rgba(247, 243, 238, 0.12)',
-    marginBottom: 9,
-  },
-  skeletonMeta: {
-    width: '48%',
-    height: 10,
-    borderRadius: 999,
-    backgroundColor: 'rgba(247, 243, 238, 0.08)',
-    marginBottom: 10,
-  },
-  skeletonBody: {
-    width: '92%',
-    height: 10,
-    borderRadius: 999,
-    backgroundColor: 'rgba(247, 243, 238, 0.08)',
-  },
-  challengeDaysCol: {
-    width: 40,
-    alignItems: 'center',
-  },
-  challengeDaysNum: {
+  durationNum: {
     fontFamily: MONO,
-    fontSize: 20,
     lineHeight: 20,
     fontWeight: '700',
-    color: IVORY,
   },
-  challengeDaysLabel: {
+  durationLabel: {
     fontFamily: DMSANS,
-    fontSize: 9.5,
-    fontWeight: '500',
+    fontSize: 8,
+    fontWeight: '700',
     letterSpacing: 0.8,
-    color: 'rgba(247, 243, 238, 0.45)',
-    marginTop: 2,
+    marginTop: 1,
   },
-  challengeDivider: {
-    width: 1,
-    height: '100%',
-    backgroundColor: 'rgba(247, 243, 238, 0.14)',
-  },
-  challengeInfoCol: {
+  cardContentCol: {
     flex: 1,
     minWidth: 0,
+    justifyContent: 'center',
   },
-  challengeCardName: {
+  challengeTitle: {
     fontFamily: DMSANS,
-    fontSize: 15.5,
+    lineHeight: 20,
     fontWeight: '600',
-    color: IVORY,
+    marginBottom: 6,
   },
-  challengeMetaRow: {
+  tagRow: {
     flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 9,
-    marginTop: 4,
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
   },
-  challengeMetaCategory: {
+  categoryPill: {
+    backgroundColor: 'rgba(181, 101, 29, 0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(181, 101, 29, 0.32)',
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  categoryPillText: {
     fontFamily: DMSANS,
-    fontSize: 10,
-    fontWeight: '500',
-    letterSpacing: 0.9,
+    fontSize: 9.5,
+    fontWeight: '700',
+    letterSpacing: 0.8,
     color: COPPER,
   },
-  challengeMetaPoints: {
+  difficultyPill: {
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  difficultyPillText: {
+    fontFamily: DMSANS,
+    fontSize: 9.5,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  cardDivider: {
+    height: 1,
+    marginVertical: 11,
+  },
+  cardFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  footerMetaGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  pointsBadge: {
+    backgroundColor: 'rgba(201, 148, 58, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(201, 148, 58, 0.3)',
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+  },
+  pointsBadgeText: {
     fontFamily: MONO,
-    fontSize: 12.5,
+    fontSize: 11,
     fontWeight: '700',
     color: GOLD,
   },
-  joinBtn: {
-    height: 36,
-    paddingHorizontal: 17,
-    borderRadius: 11,
+  footerDot: {
+    fontSize: 10,
+  },
+  joinedText: {
+    fontFamily: DMSANS,
+    fontSize: 11.5,
+    fontWeight: '500',
+    flexShrink: 1,
+  },
+  actionBtn: {
+    height: 32,
+    paddingHorizontal: 14,
+    borderRadius: 9,
     backgroundColor: GOLD,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
-  joinBtnText: {
+  actionBtnSlim: {
+    height: 30,
+    paddingHorizontal: 12,
+  },
+  actionBtnActive: {
+    backgroundColor: 'rgba(56, 189, 248, 0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.5)',
+  },
+  actionBtnCompleted: {
+    backgroundColor: 'rgba(34, 197, 94, 0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.5)',
+  },
+  actionBtnText: {
     fontFamily: DMSANS,
-    fontSize: 13.5,
+    fontSize: 12.5,
     fontWeight: '700',
     color: '#0D0D0D',
   },
+  actionBtnTextActive: {
+    color: '#38BDF8',
+  },
+  actionBtnTextCompleted: {
+    color: '#22C55E',
+  },
+
+  /* Skeleton Loading State */
+  skeletonCard: {
+    borderLeftColor: 'rgba(201, 148, 58, 0.45)',
+  },
+  skeletonBox: {
+    backgroundColor: 'rgba(247, 243, 238, 0.1)',
+  },
+  skeletonLine: {
+    borderRadius: 6,
+    backgroundColor: 'rgba(247, 243, 238, 0.1)',
+  },
+
+  /* Pull-in Guest Card */
   guestCard: {
-    marginHorizontal: 20,
-    marginTop: 14,
+    marginTop: 16,
+    marginBottom: 8,
     borderWidth: 1.5,
     borderStyle: 'dashed',
     borderColor: 'rgba(181, 101, 29, 0.5)',
-    borderRadius: 18,
-    paddingVertical: 15,
-    paddingHorizontal: 16,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 15,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
   guestTextCol: {
     flex: 1,
+    minWidth: 0,
   },
   guestTitle: {
     fontFamily: DMSANS,
-    fontSize: 15,
+    fontSize: 14.5,
     fontWeight: '600',
     color: IVORY,
   },
   guestSub: {
     fontFamily: INTER,
-    fontSize: 12.5,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 17,
     color: 'rgba(247, 243, 238, 0.55)',
     marginTop: 3,
   },
+  guestArrowWrap: {
+    flexShrink: 0,
+  },
   guestArrow: {
     fontFamily: DMSANS,
-    fontSize: 13.5,
+    fontSize: 13,
     fontWeight: '700',
     color: GOLD,
   },

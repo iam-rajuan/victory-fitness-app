@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../lib/i18n';
 
@@ -24,9 +24,12 @@ export default function ClaudeChallengeTabs({
 }: ClaudeChallengeTabsProps) {
   const { isDark } = useTheme();
   const { t } = useLanguage();
+  const { width: windowWidth } = useWindowDimensions();
+  const isSlim = windowWidth > 0 && windowWidth < 380;
+  const hPad = isSlim ? 14 : 20;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingHorizontal: hPad }]}>
       <View
         style={[
           styles.tabWrap,
@@ -81,7 +84,6 @@ export default function ClaudeChallengeTabs({
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 20,
     marginTop: 14,
   },
   tabWrap: {
@@ -114,4 +116,3 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
-

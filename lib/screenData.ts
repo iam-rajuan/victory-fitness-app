@@ -41,6 +41,11 @@ export type PrivacyPolicyPayload = {
   title: string;
   plain_text: string;
   updated_at: string;
+  version?: string;
+  filename?: string;
+  published_at?: string | null;
+  effective_at?: string | null;
+  applies_to?: string[];
 };
 
 export type ChallengeOverview = {

@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   Platform,
 } from 'react-native';
-import { ChallengeItem } from './ClaudeChallengeDirectory';
+import { ChallengeItem, formatDifficultyLabel } from './ClaudeChallengeDirectory';
 import RequirementAuditBoundary from '../audit/RequirementAuditBoundary';
 import { ClaudeInviteView } from './ClaudeInviteModal';
 
@@ -57,8 +57,8 @@ export default function ClaudeChallengeDetailModal({
     setShowInvite(false);
     onClose();
   };
-  const difficultyLabel = (challenge.difficulties?.length ? challenge.difficulties : challenge.difficulty ? [challenge.difficulty] : [])
-    .join(' / ');
+
+  const difficultyLabel = formatDifficultyLabel(challenge.difficulties, challenge.difficulty);
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={handleClose}>
@@ -79,7 +79,7 @@ export default function ClaudeChallengeDetailModal({
 
             <View style={styles.metaRow}>
               <Text style={styles.metaDays}>{`${challenge.d} DAYS`}</Text>
-              {difficultyLabel ? <Text style={styles.metaPoints}>{difficultyLabel}</Text> : null}
+              {difficultyLabel ? <Text style={styles.metaDifficulty}>{difficultyLabel}</Text> : null}
               <Text style={styles.metaPoints}>{challenge.p}</Text>
             </View>
 
@@ -248,8 +248,9 @@ const styles = StyleSheet.create({
   },
   metaRow: {
     flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 12,
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 10,
     marginBottom: 10,
   },
   metaDays: {
@@ -257,6 +258,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: GOLD,
+  },
+  metaDifficulty: {
+    fontFamily: DMSANS,
+    fontSize: 13,
+    fontWeight: '600',
+    color: 'rgba(247, 243, 238, 0.75)',
   },
   metaPoints: {
     fontFamily: MONO,

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
@@ -15,6 +16,60 @@ import { goBackOrReplace } from '../../lib/navigation';
 import { useAsyncScreenData } from '../../hooks/useAsyncScreenData';
 import { fetchPrivacyPolicy, PRIVACY_POLICY_CACHE_KEY } from '../../lib/screenData';
 
+const OBSIDIAN = '#0D0D0D';
+const NAVY = '#0D2B45';
+const GOLD = '#C9943A';
+const COPPER = '#B5651D';
+const IVORY = '#F7F3EE';
+
+const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'ClashDisplay-Bold' });
+const DMSANS_BOLD = Platform.select({ web: "'DM Sans', sans-serif", default: 'DMSans-Bold' });
+const DMSANS_SEMI = Platform.select({ web: "'DM Sans', sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'Inter-Regular' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
+
+type PolicySection = {
+  heading: string;
+  body: string[];
+};
+
+function formatDate(value?: string | null) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function normalizePolicySections(text: string): PolicySection[] {
+  const cleaned = String(text || '')
+    .replace(/\r/g, '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && !/^last updated\s*:/i.test(line));
+
+  const sections: PolicySection[] = [];
+  let current: PolicySection | null = null;
+
+  cleaned.forEach((line) => {
+    const isNumberedHeading = /^\d+\.\s+/.test(line);
+    const isPlainHeading = !isNumberedHeading && line.length < 80 && !/[.!?]$/.test(line);
+
+    if (isNumberedHeading || (!current && isPlainHeading)) {
+      current = { heading: line, body: [] };
+      sections.push(current);
+      return;
+    }
+
+    if (!current) {
+      current = { heading: '', body: [] };
+      sections.push(current);
+    }
+    current.body.push(line);
+  });
+
+  return sections.filter((section) => section.heading || section.body.length);
+}
+
 export default function PrivacyScreen() {
   const router = useRouter();
   const { data: policy, loading } = useAsyncScreenData({
@@ -23,73 +78,85 @@ export default function PrivacyScreen() {
     load: fetchPrivacyPolicy,
   });
 
-  const sections = (policy?.plain_text || '')
-    .split(/\n{2,}/)
-    .map((section) => section.trim())
-    .filter(Boolean);
-  const normalizedSections = sections
-    .map((section) => {
-      const lines = section.split('\n').map((line) => line.trim()).filter(Boolean);
-      const filteredLines = lines.filter((line) => !/^last updated\s*:/i.test(line));
-      return filteredLines.join('\n').trim();
-    })
-    .filter(Boolean);
-  const updatedLabel = policy?.updated_at
-    ? new Date(policy.updated_at).toLocaleDateString()
-    : '';
+  const sections = useMemo(() => normalizePolicySections(policy?.plain_text || ''), [policy?.plain_text]);
+  const publishedLabel = formatDate(policy?.published_at || policy?.updated_at);
+  const effectiveLabel = formatDate(policy?.effective_at);
+  const versionLabel = policy?.version || 'v1';
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Stack.Screen options={{
-        headerShown: true,
-        title: 'PRIVACY POLICY',
-        headerTransparent: true,
-        headerTintColor: '#fff',
-        headerTitleStyle: { fontFamily: 'Inter_700Bold', fontSize: 16, letterSpacing: 2 } as any,
-        headerLeft: () => (
-          <TouchableOpacity onPress={() => goBackOrReplace(router, '/profile')} style={{ marginLeft: 8 }}>
-            <Ionicons name="chevron-back" size={28} color="#fff" />
-          </TouchableOpacity>
-        ),
-      }} />
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <Stack.Screen options={{ headerShown: false }} />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => goBackOrReplace(router, '/profile')}
+          style={styles.backButton}
+          hitSlop={12}
+          activeOpacity={0.75}
+        >
+          <Ionicons name="chevron-back" size={24} color={IVORY} />
+        </TouchableOpacity>
+        <View style={styles.headerCopy}>
+          <Text style={styles.kicker}>LEGAL</Text>
+          <Text style={styles.headerTitle}>Privacy Policy</Text>
+        </View>
+      </View>
+
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {loading ? (
           <View style={styles.loadingBlock}>
-            <ActivityIndicator color={Colors.accentBlue} size="large" />
+            <ActivityIndicator color={GOLD} size="large" />
             <Text style={styles.loadingText}>Loading privacy policy...</Text>
           </View>
         ) : (
-          <View style={styles.textSection}>
-            <Text style={styles.lastUpdated}>
-              {updatedLabel ? `Last Updated: ${updatedLabel}` : 'Latest privacy policy'}
-            </Text>
-            <Text style={styles.pageTitle}>{policy?.title || 'Privacy Policy'}</Text>
-            {normalizedSections.map((section, index) => {
-              const lines = section.split('\n').map((line) => line.trim()).filter(Boolean);
-              const [firstLine, ...restLines] = lines;
-              const firstIsHeading = /^\d+\./.test(firstLine || '');
+          <>
+            <View style={styles.heroBlock}>
+              <Text style={styles.updatedText}>
+                {publishedLabel ? `Last updated: ${publishedLabel}` : 'Latest privacy policy'}
+              </Text>
+              <Text style={styles.pageTitle}>{policy?.title || 'Privacy Policy'}</Text>
+              <Text style={styles.summaryText}>
+                How Victory Fitness handles your personal data, account information and in-app privacy rights.
+              </Text>
 
-              return (
-                <View key={`${index}-${firstLine || 'section'}`} style={styles.sectionBlock}>
-                  {firstLine ? (
-                    <Text style={firstIsHeading ? styles.heading : styles.bodyText}>{firstLine}</Text>
-                  ) : null}
-                  {restLines.map((line, lineIndex) => (
-                    <Text
-                      key={`${index}-${lineIndex}`}
-                      style={line.startsWith('- ') ? styles.bulletItem : styles.bodyText}
-                    >
-                      {line}
-                    </Text>
-                  ))}
+              <View style={styles.metaGrid}>
+                <View style={styles.metaPill}>
+                  <Text style={styles.metaLabel}>VERSION</Text>
+                  <Text style={styles.metaValue}>{versionLabel}</Text>
                 </View>
-              );
-            })}
-          </View>
-        )}
+                <View style={styles.metaPill}>
+                  <Text style={styles.metaLabel}>EFFECTIVE</Text>
+                  <Text style={styles.metaValue}>{effectiveLabel || publishedLabel || 'Now'}</Text>
+                </View>
+              </View>
+            </View>
 
-        <View style={{ height: 40 }} />
+            <View style={styles.documentCard}>
+              {sections.length ? (
+                sections.map((section, index) => (
+                  <View key={`${index}-${section.heading || 'body'}`} style={styles.sectionBlock}>
+                    {section.heading ? (
+                      <Text style={styles.sectionHeading}>{section.heading}</Text>
+                    ) : null}
+                    {section.body.map((line, lineIndex) => (
+                      <Text
+                        key={`${index}-${lineIndex}`}
+                        style={line.startsWith('- ') ? styles.bulletText : styles.bodyText}
+                      >
+                        {line.startsWith('- ') ? `• ${line.slice(2)}` : line}
+                      </Text>
+                    ))}
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.bodyText}>The current privacy policy is not available right now.</Text>
+              )}
+            </View>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -98,63 +165,139 @@ export default function PrivacyScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#131313',
+    backgroundColor: OBSIDIAN,
+  },
+  header: {
+    height: 72,
+    paddingHorizontal: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(247,243,238,0.10)',
+    backgroundColor: OBSIDIAN,
+  },
+  backButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 6,
+  },
+  headerCopy: {
+    flex: 1,
+  },
+  kicker: {
+    color: GOLD,
+    fontFamily: MONO,
+    fontSize: 10,
+    letterSpacing: 1.6,
+    marginBottom: 3,
+  },
+  headerTitle: {
+    color: IVORY,
+    fontFamily: DMSANS_BOLD,
+    fontSize: 17,
+    letterSpacing: 0,
   },
   scrollContent: {
-    paddingTop: 100,
     paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
-  textSection: {
-    paddingBottom: 20,
+    paddingTop: 28,
+    paddingBottom: 54,
   },
   loadingBlock: {
-    paddingTop: 80,
+    minHeight: 360,
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 14,
   },
   loadingText: {
-    color: 'rgba(255,255,255,0.6)',
+    color: 'rgba(247,243,238,0.62)',
     fontSize: 14,
-    fontFamily: 'Inter_400Regular',
+    fontFamily: INTER,
   },
-  lastUpdated: {
-    color: Colors.accentBlue,
+  heroBlock: {
+    marginBottom: 20,
+  },
+  updatedText: {
+    color: GOLD,
     fontSize: 12,
-    fontFamily: 'Inter_600SemiBold',
-    marginBottom: 24,
-    letterSpacing: 0.5,
+    lineHeight: 18,
+    fontFamily: MONO,
+    marginBottom: 18,
+    letterSpacing: 0.4,
   },
   pageTitle: {
-    color: '#fff',
-    fontSize: 22,
-    fontFamily: 'Inter_700Bold',
-    marginBottom: 12,
+    color: IVORY,
+    fontSize: 30,
+    lineHeight: 36,
+    fontFamily: CLASH,
+    letterSpacing: 0,
+    marginBottom: 10,
+  },
+  summaryText: {
+    color: 'rgba(247,243,238,0.64)',
+    fontSize: 15,
+    lineHeight: 23,
+    fontFamily: INTER,
+    maxWidth: 420,
+  },
+  metaGrid: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 18,
+  },
+  metaPill: {
+    flex: 1,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(247,243,238,0.10)',
+    backgroundColor: NAVY,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  metaLabel: {
+    color: 'rgba(247,243,238,0.44)',
+    fontSize: 9,
+    fontFamily: MONO,
+    letterSpacing: 1.2,
+    marginBottom: 5,
+  },
+  metaValue: {
+    color: IVORY,
+    fontSize: 13,
+    fontFamily: DMSANS_SEMI,
+  },
+  documentCard: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(247,243,238,0.10)',
+    paddingTop: 6,
   },
   sectionBlock: {
-    marginBottom: 8,
+    paddingTop: 26,
+    paddingBottom: 2,
   },
-  heading: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '800',
-    fontFamily: 'Inter_700Bold',
-    letterSpacing: 1.2,
-    marginTop: 24,
-    marginBottom: 12,
+  sectionHeading: {
+    color: IVORY,
+    fontSize: 16,
+    lineHeight: 23,
+    fontFamily: DMSANS_BOLD,
+    letterSpacing: 0.2,
+    marginBottom: 13,
   },
   bodyText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 14,
-    lineHeight: 22,
-    fontFamily: 'Inter_400Regular',
+    color: 'rgba(247,243,238,0.62)',
+    fontSize: 15,
+    lineHeight: 24,
+    fontFamily: INTER,
     marginBottom: 12,
   },
-  bulletItem: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 14,
+  bulletText: {
+    color: 'rgba(247,243,238,0.66)',
+    fontSize: 15,
     lineHeight: 24,
-    fontFamily: 'Inter_400Regular',
-    marginBottom: 8,
+    fontFamily: INTER,
+    marginBottom: 10,
+    paddingLeft: 4,
   },
 });
