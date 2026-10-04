@@ -1,6 +1,7 @@
 import { apiRequest, resolveRemoteAssetUrl } from './api';
 import { fetchCachedResource, getCachedResourceSnapshot, hydrateCachedResource } from './resourceCache';
 import { HOME_WORKOUT_SUMMARY_CACHE_KEY } from './cacheKeys';
+import { WORKOUT_CATEGORY_OPTIONS } from '../constants/WorkoutCategories';
 
 export type WorkoutLibraryItem = {
   id: string;
@@ -44,6 +45,16 @@ export type WorkoutLibraryResponse = {
   workouts: WorkoutLibraryItem[];
   categories: WorkoutLibraryCategory[];
 };
+
+function normalizeWorkoutCategories(values: unknown, fallback?: unknown) {
+  const candidates = Array.isArray(values) ? values : [];
+  if (!candidates.length && fallback) {
+    candidates.push(fallback);
+  }
+  return WORKOUT_CATEGORY_OPTIONS.filter((category) =>
+    candidates.some((item) => String(item ?? '').trim().toLowerCase() === category.toLowerCase())
+  );
+}
 
 export type HomeWorkoutWeekPip = {
   label: string;
@@ -99,12 +110,8 @@ function normalizeWorkoutItem(value: unknown): WorkoutLibraryItem | null {
     vimeoId: String(item.vimeoId ?? ''),
     videoUrl: String(item.videoUrl ?? ''),
     videoSource: String(item.videoSource ?? 'VIMEO'),
-    tag: String(item.tag ?? 'Workout'),
-    purposes: Array.isArray(item.purposes)
-      ? item.purposes.map((purpose) => String(purpose).trim()).filter(Boolean)
-      : String(item.tag ?? '').trim()
-        ? [String(item.tag).trim()]
-        : [],
+    tag: normalizeWorkoutCategories(item.purposes, item.tag)[0] || '',
+    purposes: normalizeWorkoutCategories(item.purposes, item.tag),
     equipment: String(item.equipment ?? ''),
     level: String(item.level ?? ''),
     levels: Array.isArray(item.levels)
@@ -172,12 +179,15 @@ function normalizeWorkoutLibraryResponse(value: unknown): WorkoutLibraryResponse
   const categories = Array.isArray(response.categories)
     ? response.categories.map(normalizeWorkoutCategory).filter((item): item is WorkoutLibraryCategory => Boolean(item))
     : [];
+  const orderedCategories = WORKOUT_CATEGORY_OPTIONS
+    .map((category) => categories.find((item) => item.name.toLowerCase() === category.toLowerCase()))
+    .filter((item): item is WorkoutLibraryCategory => Boolean(item));
   const featuredWorkout = normalizeWorkoutItem(response.featuredWorkout);
 
   return {
     featuredWorkout: featuredWorkout ?? workouts[0] ?? null,
     workouts,
-    categories,
+    categories: orderedCategories,
   };
 }
 

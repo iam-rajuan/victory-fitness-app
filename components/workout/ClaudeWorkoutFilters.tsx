@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View, TextInput, ScrollView, Pressable, Platform } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../lib/i18n';
+import { WORKOUT_PURPOSE_FILTER_OPTIONS } from '../../constants/WorkoutCategories';
 
 interface ClaudeWorkoutFiltersProps {
   searchQuery: string;
@@ -26,7 +27,6 @@ const DMSANS = Platform.select({ web: 'DM Sans', default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: 'Inter', default: 'Inter-Regular' });
 const MONO = Platform.select({ web: 'JetBrains Mono', default: 'JetBrainsMono-Bold' });
 
-const PURPOSES = ['All', 'Strength', 'Full Body Workout', 'Mobility', 'Core', 'Conditioning', 'Recovery', 'Lower body', 'Upper body'];
 const DIFFICULTIES = ['Any', 'Beginner', 'Intermediate', 'Advanced'];
 const DURATIONS = ['Any', '15', '30', '45', '60'];
 const KITS = ['Any', 'No kit', 'Dumbbells', 'Bands', 'Mat'];
@@ -81,7 +81,7 @@ export default function ClaudeWorkoutFilters({
       {/* Purpose Filter Row */}
       <SlideableChipsRow
         label="PURPOSE"
-        items={PURPOSES}
+        items={WORKOUT_PURPOSE_FILTER_OPTIONS}
         selectedItem={selectedPurpose}
         onSelect={onSelectPurpose}
         paddingTop={16}
