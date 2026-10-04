@@ -15,7 +15,7 @@ import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import { formatAppError } from '../../lib/error';
-import { fetchWorkoutLibrary, getWorkoutLibraryCacheKey, WorkoutLibraryCategory } from '../../lib/workouts';
+import { fetchWorkoutLibrary, getWorkoutLibraryCacheKey, WorkoutLibraryCategory, WorkoutLibraryResponse } from '../../lib/workouts';
 import { useLanguage } from '../../lib/i18n';
 import { goBackOrReplace, pushRoute } from '../../lib/navigation';
 import { ScreenState } from '../../components/ScreenState';
@@ -71,19 +71,26 @@ export default function WorkoutCategoriesScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const {
-    data: categories,
+    data: libraryData,
     loading,
     error,
     reload,
-  } = useAsyncScreenData<WorkoutLibraryCategory[]>({
-    initialData: [],
+  } = useAsyncScreenData<WorkoutLibraryResponse | WorkoutLibraryCategory[] | null>({
+    initialData: null,
     cacheKey: getWorkoutLibraryCacheKey(),
     load: async () => {
       const response = await fetchWorkoutLibrary();
-      return response.categories || [];
+      return response;
     },
     getErrorMessage: (loadError) => formatAppError(loadError).message,
   });
+
+  const categories = useMemo(() => {
+    if (Array.isArray(libraryData)) {
+      return libraryData;
+    }
+    return Array.isArray(libraryData?.categories) ? libraryData.categories : [];
+  }, [libraryData]);
 
   const totalWorkouts = useMemo(() => {
     return categories.reduce((sum, c) => sum + (c.count || 0), 0);

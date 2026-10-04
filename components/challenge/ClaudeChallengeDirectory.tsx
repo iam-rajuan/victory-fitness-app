@@ -199,32 +199,35 @@ export default function ClaudeChallengeDirectory({
   const daysScroll = useHorizontalWebScroll();
   const catScroll = useHorizontalWebScroll();
   const [railOffset, setRailOffset] = useState(0);
+  const [showAllRailChallenges, setShowAllRailChallenges] = useState(false);
 
   const allChallenges = Array.isArray(challenges) ? challenges : [];
   const railChallenges = allChallenges
     .slice()
     .sort((a, b) => parseInt(b.joined, 10) - parseInt(a.joined, 10))
-    .slice(0, 4);
+    .slice(0, showAllRailChallenges ? allChallenges.length : 5);
 
-  const handleSlideRail = () => {
-    if (railChallenges.length <= 1) return;
+  const resetRailPosition = () => {
     const node = railScroll.getDomNode();
-    const currentX = node ? node.scrollLeft : railOffset;
-    // 176px card width + 12px gap = 188px step
-    const maxOffset = (railChallenges.length - 1) * 188;
-    const nextOffset = currentX >= maxOffset - 10 ? 0 : currentX + 188;
-
     if (railScroll.scrollRef.current?.scrollTo) {
-      railScroll.scrollRef.current.scrollTo({ x: nextOffset, animated: true });
+      railScroll.scrollRef.current.scrollTo({ x: 0, animated: true });
     }
     if (node) {
       if (node.scrollTo) {
-        node.scrollTo({ left: nextOffset, behavior: 'smooth' });
+        node.scrollTo({ left: 0, behavior: 'smooth' });
       } else {
-        node.scrollLeft = nextOffset;
+        node.scrollLeft = 0;
       }
     }
-    setRailOffset(nextOffset);
+    setRailOffset(0);
+  };
+
+  const handleShowAllRail = () => {
+    if (railChallenges.length <= 0) return;
+    setSelectedDay('All');
+    setSelectedCat('All');
+    setShowAllRailChallenges((current) => !current);
+    resetRailPosition();
   };
 
   const filteredChallenges = allChallenges.filter((ch) => {
@@ -245,8 +248,10 @@ export default function ClaudeChallengeDirectory({
       {/* Horizontal Rail: Most joined this week */}
       <View style={[styles.railHeader, { paddingHorizontal: hPad }]}>
         <Text style={[styles.railTitle, { color: colors.text }]}>{t('Most joined this week')}</Text>
-        <TouchableOpacity activeOpacity={0.7} onPress={handleSlideRail}>
-          <Text style={styles.railAllLink}>{t('All ›')}</Text>
+        <TouchableOpacity activeOpacity={0.7} onPress={handleShowAllRail}>
+          <Text style={styles.railAllLink}>
+            {showAllRailChallenges ? t('Top 5') : t('All ›')}
+          </Text>
         </TouchableOpacity>
       </View>
 
