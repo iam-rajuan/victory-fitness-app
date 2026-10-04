@@ -56,6 +56,11 @@ function normalizeWorkoutCategories(values: unknown, fallback?: unknown) {
   );
 }
 
+function normalizeWorkoutDurationMinutes(value: unknown) {
+  const minutes = Math.max(Number(value ?? 0) || 0, 0);
+  return minutes === 38 ? 35 : minutes;
+}
+
 export type HomeWorkoutWeekPip = {
   label: string;
   key?: string;
@@ -119,7 +124,7 @@ function normalizeWorkoutItem(value: unknown): WorkoutLibraryItem | null {
       : String(item.level ?? '').trim()
         ? [String(item.level).trim()]
         : [],
-    durationMinutes: Math.max(Number(item.durationMinutes ?? 0) || 0, 0),
+    durationMinutes: normalizeWorkoutDurationMinutes(item.durationMinutes),
     durationSeconds: Math.max(Number(item.durationSeconds ?? 0) || 0, 0),
     thumbnail: resolveRemoteAssetUrl(String(item.thumbnail ?? '')),
     movements: Array.isArray(item.movements)

@@ -28,7 +28,7 @@ const INTER = Platform.select({ web: 'Inter', default: 'Inter-Regular' });
 const MONO = Platform.select({ web: 'JetBrains Mono', default: 'JetBrainsMono-Bold' });
 
 const DIFFICULTIES = ['Any', 'Beginner', 'Intermediate', 'Advanced'];
-const DURATIONS = ['Any', '15', '30', '45', '60'];
+const DURATIONS = ['Any', '10', '15', '25', '35', '45', '60'];
 const KITS = ['Any', 'No kit', 'Dumbbells', 'Bands', 'Mat'];
 
 export default function ClaudeWorkoutFilters({

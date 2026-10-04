@@ -610,7 +610,7 @@ export default function HomeScreen() {
     if (homeWorkoutSummary?.durationMinutes) return Number(homeWorkoutSummary.durationMinutes);
     if (strengthDay?.est_time) return parseMinutes(strengthDay.est_time, 40);
     if (homeLibraryWorkout?.durationMinutes) return Number(homeLibraryWorkout.durationMinutes);
-    return Number(planDuration.replace(/[^0-9]/g, '')) || (tier === 'SILVER' ? 38 : 40);
+    return Number(planDuration.replace(/[^0-9]/g, '')) || (tier === 'SILVER' ? 35 : 40);
   }, [homeLibraryWorkout?.durationMinutes, homeWorkoutSummary?.durationMinutes, planDuration, strengthDay?.est_time, tier]);
   const workoutEquipment = useMemo(() => {
     const fromExercise = strengthExercises.find((item) => String(item.weight || '').trim())?.weight;
