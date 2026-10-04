@@ -41,6 +41,13 @@ type ActivityNotification = {
   created_at?: string | null;
 };
 
+type NotificationPresentation = {
+  category: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  accent: string;
+  actionLabel: string;
+};
+
 const CAMPAIGN: CampaignItem[] = [
   {
     day: 0,
@@ -101,14 +108,23 @@ const CAMPAIGN: CampaignItem[] = [
 
 function getTrialDay(startedAt?: string | null) {
   if (!startedAt) return null;
-  const start = new Date(startedAt).getTime();
+  const start = parseBackendDateMs(startedAt);
   if (!Number.isFinite(start)) return null;
   return Math.max(0, Math.floor((Date.now() - start) / 86400000));
 }
 
+function parseBackendDateMs(value?: string | null) {
+  if (!value) return NaN;
+  const raw = String(value).trim();
+  if (!raw) return NaN;
+  const hasExplicitTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(raw);
+  const normalized = raw.includes('T') && !hasExplicitTimezone ? `${raw}Z` : raw;
+  return new Date(normalized).getTime();
+}
+
 function formatDate(value?: string | null) {
   if (!value) return 'Not available';
-  const timestamp = new Date(value).getTime();
+  const timestamp = parseBackendDateMs(value);
   if (!Number.isFinite(timestamp)) return 'Not available';
 
   const elapsedMinutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60000));
@@ -129,6 +145,69 @@ function formatDate(value?: string | null) {
   return `${months} month${months === 1 ? '' : 's'} ago`;
 }
 
+function labelFromType(type: string) {
+  return type
+    .replace(/_/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
+}
+
+function getNotificationPresentation(item: AppNotification): NotificationPresentation {
+  const data = item.data || {};
+  const dataCategory = typeof data.categoryLabel === 'string' && data.categoryLabel.trim() ? data.categoryLabel.trim() : '';
+  const dataIcon = typeof data.icon === 'string' && data.icon in Ionicons.glyphMap ? data.icon as keyof typeof Ionicons.glyphMap : null;
+  const dataAccent = typeof data.accent === 'string' && data.accent.trim() ? data.accent.trim() : '';
+  const dataAction = typeof data.actionLabel === 'string' && data.actionLabel.trim() ? data.actionLabel.trim() : '';
+
+  if (item.type === 'phase_one_beta_outreach') {
+    return {
+      category: dataCategory || '21-Day Gold Beta',
+      icon: dataIcon || 'sparkles-outline',
+      accent: dataAccent || Colors.primary,
+      actionLabel: dataAction || 'Open workouts',
+    };
+  }
+
+  if (item.type === 'workout_published') {
+    return {
+      category: dataCategory || 'Workout published',
+      icon: dataIcon || 'barbell-outline',
+      accent: dataAccent || Colors.primary,
+      actionLabel: dataAction || 'Open workout',
+    };
+  }
+
+  if (item.type.includes('challenge')) {
+    return {
+      category: dataCategory || labelFromType(item.type),
+      icon: dataIcon || 'trophy-outline',
+      accent: dataAccent || Colors.accentGold,
+      actionLabel: dataAction || 'Open challenge',
+    };
+  }
+
+  return {
+    category: dataCategory || labelFromType(item.type),
+    icon: dataIcon || 'notifications-outline',
+    accent: dataAccent || Colors.primary,
+    actionLabel: dataAction || 'Open notification',
+  };
+}
+
+function sortAndCollapseNotifications(items: AppNotification[]) {
+  const sorted = [...items].sort((a, b) => parseBackendDateMs(b.created_at) - parseBackendDateMs(a.created_at));
+  const seenKeys = new Set<string>();
+  return sorted.filter((item) => {
+    const rawDedupeKey = typeof item.data?.dedupeKey === 'string' ? item.data.dedupeKey : '';
+    const key = rawDedupeKey || (item.type === 'phase_one_beta_outreach' ? 'phase_one_beta_outreach' : '');
+    if (!key) return true;
+    if (seenKeys.has(key)) return false;
+    seenKeys.add(key);
+    return true;
+  });
+}
+
 export default function NotificationsScreen() {
   const router = useRouter();
   const [user, setUser] = React.useState<AuthUser | null>(null);
@@ -140,7 +219,7 @@ export default function NotificationsScreen() {
   const [refreshing, setRefreshing] = React.useState(false);
   const [loadError, setLoadError] = React.useState('');
   const [deletingNotificationId, setDeletingNotificationId] = React.useState<string | null>(null);
-  const [selectedNotification, setSelectedNotification] = React.useState<{ title: string; message: string; category: string; created_at?: string | null; route?: string } | null>(null);
+  const [selectedNotification, setSelectedNotification] = React.useState<{ title: string; message: string; category: string; created_at?: string | null; route?: string; actionLabel?: string } | null>(null);
 
   const loadNotifications = React.useCallback(async (initialLoad = false) => {
     if (initialLoad) setLoading(true);
@@ -164,7 +243,7 @@ export default function NotificationsScreen() {
       const overviewData = overview as { active_challenges?: Array<Partial<ChallengeAlert> & { id?: string }> };
       const active = Array.isArray(overviewData?.active_challenges) ? overviewData.active_challenges[0] : null;
       setUser(nextUser);
-       setPushNotifications([...storedNotifications].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+       setPushNotifications(sortAndCollapseNotifications(storedNotifications));
       setChallengeAlert(active ? {
         challenge_id: String(active.challenge_id || active.id || ''),
         title: String(active.title || 'Today\'s challenge'),
@@ -224,7 +303,7 @@ export default function NotificationsScreen() {
   React.useEffect(() => {
     const unsubscribe = subscribeToPushNotifications(() => {
       void fetchAppNotifications()
-        .then((items) => setPushNotifications([...items].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())))
+        .then((items) => setPushNotifications(sortAndCollapseNotifications(items)))
         .catch(() => undefined);
     });
     return () => { unsubscribe(); };
@@ -273,7 +352,8 @@ export default function NotificationsScreen() {
 
   const openAppNotification = (item: AppNotification) => {
     const route = typeof item.data?.videoRoute === 'string' ? item.data.videoRoute : typeof item.data?.route === 'string' ? item.data.route : undefined;
-    setSelectedNotification({ title: item.title, message: item.message, category: item.type.replaceAll('_', ' ').toUpperCase(), created_at: item.created_at, route });
+    const presentation = getNotificationPresentation(item);
+    setSelectedNotification({ title: item.title, message: item.message, category: presentation.category, created_at: item.created_at, route, actionLabel: presentation.actionLabel });
     if (!item.read) {
       void markAppNotificationRead(item.id).then(() => {
         setPushNotifications((current) => current.map((notification) => notification.id === item.id ? { ...notification, read: true } : notification));
@@ -319,18 +399,21 @@ export default function NotificationsScreen() {
         {pushNotifications.length > 0 ? (
           <View style={styles.activitySection}>
             <Text style={styles.activitySectionTitle}>NEW FROM VICTORY FITNESS</Text>
-            {pushNotifications.map((item) => (
-              <View key={item.id} style={styles.activityItem}>
-                <TouchableOpacity style={styles.notificationContentButton} onPress={() => openAppNotification(item)} activeOpacity={0.82}>
-                <View style={[styles.activityIcon, { backgroundColor: `${Colors.primary}20` }]}><Ionicons name="sparkles-outline" size={21} color={Colors.primary} /></View>
-                <View style={styles.activityBody}><Text style={[styles.activityCategory, { color: Colors.primary }]}>{item.type.replaceAll('_', ' ').toUpperCase()}</Text><Text style={styles.activityTitle}>{item.title}</Text><Text style={styles.activityText}>{item.message}</Text></View>
-                <Text style={styles.notificationTime}>{formatDate(item.created_at)}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.deleteNotificationButton} onPress={() => removeNotification(item)} disabled={deletingNotificationId === item.id} accessibilityLabel="Delete notification">
-                  <Ionicons name="trash-outline" size={20} color={deletingNotificationId === item.id ? Colors.textMuted : '#F87171'} />
-                </TouchableOpacity>
-              </View>
-            ))}
+            {pushNotifications.map((item) => {
+              const presentation = getNotificationPresentation(item);
+              return (
+                <View key={item.id} style={styles.activityItem}>
+                  <TouchableOpacity style={styles.notificationContentButton} onPress={() => openAppNotification(item)} activeOpacity={0.82}>
+                  <View style={[styles.activityIcon, { backgroundColor: `${presentation.accent}20` }]}><Ionicons name={presentation.icon} size={21} color={presentation.accent} /></View>
+                  <View style={styles.activityBody}><Text style={[styles.activityCategory, { color: presentation.accent }]}>{presentation.category}</Text><Text style={styles.activityTitle}>{item.title}</Text><Text style={styles.activityText}>{item.message}</Text></View>
+                  <Text style={styles.notificationTime}>{formatDate(item.created_at)}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.deleteNotificationButton} onPress={() => removeNotification(item)} disabled={deletingNotificationId === item.id} accessibilityLabel="Delete notification">
+                    <Ionicons name="trash-outline" size={20} color={deletingNotificationId === item.id ? Colors.textMuted : '#F87171'} />
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
           </View>
         ) : null}
 
@@ -353,7 +436,7 @@ export default function NotificationsScreen() {
             <Text style={styles.activitySectionTitle}>CHALLENGES & COMMUNITY</Text>
             {activityNotifications.map((item) => (
               <View key={item.id} style={styles.activityItem}>
-                <TouchableOpacity style={styles.notificationContentButton} onPress={() => setSelectedNotification({ title: item.title, message: item.message, category: item.category, created_at: item.created_at, route: item.route })} activeOpacity={0.82}>
+                <TouchableOpacity style={styles.notificationContentButton} onPress={() => setSelectedNotification({ title: item.title, message: item.message, category: item.category, created_at: item.created_at, route: item.route, actionLabel: 'Open' })} activeOpacity={0.82}>
                 <View style={[styles.activityIcon, { backgroundColor: `${item.accent}20` }]}><Ionicons name={item.icon} size={21} color={item.accent} /></View>
                 <View style={styles.activityBody}><Text style={[styles.activityCategory, { color: item.accent }]}>{item.category}</Text><Text style={styles.activityTitle}>{item.title}</Text><Text style={styles.activityText}>{item.message}</Text></View>
                 <Text style={styles.notificationTime}>{formatDate(item.created_at)}</Text>
@@ -388,7 +471,7 @@ export default function NotificationsScreen() {
             <Text style={styles.detailTitle}>{selectedNotification?.title}</Text>
             <Text style={styles.detailMessage}>{selectedNotification?.message}</Text>
             <View style={styles.detailActions}>
-              {selectedNotification?.route ? <TouchableOpacity style={styles.detailAction} onPress={() => { setSelectedNotification(null); router.push(selectedNotification.route as never); }}><Text style={styles.detailActionText}>Open notification</Text><Ionicons name="arrow-forward" size={16} color={Colors.background} /></TouchableOpacity> : null}
+              {selectedNotification?.route ? <TouchableOpacity style={styles.detailAction} onPress={() => { setSelectedNotification(null); router.push(selectedNotification.route as never); }}><Text style={styles.detailActionText}>{selectedNotification.actionLabel || 'Open notification'}</Text><Ionicons name="arrow-forward" size={16} color={Colors.background} /></TouchableOpacity> : null}
               <TouchableOpacity style={styles.detailClose} onPress={() => setSelectedNotification(null)}><Text style={styles.detailCloseText}>Close</Text></TouchableOpacity>
             </View>
           </View>
