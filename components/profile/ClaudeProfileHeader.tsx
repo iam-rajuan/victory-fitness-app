@@ -146,6 +146,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '600',
     color: IVORY,
+    textTransform: 'capitalize',
   },
   metaRow: {
     flexDirection: 'row',

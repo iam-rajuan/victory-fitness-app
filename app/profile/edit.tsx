@@ -29,6 +29,7 @@ export default function EditProfileScreen() {
   const router = useRouter();
   const { language, setLanguage, t } = useLanguage();
   const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
   const [profileImage, setProfileImage] = useState('');
   const [preferredLanguage, setPreferredLanguage] = useState<LanguageCode>(language);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
@@ -47,6 +48,7 @@ export default function EditProfileScreen() {
     load: async () => {
       const me = await fetchCurrentUser();
       setName(me.name ?? '');
+      setEmail(me.email ?? '');
       setProfileImage(me.profileImage ?? '');
       const nextLanguage = SUPPORTED_LANGUAGES.some((option) => option.code === me.preferred_language)
         ? (me.preferred_language as LanguageCode)
@@ -358,6 +360,27 @@ export default function EditProfileScreen() {
               />
             </View>
 
+            {/* Email Address (Read-only) */}
+            <View style={styles.inputGroup}>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>{t('EMAIL ADDRESS')}</Text>
+                <View style={styles.badgeRow}>
+                  <Ionicons name="shield-checkmark" size={12} color={Colors.gold} />
+                  <Text style={styles.badgeText}>{t('REGISTERED')}</Text>
+                </View>
+              </View>
+              <View style={[styles.readOnlyField, styles.inputWithIcon]}>
+                <Ionicons name="mail-outline" size={18} color={Colors.gold} style={styles.inputIcon} />
+                <Text style={styles.readOnlyText} numberOfLines={1} ellipsizeMode="middle">
+                  {email || t('Not available')}
+                </Text>
+                <Ionicons name="lock-closed" size={14} color="rgba(247, 243, 238, 0.4)" style={styles.lockIcon} />
+              </View>
+              <Text style={styles.helperText}>
+                {t('This email is tied to your account and subscription access.')}
+              </Text>
+            </View>
+
             {/* Preferred Language - Onboarding Dropdown Style */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>{t('PREFERRED LANGUAGE')}</Text>
@@ -524,6 +547,52 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(181, 101, 29, 0.25)',
     outlineStyle: 'none' as any,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  badgeText: {
+    color: Colors.gold,
+    fontSize: 10,
+    fontFamily: Fonts.heading,
+    letterSpacing: 0.8,
+  },
+  inputWithIcon: {
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  inputIcon: {
+    position: 'absolute',
+    left: 16,
+    zIndex: 1,
+  },
+  readOnlyField: {
+    backgroundColor: 'rgba(13, 43, 69, 0.28)',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingLeft: 46,
+    paddingRight: 40,
+    borderWidth: 1,
+    borderColor: 'rgba(181, 101, 29, 0.18)',
+    minHeight: 50,
+    justifyContent: 'center',
+  },
+  readOnlyText: {
+    color: 'rgba(247, 243, 238, 0.85)',
+    fontSize: 15,
+    fontFamily: Fonts.body,
+  },
+  lockIcon: {
+    position: 'absolute',
+    right: 16,
   },
   languageDropdownField: {
     minHeight: 64,

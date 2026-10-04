@@ -11,7 +11,9 @@ import {
   Modal,
   TextInput,
   KeyboardAvoidingView,
+  Image,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   fetchAccountabilityPartner,
@@ -352,6 +354,7 @@ export default function ProfileScreen() {
   const isSilver = tier === 'SILVER';
   const isPlatinumOrIC = tier === 'PLATINUM' || tier === 'INNER CIRCLE' || tier === 'INNER_CIRCLE';
   const isIC = tier === 'INNER CIRCLE' || tier === 'INNER_CIRCLE';
+  const registeredEmail = String(user?.email || '').trim();
 
   const performLogout = async () => {
     if (isSigningOut) {
@@ -554,6 +557,79 @@ export default function ProfileScreen() {
               },
             ]}
           >
+            <TouchableOpacity
+              style={[
+                styles.accountHeroRow,
+                {
+                  borderBottomColor: colors.divider,
+                  backgroundColor: isDark ? 'rgba(247, 243, 238, 0.02)' : 'rgba(13, 43, 69, 0.02)',
+                },
+              ]}
+              activeOpacity={0.7}
+              onPress={() => router.push('/profile/edit')}
+            >
+              <View
+                style={[
+                  styles.accountAvatar,
+                  {
+                    backgroundColor: isDark ? 'rgba(201, 148, 58, 0.16)' : 'rgba(201, 148, 58, 0.1)',
+                    borderColor: 'rgba(201, 148, 58, 0.45)',
+                  },
+                ]}
+              >
+                {user?.profileImage ? (
+                  <Image source={{ uri: user.profileImage }} style={styles.accountAvatarImg} />
+                ) : (
+                  <Text style={[styles.accountAvatarText, { color: GOLD }]}>{initials}</Text>
+                )}
+              </View>
+
+              <View style={styles.accountInfoCol}>
+                <View style={styles.accountNameRow}>
+                  <Text style={[styles.accountName, { color: colors.text }]} numberOfLines={1}>
+                    {name}
+                  </Text>
+                  {tier && tier !== 'NONE' && (
+                    <View
+                      style={[
+                        styles.tierMiniBadge,
+                        isSilver
+                          ? styles.tierMiniBadgeSilver
+                          : isIC
+                          ? styles.tierMiniBadgeIC
+                          : styles.tierMiniBadgeGold,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.tierMiniBadgeText,
+                          isSilver && styles.tierMiniBadgeTextSilver,
+                          isIC && styles.tierMiniBadgeTextIC,
+                        ]}
+                      >
+                        {tier}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.accountEmailRow}>
+                  <Ionicons name="mail-outline" size={13} color={GOLD} />
+                  <Text style={[styles.registeredBadge, { color: GOLD }]}>{t('REGISTERED')}</Text>
+                  <Text style={[styles.emailDot, { color: colors.textMuted }]}>·</Text>
+                  <Text
+                    style={[styles.accountEmail, { color: colors.textSecondary }]}
+                    numberOfLines={1}
+                    ellipsizeMode="middle"
+                  >
+                    {registeredEmail || t('Not available')}
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={styles.chevron}>›</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={[styles.menuRow, { borderBottomColor: colors.divider }]}
               activeOpacity={0.7}
@@ -1059,6 +1135,98 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: DMSANS,
     fontSize: 15,
+    color: IVORY,
+  },
+  accountHeroRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+  },
+  accountAvatar: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  accountAvatarImg: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+  },
+  accountAvatarText: {
+    fontFamily: DMSANS,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  accountInfoCol: {
+    flex: 1,
+    marginLeft: 13,
+    justifyContent: 'center',
+    minWidth: 0,
+  },
+  accountNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  accountName: {
+    fontFamily: DMSANS,
+    fontSize: 16,
+    fontWeight: '700',
+    textTransform: 'capitalize',
+    maxWidth: '75%',
+  },
+  accountEmailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 5,
+  },
+  registeredBadge: {
+    fontFamily: DMSANS,
+    fontSize: 9.5,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+  },
+  emailDot: {
+    fontSize: 11,
+    marginHorizontal: 1,
+  },
+  accountEmail: {
+    flex: 1,
+    fontFamily: INTER,
+    fontSize: 12.5,
+  },
+  tierMiniBadge: {
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  tierMiniBadgeGold: {
+    backgroundColor: GOLD,
+  },
+  tierMiniBadgeSilver: {
+    backgroundColor: 'rgba(247, 243, 238, 0.15)',
+  },
+  tierMiniBadgeIC: {
+    backgroundColor: COPPER,
+  },
+  tierMiniBadgeText: {
+    fontFamily: DMSANS,
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    color: '#0D0D0D',
+  },
+  tierMiniBadgeTextSilver: {
+    color: IVORY,
+  },
+  tierMiniBadgeTextIC: {
     color: IVORY,
   },
   menuMeta: {
