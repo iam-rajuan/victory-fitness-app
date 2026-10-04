@@ -3,6 +3,8 @@ import { fetchCachedResource } from './resourceCache';
 export {
   JOURNAL_ENTRIES_CACHE_KEY,
   PRIVACY_POLICY_CACHE_KEY,
+  TERMS_CONDITIONS_CACHE_KEY,
+  ABOUT_US_CACHE_KEY,
   CHALLENGE_OVERVIEW_CACHE_KEY,
   COMMUNITY_POSTS_CACHE_KEY,
   NUTRITION_PLAN_LATEST_CACHE_KEY,
@@ -18,6 +20,8 @@ export {
 import {
   JOURNAL_ENTRIES_CACHE_KEY,
   PRIVACY_POLICY_CACHE_KEY,
+  TERMS_CONDITIONS_CACHE_KEY,
+  ABOUT_US_CACHE_KEY,
   CHALLENGE_OVERVIEW_CACHE_KEY,
   COMMUNITY_POSTS_CACHE_KEY,
   NUTRITION_PLAN_LATEST_CACHE_KEY,
@@ -47,6 +51,9 @@ export type PrivacyPolicyPayload = {
   effective_at?: string | null;
   applies_to?: string[];
 };
+
+export type TermsConditionPayload = PrivacyPolicyPayload;
+export type AboutUsPayload = PrivacyPolicyPayload;
 
 export type ChallengeOverview = {
   active_chats: unknown[];
@@ -84,6 +91,18 @@ export async function fetchJournalEntries() {
 export async function fetchPrivacyPolicy() {
   return fetchCachedResource(PRIVACY_POLICY_CACHE_KEY, async () => {
     return apiRequest<PrivacyPolicyPayload>('/content/privacy-policy');
+  });
+}
+
+export async function fetchTermsConditions() {
+  return fetchCachedResource(TERMS_CONDITIONS_CACHE_KEY, async () => {
+    return apiRequest<TermsConditionPayload>('/content/terms-condition');
+  });
+}
+
+export async function fetchAboutUs() {
+  return fetchCachedResource(ABOUT_US_CACHE_KEY, async () => {
+    return apiRequest<AboutUsPayload>('/content/about-us');
   });
 }
 

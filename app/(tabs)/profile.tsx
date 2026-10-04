@@ -633,12 +633,32 @@ export default function ProfileScreen() {
             </RequirementAuditBoundary>
 
             <TouchableOpacity
+              style={[styles.menuRow, { borderBottomColor: colors.divider }]}
+              activeOpacity={0.7}
+              onPress={() => router.push('/profile/about')}
+            >
+              <Text style={[styles.menuTitle, { color: colors.text }]}>{t('About Us')}</Text>
+              <Text style={[styles.menuMeta, { color: colors.textMuted }]}>{t('Mission & coaching ethos')}</Text>
+              <Text style={styles.chevron}>›</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.menuRow, { borderBottomColor: colors.divider }]}
+              activeOpacity={0.7}
+              onPress={() => router.push('/profile/terms')}
+            >
+              <Text style={[styles.menuTitle, { color: colors.text }]}>{t('Terms & conditions')}</Text>
+              <Text style={[styles.menuMeta, { color: colors.textMuted }]}>{t('Usage rules & member agreement')}</Text>
+              <Text style={styles.chevron}>›</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
               style={[styles.menuRow, { borderBottomWidth: 0 }]}
               activeOpacity={0.7}
               onPress={() => router.push('/profile/privacy')}
             >
               <Text style={[styles.menuTitle, { color: colors.text }]}>{t('Privacy policy')}</Text>
-              <Text style={[styles.menuMeta, { color: colors.textMuted }]}>{t('Export or delete data')}</Text>
+              <Text style={[styles.menuMeta, { color: colors.textMuted }]}>{t('Data protection & rights')}</Text>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
           </View>

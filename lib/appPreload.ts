@@ -15,6 +15,8 @@ import {
   fetchCommunityPostsData,
   fetchJournalEntries,
   fetchPrivacyPolicy,
+  fetchTermsConditions,
+  fetchAboutUs,
 } from './screenData';
 import { fetchWorkoutLibrary } from './workouts';
 import { fetchLatestStrengthWorkoutPlan, loadLatestVideoWorkoutPlan } from './workout-plans';
@@ -40,6 +42,8 @@ export async function preloadAppData() {
         fetchWorkoutLibrary(),
         fetchJournalEntries(),
         fetchPrivacyPolicy(),
+        fetchTermsConditions(),
+        fetchAboutUs(),
       ];
 
       if (canAccessFeature('challenge', user)) {

@@ -1,5 +1,7 @@
 export const JOURNAL_ENTRIES_CACHE_KEY = 'journal-entries';
 export const PRIVACY_POLICY_CACHE_KEY = 'content-privacy-policy';
+export const TERMS_CONDITIONS_CACHE_KEY = 'content-terms-condition';
+export const ABOUT_US_CACHE_KEY = 'content-about-us';
 export const CHALLENGE_OVERVIEW_CACHE_KEY = 'challenge-overview';
 export const COMMUNITY_POSTS_CACHE_KEY = 'community-posts';
 export const NUTRITION_PLAN_LATEST_CACHE_KEY = 'nutrition-plan-latest';
