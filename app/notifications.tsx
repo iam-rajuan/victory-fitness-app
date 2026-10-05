@@ -178,6 +178,15 @@ function getNotificationPresentation(item: AppNotification): NotificationPresent
     };
   }
 
+  if (item.type === 'feedback_reply') {
+    return {
+      category: dataCategory || 'Feedback reply',
+      icon: dataIcon || 'chatbubble-ellipses-outline',
+      accent: dataAccent || Colors.primary,
+      actionLabel: dataAction || 'View reply',
+    };
+  }
+
   if (item.type.includes('challenge')) {
     return {
       category: dataCategory || labelFromType(item.type),
