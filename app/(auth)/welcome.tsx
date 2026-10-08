@@ -17,6 +17,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 
 import { pushRoute } from '../../lib/navigation';
+import { isGermanyDomain } from '../../lib/domainContext';
 import { Colors } from '../../constants/Colors';
 import { Fonts } from '../../constants/Typography';
 
@@ -64,7 +65,7 @@ export default function WelcomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const [lang, setLang] = useState<Language>('en');
+  const [lang, setLang] = useState<Language>(() => (isGermanyDomain() ? 'de' : 'en'));
 
   const isDesktop = width >= 960;
   const isTablet = width >= 640 && width < 960;

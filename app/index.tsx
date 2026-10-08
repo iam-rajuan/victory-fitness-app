@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { getValidAuthTokens, fetchCurrentUser, getAuthUser } from '../lib/api';
 import { getPostAuthRoute } from '../lib/access';
+import { redirectToGermanyDomainPreservingPath, shouldRedirectGermanyUserToGermanyDomain } from '../lib/domainContext';
 import { replaceRoute } from '../lib/navigation';
 import WelcomeScreen from './(auth)/welcome';
 import { Colors } from '../constants/Colors';
@@ -22,6 +23,10 @@ export default function Index() {
           const user = await fetchCurrentUser().catch(() => getAuthUser());
           if (cancelled) return;
           if (user) {
+            if (await shouldRedirectGermanyUserToGermanyDomain(user)) {
+              redirectToGermanyDomainPreservingPath();
+              return;
+            }
             setIsAuthenticated(true);
             replaceRoute(router, getPostAuthRoute(user));
             return;

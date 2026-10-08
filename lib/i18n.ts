@@ -1,6 +1,7 @@
 import React from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchCurrentUser, getAuthUser, setApiLanguage, translateTextBatch } from './api';
+import { isGermanyDomain } from './domainContext';
 import { STATIC_TRANSLATIONS } from './translations';
 
 export const SUPPORTED_LANGUAGES = [
@@ -102,6 +103,10 @@ function shouldAutoTranslateText(value: string) {
 }
 
 function getInitialLanguage(): LanguageCode {
+  if (isGermanyDomain()) {
+    return 'de';
+  }
+
   if (typeof window !== 'undefined' && window.localStorage) {
     try {
       const stored = window.localStorage.getItem(GLOBAL_LANGUAGE_STORAGE_KEY);
@@ -243,7 +248,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
           ? cachedUser
           : await fetchCurrentUser().catch(() => cachedUser);
         const userStored = await getSavedLanguageForUser(user?.id);
-        const finalLanguage = resolvedLanguage ?? userStored ?? normalizeLanguageCode(user?.preferred_language) ?? DEFAULT_LANGUAGE;
+        const domainLanguage = isGermanyDomain() ? 'de' : null;
+        const finalLanguage = domainLanguage ?? resolvedLanguage ?? userStored ?? normalizeLanguageCode(user?.preferred_language) ?? DEFAULT_LANGUAGE;
 
         if (!cancelled) {
           setLanguageState(finalLanguage);

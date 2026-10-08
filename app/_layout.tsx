@@ -17,6 +17,7 @@ import {
 import { appendRunLog, formatRunLogMessage } from '../lib/runLog';
 import { LanguageProvider } from '../lib/i18n';
 import { ThemeProvider, useTheme } from '../context/ThemeContext';
+import { redirectToGermanyDomainPreservingPath, shouldRedirectGermanyUserToGermanyDomain } from '../lib/domainContext';
 import { blurActiveElementBeforeNavigation, replaceRoute } from '../lib/navigation';
 import { PushNotificationEvent, registerForPushNotificationsAsync, startForegroundNotificationStream, stopForegroundNotificationStream, subscribeToPushNotifications } from '../lib/pushNotifications';
 import { cleanupLocalWebServiceWorkers } from '../lib/webServiceWorker';
@@ -180,6 +181,11 @@ export default function RootLayout() {
       const applyAccess = async (user: Awaited<ReturnType<typeof getAuthUser>>) => {
         if (!user) {
           return false;
+        }
+
+        if (await shouldRedirectGermanyUserToGermanyDomain(user)) {
+          redirectToGermanyDomainPreservingPath();
+          return true;
         }
 
         if (isAdminRestrictedFromApp(user)) {

@@ -76,6 +76,10 @@ export const CONFIGURED_API_URL = RAW_API_URL.replace(/\/+$/, '');
 function resolveApiUrl(url: string): string {
   const normalizedUrl = String(url || '').trim().replace(/\/+$/, '');
 
+  if (normalizedUrl.startsWith('/')) {
+    return normalizedUrl;
+  }
+
   if (Platform.OS === 'web') {
     const hostname = getWebHostname();
     if (isLocalHostname(hostname)) {
@@ -114,10 +118,12 @@ const getResponsePromises = new Map<string, Promise<unknown>>();
 
 export function buildApiWebSocketUrl(path: string, params?: Record<string, string>) {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  const apiUrl = API_URL.replace(/^http/, 'ws').replace(/\/$/, '');
+  const apiUrl = API_URL.startsWith('/')
+    ? `${typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss' : 'ws'}://${typeof window !== 'undefined' ? window.location.host : ''}${API_URL}`
+    : API_URL.replace(/^http/, 'ws');
   const searchParams = new URLSearchParams(params || {});
   const query = searchParams.toString();
-  return `${apiUrl}${normalizedPath}${query ? `?${query}` : ''}`;
+  return `${apiUrl.replace(/\/$/, '')}${normalizedPath}${query ? `?${query}` : ''}`;
 }
 
 function getClientHeaders(): Record<string, string> {

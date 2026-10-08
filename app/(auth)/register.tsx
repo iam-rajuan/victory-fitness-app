@@ -29,6 +29,7 @@ import { useLanguage } from '../../lib/i18n';
 import { detectCountryFromDeviceLocale } from '../../lib/localeCountry';
 import { pushRoute, replaceRoute } from '../../lib/navigation';
 import { isE164PhoneNumber } from '../../lib/phone';
+import { getInitialRegionForDomainContext, isGermanyDomain, rememberExplicitCountryChoice } from '../../lib/domainContext';
 import {
   ONBOARDING_ANSWERS_KEY,
   ONBOARDING_STEP_KEY,
@@ -38,36 +39,46 @@ type RegionKey = 'de' | 'gh' | 'in' | 'uk' | 'us';
 
 const REGIONS: Record<
   RegionKey,
-  { dial: string; sample: string; n: string; note: string }
+  { dial: string; sample: string; n: string; countryCode: string; preferredLanguage: string; note: string }
 > = {
   de: {
     dial: '+49',
     sample: '171 555 0148',
     n: 'Germany',
+    countryCode: 'DE',
+    preferredLanguage: 'de',
     note: 'Sets your currency, your payment options and the clock your reminders run on. You can change it later.',
   },
   gh: {
     dial: '+233',
     sample: '24 000 0000',
     n: 'Ghana',
+    countryCode: 'GH',
+    preferredLanguage: 'en',
     note: 'Prices in cedis, charged locally — no foreign-card fee. Mobile Money first.',
   },
   in: {
     dial: '+91',
     sample: '98 0000 0000',
     n: 'India',
+    countryCode: 'IN',
+    preferredLanguage: 'en',
     note: 'The app stays in English in India — only prices and payment become local.',
   },
   uk: {
     dial: '+44',
     sample: '7700 900148',
     n: 'United Kingdom',
+    countryCode: 'GB',
+    preferredLanguage: 'en',
     note: 'Prices in pounds. Cancel any time from your profile.',
   },
   us: {
     dial: '+1',
     sample: '(415) 555-0148',
     n: 'United States',
+    countryCode: 'US',
+    preferredLanguage: 'en',
     note: 'Prices in dollars. Sales tax added at checkout where it applies.',
   },
 };
@@ -96,9 +107,8 @@ export default function RegisterScreen() {
   // Region selection
   const detectedLocale = useMemo(() => detectCountryFromDeviceLocale(), []);
   const initialRegionKey: RegionKey = useMemo(() => {
-    const code = (detectedLocale?.country.code || 'DE').toLowerCase();
+    const code = getInitialRegionForDomainContext(detectedLocale?.country.code);
     if (code in REGIONS) return code as RegionKey;
-    if (code === 'gb') return 'uk';
     return 'de';
   }, [detectedLocale]);
 
@@ -112,7 +122,9 @@ export default function RegisterScreen() {
   const { isConfigured: isGoogleConfigured, request: googleRequest, promptAsync } = useGoogleIdTokenAuth();
 
   React.useEffect(() => {
-    useDefaultLanguage();
+    if (!isGermanyDomain()) {
+      useDefaultLanguage();
+    }
   }, [useDefaultLanguage]);
 
   const handleRegister = async () => {
@@ -154,6 +166,7 @@ export default function RegisterScreen() {
     setLoading(true);
     try {
       await AsyncStorage.multiRemove([ONBOARDING_STEP_KEY, ONBOARDING_ANSWERS_KEY]).catch(() => {});
+      await rememberExplicitCountryChoice(selectedRegion);
       if (params.challenge_id) {
         await AsyncStorage.setItem('@pending_challenge_id', String(params.challenge_id));
       }
@@ -166,6 +179,9 @@ export default function RegisterScreen() {
           mobile: fullMobile,
           password,
           marketing_consent: marketingConsent,
+          country: currentRegion.n,
+          country_code: currentRegion.countryCode,
+          preferred_language: currentRegion.preferredLanguage,
           signup_source: String(source || (params.challenge_id ? 'challenge_invite' : 'organic')).trim().slice(0, 120) || 'organic',
           inviter_id: params.inviter_id,
           invite_id: params.invite_id,
@@ -461,7 +477,10 @@ export default function RegisterScreen() {
                   return (
                     <Pressable
                       key={k}
-                      onPress={() => setSelectedRegion(k)}
+                      onPress={() => {
+                        setSelectedRegion(k);
+                        void rememberExplicitCountryChoice(k);
+                      }}
                       style={[
                         styles.chip,
                         active ? styles.chipActive : styles.chipInactive,

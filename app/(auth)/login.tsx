@@ -38,6 +38,7 @@ import {
   useGoogleIdTokenAuth,
 } from '../../lib/firebaseGoogleAuth';
 import { useLanguage } from '../../lib/i18n';
+import { isGermanyDomain, redirectToGermanyDomainPreservingPath, shouldRedirectGermanyUserToGermanyDomain } from '../../lib/domainContext';
 import { pushRoute, replaceRoute } from '../../lib/navigation';
 
 const VF_LOGO = require('../../assets/images/onboarding/vf-logo-white.png');
@@ -85,6 +86,11 @@ export default function LoginScreen() {
             return;
           }
 
+          if (await shouldRedirectGermanyUserToGermanyDomain(user)) {
+            redirectToGermanyDomainPreservingPath();
+            return;
+          }
+
           await syncLanguageWithCurrentUser(user.id);
           replaceRoute(router, getPostAuthRoute(user));
           return;
@@ -93,7 +99,9 @@ export default function LoginScreen() {
         // Not authenticated
       }
 
-      useDefaultLanguage();
+      if (!isGermanyDomain()) {
+        useDefaultLanguage();
+      }
       if (reauth === '1') {
         setErrorDialog({
           title: t('Session expired'),
@@ -172,6 +180,10 @@ export default function LoginScreen() {
       }
       await setAuthTokens(auth);
       markBiometricSessionUnlocked();
+      if (await shouldRedirectGermanyUserToGermanyDomain(auth.user)) {
+        redirectToGermanyDomainPreservingPath();
+        return;
+      }
       await syncLanguageWithCurrentUser(auth.user.id);
       void maybeOfferBiometricUnlock(auth.user);
       const pendingChallengeId = challenge_id || (await AsyncStorage.getItem('@pending_challenge_id'));
@@ -216,6 +228,10 @@ export default function LoginScreen() {
 
     await setAuthTokens(auth);
     markBiometricSessionUnlocked();
+    if (await shouldRedirectGermanyUserToGermanyDomain(auth.user)) {
+      redirectToGermanyDomainPreservingPath();
+      return;
+    }
     await syncLanguageWithCurrentUser(auth.user.id);
     void maybeOfferBiometricUnlock(auth.user);
     if (auth.returning_user) {
