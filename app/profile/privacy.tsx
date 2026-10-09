@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -11,10 +11,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants/Colors';
 import { goBackOrReplace } from '../../lib/navigation';
 import { useAsyncScreenData } from '../../hooks/useAsyncScreenData';
 import { fetchPrivacyPolicy, PRIVACY_POLICY_CACHE_KEY } from '../../lib/screenData';
+import LegalContentRenderer from '../../components/legal/LegalContentRenderer';
 
 const OBSIDIAN = '#0D0D0D';
 const NAVY = '#0D2B45';
@@ -28,46 +28,11 @@ const DMSANS_SEMI = Platform.select({ web: "'DM Sans', sans-serif", default: 'DM
 const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
-type PolicySection = {
-  heading: string;
-  body: string[];
-};
-
 function formatDate(value?: string | null) {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
   return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-}
-
-function normalizePolicySections(text: string): PolicySection[] {
-  const cleaned = String(text || '')
-    .replace(/\r/g, '')
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line && !/^last updated\s*:/i.test(line));
-
-  const sections: PolicySection[] = [];
-  let current: PolicySection | null = null;
-
-  cleaned.forEach((line) => {
-    const isNumberedHeading = /^\d+\.\s+/.test(line);
-    const isPlainHeading = !isNumberedHeading && line.length < 80 && !/[.!?]$/.test(line);
-
-    if (isNumberedHeading || (!current && isPlainHeading)) {
-      current = { heading: line, body: [] };
-      sections.push(current);
-      return;
-    }
-
-    if (!current) {
-      current = { heading: '', body: [] };
-      sections.push(current);
-    }
-    current.body.push(line);
-  });
-
-  return sections.filter((section) => section.heading || section.body.length);
 }
 
 export default function PrivacyScreen() {
@@ -78,7 +43,6 @@ export default function PrivacyScreen() {
     load: fetchPrivacyPolicy,
   });
 
-  const sections = useMemo(() => normalizePolicySections(policy?.plain_text || ''), [policy?.plain_text]);
   const publishedLabel = formatDate(policy?.published_at || policy?.updated_at);
   const effectiveLabel = formatDate(policy?.effective_at);
   const versionLabel = policy?.version || 'v1';
@@ -135,25 +99,12 @@ export default function PrivacyScreen() {
             </View>
 
             <View style={styles.documentCard}>
-              {sections.length ? (
-                sections.map((section, index) => (
-                  <View key={`${index}-${section.heading || 'body'}`} style={styles.sectionBlock}>
-                    {section.heading ? (
-                      <Text style={styles.sectionHeading}>{section.heading}</Text>
-                    ) : null}
-                    {section.body.map((line, lineIndex) => (
-                      <Text
-                        key={`${index}-${lineIndex}`}
-                        style={line.startsWith('- ') ? styles.bulletText : styles.bodyText}
-                      >
-                        {line.startsWith('- ') ? `• ${line.slice(2)}` : line}
-                      </Text>
-                    ))}
-                  </View>
-                ))
-              ) : (
-                <Text style={styles.bodyText}>The current privacy policy is not available right now.</Text>
-              )}
+              <LegalContentRenderer
+                htmlContent={policy?.html_content}
+                plainText={policy?.plain_text}
+                pdfUrl={policy?.pdf_url}
+                pdfFilename={policy?.pdf_filename}
+              />
             </View>
           </>
         )}

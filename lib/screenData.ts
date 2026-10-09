@@ -43,6 +43,7 @@ export type JournalEntry = {
 
 export type PrivacyPolicyPayload = {
   title: string;
+  html_content?: string;
   plain_text: string;
   updated_at: string;
   version?: string;
@@ -50,6 +51,8 @@ export type PrivacyPolicyPayload = {
   published_at?: string | null;
   effective_at?: string | null;
   applies_to?: string[];
+  pdf_url?: string;
+  pdf_filename?: string;
 };
 
 export type TermsConditionPayload = PrivacyPolicyPayload;

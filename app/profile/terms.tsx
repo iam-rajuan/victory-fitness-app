@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { goBackOrReplace } from '../../lib/navigation';
 import { useAsyncScreenData } from '../../hooks/useAsyncScreenData';
 import { fetchTermsConditions, TERMS_CONDITIONS_CACHE_KEY } from '../../lib/screenData';
 import { useLanguage } from '../../lib/i18n';
+import LegalContentRenderer from '../../components/legal/LegalContentRenderer';
 
 const OBSIDIAN = '#0D0D0D';
 const NAVY = '#0D2B45';
@@ -28,46 +29,11 @@ const DMSANS_SEMI = Platform.select({ web: "'DM Sans', sans-serif", default: 'DM
 const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
-type PolicySection = {
-  heading: string;
-  body: string[];
-};
-
 function formatDate(value?: string | null) {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
   return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-}
-
-function normalizePolicySections(text: string): PolicySection[] {
-  const cleaned = String(text || '')
-    .replace(/\r/g, '')
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line && !/^last updated\s*:/i.test(line));
-
-  const sections: PolicySection[] = [];
-  let current: PolicySection | null = null;
-
-  cleaned.forEach((line) => {
-    const isNumberedHeading = /^\d+\.\s+/.test(line);
-    const isPlainHeading = !isNumberedHeading && line.length < 80 && !/[.!?]$/.test(line);
-
-    if (isNumberedHeading || (!current && isPlainHeading)) {
-      current = { heading: line, body: [] };
-      sections.push(current);
-      return;
-    }
-
-    if (!current) {
-      current = { heading: '', body: [] };
-      sections.push(current);
-    }
-    current.body.push(line);
-  });
-
-  return sections.filter((section) => section.heading || section.body.length);
 }
 
 export default function TermsScreen() {
@@ -79,7 +45,6 @@ export default function TermsScreen() {
     load: fetchTermsConditions,
   });
 
-  const sections = useMemo(() => normalizePolicySections(terms?.plain_text || ''), [terms?.plain_text]);
   const publishedLabel = formatDate(terms?.published_at || terms?.updated_at);
   const effectiveLabel = formatDate(terms?.effective_at);
   const versionLabel = terms?.version || 'v1';
@@ -136,25 +101,12 @@ export default function TermsScreen() {
             </View>
 
             <View style={styles.documentCard}>
-              {sections.length ? (
-                sections.map((section, index) => (
-                  <View key={`${index}-${section.heading || 'body'}`} style={styles.sectionBlock}>
-                    {section.heading ? (
-                      <Text style={styles.sectionHeading}>{section.heading}</Text>
-                    ) : null}
-                    {section.body.map((line, lineIndex) => (
-                      <Text
-                        key={`${index}-${lineIndex}`}
-                        style={line.startsWith('- ') ? styles.bulletText : styles.bodyText}
-                      >
-                        {line.startsWith('- ') ? `• ${line.slice(2)}` : line}
-                      </Text>
-                    ))}
-                  </View>
-                ))
-              ) : (
-                <Text style={styles.bodyText}>{t('The current terms & conditions are not available right now.')}</Text>
-              )}
+              <LegalContentRenderer
+                htmlContent={terms?.html_content}
+                plainText={terms?.plain_text}
+                pdfUrl={terms?.pdf_url}
+                pdfFilename={terms?.pdf_filename}
+              />
             </View>
           </>
         )}

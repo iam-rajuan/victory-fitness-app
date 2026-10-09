@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { goBackOrReplace } from '../../lib/navigation';
 import { useAsyncScreenData } from '../../hooks/useAsyncScreenData';
 import { fetchAboutUs, ABOUT_US_CACHE_KEY } from '../../lib/screenData';
 import { useLanguage } from '../../lib/i18n';
+import LegalContentRenderer from '../../components/legal/LegalContentRenderer';
 
 const OBSIDIAN = '#0D0D0D';
 const NAVY = '#0D2B45';
@@ -28,46 +29,11 @@ const DMSANS_SEMI = Platform.select({ web: "'DM Sans', sans-serif", default: 'DM
 const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
-type AboutSection = {
-  heading: string;
-  body: string[];
-};
-
 function formatDate(value?: string | null) {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
   return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-}
-
-function normalizeAboutSections(text: string): AboutSection[] {
-  const cleaned = String(text || '')
-    .replace(/\r/g, '')
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line && !/^last updated\s*:/i.test(line));
-
-  const sections: AboutSection[] = [];
-  let current: AboutSection | null = null;
-
-  cleaned.forEach((line) => {
-    const isNumberedHeading = /^\d+\.\s+/.test(line);
-    const isPlainHeading = !isNumberedHeading && line.length < 80 && !/[.!?]$/.test(line);
-
-    if (isNumberedHeading || (!current && isPlainHeading) || (current && isPlainHeading && line.length < 50)) {
-      current = { heading: line, body: [] };
-      sections.push(current);
-      return;
-    }
-
-    if (!current) {
-      current = { heading: '', body: [] };
-      sections.push(current);
-    }
-    current.body.push(line);
-  });
-
-  return sections.filter((section) => section.heading || section.body.length);
 }
 
 export default function AboutUsScreen() {
@@ -79,7 +45,6 @@ export default function AboutUsScreen() {
     load: fetchAboutUs,
   });
 
-  const sections = useMemo(() => normalizeAboutSections(about?.plain_text || ''), [about?.plain_text]);
   const publishedLabel = formatDate(about?.published_at || about?.updated_at);
   const versionLabel = about?.version || 'v1';
 
@@ -135,34 +100,12 @@ export default function AboutUsScreen() {
             </View>
 
             <View style={styles.documentCard}>
-              {sections.length ? (
-                sections.map((section, index) => (
-                  <View key={`${index}-${section.heading || 'body'}`} style={styles.sectionBlock}>
-                    {section.heading ? (
-                      <Text style={styles.sectionHeading}>{section.heading}</Text>
-                    ) : null}
-                    {section.body.map((line, lineIndex) => (
-                      <Text
-                        key={`${index}-${lineIndex}`}
-                        style={line.startsWith('- ') ? styles.bulletText : styles.bodyText}
-                      >
-                        {line.startsWith('- ') ? `• ${line.slice(2)}` : line}
-                      </Text>
-                    ))}
-                  </View>
-                ))
-              ) : (
-                <View style={styles.sectionBlock}>
-                  <Text style={styles.sectionHeading}>{t('About Victory Fitness')}</Text>
-                  <Text style={styles.bodyText}>
-                    {t('Victory Fitness is built to help people train with more structure, eat with more clarity, and stay consistent for the long term.')}
-                  </Text>
-                  <Text style={styles.sectionHeading}>{t('Our Mission')}</Text>
-                  <Text style={styles.bodyText}>
-                    {t('To provide elite, structured coaching, daily habits, and community accountability for high performers worldwide.')}
-                  </Text>
-                </View>
-              )}
+              <LegalContentRenderer
+                htmlContent={about?.html_content}
+                plainText={about?.plain_text}
+                pdfUrl={about?.pdf_url}
+                pdfFilename={about?.pdf_filename}
+              />
             </View>
           </>
         )}
