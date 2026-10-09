@@ -9,6 +9,7 @@ import {
   TextInput,
   Platform,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { apiRequest } from '../../lib/api';
 
@@ -16,6 +17,7 @@ interface CohortMessage {
   id: string;
   n: string; // name
   i: string; // initials
+  profileImage?: string;
   t: string; // time
   m: string; // message
   isMe?: boolean;
@@ -34,6 +36,7 @@ type ChallengeChatMessage = {
   id: string;
   author_name: string;
   author_role: string;
+  author_profile_image?: string;
   content: string;
   created_at: string;
   can_edit?: boolean;
@@ -182,9 +185,13 @@ export default function ClaudeCohortModal({
             }
             return (
               <View key={m.id} style={styles.otherMessageRow}>
-                <View style={styles.avatarCircle}>
-                  <Text style={styles.avatarText}>{m.i}</Text>
-                </View>
+                {m.profileImage ? (
+                  <Image source={{ uri: m.profileImage }} style={styles.avatarCircle} />
+                ) : (
+                  <View style={styles.avatarCircle}>
+                    <Text style={styles.avatarText}>{m.i}</Text>
+                  </View>
+                )}
                 <View style={styles.otherBubbleWrap}>
                   <View style={styles.otherMetaRow}>
                     <Text style={styles.otherName}>{m.n}</Text>
@@ -264,6 +271,7 @@ function mapChatMessage(message: ChallengeChatMessage): CohortMessage {
     id: String(message.id || `cm-${Date.now()}`),
     n: message.can_edit ? 'You' : authorName,
     i: message.can_edit ? 'ME' : getInitials(authorName),
+    profileImage: message.can_edit ? '' : String(message.author_profile_image || '').trim(),
     t: formatMessageTime(String(message.created_at || '')),
     m: String(message.content || '').trim(),
     isMe: Boolean(message.can_edit),

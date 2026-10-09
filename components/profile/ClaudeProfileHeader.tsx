@@ -1,11 +1,12 @@
 import React from 'react';
-import { StyleSheet, Text, View, Platform } from 'react-native';
+import { Image, StyleSheet, Text, View, Platform } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../lib/i18n';
 
 interface ClaudeProfileHeaderProps {
   name?: string;
   initials?: string;
+  profileImage?: string;
   tier?: string;
   country?: string;
   sinceDate?: string;
@@ -28,6 +29,7 @@ const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Cou
 export default function ClaudeProfileHeader({
   name = 'Victory member',
   initials = 'VF',
+  profileImage = '',
   tier = 'NONE',
   country = '',
   sinceDate = '',
@@ -45,9 +47,13 @@ export default function ClaudeProfileHeader({
     <View style={styles.container}>
       {/* Top User Info matching lines 1133-1136 */}
       <View style={styles.userRow}>
-        <View style={styles.avatarWrap}>
-          <Text style={styles.avatarText}>{initials}</Text>
-        </View>
+        {profileImage ? (
+          <Image source={{ uri: profileImage }} style={styles.avatarWrap} />
+        ) : (
+          <View style={styles.avatarWrap}>
+            <Text style={styles.avatarText}>{initials}</Text>
+          </View>
+        )}
 
         <View style={styles.nameCol}>
           <Text style={[styles.userName, { color: colors.text }]}>{name}</Text>

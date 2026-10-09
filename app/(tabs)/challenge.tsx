@@ -71,6 +71,16 @@ function buildChallengeItem(raw: Record<string, any>, status: ChallengeItem['sta
   const challengeId = String(raw.challenge_id || raw.id || '').trim();
   const points = status === 'completed' ? raw.earned_points : raw.points;
   const difficulties = normalizeChallengeDifficulties(raw);
+  const faces = (Array.isArray(raw.participant_preview) ? raw.participant_preview : Array.isArray(raw.participants_preview) ? raw.participants_preview : Array.isArray(raw.faces) ? raw.faces : [])
+    .map((item: Record<string, any>) => {
+      const name = String(item.name || item.author_name || '').trim();
+      return {
+        i: String(item.i || item.initials || initialsFromName(name || 'VF')).toUpperCase(),
+        image: resolveRemoteAssetUrl(item.profile_image || item.profileImage || item.author_profile_image),
+      };
+    })
+    .filter((item: { i: string; image: string }) => item.i || item.image)
+    .slice(0, 4);
   return {
     id: challengeId,
     challengeId,
@@ -79,7 +89,7 @@ function buildChallengeItem(raw: Record<string, any>, status: ChallengeItem['sta
     c: formatCategory(raw.type || raw.category),
     p: formatPoints(points),
     joined: formatJoined(raw.participants),
-    faces: [],
+    faces,
     desc: String(raw.description || '').trim(),
     why: String(raw.why_it_matters || '').trim(),
     difficulty: difficulties[0] || String(raw.difficulty || '').trim().toUpperCase(),
@@ -124,6 +134,7 @@ function mapCommunityComment(raw: Record<string, any>): CommunityComment {
     postId: String(raw.post_id || ''),
     authorName,
     authorInitials: initialsFromName(authorName),
+    authorProfileImage: resolveRemoteAssetUrl(raw.author_profile_image),
     authorRole: String(raw.author_role || 'member').trim().toUpperCase(),
     content: String(raw.content || '').trim(),
     when: formatRelativeTime(raw.created_at),
@@ -141,6 +152,7 @@ function mapCommunityPost(raw: Record<string, any>): CommunityPost {
     name: authorName,
     tier: String(raw.author_tier || raw.author_role || 'MEMBER').trim().toUpperCase(),
     i: initialsFromName(authorName),
+    profileImage: resolveRemoteAssetUrl(raw.author_profile_image),
     when: formatRelativeTime(raw.created_at),
     body: String(raw.content || '').trim(),
     react: `${likeCount} cheers · ${commentCount} comments`,
@@ -201,6 +213,7 @@ export default function ChallengeScreen() {
   const [userTier, setUserTier] = useState('GOLD');
   const [userName, setUserName] = useState('Member');
   const [userInitials, setUserInitials] = useState('ME');
+  const [userProfileImage, setUserProfileImage] = useState('');
   const challengeItemsCountRef = useRef(0);
   const cachedChallengeOverview = useResourceStore((state) => state.resources[CHALLENGE_OVERVIEW_CACHE_KEY]?.data as ChallengeOverviewPayload | undefined);
   const cachedCommunityPosts = useResourceStore((state) => state.resources[getCommunityPostsCacheKey(communityScope)]?.data as { posts?: Array<Record<string, any>> } | undefined);
@@ -233,6 +246,7 @@ export default function ChallengeScreen() {
         setUserId(String(u.id || u._id || '').trim());
         const tier = (u.tier || u.membership_tier || 'gold').toUpperCase();
         setUserTier(tier);
+        setUserProfileImage(String(u.profileImage || '').trim());
         if (u.name) {
           setUserName(u.name);
           const parts = u.name.split(' ');
@@ -510,6 +524,7 @@ export default function ChallengeScreen() {
           <ClaudeCommunityFeed
             userTier={userTier}
             userInitials={userInitials}
+            userProfileImage={userProfileImage}
             posts={communityPosts}
             onPublishPost={handlePublishCommunityPost}
             onToggleCheer={handleToggleCommunityCheer}

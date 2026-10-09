@@ -1009,9 +1009,15 @@ export default function ChallengeProgressScreen() {
             {/* Logo Section */}
             <View style={styles.newPostcardLogoContainer}>
               <View style={styles.avatarOutlineBox}>
-                <View style={styles.avatarInnerBox}>
-                  <Text style={styles.avatarQuestionMark}>?</Text>
-                </View>
+                {currentUser?.profileImage ? (
+                  <Image source={{ uri: currentUser.profileImage }} style={styles.avatarInnerBox} />
+                ) : (
+                  <View style={styles.avatarInnerBox}>
+                    <Text style={styles.avatarQuestionMark}>
+                      {String(currentUser?.name || 'VF').trim().slice(0, 1).toUpperCase()}
+                    </Text>
+                  </View>
+                )}
               </View>
               <Text style={styles.newPostcardBrandText}>{t('WORKOUT_CARD_YOUR_VICTORY').toUpperCase()}</Text>
             </View>

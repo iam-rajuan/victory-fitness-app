@@ -40,6 +40,8 @@ type GoogleOAuthPollResponse = {
   payload?: BrowserGoogleAuthMessage;
 };
 
+const PRODUCTION_GOOGLE_OAUTH_API_ORIGIN = 'https://api.victoryfitnessapp.com';
+
 function readEnv(name: string): string {
   return String(process.env?.[name] ?? '').trim();
 }
@@ -50,6 +52,24 @@ function getDefaultGoogleRedirectUri(): string {
   }
 
   return makeRedirectUri({ preferLocalhost: true });
+}
+
+function getBrowserGoogleOAuthApiBase(): string {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') {
+    return API_URL;
+  }
+
+  const hostname = String(window.location.hostname || '').toLowerCase();
+  if (
+    hostname === 'victoryfitnessapp.com'
+    || hostname === 'www.victoryfitnessapp.com'
+    || hostname === 'app.victoryfitnessapp.com'
+    || hostname === 'victoryfitnessapp.de'
+  ) {
+    return PRODUCTION_GOOGLE_OAUTH_API_ORIGIN;
+  }
+
+  return API_URL;
 }
 
 export function getFirebaseGoogleConfig(): FirebaseGoogleConfig {
@@ -123,7 +143,8 @@ export function signInWithGoogleBrowserOAuth(): Promise<AuthResponse> {
   }
 
   const flowId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-  const authUrl = `${API_URL}/auth/google/start?return_origin=${encodeURIComponent(window.location.origin)}&flow_id=${encodeURIComponent(flowId)}`;
+  const oauthApiBase = getBrowserGoogleOAuthApiBase().replace(/\/+$/, '');
+  const authUrl = `${oauthApiBase}/auth/google/start?return_origin=${encodeURIComponent(window.location.origin)}&flow_id=${encodeURIComponent(flowId)}`;
 
   return new Promise<AuthResponse>((resolve, reject) => {
     let completed = false;
@@ -193,7 +214,7 @@ export function signInWithGoogleBrowserOAuth(): Promise<AuthResponse> {
       }
 
       try {
-        const response = await fetch(`${API_URL}/auth/google/result?flow_id=${encodeURIComponent(flowId)}`, {
+        const response = await fetch(`${oauthApiBase}/auth/google/result?flow_id=${encodeURIComponent(flowId)}`, {
           method: 'GET',
           credentials: 'omit',
           headers: { Accept: 'application/json' },

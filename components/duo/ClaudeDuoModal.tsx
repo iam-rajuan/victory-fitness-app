@@ -9,6 +9,7 @@ import {
   Platform,
   Alert,
   TextInput,
+  Image,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import {
@@ -42,6 +43,7 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
   const [duoState, setDuoState] = useState<DuoState>('inactive');
   const [pairId, setPairId] = useState('');
   const [partnerName, setPartnerName] = useState('Partner');
+  const [partnerProfileImage, setPartnerProfileImage] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [inputCode, setInputCode] = useState('');
   const [showCodeInput, setShowCodeInput] = useState(false);
@@ -60,6 +62,7 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
         if (res && res.partner) {
           setDuoState('active');
           setPartnerName(res.partner.name || res.partner.email?.split('@')[0] || 'Partner');
+          setPartnerProfileImage(String(res.partner.profileImage || res.partner_profile_image || '').trim());
           setDaysInSync(Math.max(0, Number(res.days_in_sync || res.partner.days_in_sync || 0)));
           setPartnerTrainedToday(Boolean(res.partner.trained_today ?? res.partner_checked_in_today));
           setYouTrainedToday(Boolean(res.your_checked_in_today));
@@ -67,6 +70,7 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
           setDuoState('pending');
           setInviteCode(String(res.invite_code || ''));
           setPartnerName('Partner');
+          setPartnerProfileImage('');
           setDaysInSync(0);
           setPartnerTrainedToday(false);
           setYouTrainedToday(false);
@@ -74,6 +78,7 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
           setDuoState('inactive');
           setInviteCode('');
           setPartnerName('Partner');
+          setPartnerProfileImage('');
           setDaysInSync(0);
           setPartnerTrainedToday(false);
           setYouTrainedToday(false);
@@ -82,6 +87,7 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
         setDuoState('inactive');
         setInviteCode('');
         setPartnerName('Partner');
+        setPartnerProfileImage('');
         setDaysInSync(0);
         setPartnerTrainedToday(false);
         setYouTrainedToday(false);
@@ -115,6 +121,7 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
       setPairId(res.pair_id || '');
       setDuoState('active');
       setPartnerName('Partner');
+      setPartnerProfileImage('');
       setShowCodeInput(false);
       Alert.alert('Duo Active', 'You are now synced with your accountability partner!');
     } catch (error: any) {
@@ -149,6 +156,7 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
             setPairId('');
             setDuoState('inactive');
             setPartnerName('Partner');
+            setPartnerProfileImage('');
             setDaysInSync(0);
             setPartnerTrainedToday(false);
             setYouTrainedToday(false);
@@ -221,11 +229,15 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
           {/* Main Duo Card matching lines 1777-1821 */}
           <View style={styles.mainCard}>
             <View style={styles.cardHeader}>
-              <View style={styles.avatarWrap}>
-                <Text style={styles.avatarText}>
-                  {duoState === 'active' ? partnerName.slice(0, 2).toUpperCase() : 'AD'}
-                </Text>
-              </View>
+              {duoState === 'active' && partnerProfileImage ? (
+                <Image source={{ uri: partnerProfileImage }} style={styles.avatarWrap} />
+              ) : (
+                <View style={styles.avatarWrap}>
+                  <Text style={styles.avatarText}>
+                    {duoState === 'active' ? partnerName.slice(0, 2).toUpperCase() : 'AD'}
+                  </Text>
+                </View>
+              )}
 
               <View style={styles.cardHeaderTextWrap}>
                 <Text style={styles.cardHeading}>

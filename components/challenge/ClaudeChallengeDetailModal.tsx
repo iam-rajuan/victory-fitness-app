@@ -7,6 +7,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Platform,
+  Image,
 } from 'react-native';
 import { ChallengeItem, formatDifficultyLabel } from './ClaudeChallengeDirectory';
 import RequirementAuditBoundary from '../audit/RequirementAuditBoundary';
@@ -110,9 +111,13 @@ export default function ClaudeChallengeDetailModal({
             <View style={styles.whoRow}>
               <View style={styles.avatarRow}>
                 {challenge.faces.map((f, i) => (
-                  <View key={`face-${i}`} style={[styles.avatarCircle, { marginLeft: i > 0 ? -8 : 0 }]}>
-                    <Text style={styles.avatarText}>{f.i}</Text>
-                  </View>
+                  f.image ? (
+                    <Image key={`face-${i}`} source={{ uri: f.image }} style={[styles.avatarCircle, { marginLeft: i > 0 ? -8 : 0 }]} />
+                  ) : (
+                    <View key={`face-${i}`} style={[styles.avatarCircle, { marginLeft: i > 0 ? -8 : 0 }]}>
+                      <Text style={styles.avatarText}>{f.i}</Text>
+                    </View>
+                  )
                 ))}
               </View>
               <View style={styles.whoTextCol}>

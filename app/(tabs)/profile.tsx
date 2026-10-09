@@ -460,6 +460,7 @@ export default function ProfileScreen() {
         <ClaudeProfileHeader
           name={name}
           initials={initials}
+          profileImage={user?.profileImage || ''}
           tier={tier}
           country={country}
           sinceDate={sinceDate}

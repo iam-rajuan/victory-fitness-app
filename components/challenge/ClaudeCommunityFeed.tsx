@@ -20,6 +20,7 @@ export interface CommunityPost {
   name: string;
   tier: string;
   i: string; // initials
+  profileImage?: string;
   when: string;
   body: string;
   react: string;
@@ -41,6 +42,7 @@ export interface CommunityComment {
   postId: string;
   authorName: string;
   authorInitials: string;
+  authorProfileImage?: string;
   authorRole: string;
   content: string;
   when: string;
@@ -59,6 +61,7 @@ export type CommunityPostDraft = {
 interface ClaudeCommunityFeedProps {
   userTier?: string;
   userInitials?: string;
+  userProfileImage?: string;
   posts?: CommunityPost[];
   onPublishPost?: (draft: CommunityPostDraft) => Promise<void>;
   onToggleCheer?: (postId: string) => Promise<void>;
@@ -299,6 +302,7 @@ function CommunityVideoPlayer({ videoUrl }: { videoUrl?: string }) {
 export default function ClaudeCommunityFeed({
   userTier = 'gold',
   userInitials = 'ME',
+  userProfileImage = '',
   posts = [],
   onPublishPost,
   onToggleCheer,
@@ -651,9 +655,13 @@ export default function ClaudeCommunityFeed({
         activeOpacity={0.85}
         onPress={() => setShowPostModal(true)}
       >
-        <View style={styles.composerAvatar}>
-          <Text style={styles.composerAvatarText}>{userInitials}</Text>
-        </View>
+        {userProfileImage ? (
+          <Image source={{ uri: userProfileImage }} style={styles.composerAvatar} />
+        ) : (
+          <View style={styles.composerAvatar}>
+            <Text style={styles.composerAvatarText}>{userInitials}</Text>
+          </View>
+        )}
         <Text style={styles.composerPlaceholder}>Share something with your circle…</Text>
         <Text style={styles.composerPostLink}>Post</Text>
       </TouchableOpacity>
@@ -684,9 +692,13 @@ export default function ClaudeCommunityFeed({
             ]}
           >
             <View style={styles.postHeader}>
-              <View style={styles.postAvatar}>
-                <Text style={styles.postAvatarText}>{p.i}</Text>
-              </View>
+              {p.profileImage ? (
+                <Image source={{ uri: p.profileImage }} style={styles.postAvatar} />
+              ) : (
+                <View style={styles.postAvatar}>
+                  <Text style={styles.postAvatarText}>{p.i}</Text>
+                </View>
+              )}
 
               <View style={styles.postMetaCol}>
                 <View style={styles.postNameRow}>
@@ -742,9 +754,13 @@ export default function ClaudeCommunityFeed({
                 ) : (p.comments || []).length > 0 ? (
                   (p.comments || []).map((comment) => (
                     <View key={comment.id} style={styles.commentRow}>
-                      <View style={styles.commentAvatar}>
-                        <Text style={styles.commentAvatarText}>{comment.authorInitials}</Text>
-                      </View>
+                      {comment.authorProfileImage ? (
+                        <Image source={{ uri: comment.authorProfileImage }} style={styles.commentAvatar} />
+                      ) : (
+                        <View style={styles.commentAvatar}>
+                          <Text style={styles.commentAvatarText}>{comment.authorInitials}</Text>
+                        </View>
+                      )}
                       <View style={styles.commentBody}>
                         <View style={styles.commentMetaRow}>
                           <Text style={styles.commentAuthor}>{comment.authorName}</Text>

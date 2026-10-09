@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Image, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
@@ -129,14 +129,22 @@ export default function SocialContagionWidget() {
       <View style={styles.countRow}>
         {recentCompletions.length > 0 ? (
           <View style={styles.avatarStack}>
-            {recentCompletions.slice(0, 4).map((item, index) => (
-              <View
-                key={item.id || `${item.name}-${index}`}
-                style={[styles.avatarMini, { backgroundColor: item.avatar_color || Colors.primary, marginLeft: index === 0 ? 0 : -8 }]}
-              >
-                <Text style={styles.avatarInitial}>{String(item.name || '?').trim().slice(0, 1).toUpperCase()}</Text>
-              </View>
-            ))}
+            {recentCompletions.slice(0, 4).map((item, index) =>
+              item.profile_image ? (
+                <Image
+                  key={item.id || `${item.name}-${index}`}
+                  source={{ uri: item.profile_image }}
+                  style={[styles.avatarMini, { marginLeft: index === 0 ? 0 : -8 }]}
+                />
+              ) : (
+                <View
+                  key={item.id || `${item.name}-${index}`}
+                  style={[styles.avatarMini, { backgroundColor: item.avatar_color || Colors.primary, marginLeft: index === 0 ? 0 : -8 }]}
+                >
+                  <Text style={styles.avatarInitial}>{String(item.name || '?').trim().slice(0, 1).toUpperCase()}</Text>
+                </View>
+              )
+            )}
           </View>
         ) : null}
         <View style={{ flex: 1, marginLeft: recentCompletions.length > 0 ? 12 : 0 }}>
@@ -150,7 +158,11 @@ export default function SocialContagionWidget() {
         <View style={styles.recentList}>
           {recentCompletions.slice(0, 3).map((item) => (
             <View key={item.id} style={styles.recentItem}>
-              <View style={[styles.recentDot, { backgroundColor: item.avatar_color || Colors.primary }]} />
+              {item.profile_image ? (
+                <Image source={{ uri: item.profile_image }} style={styles.recentAvatar} />
+              ) : (
+                <View style={[styles.recentDot, { backgroundColor: item.avatar_color || Colors.primary }]} />
+              )}
               <Text style={styles.recentItemText} numberOfLines={1}>
                 <Text style={styles.recentItemName}>{item.name} </Text>
                 {t(item.action)}
@@ -305,6 +317,11 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
+  },
+  recentAvatar: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
   },
   recentItemText: {
     flex: 1,

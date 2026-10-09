@@ -9,6 +9,7 @@ import {
   TextInput,
   Alert,
   Platform,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
@@ -190,11 +191,15 @@ export default function AccountabilityPartnerCard({ onStatusChange }: Accountabi
           <View style={styles.partnerRow}>
             {/* Avatar */}
             <View style={styles.partnerAvatarWrap}>
-              <View style={styles.partnerAvatarFallback}>
-                <Text style={styles.partnerInitials}>
-                  {partner.name ? partner.name.slice(0, 2).toUpperCase() : 'AP'}
-                </Text>
-              </View>
+              {partner.profileImage ? (
+                <Image source={{ uri: partner.profileImage }} style={styles.partnerAvatarFallback} />
+              ) : (
+                <View style={styles.partnerAvatarFallback}>
+                  <Text style={styles.partnerInitials}>
+                    {partner.name ? partner.name.slice(0, 2).toUpperCase() : 'AP'}
+                  </Text>
+                </View>
+              )}
             </View>
 
             {/* Info */}

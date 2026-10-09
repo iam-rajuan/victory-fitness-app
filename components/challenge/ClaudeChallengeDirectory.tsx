@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Platform,
   useWindowDimensions,
+  Image,
 } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../lib/i18n';
@@ -19,7 +20,7 @@ export interface ChallengeItem {
   c: string; // category
   p: string; // points e.g. "800 pts"
   joined: string; // "142 joined"
-  faces: { i: string }[];
+  faces: { i: string; image?: string }[];
   desc?: string;
   why?: string;
   difficulty?: string;
@@ -305,9 +306,13 @@ export default function ClaudeChallengeDirectory({
             <View style={styles.railCardFooter}>
               <View style={styles.avatarRow}>
                 {c.faces.map((f, i) => (
-                  <View key={`avatar-${i}`} style={[styles.avatarCircle, { marginLeft: i > 0 ? -6 : 0 }]}>
-                    <Text style={styles.avatarText}>{f.i}</Text>
-                  </View>
+                  f.image ? (
+                    <Image key={`avatar-${i}`} source={{ uri: f.image }} style={[styles.avatarCircle, { marginLeft: i > 0 ? -6 : 0 }]} />
+                  ) : (
+                    <View key={`avatar-${i}`} style={[styles.avatarCircle, { marginLeft: i > 0 ? -6 : 0 }]}>
+                      <Text style={styles.avatarText}>{f.i}</Text>
+                    </View>
+                  )
                 ))}
               </View>
               <Text

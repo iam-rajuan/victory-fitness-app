@@ -1438,6 +1438,7 @@ export type NetworkActivityResponse = {
     action: string;
     time_ago: string;
     avatar_color: string;
+    profile_image?: string;
   }>;
 };
 
