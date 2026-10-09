@@ -12,7 +12,6 @@ import { Ionicons } from '@expo/vector-icons';
 
 const GOLD = '#C9943A';
 const IVORY = '#F7F3EE';
-const NAVY = '#0D2B45';
 const INTER = "'Inter', sans-serif";
 const DMSANS = "'DM Sans', sans-serif";
 const MONO = "'JetBrains Mono', monospace";
@@ -161,7 +160,12 @@ function renderBlocks(nodes: Node[] = [], width: number, keyPrefix = 'legal'): R
     if (tag === 'img') {
       const src = String(node.attrs?.src || '');
       if (!src) return null;
-      return <Image key={key} source={{ uri: src }} style={[styles.image, { height: Math.min(320, Math.max(180, width * 0.55)) }]} resizeMode="contain" />;
+      const frameHeight = Math.min(260, Math.max(168, width * 0.5625));
+      return (
+        <View key={key} style={[styles.imageFrame, { height: frameHeight }]}>
+          <Image source={{ uri: src }} style={styles.image} resizeMode="contain" />
+        </View>
+      );
     }
     if (tag === 'hr') return <View key={key} style={styles.rule} />;
     return <View key={key}>{renderBlocks(node.children, width, key)}</View>;
@@ -267,12 +271,19 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 24,
   },
-  image: {
+  imageFrame: {
     width: '100%',
     maxWidth: '100%',
-    backgroundColor: NAVY,
+    backgroundColor: 'rgba(247,243,238,0.96)',
     borderRadius: 12,
     marginVertical: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(247,243,238,0.12)',
+  },
+  image: {
+    width: '100%',
+    height: '100%',
   },
   rule: {
     height: StyleSheet.hairlineWidth,
