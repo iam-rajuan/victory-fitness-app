@@ -19,8 +19,11 @@ import {
   updateNutritionMealCompletion,
   calculateProteinTarget,
   NutritionDayPlan,
+  NutritionPlanApiResponse,
 } from '../../lib/nutrition';
 import { useLanguage } from '../../lib/i18n';
+import { NUTRITION_PLAN_LATEST_CACHE_KEY } from '../../lib/cacheKeys';
+import { hydrateCachedResource } from '../../lib/resourceCache';
 
 const PLAN_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
 
@@ -51,40 +54,58 @@ export default function ProteinRingCard({ onPressLogMeal }: ProteinRingCardProps
   const loadTargets = useCallback(async () => {
     try {
       const todayKey = getTodayPlanDay();
+      const cachedPlan = await hydrateCachedResource<NutritionPlanApiResponse>(NUTRITION_PLAN_LATEST_CACHE_KEY);
+      if (cachedPlan) {
+        const cachedDayPlan = cachedPlan.days?.find((d) => d.day === todayKey) || cachedPlan.days?.[0] || null;
+        if (cachedPlan.daily_protein_target) setProteinTarget(cachedPlan.daily_protein_target);
+        if (cachedDayPlan) setTodayPlan(cachedDayPlan);
+      }
       const [user, metrics, plan] = await Promise.all([
         fetchCurrentUser().catch(() => null),
         fetchCurrentUserBodyMetrics().catch(() => null),
         getLatestNutritionPlan({ forceRefresh: true }).catch(() => null),
       ]);
 
-      const weightKg = Number(metrics?.weight) || Number((user as any)?.weight) || 70;
-      const calcProtein = calculateProteinTarget(weightKg, (user as any)?.goal || (plan?.profile as any)?.goal);
-      const targetP = plan?.daily_protein_target || user?.daily_protein_target || calcProtein.target || 0;
-      setProteinTarget(targetP);
+      const weightKg = Number(metrics?.weight) || Number((user as any)?.weight) || Number(plan?.baseline_weight) || 0;
+      const calcProtein = weightKg > 0
+        ? calculateProteinTarget(weightKg, (user as any)?.goal || (plan?.profile as any)?.goal)
+        : null;
+      const targetP = plan?.daily_protein_target || user?.daily_protein_target || calcProtein?.target || 0;
+      if (targetP > 0) {
+        setProteinTarget(targetP);
+      }
 
       const resolvedDayPlan = plan?.days?.find((d) => d.day === todayKey) || plan?.days?.[0] || null;
-      setTodayPlan(resolvedDayPlan);
+      if (resolvedDayPlan) {
+        setTodayPlan(resolvedDayPlan);
+      }
 
       const dayMeals = Object.entries(resolvedDayPlan || {}).filter(
         ([k, v]) => k !== 'day' && v && typeof v === 'object' && typeof (v as any).kcal === 'number'
       );
       const targetKcal = dayMeals.reduce((sum, [_, m]: any) => sum + (m.kcal || 0), 0);
-      setCaloriesTarget(targetKcal);
+      if (targetKcal > 0) {
+        setCaloriesTarget(targetKcal);
+      }
 
-      const dayCompletions = (plan?.meal_completions?.[todayKey] as Record<string, boolean>) || {};
-      setTodayCompletions(dayCompletions);
+      const dayCompletions = plan?.meal_completions?.[todayKey] as Record<string, boolean> | undefined;
+      if (dayCompletions) {
+        setTodayCompletions(dayCompletions);
+      }
 
       let p = 0;
       let kcal = 0;
       dayMeals.forEach(([key, meal]: any) => {
-        if (dayCompletions[key]) {
+        if (dayCompletions?.[key]) {
           p += meal.p || 0;
           kcal += meal.kcal || 0;
         }
       });
 
-      setProteinConsumed(p);
-      setCaloriesConsumed(kcal);
+      if (resolvedDayPlan || dayCompletions) {
+        setProteinConsumed(p);
+        setCaloriesConsumed(kcal);
+      }
     } catch {
       // Fallback
     }

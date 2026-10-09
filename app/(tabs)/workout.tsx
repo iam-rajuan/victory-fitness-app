@@ -351,7 +351,7 @@ export default function WorkoutScreen() {
 
       const [library, completedLogs, onboarding, localCompletedIds] = await Promise.all([
         fetchWorkoutLibrary(),
-        fetchWorkoutLogs(1, 100, 'completed').catch(() => ({ items: [] })),
+        fetchWorkoutLogs(1, 100, 'completed').catch(() => null),
         fetchCurrentUserOnboarding().catch(() => null),
         readLocalCompletedWorkoutIds(),
       ]);
@@ -375,13 +375,14 @@ export default function WorkoutScreen() {
       const durationText = nextPreferredMinutes > 0 ? `${nextPreferredMinutes} minutes` : 'your time';
       const daysText = daysPerWeek ? `, ${daysPerWeek}` : '';
       setTrainingContextLine(`${kitLabel}, ${durationText}${daysText}`);
+      const completedLogItems = Array.isArray(completedLogs?.items) ? completedLogs.items : [];
       const completedWorkoutIds = new Set(
-        completedLogs.items
+        completedLogItems
           .map((log) => String(log.workout_id || '').trim())
           .filter(Boolean)
       );
       const completedWorkoutTitles = new Set(
-        completedLogs.items
+        completedLogItems
           .map((log) => normalizeWords(log.title))
           .filter(Boolean)
       );

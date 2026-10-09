@@ -15,7 +15,7 @@ import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import { ErrorPopupModal } from '../../components/ErrorPopupModal';
-import { fetchCurrentUser, updateCurrentUserProfile } from '../../lib/api';
+import { fetchCurrentUser, getAuthUser, updateCurrentUserProfile } from '../../lib/api';
 import { formatAppError } from '../../lib/error';
 import { goBackOrReplace } from '../../lib/navigation';
 import { useLanguage } from '../../lib/i18n';
@@ -45,29 +45,37 @@ export default function ProfileSettingsScreen() {
   // Commitment statement
   const [motivationStatement, setMotivationStatement] = useState('');
 
+  const applyUserSettings = (user: Awaited<ReturnType<typeof fetchCurrentUser>>) => {
+    setIdentityStatement(user.identity_statement ?? '');
+    setTrainingTriggerContext(user.training_trigger_context ?? '');
+    setTrainingTriggerAction(
+      user.training_trigger_action && user.training_trigger_action.trim()
+        ? user.training_trigger_action
+        : 'open the app and start my workout'
+    );
+    setWorkoutUnlockLabel(user.workout_unlock_label ?? '');
+    setMotivationStatement(user.motivation_statement ?? '');
+    const tier = String(user.subscription_tier || '').toUpperCase().replace(/\s+/g, '_');
+    const trialTier = String(user.trial_tier_granted || user.gold_trial?.tier_granted || '').toUpperCase();
+    setCanEditGoldHabits(
+      ['GOLD', 'GOLD_BETA', 'PLATINUM', 'INNER_CIRCLE'].includes(tier) ||
+      (Boolean(user.gold_trial?.active) && trialTier === 'GOLD')
+    );
+  };
+
   useEffect(() => {
     let cancelled = false;
 
     const loadUserData = async () => {
       try {
+        const cachedUser = await getAuthUser();
+        if (!cancelled && cachedUser) {
+          applyUserSettings(cachedUser);
+          setLoading(false);
+        }
         const user = await fetchCurrentUser({ forceRefresh: true });
         if (cancelled) return;
-
-        setIdentityStatement(user.identity_statement ?? '');
-        setTrainingTriggerContext(user.training_trigger_context ?? '');
-        setTrainingTriggerAction(
-          user.training_trigger_action && user.training_trigger_action.trim()
-            ? user.training_trigger_action
-            : 'open the app and start my workout'
-        );
-        setWorkoutUnlockLabel(user.workout_unlock_label ?? '');
-        setMotivationStatement(user.motivation_statement ?? '');
-        const tier = String(user.subscription_tier || '').toUpperCase().replace(/\s+/g, '_');
-        const trialTier = String(user.trial_tier_granted || user.gold_trial?.tier_granted || '').toUpperCase();
-        setCanEditGoldHabits(
-          ['GOLD', 'GOLD_BETA', 'PLATINUM', 'INNER_CIRCLE'].includes(tier) ||
-          (Boolean(user.gold_trial?.active) && trialTier === 'GOLD')
-        );
+        applyUserSettings(user);
       } catch (err) {
         if (!cancelled) {
           setErrorDialog(formatAppError(err, t('Unable to load settings.')));

@@ -13,7 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import { apiRequest } from '../../lib/api';
 import { JOURNAL_ENTRIES_CACHE_KEY, JournalEntry } from '../../lib/screenData';
-import { primeCachedResource } from '../../lib/resourceCache';
+import { hydrateCachedResource, primeCachedResource } from '../../lib/resourceCache';
 import RequirementAuditBoundary from '../../components/audit/RequirementAuditBoundary';
 
 const OBSIDIAN = '#0D0D0D';
@@ -66,7 +66,7 @@ export default function JournalScreen() {
   const router = useRouter();
   const [entryText, setEntryText] = useState('');
   const [saving, setSaving] = useState(false);
-  const [streakDays, setStreakDays] = useState(5);
+  const [streakDays, setStreakDays] = useState(0);
   const [pastEntries, setPastEntries] = useState<JournalEntry[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
@@ -80,17 +80,19 @@ export default function JournalScreen() {
     const loadEntries = async () => {
       setLoadingHistory(true);
       try {
+        const cached = await hydrateCachedResource<{ entries: JournalEntry[] }>(JOURNAL_ENTRIES_CACHE_KEY);
+        if (!cancelled && Array.isArray(cached?.entries)) {
+          setPastEntries(cached.entries);
+          setStreakDays(cached.entries.length);
+        }
         const res = await apiRequest<{ entries: JournalEntry[] }>('/journal/entries');
         if (!cancelled && res?.entries) {
           setPastEntries(res.entries);
-          if (res.entries.length > 0) {
-            setStreakDays(Math.max(res.entries.length, 3));
-          }
+          setStreakDays(res.entries.length);
+          await primeCachedResource(JOURNAL_ENTRIES_CACHE_KEY, { entries: res.entries }, true);
         }
       } catch {
-        if (!cancelled) {
-          setPastEntries([]);
-        }
+        // Keep cached or current entries on refresh failure.
       } finally {
         if (!cancelled) setLoadingHistory(false);
       }

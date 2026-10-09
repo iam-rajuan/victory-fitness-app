@@ -31,12 +31,18 @@ export default function SocialContagionWidget() {
         if (cancelled) return;
 
         if (activity) {
-          setActiveCount(activity.active_today || 0);
-          setUserTrainedToday(Boolean(activity.user_trained_today));
+          if (activity.active_today != null) {
+            setActiveCount(Math.max(0, Number(activity.active_today) || 0));
+          }
+          if (activity.user_trained_today != null) {
+            setUserTrainedToday(Boolean(activity.user_trained_today));
+          }
           if (activity.headline) {
             setHeadline(activity.headline);
           }
-          setRecentCompletions(activity.recent_completions || []);
+          if (Array.isArray(activity.recent_completions)) {
+            setRecentCompletions(activity.recent_completions);
+          }
         }
         if (user) {
           setCurrentUser(user);

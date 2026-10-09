@@ -109,6 +109,18 @@ function notificationSummary(user: any) {
   return channels.length ? `${time} · ${channels.join(' & ')}` : 'Off';
 }
 
+function cleanText(value: unknown) {
+  return String(value || '').trim();
+}
+
+function firstText(...values: unknown[]) {
+  for (const value of values) {
+    const text = cleanText(value);
+    if (text) return text;
+  }
+  return '';
+}
+
 function monthName(value?: string | null) {
   if (!value) return '';
   const date = new Date(value);
@@ -195,11 +207,11 @@ export default function ProfileScreen() {
   const [consistencyPct, setConsistencyPct] = useState(0);
   const [journalPrompt, setJournalPrompt] = useState(JOURNAL_PROMPTS[new Date().getDay() % JOURNAL_PROMPTS.length]);
   const [journalRunningText, setJournalRunningText] = useState('READY TODAY');
-  const [habitIdentity, setHabitIdentity] = useState('Set the person you are becoming.');
-  const [habitUnlock, setHabitUnlock] = useState('Set a reward you only use while training.');
-  const [habitTrigger, setHabitTrigger] = useState('Set the moment that starts your session.');
-  const [triggerUsage, setTriggerUsage] = useState('No trigger data yet');
-  const [habitDigestSummary, setHabitDigestSummary] = useState('Your digest will build as you log workouts and trigger days.');
+  const [habitIdentity, setHabitIdentity] = useState('');
+  const [habitUnlock, setHabitUnlock] = useState('');
+  const [habitTrigger, setHabitTrigger] = useState('');
+  const [triggerUsage, setTriggerUsage] = useState('');
+  const [habitDigestSummary, setHabitDigestSummary] = useState('');
   const [habitDigestWeeks, setHabitDigestWeeks] = useState<Array<{ label: string; score: number }>>([]);
   const [habitDigestScore, setHabitDigestScore] = useState(0);
   const [notificationMeta, setNotificationMeta] = useState('All caught up');
@@ -213,8 +225,8 @@ export default function ProfileScreen() {
     nudgeTime: '20:30',
     templates: [] as Array<{ type: string; title: string; enabled: boolean; approved: boolean; channels: string[] }>,
   });
-  const [partnerTitle, setPartnerTitle] = useState('Accountability duo');
-  const [partnerNote, setPartnerNote] = useState('Set up or manage your partner.');
+  const [partnerTitle, setPartnerTitle] = useState('');
+  const [partnerNote, setPartnerNote] = useState('');
   const [planPrice, setPlanPrice] = useState('Free');
   const [planDescription, setPlanDescription] = useState('Choose the plan that fits your training.');
   const [wearableDevice, setWearableDevice] = useState('No wearable connected');
@@ -256,6 +268,14 @@ export default function ProfileScreen() {
     setNotificationMeta(notificationSummary(userObj));
     setSinceDate(monthName(userObj.subscription_confirmed_at || userObj.subscription_started_at || userObj.created_at));
     setStreakDays(Math.max(0, Number(userObj.streak_days ?? 0) || 0));
+    const identity = cleanText(userObj.identity_statement);
+    const unlock = cleanText(userObj.workout_unlock_label);
+    const triggerContext = cleanText(userObj.training_trigger_context);
+    const triggerAction = cleanText(userObj.training_trigger_action);
+    const trigger = [triggerContext, triggerAction].filter(Boolean).join(', ');
+    if (identity) setHabitIdentity(identity);
+    if (unlock) setHabitUnlock(unlock);
+    if (trigger) setHabitTrigger(trigger);
   };
 
   useEffect(() => {
@@ -298,9 +318,9 @@ export default function ProfileScreen() {
         const [u, habit, journal, plans, completedLogs, accountability, longevity, notificationPreferences] = await Promise.all([
           fetchCurrentUser({ forceRefresh: true }),
           fetchHabitConsistency().catch(() => null),
-          fetchJournalEntries().catch(() => ({ entries: [] })),
-          fetchSubscriptionPlans().catch(() => ({ items: [] })),
-          fetchWorkoutLogs(1, 100, 'completed').catch(() => ({ items: [], total: 0, page: 1, limit: 100, total_pages: 0 })),
+          fetchJournalEntries().catch(() => null),
+          fetchSubscriptionPlans().catch(() => null),
+          fetchWorkoutLogs(1, 100, 'completed').catch(() => null),
           fetchAccountabilityPartner().catch(() => null),
           fetchLongevityDashboard().catch(() => null),
           fetchNotificationPreferences().catch(() => null),
@@ -308,33 +328,47 @@ export default function ProfileScreen() {
         if (cancelled || !u) return;
         const userObj = u as any;
         applyUserProfile(userObj, notificationPreferences);
-        const workoutItems = Array.isArray((completedLogs as any)?.items) ? (completedLogs as any).items : [];
-        setTotalSessions(Math.max(0, Number((completedLogs as any)?.total || workoutItems.length || 0)));
+        const workoutItems = Array.isArray((completedLogs as any)?.items) ? (completedLogs as any).items : null;
+        if (workoutItems) {
+          setTotalSessions(Math.max(0, Number((completedLogs as any)?.total || workoutItems.length || 0)));
+        }
 
-        const score = Math.round(Number((habit as any)?.current_score || 0));
+        const habitObj = (habit && typeof habit === 'object') ? (habit as any) : {};
+        const score = Math.round(Number(habitObj.current_score || 0));
         setHabitDigestScore(score);
-        setConsistencyPct(calculateWorkoutConsistency(workoutItems, score));
-        setHabitIdentity(String((habit as any)?.identity_statement || userObj.identity_statement || 'Set the person you are becoming.'));
-        setHabitUnlock(String((habit as any)?.workout_unlock_label || userObj.workout_unlock_label || 'Set a reward you only use while training.'));
-        const triggerContext = String((habit as any)?.training_trigger_context || userObj.training_trigger_context || '').trim();
-        const triggerAction = String((habit as any)?.training_trigger_action || userObj.training_trigger_action || '').trim();
-        setHabitTrigger([triggerContext, triggerAction].filter(Boolean).join(', ') || 'Set the moment that starts your session.');
-        const latestWeek = Array.isArray((habit as any)?.weeks) ? (habit as any).weeks[(habit as any).weeks.length - 1] : null;
-        setTriggerUsage(latestWeek ? `used on ${latestWeek.trained_trigger_days || 0} of ${latestWeek.trigger_days || 0} trigger days` : 'No trigger data yet');
-        const digestWeeks = Array.isArray((habit as any)?.weeks)
-          ? (habit as any).weeks.map((week: any, index: number) => ({
+        if (workoutItems) {
+          setConsistencyPct(calculateWorkoutConsistency(workoutItems, score));
+        }
+        const identity = firstText(habitObj.identity_statement, userObj.identity_statement);
+        const unlock = firstText(habitObj.workout_unlock_label, userObj.workout_unlock_label);
+        const triggerContext = firstText(habitObj.training_trigger_context, userObj.training_trigger_context);
+        const triggerAction = firstText(habitObj.training_trigger_action, userObj.training_trigger_action);
+        const trigger = [triggerContext, triggerAction].filter(Boolean).join(', ');
+        if (identity) setHabitIdentity(identity);
+        if (unlock) setHabitUnlock(unlock);
+        if (trigger) setHabitTrigger(trigger);
+        const latestWeek = Array.isArray(habitObj.weeks) ? habitObj.weeks[habitObj.weeks.length - 1] : null;
+        if (latestWeek) {
+          setTriggerUsage(`used on ${latestWeek.trained_trigger_days || 0} of ${latestWeek.trigger_days || 0} trigger days`);
+        }
+        const digestWeeks = Array.isArray(habitObj.weeks)
+          ? habitObj.weeks.map((week: any, index: number) => ({
               label: String(week.label || `W${index + 1}`),
               score: Math.round(Number(week.score || 0)),
             }))
           : [];
-        setHabitDigestWeeks(digestWeeks);
-        setHabitDigestSummary(latestWeek
-          ? `This week you trained on ${latestWeek.trained_trigger_days || 0} of ${latestWeek.trigger_days || 0} trigger days. ${triggerContext ? `Your trigger is "${triggerContext}".` : 'Set a trigger to make this digest sharper.'}`
-          : 'Your digest will build as you log workouts and trigger days.');
+        if (digestWeeks.length > 0) {
+          setHabitDigestWeeks(digestWeeks);
+        }
+        if (latestWeek) {
+          setHabitDigestSummary(`This week you trained on ${latestWeek.trained_trigger_days || 0} of ${latestWeek.trigger_days || 0} trigger days. ${triggerContext ? `Your trigger is "${triggerContext}".` : 'Set a trigger to make this digest sharper.'}`);
+        }
 
-        const entries = Array.isArray((journal as any)?.entries) ? (journal as any).entries : [];
-        setJournalRunningText(entries.length > 0 ? `${entries.length} ENTRIES SAVED` : 'READY TODAY');
-        setJournalPrompt(JOURNAL_PROMPTS[new Date().getDay() % JOURNAL_PROMPTS.length]);
+        const entries = Array.isArray((journal as any)?.entries) ? (journal as any).entries : null;
+        if (entries) {
+          setJournalRunningText(entries.length > 0 ? `${entries.length} ENTRIES SAVED` : 'READY TODAY');
+          setJournalPrompt(JOURNAL_PROMPTS[new Date().getDay() % JOURNAL_PROMPTS.length]);
+        }
 
         const partner = (accountability as any)?.partner;
         if (partner) {
@@ -343,15 +377,14 @@ export default function ProfileScreen() {
         } else if ((accountability as any)?.status === 'pending') {
           setPartnerTitle('Duo invite pending');
           setPartnerNote((accountability as any)?.invite_code ? `Code ${(accountability as any).invite_code}` : 'Waiting for your partner.');
-        } else {
-          setPartnerTitle('Accountability duo');
-          setPartnerNote('Set up or manage your partner.');
         }
 
         const normalizedTier = normalizeTierLabel(userObj.subscription_tier || userObj.tier || userObj.membership_tier);
-        const plan = (plans.items || []).find((item: any) => normalizeTierLabel(item.subscriptionTier) === normalizedTier);
-        setPlanPrice(planPriceText(plan, normalizedTier));
-        setPlanDescription(planCopy(plan, normalizedTier));
+        if (Array.isArray((plans as any)?.items)) {
+          const plan = (plans as any).items.find((item: any) => normalizeTierLabel(item.subscriptionTier) === normalizedTier);
+          setPlanPrice(planPriceText(plan, normalizedTier));
+          setPlanDescription(planCopy(plan, normalizedTier));
+        }
 
         const wearableDevices = Array.isArray((longevity as any)?.wearables?.devices) ? (longevity as any).wearables.devices : [];
         const connected = wearableDevices.find((device: any) => Boolean(device.connected || device.is_connected));

@@ -238,11 +238,12 @@ export default function NotificationsScreen() {
       setLoadError('');
       const [nextUser, overview, community, storedNotifications] = await Promise.all([
         fetchCurrentUser(),
-        fetchChallengeOverviewData().catch(() => ({ active_challenges: [] })),
-        fetchCommunityPostsData().catch(() => ({ posts: [] })),
-        fetchAppNotifications().catch(() => []),
+        fetchChallengeOverviewData().catch(() => null),
+        fetchCommunityPostsData().catch(() => null),
+        fetchAppNotifications().catch(() => null),
       ]);
-      const dismissedActivityIds = new Set(await fetchDismissedActivityNotifications().catch(() => []));
+      const dismissedActivityIdsResponse = await fetchDismissedActivityNotifications().catch(() => null);
+      const dismissedActivityIds = new Set(Array.isArray(dismissedActivityIdsResponse) ? dismissedActivityIdsResponse : []);
       const registeredAt = new Date(String(nextUser.created_at || '')).getTime();
       const isAfterRegistration = (value: unknown) => {
         if (!Number.isFinite(registeredAt)) return true;
@@ -252,14 +253,18 @@ export default function NotificationsScreen() {
       const overviewData = overview as { active_challenges?: Array<Partial<ChallengeAlert> & { id?: string }> };
       const active = Array.isArray(overviewData?.active_challenges) ? overviewData.active_challenges[0] : null;
       setUser(nextUser);
-       setPushNotifications(sortAndCollapseNotifications(storedNotifications));
-      setChallengeAlert(active ? {
-        challenge_id: String(active.challenge_id || active.id || ''),
-        title: String(active.title || 'Today\'s challenge'),
-        progress: Math.max(0, Math.min(1, Number(active.progress || 0))),
-        points: Math.max(0, Number(active.points || 0)),
-        days_left: Math.max(0, Number(active.days_left || 0)),
-      } : null);
+      if (Array.isArray(storedNotifications)) {
+        setPushNotifications(sortAndCollapseNotifications(storedNotifications));
+      }
+      if (overview) {
+        setChallengeAlert(active ? {
+          challenge_id: String(active.challenge_id || active.id || ''),
+          title: String(active.title || 'Today\'s challenge'),
+          progress: Math.max(0, Math.min(1, Number(active.progress || 0))),
+          points: Math.max(0, Number(active.points || 0)),
+          days_left: Math.max(0, Number(active.days_left || 0)),
+        } : null);
+      }
       const fullOverview = overview as {
         active_challenges?: Array<Record<string, unknown>>;
         completed_challenges?: Array<Record<string, unknown>>;
@@ -294,7 +299,9 @@ export default function NotificationsScreen() {
           created_at: String(post.created_at || ''),
         });
       });
-       setActivityNotifications(nextActivity.filter((item) => !dismissedActivityIds.has(item.id)).sort((a, b) => new Date(String(b.created_at || '')).getTime() - new Date(String(a.created_at || '')).getTime()));
+      if (overview || community) {
+        setActivityNotifications(nextActivity.filter((item) => !dismissedActivityIds.has(item.id)).sort((a, b) => new Date(String(b.created_at || '')).getTime() - new Date(String(a.created_at || '')).getTime()));
+      }
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : 'Unable to load notifications right now.');
     } finally {

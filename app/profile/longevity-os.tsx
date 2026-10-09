@@ -1095,7 +1095,9 @@ export default function LongevityOS() {
 
   const loadIntegrationStatuses = React.useCallback(async () => {
     const response = await fetchIntegrationConnections();
-    setIntegrations(Array.isArray(response.items) ? response.items : []);
+    if (Array.isArray(response.items)) {
+      setIntegrations(response.items);
+    }
   }, []);
 
   const loadDashboard = React.useCallback(async (showLoader = true) => {
@@ -1120,8 +1122,12 @@ export default function LongevityOS() {
         }
         return [];
       });
-      setHealthSummary(mergeLatestHealthRecords(Array.isArray(records?.items) ? records.items : []));
-      setIntegrations(Array.isArray(integrationResponse?.items) ? integrationResponse.items : []);
+      if (Array.isArray(records?.items)) {
+        setHealthSummary(mergeLatestHealthRecords(records.items));
+      }
+      if (Array.isArray(integrationResponse?.items)) {
+        setIntegrations(integrationResponse.items);
+      }
       setCanGenerateLongevityPlan(canAccessFeature('longevity_plan', user));
       dismissScreenError();
     } catch (error) {

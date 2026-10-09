@@ -31,7 +31,7 @@ import ClaudeWeekPlanModal from '../../components/nutrition/ClaudeWeekPlanModal'
 import ClaudeShoppingListModal from '../../components/nutrition/ClaudeShoppingListModal';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../lib/i18n';
-import { getNutritionMealLogsCacheKey, NUTRITION_PLAN_LATEST_CACHE_KEY } from '../../lib/cacheKeys';
+import { CURRENT_USER_CACHE_KEY, getNutritionMealLogsCacheKey, NUTRITION_PLAN_LATEST_CACHE_KEY } from '../../lib/cacheKeys';
 import { hydrateCachedResource } from '../../lib/resourceCache';
 import { useResourceStore } from '../../lib/stores/resourceStore';
 
@@ -56,7 +56,7 @@ export default function MealPlanScreen() {
   const [nutritionPlan, setNutritionPlan] = useState<NutritionPlanApiResponse | null>(null);
   const [mealLogs, setMealLogs] = useState<NutritionMealLog[]>([]);
   const [proteinTarget, setProteinTarget] = useState(0);
-  const [userWeight, setUserWeight] = useState(75);
+  const [userWeight, setUserWeight] = useState(0);
   const [updatingMealKey, setUpdatingMealKey] = useState<string | null>(null);
   const [selectedMealPhoto, setSelectedMealPhoto] = useState<{
     uri: string;
@@ -72,6 +72,13 @@ export default function MealPlanScreen() {
   const todayIsoDate = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const cachedNutritionPlan = useResourceStore((state) => state.resources[NUTRITION_PLAN_LATEST_CACHE_KEY]?.data as NutritionPlanApiResponse | undefined);
   const cachedMealLogs = useResourceStore((state) => state.resources[getNutritionMealLogsCacheKey(todayIsoDate)]?.data as { logs: NutritionMealLog[] } | undefined);
+  const cachedCurrentUser = useResourceStore((state) => state.resources[CURRENT_USER_CACHE_KEY]?.data as AuthUser | undefined);
+
+  useEffect(() => {
+    if (cachedCurrentUser) {
+      setCurrentUser(cachedCurrentUser);
+    }
+  }, [cachedCurrentUser]);
 
   useEffect(() => {
     if (!cachedNutritionPlan) return;
@@ -90,11 +97,15 @@ export default function MealPlanScreen() {
     let cancelled = false;
 
     const hydrateCachedData = async () => {
-      const [cachedPlan, cachedLogs] = await Promise.all([
+      const [cachedUser, cachedPlan, cachedLogs] = await Promise.all([
+        hydrateCachedResource<AuthUser>(CURRENT_USER_CACHE_KEY),
         hydrateCachedResource<NutritionPlanApiResponse>(NUTRITION_PLAN_LATEST_CACHE_KEY),
         hydrateCachedResource<{ logs: NutritionMealLog[] }>(getNutritionMealLogsCacheKey(todayIsoDate)),
       ]);
       if (cancelled) return;
+      if (cachedUser) {
+        setCurrentUser(cachedUser);
+      }
       if (cachedPlan) {
         setNutritionPlan(cachedPlan);
         if (cachedPlan.daily_protein_target) setProteinTarget(cachedPlan.daily_protein_target);
@@ -112,7 +123,7 @@ export default function MealPlanScreen() {
           fetchCurrentUser().catch(() => null),
           fetchCurrentUserBodyMetrics().catch(() => null),
           getLatestNutritionPlan().catch(() => null),
-          getNutritionMealLogs(todayIsoDate).catch(() => ({ logs: [] })),
+          getNutritionMealLogs(todayIsoDate).catch(() => null),
         ]);
 
         if (cancelled) return;
@@ -133,7 +144,9 @@ export default function MealPlanScreen() {
           if (plan.daily_protein_target) setProteinTarget(plan.daily_protein_target);
           if (plan.baseline_weight) setUserWeight(plan.baseline_weight);
         }
-        setMealLogs(Array.isArray(logsResponse?.logs) ? logsResponse.logs : []);
+        if (Array.isArray(logsResponse?.logs)) {
+          setMealLogs(logsResponse.logs);
+        }
       } catch {
         // Fallback to defaults
       }

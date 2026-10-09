@@ -42,7 +42,7 @@ const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Cou
 export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps) {
   const [duoState, setDuoState] = useState<DuoState>('inactive');
   const [pairId, setPairId] = useState('');
-  const [partnerName, setPartnerName] = useState('Partner');
+  const [partnerName, setPartnerName] = useState('');
   const [partnerProfileImage, setPartnerProfileImage] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [inputCode, setInputCode] = useState('');
@@ -61,7 +61,7 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
         setPairId(String(res?.pair_id || ''));
         if (res && res.partner) {
           setDuoState('active');
-          setPartnerName(res.partner.name || res.partner.email?.split('@')[0] || 'Partner');
+          setPartnerName(res.partner.name || res.partner.email?.split('@')[0] || '');
           setPartnerProfileImage(String(res.partner.profileImage || res.partner_profile_image || '').trim());
           setDaysInSync(Math.max(0, Number(res.days_in_sync || res.partner.days_in_sync || 0)));
           setPartnerTrainedToday(Boolean(res.partner.trained_today ?? res.partner_checked_in_today));
@@ -69,7 +69,7 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
         } else if (res && res.invite_code) {
           setDuoState('pending');
           setInviteCode(String(res.invite_code || ''));
-          setPartnerName('Partner');
+          setPartnerName('');
           setPartnerProfileImage('');
           setDaysInSync(0);
           setPartnerTrainedToday(false);
@@ -77,20 +77,14 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
         } else {
           setDuoState('inactive');
           setInviteCode('');
-          setPartnerName('Partner');
+          setPartnerName('');
           setPartnerProfileImage('');
           setDaysInSync(0);
           setPartnerTrainedToday(false);
           setYouTrainedToday(false);
         }
       } catch {
-        setDuoState('inactive');
-        setInviteCode('');
-        setPartnerName('Partner');
-        setPartnerProfileImage('');
-        setDaysInSync(0);
-        setPartnerTrainedToday(false);
-        setYouTrainedToday(false);
+        // Keep the current visible state if the refresh fails.
       }
     };
 
@@ -118,9 +112,10 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
     setLoading(true);
     try {
       const res = await acceptAccountabilityInvite(inputCode.trim().toUpperCase());
+      const accepted = res as typeof res & { partner?: { name?: string | null; email?: string | null } };
       setPairId(res.pair_id || '');
       setDuoState('active');
-      setPartnerName('Partner');
+      setPartnerName(accepted.partner?.name || accepted.partner?.email?.split('@')[0] || '');
       setPartnerProfileImage('');
       setShowCodeInput(false);
       Alert.alert('Duo Active', 'You are now synced with your accountability partner!');
@@ -155,7 +150,7 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
             if (pairId) await unpairAccountabilityPartner(pairId);
             setPairId('');
             setDuoState('inactive');
-            setPartnerName('Partner');
+            setPartnerName('');
             setPartnerProfileImage('');
             setDaysInSync(0);
             setPartnerTrainedToday(false);

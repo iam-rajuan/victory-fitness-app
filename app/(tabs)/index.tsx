@@ -418,7 +418,7 @@ export default function HomeScreen() {
         fetchWorkoutLibrary().catch(() => null),
         fetchHomeWorkoutPlanSummary().catch(() => null),
         fetchAccountabilityPartner().catch(() => null),
-        fetchAppNotifications().catch(() => []),
+        fetchAppNotifications().catch(() => null),
       ]);
 
       if (user) {
@@ -439,7 +439,9 @@ export default function HomeScreen() {
       }
       if (homePlanSummary) setHomeWorkoutSummary(homePlanSummary);
       if (accountabilityData) setAccountabilityPartner(accountabilityData);
-      setUnreadNotifications(Array.isArray(notifications) ? notifications.filter((item: any) => !item.read).length : 0);
+      if (Array.isArray(notifications)) {
+        setUnreadNotifications(notifications.filter((item: any) => !item.read).length);
+      }
 
       if (Array.isArray(journalData?.entries)) {
         setJournalWrittenToday(journalData.entries.some((entry) => isSameLocalDay(entry.created_at)));
