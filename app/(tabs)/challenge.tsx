@@ -12,7 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 import { apiRequest, fetchCurrentUser, resolveRemoteAssetUrl } from '../../lib/api';
 import { fetchChallengeOverviewData } from '../../lib/screenData';
-import { CHALLENGE_OVERVIEW_CACHE_KEY, getCommunityPostsCacheKey } from '../../lib/cacheKeys';
+import { CHALLENGE_OVERVIEW_CACHE_KEY, CURRENT_USER_CACHE_KEY, getCommunityPostsCacheKey } from '../../lib/cacheKeys';
 import { fetchCachedResource, hydrateCachedResource } from '../../lib/resourceCache';
 import { useResourceStore } from '../../lib/stores/resourceStore';
 import ClaudeChallengeTabs, { ChallengeTabType } from '../../components/challenge/ClaudeChallengeTabs';
@@ -75,7 +75,7 @@ function buildChallengeItem(raw: Record<string, any>, status: ChallengeItem['sta
     .map((item: Record<string, any>) => {
       const name = String(item.name || item.author_name || '').trim();
       return {
-        i: String(item.i || item.initials || initialsFromName(name || 'VF')).toUpperCase(),
+        i: String(item.i || item.initials || initialsFromName(name)).toUpperCase(),
         image: resolveRemoteAssetUrl(item.profile_image || item.profileImage || item.author_profile_image),
       };
     })
@@ -110,7 +110,7 @@ function buildChallengeItem(raw: Record<string, any>, status: ChallengeItem['sta
 function initialsFromName(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  return (parts[0] || 'VF').slice(0, 2).toUpperCase();
+  return (parts[0] || '').slice(0, 2).toUpperCase();
 }
 
 function formatRelativeTime(value: unknown) {
@@ -128,7 +128,7 @@ function formatRelativeTime(value: unknown) {
 }
 
 function mapCommunityComment(raw: Record<string, any>): CommunityComment {
-  const authorName = String(raw.author_name || 'Victory member').trim();
+  const authorName = String(raw.author_name || '').trim();
   return {
     id: String(raw.id || ''),
     postId: String(raw.post_id || ''),
@@ -146,7 +146,7 @@ function mapCommunityPost(raw: Record<string, any>): CommunityPost {
   const commentCount = Math.max(0, Number(raw.comment_count || 0));
   const videoUrl = resolveRemoteAssetUrl(raw.video_url);
   const imageUrl = resolveRemoteAssetUrl(raw.image_url);
-  const authorName = String(raw.author_name || 'Victory member').trim();
+  const authorName = String(raw.author_name || '').trim();
   return {
     id: String(raw.id || ''),
     name: authorName,
@@ -210,13 +210,33 @@ export default function ChallengeScreen() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [completingChallengeId, setCompletingChallengeId] = useState<string | null>(null);
   const [userId, setUserId] = useState('');
-  const [userTier, setUserTier] = useState('GOLD');
-  const [userName, setUserName] = useState('Member');
-  const [userInitials, setUserInitials] = useState('ME');
+  const [userTier, setUserTier] = useState('');
+  const [userName, setUserName] = useState('');
+  const [userInitials, setUserInitials] = useState('');
   const [userProfileImage, setUserProfileImage] = useState('');
   const challengeItemsCountRef = useRef(0);
   const cachedChallengeOverview = useResourceStore((state) => state.resources[CHALLENGE_OVERVIEW_CACHE_KEY]?.data as ChallengeOverviewPayload | undefined);
   const cachedCommunityPosts = useResourceStore((state) => state.resources[getCommunityPostsCacheKey(communityScope)]?.data as { posts?: Array<Record<string, any>> } | undefined);
+  const cachedCurrentUser = useResourceStore((state) => state.resources[CURRENT_USER_CACHE_KEY]?.data as any | undefined);
+
+  const applyCurrentUser = useCallback((user: any) => {
+    if (!user) return;
+    setUserId(String(user.id || user._id || '').trim());
+    setUserTier(String(user.tier || user.membership_tier || user.subscription_tier || '').toUpperCase());
+    setUserProfileImage(String(user.profileImage || '').trim());
+    if (user.name) {
+      setUserName(user.name);
+      const parts = String(user.name).split(' ');
+      const inits = parts.length > 1 ? `${parts[0][0]}${parts[1][0]}` : parts[0].slice(0, 2);
+      setUserInitials(inits.toUpperCase());
+    }
+  }, []);
+
+  useEffect(() => {
+    if (cachedCurrentUser) {
+      applyCurrentUser(cachedCurrentUser);
+    }
+  }, [applyCurrentUser, cachedCurrentUser]);
 
   useEffect(() => {
     if (!cachedChallengeOverview) return;
@@ -242,17 +262,7 @@ export default function ChallengeScreen() {
       try {
         const user = await fetchCurrentUser();
         if (cancelled || !user) return;
-        const u = user as any;
-        setUserId(String(u.id || u._id || '').trim());
-        const tier = (u.tier || u.membership_tier || 'gold').toUpperCase();
-        setUserTier(tier);
-        setUserProfileImage(String(u.profileImage || '').trim());
-        if (u.name) {
-          setUserName(u.name);
-          const parts = u.name.split(' ');
-          const inits = parts.length > 1 ? `${parts[0][0]}${parts[1][0]}` : parts[0].slice(0, 2);
-          setUserInitials(inits.toUpperCase());
-        }
+        applyCurrentUser(user as any);
       } catch {
         // Fallback silently
       }
@@ -263,7 +273,7 @@ export default function ChallengeScreen() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [applyCurrentUser]);
 
   const loadChallenges = useCallback(async ({ forceRefresh = false } = {}) => {
     if (challengeItemsCountRef.current === 0) {
@@ -286,7 +296,7 @@ export default function ChallengeScreen() {
   const loadCommunityPosts = useCallback(async (scope: 'auto' | 'tier' | 'all') => {
     try {
       const params = new URLSearchParams({ limit: '50' });
-      if (scope === 'tier') {
+      if (scope === 'tier' && userTier) {
         const normalizedTier = userTier.includes('PLATINUM')
           ? 'PLATINUM'
           : userTier.includes('INNER')

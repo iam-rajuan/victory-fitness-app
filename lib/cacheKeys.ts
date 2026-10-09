@@ -8,6 +8,7 @@ export const NUTRITION_PLAN_LATEST_CACHE_KEY = 'nutrition-plan-latest';
 export const COACH_VICTOR_HISTORY_CACHE_KEY = 'coach-victor-history';
 export const INTEGRATIONS_CACHE_KEY = 'integrations';
 export const HOME_WORKOUT_SUMMARY_CACHE_KEY = 'home-workout-summary';
+export const CURRENT_USER_CACHE_KEY = 'me-current-user';
 
 export function getCommunityPostsCacheKey(scope = 'auto') {
   return `community-posts:${scope || 'auto'}`;

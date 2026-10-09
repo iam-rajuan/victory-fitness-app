@@ -56,66 +56,17 @@ const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", de
 const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
-const DEFAULT_EXERCISES: ExerciseItem[] = [
-  {
-    id: '1',
-    name: 'Barbell overhead press',
-    note: 'Compound · 2 min rest · 2.5 kg up from Monday',
-    sets: '4 × 5',
-  },
-  {
-    id: '2',
-    name: 'Incline bench press',
-    note: 'Compound · 2 min rest · Chest to the bar, no bounce',
-    sets: '3 × 6',
-  },
-  {
-    id: '3',
-    name: 'Single-arm row',
-    note: 'Compound · 2 min rest · Slow on the way back',
-    sets: '3 × 8',
-  },
-  {
-    id: '4',
-    name: 'Lateral raise',
-    note: 'Accessory · 45 sec rest · Light. Form over load.',
-    sets: '3 × 15',
-  },
-  {
-    id: '5',
-    name: 'Face pull',
-    note: 'Accessory · 45 sec rest · Your shoulders will thank you',
-    sets: '3 × 15',
-  },
-  {
-    id: '6',
-    name: 'Dead hang',
-    note: 'Accessory · 45 sec rest · As long as you can hold',
-    sets: '2 × max',
-  },
-];
-
-const WEEK_PIPS = [
-  { label: 'M', state: 'done' },      // Mon: Done (Green)
-  { label: 'T', state: 'rest' },      // Tue: Rest
-  { label: 'W', state: 'done' },      // Wed: Done (Green)
-  { label: 'T', state: 'rest' },      // Thu: Rest
-  { label: 'F', state: 'today' },     // Fri: Today (Gold)
-  { label: 'S', state: 'optional' },  // Sat: Optional (Muted Gold)
-  { label: 'S', state: 'rest' },      // Sun: Rest
-];
-
 export default function ClaudePlanDetailModal({
   visible,
   onClose,
   onBeginSession,
   onAdjustWithCoach,
-  planTitle = 'Upper Body Strength',
-  dayKicker = 'DAY 3 OF WEEK 2 · PUSH DAY',
-  planSource = 'BUILT BY YOUR COACH',
-  exercises = DEFAULT_EXERCISES,
-  weekPips = WEEK_PIPS,
-  weekNote = '2 done · today · 1 light session left · Sunday optional',
+  planTitle = 'Workout',
+  dayKicker = 'TODAY',
+  planSource = 'YOUR PLAN',
+  exercises = [],
+  weekPips = [],
+  weekNote = '',
   whyToday = 'This session is built from your current workout plan, progress, and available training setup.',
   sessionSummary,
 }: ClaudePlanDetailModalProps) {

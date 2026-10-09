@@ -31,10 +31,10 @@ const MONO = Platform.select({ web: 'JetBrains Mono', default: 'JetBrainsMono-Bo
 
 export default function ClaudeTodayWorkoutCard({
   tier,
-  workoutTitle = 'Upper Body Strength',
-  durationMinutes = 40,
-  exerciseCount = 4,
-  equipment = 'DUMBBELLS',
+  workoutTitle = 'Workout',
+  durationMinutes = 0,
+  exerciseCount = 0,
+  equipment = '',
   isPlanBuilt = false,
   hasActivePlan = true,
   isGeneratingPlan = false,

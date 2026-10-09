@@ -28,6 +28,9 @@ import {
   updateCurrentUserProfile,
 } from '../../lib/api';
 import { fetchJournalEntries } from '../../lib/screenData';
+import { CURRENT_USER_CACHE_KEY } from '../../lib/cacheKeys';
+import { hydrateCachedResource } from '../../lib/resourceCache';
+import { useResourceStore } from '../../lib/stores/resourceStore';
 import { replaceRoute } from '../../lib/navigation';
 import ClaudeProfileHeader from '../../components/profile/ClaudeProfileHeader';
 import ClaudeHabitsCard from '../../components/profile/ClaudeHabitsCard';
@@ -76,7 +79,7 @@ const JOURNAL_PROMPTS = [
 function initialsForName(value: string) {
   const parts = value.trim().split(/\s+/).filter(Boolean);
   if (parts.length > 1) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  return (parts[0] || 'VF').slice(0, 2).toUpperCase();
+  return (parts[0] || '').slice(0, 2).toUpperCase();
 }
 
 function normalizeTierLabel(value: unknown) {
@@ -182,8 +185,8 @@ export default function ProfileScreen() {
   const { language, setLanguage, t } = useLanguage();
 
   const [user, setUser] = useState<any>(null);
-  const [name, setName] = useState('Victory member');
-  const [initials, setInitials] = useState('VF');
+  const [name, setName] = useState('');
+  const [initials, setInitials] = useState('');
   const [tier, setTier] = useState('NONE');
   const [country, setCountry] = useState('');
   const [sinceDate, setSinceDate] = useState('');
@@ -231,12 +234,41 @@ export default function ProfileScreen() {
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const [feedbackWouldPay, setFeedbackWouldPay] = useState<boolean | null>(null);
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
+  const cachedCurrentUser = useResourceStore((state) => state.resources[CURRENT_USER_CACHE_KEY]?.data as any | undefined);
+
+  const applyUserProfile = (userObj: any, notificationPreferences?: any) => {
+    setUser(userObj);
+    const displayName = String(userObj.name || userObj.email || '').trim();
+    setName(displayName);
+    setInitials(displayName ? initialsForName(displayName) : '');
+    const normalizedTier = normalizeTierLabel(userObj.subscription_tier || userObj.tier || userObj.membership_tier);
+    setTier(normalizedTier);
+    setCountry(String(userObj.country || '').trim());
+    setLanguageMeta(languageLabel(userObj.preferred_language));
+    const nextNotificationPrefs = {
+      pushEnabled: notificationPreferences?.pushEnabled ?? userObj.notification_push_enabled !== false,
+      whatsappEnabled: notificationPreferences?.whatsappEnabled ?? Boolean(userObj.notification_whatsapp_enabled),
+      emailEnabled: notificationPreferences?.emailEnabled ?? Boolean(userObj.notification_email_enabled),
+      nudgeTime: String(notificationPreferences?.nudgeTime || userObj.notification_nudge_time || '20:30'),
+      templates: Array.isArray(notificationPreferences?.templates) ? notificationPreferences.templates : [],
+    };
+    setNotificationPrefs(nextNotificationPrefs);
+    setNotificationMeta(notificationSummary(userObj));
+    setSinceDate(monthName(userObj.subscription_confirmed_at || userObj.subscription_started_at || userObj.created_at));
+    setStreakDays(Math.max(0, Number(userObj.streak_days ?? 0) || 0));
+  };
 
   useEffect(() => {
     if (params.openDuo === '1') {
       setShowDuoModal(true);
     }
   }, [params.openDuo]);
+
+  useEffect(() => {
+    if (cachedCurrentUser) {
+      applyUserProfile(cachedCurrentUser);
+    }
+  }, [cachedCurrentUser]);
 
   const handleLanguageSelect = async (nextLanguage: LanguageCode) => {
     if (savingLanguage) return;
@@ -259,6 +291,10 @@ export default function ProfileScreen() {
 
     const loadUserData = async () => {
       try {
+        const cachedUser = await hydrateCachedResource<any>(CURRENT_USER_CACHE_KEY);
+        if (!cancelled && cachedUser) {
+          applyUserProfile(cachedUser);
+        }
         const [u, habit, journal, plans, completedLogs, accountability, longevity, notificationPreferences] = await Promise.all([
           fetchCurrentUser({ forceRefresh: true }),
           fetchHabitConsistency().catch(() => null),
@@ -271,26 +307,8 @@ export default function ProfileScreen() {
         ]);
         if (cancelled || !u) return;
         const userObj = u as any;
-        setUser(userObj);
-        const displayName = String(userObj.name || userObj.email || 'Victory member').trim();
-        setName(displayName);
-        setInitials(initialsForName(displayName));
-        const normalizedTier = normalizeTierLabel(userObj.subscription_tier || userObj.tier || userObj.membership_tier);
-        setTier(normalizedTier);
-        setCountry(String(userObj.country || '').trim());
-        setLanguageMeta(languageLabel(userObj.preferred_language));
-        const nextNotificationPrefs = {
-          pushEnabled: notificationPreferences?.pushEnabled ?? userObj.notification_push_enabled !== false,
-          whatsappEnabled: notificationPreferences?.whatsappEnabled ?? Boolean(userObj.notification_whatsapp_enabled),
-          emailEnabled: notificationPreferences?.emailEnabled ?? Boolean(userObj.notification_email_enabled),
-          nudgeTime: String(notificationPreferences?.nudgeTime || userObj.notification_nudge_time || '20:30'),
-          templates: Array.isArray(notificationPreferences?.templates) ? notificationPreferences.templates : [],
-        };
-        setNotificationPrefs(nextNotificationPrefs);
-        setNotificationMeta(notificationSummary(userObj));
-        setSinceDate(monthName(userObj.subscription_confirmed_at || userObj.subscription_started_at || userObj.created_at));
+        applyUserProfile(userObj, notificationPreferences);
         const workoutItems = Array.isArray((completedLogs as any)?.items) ? (completedLogs as any).items : [];
-        setStreakDays(Math.max(0, Number(userObj.streak_days ?? 0) || 0));
         setTotalSessions(Math.max(0, Number((completedLogs as any)?.total || workoutItems.length || 0)));
 
         const score = Math.round(Number((habit as any)?.current_score || 0));
@@ -330,6 +348,7 @@ export default function ProfileScreen() {
           setPartnerNote('Set up or manage your partner.');
         }
 
+        const normalizedTier = normalizeTierLabel(userObj.subscription_tier || userObj.tier || userObj.membership_tier);
         const plan = (plans.items || []).find((item: any) => normalizeTierLabel(item.subscriptionTier) === normalizedTier);
         setPlanPrice(planPriceText(plan, normalizedTier));
         setPlanDescription(planCopy(plan, normalizedTier));

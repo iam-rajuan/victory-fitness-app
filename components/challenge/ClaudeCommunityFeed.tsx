@@ -300,8 +300,8 @@ function CommunityVideoPlayer({ videoUrl }: { videoUrl?: string }) {
 }
 
 export default function ClaudeCommunityFeed({
-  userTier = 'gold',
-  userInitials = 'ME',
+  userTier = '',
+  userInitials = '',
   userProfileImage = '',
   posts = [],
   onPublishPost,
@@ -314,13 +314,15 @@ export default function ClaudeCommunityFeed({
 
   // Tier normalization
   const normTier = userTier.toLowerCase().replace(/_/g, '').replace(/\s+/g, '');
-  const cleanTier = normTier.includes('ic') || normTier.includes('inner')
-    ? 'ic'
-    : normTier.includes('plat')
-    ? 'platinum'
-    : normTier.includes('silver')
-    ? 'silver'
-    : 'gold';
+  const cleanTier = !normTier
+    ? ''
+    : normTier.includes('ic') || normTier.includes('inner')
+      ? 'ic'
+      : normTier.includes('plat')
+        ? 'platinum'
+        : normTier.includes('silver')
+          ? 'silver'
+          : 'gold';
 
   const order = ['silver', 'gold', 'platinum', 'ic'];
   const tierNames: Record<string, string> = {
@@ -329,11 +331,13 @@ export default function ClaudeCommunityFeed({
     platinum: 'Platinum',
     ic: 'Inner Circle',
   };
-  const tierIndex = Math.max(0, order.indexOf(cleanTier));
-  const reachString = order
-    .slice(0, tierIndex + 1)
-    .map((k) => tierNames[k])
-    .join(' + ');
+  const tierIndex = order.indexOf(cleanTier);
+  const reachString = tierIndex >= 0
+    ? order
+      .slice(0, tierIndex + 1)
+      .map((k) => tierNames[k])
+      .join(' + ')
+    : '';
 
   const [scope, setScope] = useState<'auto' | 'tier' | 'all'>('auto');
   const [feed, setFeed] = useState<CommunityPost[]>(posts);

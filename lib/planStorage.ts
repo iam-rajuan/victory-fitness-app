@@ -14,6 +14,13 @@ export interface SavedPlanStatus {
   planDuration: string;
 }
 
+const LEGACY_DEMO_PLAN_SUMMARY = 'Get stronger · Mon, Wed, Fri · 40 min · built around your home gym.';
+
+function realSavedValue(value: string | null) {
+  const text = String(value || '').trim();
+  return text && text !== LEGACY_DEMO_PLAN_SUMMARY ? text : '';
+}
+
 export async function getSavedPlanStatus(): Promise<SavedPlanStatus> {
   try {
     const [built, summary, fresh, kit, duration] = await Promise.all([
@@ -26,18 +33,18 @@ export async function getSavedPlanStatus(): Promise<SavedPlanStatus> {
 
     return {
       planBuilt: built === 'true',
-      planSummary: summary || 'Get stronger · Mon, Wed, Fri · 40 min · built around your home gym.',
+      planSummary: realSavedValue(summary),
       showFreshPlan: fresh === 'true',
-      planKit: kit || 'Home gym',
-      planDuration: duration || '40 minutes',
+      planKit: realSavedValue(kit),
+      planDuration: realSavedValue(duration),
     };
   } catch {
     return {
       planBuilt: false,
-      planSummary: 'Get stronger · Mon, Wed, Fri · 40 min · built around your home gym.',
+      planSummary: '',
       showFreshPlan: false,
-      planKit: 'Home gym',
-      planDuration: '40 minutes',
+      planKit: '',
+      planDuration: '',
     };
   }
 }

@@ -52,7 +52,7 @@ import {
   updateStrengthWorkoutPlanProgress,
 } from '../../lib/workout-plans';
 import { fetchHomeWorkoutPlanSummary, fetchWorkoutLibrary, getWorkoutLibraryCacheKey, hydrateCachedWorkoutLibrary, HomeWorkoutPlanSummary, WorkoutLibraryResponse } from '../../lib/workouts';
-import { CHALLENGE_OVERVIEW_CACHE_KEY, HOME_WORKOUT_SUMMARY_CACHE_KEY, JOURNAL_ENTRIES_CACHE_KEY, NUTRITION_PLAN_LATEST_CACHE_KEY } from '../../lib/cacheKeys';
+import { CHALLENGE_OVERVIEW_CACHE_KEY, CURRENT_USER_CACHE_KEY, HOME_WORKOUT_SUMMARY_CACHE_KEY, JOURNAL_ENTRIES_CACHE_KEY, NUTRITION_PLAN_LATEST_CACHE_KEY } from '../../lib/cacheKeys';
 import { hydrateCachedResource } from '../../lib/resourceCache';
 import { useResourceStore } from '../../lib/stores/resourceStore';
 
@@ -286,14 +286,21 @@ export default function HomeScreen() {
   // Custom 6-week plan state (Claude Prototype VF Prototype.dc.html lines 188-199 & 3234-3243)
   const [planBuilt, setPlanBuilt] = useState(false);
   const [showFreshPlan, setShowFreshPlan] = useState(false);
-  const [planSummaryLine, setPlanSummaryLine] = useState('Get stronger · Mon, Wed, Fri · 40 min · built around your home gym.');
-  const [planKit, setPlanKit] = useState('Home gym');
-  const [planDuration, setPlanDuration] = useState('40 minutes');
+  const [planSummaryLine, setPlanSummaryLine] = useState('');
+  const [planKit, setPlanKit] = useState('');
+  const [planDuration, setPlanDuration] = useState('');
+  const cachedCurrentUser = useResourceStore((state) => state.resources[CURRENT_USER_CACHE_KEY]?.data as AuthUser | undefined);
   const cachedChallengeData = useResourceStore((state) => state.resources[CHALLENGE_OVERVIEW_CACHE_KEY]?.data as any | undefined);
   const cachedNutritionPlan = useResourceStore((state) => state.resources[NUTRITION_PLAN_LATEST_CACHE_KEY]?.data as NutritionPlanApiResponse | undefined);
   const cachedJournalData = useResourceStore((state) => state.resources[JOURNAL_ENTRIES_CACHE_KEY]?.data as any | undefined);
   const cachedWorkoutLibrary = useResourceStore((state) => state.resources[getWorkoutLibraryCacheKey()]?.data as WorkoutLibraryResponse | undefined);
   const cachedHomeSummary = useResourceStore((state) => state.resources[HOME_WORKOUT_SUMMARY_CACHE_KEY]?.data as HomeWorkoutPlanSummary | undefined);
+
+  useEffect(() => {
+    if (cachedCurrentUser) {
+      setCurrentUser(cachedCurrentUser);
+    }
+  }, [cachedCurrentUser]);
 
   useEffect(() => {
     if (cachedNutritionPlan) {
@@ -351,7 +358,8 @@ export default function HomeScreen() {
   }, []);
 
   const hydrateHomeCache = useCallback(async () => {
-    const [cachedChallengeData, cachedNutritionPlan, cachedStrengthPlan, cachedJournalData, cachedWorkoutLibrary, cachedHomeSummary] = await Promise.all([
+    const [cachedUser, cachedChallengeData, cachedNutritionPlan, cachedStrengthPlan, cachedJournalData, cachedWorkoutLibrary, cachedHomeSummary] = await Promise.all([
+      hydrateCachedResource<AuthUser>(CURRENT_USER_CACHE_KEY),
       hydrateCachedResource<any>(CHALLENGE_OVERVIEW_CACHE_KEY),
       hydrateCachedResource<NutritionPlanApiResponse>(NUTRITION_PLAN_LATEST_CACHE_KEY),
       loadLatestStrengthWorkoutPlan().catch(() => null),
@@ -360,6 +368,9 @@ export default function HomeScreen() {
       hydrateCachedResource<HomeWorkoutPlanSummary>(HOME_WORKOUT_SUMMARY_CACHE_KEY),
     ]);
 
+    if (cachedUser) {
+      setCurrentUser(cachedUser);
+    }
     if (cachedNutritionPlan) {
       setNutritionPlan(cachedNutritionPlan);
     }
@@ -540,8 +551,7 @@ export default function HomeScreen() {
 
   // Derived user subscription tier from onboarding/payment profile
   const tier = useMemo(() => {
-    const rawTier = normalizeSubscriptionTier(currentUser?.subscription_tier);
-    return rawTier !== 'NONE' ? rawTier : 'GOLD';
+    return normalizeSubscriptionTier(currentUser?.subscription_tier);
   }, [currentUser?.subscription_tier]);
 
   const streakDays = Math.max(0, Number(currentUser?.streak_days ?? 0) || 0);
@@ -1110,7 +1120,7 @@ export default function HomeScreen() {
         challenge={selectedChallengeDetail}
         visible={challengeDetailVisible}
         onClose={() => setChallengeDetailVisible(false)}
-        userName={currentUser?.name || 'Michael'}
+        userName={currentUser?.name || ''}
         onJoin={() => {
           setChallengeDetailVisible(false);
           setCohortModalVisible(true);
@@ -1127,16 +1137,16 @@ export default function HomeScreen() {
         visible={cohortModalVisible}
         onClose={() => setCohortModalVisible(false)}
         onInvite={handleInviteSomeone}
-        challengeTitle={selectedChallengeDetail?.n || '21-Day Warrior'}
+        challengeTitle={selectedChallengeDetail?.n || ''}
       />
 
       {/* Guest Mode Invite Modal matching lines 1461-1502 */}
       <ClaudeInviteModal
         visible={inviteModalVisible}
         onClose={() => setInviteModalVisible(false)}
-        challengeTitle={selectedChallengeDetail?.n || '21-Day Warrior'}
+        challengeTitle={selectedChallengeDetail?.n || ''}
         challengeDays={selectedChallengeDetail?.d ? parseInt(String(selectedChallengeDetail.d).replace(/\D/g, ''), 10) || 21 : 21}
-        userName={currentUser?.name || 'Michael'}
+        userName={currentUser?.name || ''}
       />
     </View>
   );

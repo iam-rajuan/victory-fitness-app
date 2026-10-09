@@ -27,8 +27,8 @@ const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' })
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
 
 export default function ClaudeProfileHeader({
-  name = 'Victory member',
-  initials = 'VF',
+  name = '',
+  initials = '',
   profileImage = '',
   tier = 'NONE',
   country = '',

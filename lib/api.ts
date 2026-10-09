@@ -11,6 +11,7 @@ import type {
 } from './onboarding';
 import { clearAllCachedResources, fetchCachedResource, getCachedResourceSnapshot, primeCachedResource } from './resourceCache';
 import {
+  CURRENT_USER_CACHE_KEY,
   getLongevityDashboardCacheKey,
   getLongevityHealthRecordsCacheKey,
   getLongevityHealthSummaryCacheKey,
@@ -817,6 +818,7 @@ async function persistAuthTokens(tokens: AuthTokens | null) {
 async function persistAuthUser(user: AuthUser | null) {
   if (user) {
     await AsyncStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(user));
+    await primeCachedResource(CURRENT_USER_CACHE_KEY, user);
   } else {
     await AsyncStorage.removeItem(AUTH_USER_STORAGE_KEY);
   }
@@ -899,6 +901,9 @@ async function ensureAuthUserLoaded() {
     authUserLoadPromise = loadPersistedAuthUser()
       .then((stored) => {
         authUser = stored;
+        if (stored) {
+          void primeCachedResource(CURRENT_USER_CACHE_KEY, stored).catch(() => undefined);
+        }
         authUserLoaded = true;
       })
       .finally(() => {
@@ -921,7 +926,7 @@ export async function setAuthTokens(tokens: AuthTokens & { user?: AuthUser }) {
     currentUserFetchedAt = Date.now();
     bodyMetricsCache = null;
     bodyMetricsFetchedAt = 0;
-    await persistAuthUser(tokens.user);
+    await persistAuthUser(authUser);
   }
 }
 

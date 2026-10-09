@@ -1014,7 +1014,7 @@ export default function ChallengeProgressScreen() {
                 ) : (
                   <View style={styles.avatarInnerBox}>
                     <Text style={styles.avatarQuestionMark}>
-                      {String(currentUser?.name || 'VF').trim().slice(0, 1).toUpperCase()}
+                      {String(currentUser?.name || '').trim().slice(0, 1).toUpperCase()}
                     </Text>
                   </View>
                 )}

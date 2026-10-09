@@ -254,7 +254,7 @@ export default function ClaudeCohortModal({
 function getInitials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  return (parts[0] || 'VF').slice(0, 2).toUpperCase();
+  return (parts[0] || '').slice(0, 2).toUpperCase();
 }
 
 function formatMessageTime(value: string) {
@@ -266,11 +266,11 @@ function formatMessageTime(value: string) {
 }
 
 function mapChatMessage(message: ChallengeChatMessage): CohortMessage {
-  const authorName = String(message.author_name || 'Member').trim();
+  const authorName = String(message.author_name || '').trim();
   return {
     id: String(message.id || `cm-${Date.now()}`),
     n: message.can_edit ? 'You' : authorName,
-    i: message.can_edit ? 'ME' : getInitials(authorName),
+    i: getInitials(authorName),
     profileImage: message.can_edit ? '' : String(message.author_profile_image || '').trim(),
     t: formatMessageTime(String(message.created_at || '')),
     m: String(message.content || '').trim(),
@@ -282,7 +282,7 @@ function buildLocalMessage(content: string): CohortMessage {
   return {
     id: `cm-${Date.now()}`,
     n: 'You',
-    i: 'ME',
+    i: '',
     t: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
     m: content,
     isMe: true,

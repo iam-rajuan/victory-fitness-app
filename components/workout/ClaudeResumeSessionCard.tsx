@@ -35,10 +35,10 @@ function buildVideoPreviewHtml(videoUrl: string) {
 }
 
 export default function ClaudeResumeSessionCard({
-  sessionTitle = 'Upper Body Strength',
-  sessionLine = 'exercise 3 of 7 · Strong at 45+ · week 2',
-  minutesLeft = '18 min left',
-  progressPct = 43,
+  sessionTitle = 'Workout',
+  sessionLine = '',
+  minutesLeft = '',
+  progressPct = 0,
   thumbnail = '',
   videoUrl = '',
   videoSource = '',

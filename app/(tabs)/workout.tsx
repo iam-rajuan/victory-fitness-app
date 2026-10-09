@@ -45,6 +45,8 @@ import { getSavedPlanStatus, savePlanBuiltData } from '../../lib/planStorage';
 import { fetchWorkoutLibrary, getWorkoutLibraryCacheKey, hydrateCachedWorkoutLibrary, WorkoutLibraryCategory, WorkoutLibraryItem, WorkoutLibraryResponse } from '../../lib/workouts';
 import { createHomeSevenDayWorkoutPlan } from '../../lib/workout-plans';
 import { useResourceStore } from '../../lib/stores/resourceStore';
+import { CURRENT_USER_CACHE_KEY } from '../../lib/cacheKeys';
+import { hydrateCachedResource } from '../../lib/resourceCache';
 
 const OBSIDIAN = '#0D0D0D';
 const GOLD = '#C9943A';
@@ -258,6 +260,7 @@ export default function WorkoutScreen() {
   const [libraryPrograms, setLibraryPrograms] = useState<ProgramCardItem[]>([]);
   const completedWorkoutIdsRef = useRef<Set<string>>(new Set());
   const cachedWorkoutLibrary = useResourceStore((state) => state.resources[getWorkoutLibraryCacheKey()]?.data as WorkoutLibraryResponse | undefined);
+  const cachedCurrentUser = useResourceStore((state) => state.resources[CURRENT_USER_CACHE_KEY]?.data as AuthUser | undefined);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
@@ -268,7 +271,7 @@ export default function WorkoutScreen() {
 
   // Plan Build State
   const [planBuilt, setPlanBuilt] = useState(false);
-  const [planSummaryLine, setPlanSummaryLine] = useState('Get stronger · Mon, Wed, Fri · 40 min · built around dumbbells.');
+  const [planSummaryLine, setPlanSummaryLine] = useState('');
   const [trainingContextLine, setTrainingContextLine] = useState('Workouts matched to your kit and time');
   const [preferredKitWords, setPreferredKitWords] = useState<string[]>([]);
   const [preferredMinutes, setPreferredMinutes] = useState(0);
@@ -295,6 +298,12 @@ export default function WorkoutScreen() {
   }, [currentUser?.subscription_tier]);
 
   const hasCoach = tier !== 'SILVER' && tier !== 'NONE';
+
+  useEffect(() => {
+    if (cachedCurrentUser) {
+      setCurrentUser(cachedCurrentUser);
+    }
+  }, [cachedCurrentUser]);
 
   const applyWorkoutLibrary = (
     library: WorkoutLibraryResponse,
@@ -329,6 +338,11 @@ export default function WorkoutScreen() {
             await prefetchCriticalWorkoutImages(cachedLibrary);
             applyWorkoutLibrary(cachedLibrary);
           }
+        })
+        .catch(() => undefined);
+      hydrateCachedResource<AuthUser>(CURRENT_USER_CACHE_KEY)
+        .then((cachedUser) => {
+          if (cachedUser) setCurrentUser(cachedUser);
         })
         .catch(() => undefined);
 

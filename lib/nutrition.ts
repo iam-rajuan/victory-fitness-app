@@ -138,7 +138,9 @@ export async function getProgressiveNutritionPlanJob(jobId: string) {
 
 export async function getLatestNutritionPlan(options?: { forceRefresh?: boolean }) {
   if (options?.forceRefresh) {
-    return apiRequest<NutritionPlanApiResponse>('/ai/nutrition/plan/latest');
+    const plan = await apiRequest<NutritionPlanApiResponse>('/ai/nutrition/plan/latest');
+    await primeCachedResource(NUTRITION_PLAN_LATEST_CACHE_KEY, plan);
+    return plan;
   }
   return fetchCachedResource(NUTRITION_PLAN_LATEST_CACHE_KEY, () =>
     apiRequest<NutritionPlanApiResponse>('/ai/nutrition/plan/latest')

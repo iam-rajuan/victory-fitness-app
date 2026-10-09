@@ -39,32 +39,8 @@ const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'DMSans-
 const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
-const DEFAULT_CHALLENGES: ChallengeItem[] = [
-  {
-    n: '21-Day Warrior',
-    d: 'Day 18 of 21',
-    pct: 86,
-    rank: 'Rank 3',
-    note: 'Finish today to keep the streak bonus.',
-  },
-  {
-    n: 'Sleep Lock',
-    d: 'Day 3 of 5',
-    pct: 60,
-    rank: 'Rank 1',
-    note: 'Same bedtime two nights running. Keep it.',
-  },
-  {
-    n: 'Gratitude Blitz',
-    d: 'Day 1 of 3',
-    pct: 33,
-    rank: '30 pts',
-    note: 'One message today. Anyone specific.',
-  },
-];
-
 export default function ClaudeChallengesCarousel({
-  challenges = DEFAULT_CHALLENGES,
+  challenges = [],
   onOpenChallenge,
 }: ClaudeChallengesCarouselProps) {
   const router = useRouter();
@@ -79,7 +55,7 @@ export default function ClaudeChallengesCarousel({
   const scrollStartLeft = useRef(0);
   const hasDragged = useRef(false);
 
-  const list = Array.isArray(challenges) ? challenges : DEFAULT_CHALLENGES;
+  const list = Array.isArray(challenges) ? challenges : [];
 
   const screenWidth = Dimensions.get('window').width;
   const defaultWidth = Math.min(600, screenWidth);

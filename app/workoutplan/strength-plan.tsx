@@ -86,7 +86,7 @@ export default function StrengthPlanDashboard() {
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [activeSessionDay, setActiveSessionDay] = useState<string | null>(null);
   const [completedSessionSeconds, setCompletedSessionSeconds] = useState<number | null>(null);
-  const [currentUserName, setCurrentUserName] = useState('Victory Member');
+  const [currentUserName, setCurrentUserName] = useState('');
   const [workoutUnlockLabel, setWorkoutUnlockLabel] = useState<string | null>(null);
   const [completionCard, setCompletionCard] = useState<CompletionCard | null>(null);
   const [cardAction, setCardAction] = useState<'download' | 'share' | 'preview' | ''>('');
@@ -100,7 +100,7 @@ export default function StrengthPlanDashboard() {
   // Active Rest Timer & Completion State
   const [activeRestSeconds, setActiveRestSeconds] = useState<number | null>(null);
   const [activeRestExercise, setActiveRestExercise] = useState<string>('');
-  const [completedWorkoutsCount, setCompletedWorkoutsCount] = useState(2);
+  const [completedWorkoutsCount, setCompletedWorkoutsCount] = useState(0);
   const [completedDayLabel, setCompletedDayLabel] = useState<string>('');
   const [activePlanIdForFeedback, setActivePlanIdForFeedback] = useState<string | null>(null);
 
@@ -142,7 +142,7 @@ export default function StrengthPlanDashboard() {
 
     void loadPlans();
     void fetchCurrentUser().then((user) => {
-      setCurrentUserName(user.name || 'Victory Member');
+      setCurrentUserName(user.name || '');
       if (user.workout_unlock_label && user.workout_unlock_label.trim()) {
         setWorkoutUnlockLabel(user.workout_unlock_label.trim());
       } else {
