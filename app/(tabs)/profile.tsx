@@ -11,7 +11,6 @@ import {
   Modal,
   TextInput,
   KeyboardAvoidingView,
-  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -569,22 +568,6 @@ export default function ProfileScreen() {
               activeOpacity={0.7}
               onPress={() => router.push('/profile/edit')}
             >
-              <View
-                style={[
-                  styles.accountAvatar,
-                  {
-                    backgroundColor: isDark ? 'rgba(201, 148, 58, 0.16)' : 'rgba(201, 148, 58, 0.1)',
-                    borderColor: 'rgba(201, 148, 58, 0.45)',
-                  },
-                ]}
-              >
-                {user?.profileImage ? (
-                  <Image source={{ uri: user.profileImage }} style={styles.accountAvatarImg} />
-                ) : (
-                  <Text style={[styles.accountAvatarText, { color: GOLD }]}>{initials}</Text>
-                )}
-              </View>
-
               <View style={styles.accountInfoCol}>
                 <View style={styles.accountNameRow}>
                   <Text style={[styles.accountName, { color: colors.text }]} numberOfLines={1}>
@@ -1145,28 +1128,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderBottomWidth: 1,
   },
-  accountAvatar: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  accountAvatarImg: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-  },
-  accountAvatarText: {
-    fontFamily: DMSANS,
-    fontSize: 16,
-    fontWeight: '700',
-  },
   accountInfoCol: {
     flex: 1,
-    marginLeft: 13,
     justifyContent: 'center',
     minWidth: 0,
   },
