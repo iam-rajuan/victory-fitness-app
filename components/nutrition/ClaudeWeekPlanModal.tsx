@@ -150,11 +150,6 @@ export default function ClaudeWeekPlanModal({
       .map((meal) => meal.trim())
       .filter(Boolean);
     const favoriteMeals = Array.from(new Set(meals)).slice(0, 8);
-    const hasSpecificCuisine = selectedCuisines.length > 0;
-    if (!hasSpecificCuisine && favoriteMeals.length < 3) {
-      Alert.alert('Add meal preferences', 'Choose at least one cuisine or add at least three meals you already eat.');
-      return;
-    }
 
     setIsBuilding(true);
     try {
