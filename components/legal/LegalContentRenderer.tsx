@@ -137,6 +137,9 @@ function renderBlocks(nodes: Node[] = [], width: number, keyPrefix = 'legal'): R
       return <Text key={key} style={[styles.heading, tag === 'h1' && styles.h1, tag === 'h2' && styles.h2]}>{renderInline(node.children, key)}</Text>;
     }
     if (tag === 'p') {
+      if ((node.children || []).some((child) => child.tag === 'img')) {
+        return <View key={key} style={styles.paragraphBlock}>{renderBlocks(node.children, width, key)}</View>;
+      }
       return <Text key={key} style={styles.paragraph}>{renderInline(node.children, key)}</Text>;
     }
     if (tag === 'blockquote') {
@@ -211,6 +214,9 @@ const styles = StyleSheet.create({
     fontFamily: INTER,
     fontSize: 15,
     lineHeight: 25,
+    marginBottom: 13,
+  },
+  paragraphBlock: {
     marginBottom: 13,
   },
   bold: {
