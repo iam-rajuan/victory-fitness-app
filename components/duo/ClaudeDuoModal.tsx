@@ -186,26 +186,35 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
     }
   };
 
+  const endDuo = async () => {
+    setLoading(true);
+    try {
+      if (pairId) await unpairAccountabilityPartner(pairId);
+      resetDuoState();
+      notify('Duo Ended', 'Your accountability partnership has ended.');
+    } catch (error: any) {
+      notify('Could not end duo', error?.message || 'Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleEndDuo = () => {
-    Alert.alert('End Duo', `Are you sure you want to disconnect from ${partnerName}?`, [
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const confirmed = window.confirm(`End your accountability duo with ${displayPartnerName}?`);
+      if (confirmed) {
+        void endDuo();
+      }
+      return;
+    }
+
+    Alert.alert('End Duo', `Are you sure you want to disconnect from ${displayPartnerName}?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'End this duo',
         style: 'destructive',
-        onPress: async () => {
-          try {
-            if (pairId) await unpairAccountabilityPartner(pairId);
-            setPairId('');
-            setDuoState('inactive');
-            setPartnerName('');
-            setPartnerProfileImage('');
-            setDaysInSync(0);
-            setPartnerTrainedToday(false);
-            setYouTrainedToday(false);
-            Alert.alert('Duo Ended', 'Your accountability partnership has ended.');
-          } catch (error: any) {
-            Alert.alert('Could not end duo', error?.message || 'Please try again.');
-          }
+        onPress: () => {
+          void endDuo();
         },
       },
     ]);
