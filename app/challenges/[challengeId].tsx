@@ -169,10 +169,15 @@ export default function ChallengeDetailScreen() {
     try {
       const authUser = await getAuthUser();
       const inviterId = authUser?.id ? `&inviter_id=${authUser.id}` : '';
-      const origin =
-        Platform.OS === 'web' && typeof window !== 'undefined'
-          ? window.location.origin
-          : 'https://app.victoryfitnessapp.com';
+      const origin = (() => {
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          const hostname = window.location.hostname;
+          if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.local')) {
+            return window.location.origin;
+          }
+        }
+        return 'https://app.victoryfitnessapp.com';
+      })();
       const inviteUrl = `${origin}/register?challenge_id=${detail.challenge_id}${inviterId}&source=challenge_invite`;
       const msg = [
         `${t('Join me in the')} "${detail.title}" ${t('challenge on Victory Fitness!')}`,

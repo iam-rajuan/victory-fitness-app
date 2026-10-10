@@ -105,7 +105,10 @@ export default function ClaudeDuoModal({ visible, onClose, initialInviteCode }: 
 
   const getAppBaseUrl = () => {
     if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin) {
-      return window.location.origin;
+      const hostname = window.location.hostname;
+      if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.local')) {
+        return window.location.origin;
+      }
     }
     return 'https://app.victoryfitnessapp.com';
   };

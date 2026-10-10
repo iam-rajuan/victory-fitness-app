@@ -436,9 +436,15 @@ function buildChallengeInviteUrl({
   inviterId?: string;
   inviteId?: string;
 }) {
-  const baseUrl = Platform.OS === 'web' && typeof window !== 'undefined'
-    ? window.location.origin
-    : 'https://app.victoryfitnessapp.com';
+  const baseUrl = (() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.local')) {
+        return window.location.origin;
+      }
+    }
+    return 'https://app.victoryfitnessapp.com';
+  })();
   const params = new URLSearchParams();
   if (challengeId) params.set('challenge_id', challengeId);
   if (inviterId) params.set('inviter_id', inviterId);
