@@ -37,6 +37,7 @@ const GOLD_BETA_ROUTE_ACCESS = [
   '/mealPlan',
   '/profile',
   '/journal',
+  '/duo',
 ] as const;
 const SILVER_ROUTE_ACCESS = [
   '/',
@@ -46,6 +47,7 @@ const SILVER_ROUTE_ACCESS = [
   '/challenges',
   '/profile',
   '/journal',
+  '/duo',
 ] as const;
 const GOLD_ROUTE_ACCESS = [...SILVER_ROUTE_ACCESS, '/mealPlan', '/chat'] as const;
 const PLATINUM_ROUTE_ACCESS = [...GOLD_ROUTE_ACCESS, '/workoutplan', '/profile/longevity-os'] as const;
@@ -77,7 +79,7 @@ const FEATURE_ROUTE_ACCESS: Record<string, readonly string[]> = {
   mealPlan: ['/mealPlan'],
   nutrition_tracker: ['/mealPlan'],
   meal_analysis: ['/mealPlan'],
-  profile: ['/profile'],
+  profile: ['/profile', '/duo'],
   workoutplan: ['/workoutplan'],
   longevity: ['/profile/longevity-os'],
   application: ['/profile/application'],
