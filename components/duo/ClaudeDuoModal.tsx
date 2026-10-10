@@ -20,11 +20,13 @@ import {
   nudgeAccountabilityPartner,
   unpairAccountabilityPartner,
 } from '../../lib/api';
+import { useLanguage } from '../../lib/i18n';
 import { replaceRoute } from '../../lib/navigation';
 
 interface ClaudeDuoModalProps {
   visible: boolean;
   onClose: () => void;
+  initialInviteCode?: string;
 }
 
 type DuoState = 'inactive' | 'pending' | 'active';
@@ -41,8 +43,9 @@ const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System'
 const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
 
-export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps) {
+export default function ClaudeDuoModal({ visible, onClose, initialInviteCode }: ClaudeDuoModalProps) {
   const router = useRouter();
+  const { language } = useLanguage();
   const [duoState, setDuoState] = useState<DuoState>('inactive');
   const [pairId, setPairId] = useState('');
   const [partnerName, setPartnerName] = useState('');
@@ -55,6 +58,7 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
   const [youTrainedToday, setYouTrainedToday] = useState(false);
   const [loading, setLoading] = useState(false);
   const displayPartnerName = partnerName.trim() || 'Your partner';
+  const normalizedInitialInviteCode = String(initialInviteCode || '').trim().toUpperCase();
 
   const notify = (title: string, message: string) => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -75,6 +79,82 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
   const returnHomeAfterInviteSent = () => {
     onClose();
     replaceRoute(router, '/(tabs)');
+  };
+
+  const getAppBaseUrl = () => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin) {
+      return window.location.origin;
+    }
+    return 'https://app.victoryfitnessapp.com';
+  };
+
+  const getDuoInviteUrl = (code: string) => {
+    const params = new URLSearchParams();
+    params.set('invite_code', code);
+    params.set('source', 'duo_invite');
+    return `${getAppBaseUrl()}/duo?${params.toString()}`;
+  };
+
+  const buildDuoInviteText = (code: string) => {
+    const url = getDuoInviteUrl(code);
+    const templates: Record<string, string> = {
+      de: [
+        'Ich lade dich zu meinem Accountability Duo bei Victory Fitness ein.',
+        'Wir sehen nur, ob wir heute trainiert haben - keine Gewichte, kein Journal, keine privaten Daten.',
+        `Dein Code: ${code}`,
+        `Hier öffnen und den Code eingeben: ${url}`,
+        'Falls du neu bist, erstelle zuerst dein Victory Fitness Konto und nutze danach denselben Code.',
+      ].join('\n\n'),
+      es: [
+        'Te invito a mi Accountability Duo en Victory Fitness.',
+        'Solo veremos si entrenamos hoy: sin pesos, sin diario y sin datos privados.',
+        `Tu código: ${code}`,
+        `Abre aquí e introduce el código: ${url}`,
+        'Si eres nuevo, crea primero tu cuenta de Victory Fitness y luego usa el mismo código.',
+      ].join('\n\n'),
+      fr: [
+        "Je t'invite dans mon Accountability Duo sur Victory Fitness.",
+        "On voit seulement si chacun s'est entraîné aujourd'hui : pas de poids, pas de journal, pas de données privées.",
+        `Ton code : ${code}`,
+        `Ouvre ce lien et saisis le code : ${url}`,
+        "Si tu es nouveau, crée d'abord ton compte Victory Fitness puis utilise le même code.",
+      ].join('\n\n'),
+      it: [
+        'Ti invito nel mio Accountability Duo su Victory Fitness.',
+        'Vedremo solo se ci siamo allenati oggi: niente pesi, niente diario, nessun dato privato.',
+        `Il tuo codice: ${code}`,
+        `Apri qui e inserisci il codice: ${url}`,
+        'Se sei nuovo, crea prima il tuo account Victory Fitness e poi usa lo stesso codice.',
+      ].join('\n\n'),
+      pt: [
+        'Estou te convidando para meu Accountability Duo no Victory Fitness.',
+        'A gente só vê se treinou hoje: sem pesos, sem diário e sem dados privados.',
+        `Seu código: ${code}`,
+        `Abra aqui e digite o código: ${url}`,
+        'Se você é novo, crie sua conta Victory Fitness primeiro e depois use o mesmo código.',
+      ].join('\n\n'),
+      nl: [
+        'Ik nodig je uit voor mijn Accountability Duo op Victory Fitness.',
+        'We zien alleen of we vandaag getraind hebben: geen gewichten, geen dagboek, geen privegegevens.',
+        `Je code: ${code}`,
+        `Open hier en vul de code in: ${url}`,
+        'Ben je nieuw? Maak eerst je Victory Fitness account aan en gebruik daarna dezelfde code.',
+      ].join('\n\n'),
+      bn: [
+        'আমি তোমাকে Victory Fitness-এ আমার Accountability Duo-তে আমন্ত্রণ জানাচ্ছি।',
+        'আমরা শুধু দেখব আজ ট্রেনিং করেছি কি না - কোনো ওজন, জার্নাল বা ব্যক্তিগত ডেটা নয়।',
+        `তোমার কোড: ${code}`,
+        `এখানে খুলে কোড দাও: ${url}`,
+        'নতুন হলে আগে Victory Fitness অ্যাকাউন্ট তৈরি করো, তারপর একই কোড ব্যবহার করো।',
+      ].join('\n\n'),
+    };
+    return templates[language] || [
+      'I am inviting you to be my Accountability Duo on Victory Fitness.',
+      'We only see whether we trained today - no weights, no journal, no private data.',
+      `Your code: ${code}`,
+      `Open this link and enter the code: ${url}`,
+      'If you are new, create your Victory Fitness account first, then use the same code.',
+    ].join('\n\n');
   };
 
   const applyPairResponse = (res: any) => {
@@ -104,6 +184,10 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
       setDaysInSync(0);
       setPartnerTrainedToday(false);
       setYouTrainedToday(false);
+      if (normalizedInitialInviteCode) {
+        setInputCode(normalizedInitialInviteCode);
+        setShowCodeInput(true);
+      }
     }
   };
 
@@ -120,7 +204,13 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
     };
 
     void loadPair();
-  }, [visible]);
+  }, [visible, normalizedInitialInviteCode]);
+
+  useEffect(() => {
+    if (!visible || !normalizedInitialInviteCode || duoState !== 'inactive') return;
+    setInputCode(normalizedInitialInviteCode);
+    setShowCodeInput(true);
+  }, [duoState, normalizedInitialInviteCode, visible]);
 
   const handleCopyCode = async () => {
     if (!inviteCode) return;
@@ -135,7 +225,7 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
 
   const handleCopyInviteText = async () => {
     if (!inviteCode) return;
-    const text = `Join my Accountability Duo on Victory Fitness. Enter code: ${inviteCode}`;
+    const text = buildDuoInviteText(inviteCode);
     try {
       await copyText(text);
       notify('Link copied', 'The duo invite text was copied to your clipboard.');
@@ -147,7 +237,7 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
 
   const handleShareWhatsApp = () => {
     if (!inviteCode) return;
-    const text = `Join my Accountability Duo on Victory Fitness! Enter code: ${inviteCode}`;
+    const text = buildDuoInviteText(inviteCode);
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
       returnHomeAfterInviteSent();

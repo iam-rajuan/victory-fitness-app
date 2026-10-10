@@ -40,6 +40,7 @@ export default function RootLayout() {
   const router = useRouter();
   const pathname = usePathname();
   const pathnameRef = useRef(pathname);
+  const hrefRef = useRef(pathname);
   const lastLoggedRouteRef = useRef<string | null>(null);
   const knownNotificationIdsRef = useRef<Set<string> | null>(null);
   const [fontsLoaded, fontError] = useFonts(Object.fromEntries(Object.entries({
@@ -70,6 +71,12 @@ export default function RootLayout() {
   }).map(([name, uri]) => [name, Platform.OS === 'web' ? { uri, display: FontDisplay.SWAP } : uri])));
   // Web uses fallback fonts immediately; native retains its font-loading behavior.
   const fontsReady = Platform.OS === 'web' || fontsLoaded || Boolean(fontError);
+  const getCurrentHref = () => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      return `${window.location.pathname || pathname}${window.location.search || ''}`;
+    }
+    return pathname;
+  };
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [toastNotification, setToastNotification] = useState<PushNotificationEvent | null>(null);
   const [biometricLocked, setBiometricLocked] = useState(false);
@@ -137,7 +144,7 @@ export default function RootLayout() {
           route: pathnameRef.current,
           context: 'RootLayout',
         });
-        replaceRoute(router, getLoginRouteWithReturn(pathnameRef.current, { reauth: true }));
+        replaceRoute(router, getLoginRouteWithReturn(hrefRef.current, { reauth: true }));
       });
 
     return () => {
@@ -200,7 +207,7 @@ export default function RootLayout() {
               route: pathname,
               context: 'RootLayout',
             });
-            replaceRoute(router, getLoginRouteWithReturn(pathname, { reauth: true }));
+            replaceRoute(router, getLoginRouteWithReturn(getCurrentHref(), { reauth: true }));
             return true;
           }
 
@@ -268,7 +275,7 @@ export default function RootLayout() {
               route: pathname,
               context: 'RootLayout',
             });
-            replaceRoute(router, getLoginRouteWithReturn(pathname));
+            replaceRoute(router, getLoginRouteWithReturn(getCurrentHref()));
           }
           setCheckingAccess(false);
           return;
@@ -310,7 +317,7 @@ export default function RootLayout() {
             route: pathname,
             context: 'RootLayout',
           });
-          replaceRoute(router, getLoginRouteWithReturn(pathname, { reauth: true }));
+          replaceRoute(router, getLoginRouteWithReturn(getCurrentHref(), { reauth: true }));
         }
 
         setCheckingAccess(false);
@@ -326,6 +333,11 @@ export default function RootLayout() {
 
   useEffect(() => {
     pathnameRef.current = pathname;
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      hrefRef.current = `${window.location.pathname || pathname}${window.location.search || ''}`;
+    } else {
+      hrefRef.current = pathname;
+    }
   }, [pathname]);
 
   useEffect(() => {

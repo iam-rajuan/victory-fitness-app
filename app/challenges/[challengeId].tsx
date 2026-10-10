@@ -141,19 +141,22 @@ export default function ChallengeDetailScreen() {
       const origin =
         Platform.OS === 'web' && typeof window !== 'undefined'
           ? window.location.origin
-          : 'https://victory-fitness-app.vercel.app';
-      const inviteUrl = `${origin}/register?challenge_id=${detail.challenge_id}${inviterId}&signup_source=challenge_invite`;
-      const msg = `${t('Join me in the')} "${detail.title}" ${t('challenge on Victory Fitness!')}\n${inviteUrl}`;
+          : 'https://app.victoryfitnessapp.com';
+      const inviteUrl = `${origin}/register?challenge_id=${detail.challenge_id}${inviterId}&source=challenge_invite`;
+      const msg = [
+        `${t('Join me in the')} "${detail.title}" ${t('challenge on Victory Fitness!')}`,
+        t('You get your own challenge days from the moment you join, and we can still cheer each other on from the same board.'),
+        `${t('Join here, or create your Victory Fitness account first:')} ${inviteUrl}`,
+      ].join('\n\n');
 
       if (Platform.OS === 'web' && typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
         await navigator.share({
           title: detail.title,
-          text: `${t('Join me in the')} "${detail.title}" ${t('challenge on Victory Fitness!')}`,
-          url: inviteUrl,
+          text: msg,
         });
         return;
       }
-      await Clipboard.setStringAsync(inviteUrl);
+      await Clipboard.setStringAsync(msg);
       setInviteCopied(true);
       setTimeout(() => setInviteCopied(false), 3500);
       Alert.alert(

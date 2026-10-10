@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { apiRequest } from '../../lib/api';
+import { useLanguage } from '../../lib/i18n';
 
 export interface ClaudeInviteViewProps {
   onClose: () => void;
@@ -50,15 +51,22 @@ export function ClaudeInviteView({
   inviterId,
   isOverlay = false,
 }: ClaudeInviteViewProps) {
+  const { language } = useLanguage();
   const [copied, setCopied] = useState(false);
   const [inviteState, setInviteState] = useState<{ id: string; url: string } | null>(null);
   const [isPreparingInvite, setIsPreparingInvite] = useState(false);
 
   const displayTitle = challengeTitle || 'Challenge';
   const displayDays = challengeDays || 1;
-  const inviteMessage = `“Join ${userName}'s team for the ${displayTitle} on Victory Fitness. We're in this together.”`;
   const fallbackInviteUrl = buildChallengeInviteUrl({ challengeId, inviterId });
   const inviteUrl = inviteState?.url || fallbackInviteUrl;
+  const inviteMessage = buildChallengeInviteMessage({
+    language,
+    userName,
+    challengeTitle: displayTitle,
+    challengeDays: displayDays,
+    inviteUrl,
+  });
 
   const prepareInvite = async () => {
     if (inviteState) return inviteState;
@@ -93,7 +101,13 @@ export function ClaudeInviteView({
   const handleShareWhatsApp = async () => {
     try {
       const invite = await prepareInvite();
-      const shareText = `${inviteMessage}\n\n${invite.url}`;
+      const shareText = buildChallengeInviteMessage({
+        language,
+        userName,
+        challengeTitle: displayTitle,
+        challengeDays: displayDays,
+        inviteUrl: invite.url,
+      });
       const waUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
       if (Platform.OS === 'web') {
         if (typeof window !== 'undefined') {
@@ -115,10 +129,17 @@ export function ClaudeInviteView({
   const handleCopyLink = async () => {
     try {
       const invite = await prepareInvite();
+      const shareText = buildChallengeInviteMessage({
+        language,
+        userName,
+        challengeTitle: displayTitle,
+        challengeDays: displayDays,
+        inviteUrl: invite.url,
+      });
       if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(invite.url);
+        await navigator.clipboard.writeText(shareText);
       } else {
-        await Clipboard.setStringAsync(invite.url);
+        await Clipboard.setStringAsync(shareText);
       }
     } catch {
       Alert.alert('Invite Link', inviteUrl);
@@ -131,7 +152,13 @@ export function ClaudeInviteView({
   const handleEmail = async () => {
     const invite = await prepareInvite();
     const subject = `Join ${userName} for the ${displayTitle}`;
-    const body = `${inviteMessage}\n\n${invite.url}`;
+    const body = buildChallengeInviteMessage({
+      language,
+      userName,
+      challengeTitle: displayTitle,
+      challengeDays: displayDays,
+      inviteUrl: invite.url,
+    });
     const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       window.location.href = mailtoUrl;
@@ -145,15 +172,22 @@ export function ClaudeInviteView({
   const handleInstagram = async () => {
     try {
       const invite = await prepareInvite();
+      const shareText = buildChallengeInviteMessage({
+        language,
+        userName,
+        challengeTitle: displayTitle,
+        challengeDays: displayDays,
+        inviteUrl: invite.url,
+      });
       if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(invite.url);
+        await navigator.clipboard.writeText(shareText);
       } else {
-        await Clipboard.setStringAsync(invite.url);
+        await Clipboard.setStringAsync(shareText);
       }
     } catch {}
     Alert.alert(
       'Share to Instagram',
-      `Invite link copied to clipboard!\nOpen Instagram and paste it in your Story sticker or direct message.`
+      `Invite message copied to clipboard!\nOpen Instagram and paste it in your Story sticker or direct message.`
     );
   };
 
@@ -309,6 +343,67 @@ export default function ClaudeInviteModal({
   );
 }
 
+function buildChallengeInviteMessage({
+  language,
+  userName,
+  challengeTitle,
+  challengeDays,
+  inviteUrl,
+}: {
+  language: string;
+  userName: string;
+  challengeTitle: string;
+  challengeDays: number;
+  inviteUrl: string;
+}) {
+  const safeUserName = userName || 'A Victory Fitness member';
+  const safeTitle = challengeTitle || 'Challenge';
+  const days = Math.max(1, Number(challengeDays || 1));
+  const templates: Record<string, string> = {
+    de: [
+      `${safeUserName} lädt dich zur Challenge "${safeTitle}" bei Victory Fitness ein.`,
+      `Du bekommst deine eigenen ${days} Tage ab dem Moment, in dem du beitrittst. Ihr seid trotzdem auf demselben Board und könnt euch gegenseitig motivieren.`,
+      `Hier beitreten oder zuerst dein Konto erstellen: ${inviteUrl}`,
+    ].join('\n\n'),
+    es: [
+      `${safeUserName} te invita al reto "${safeTitle}" en Victory Fitness.`,
+      `Tendrás tus propios ${days} días desde el momento en que te unes. Aun así estarán en el mismo tablero para apoyarse.`,
+      `Únete aquí o crea primero tu cuenta: ${inviteUrl}`,
+    ].join('\n\n'),
+    fr: [
+      `${safeUserName} t'invite au challenge "${safeTitle}" sur Victory Fitness.`,
+      `Tu auras tes propres ${days} jours à partir du moment où tu rejoins. Vous serez quand même sur le même classement pour vous encourager.`,
+      `Rejoins ici ou crée d'abord ton compte : ${inviteUrl}`,
+    ].join('\n\n'),
+    it: [
+      `${safeUserName} ti invita alla challenge "${safeTitle}" su Victory Fitness.`,
+      `Avrai i tuoi ${days} giorni dal momento in cui entri. Sarete comunque sulla stessa classifica per motivarvi.`,
+      `Entra qui o crea prima il tuo account: ${inviteUrl}`,
+    ].join('\n\n'),
+    pt: [
+      `${safeUserName} está te convidando para o desafio "${safeTitle}" no Victory Fitness.`,
+      `Você terá seus próprios ${days} dias a partir do momento em que entrar. Mesmo assim, vocês ficam no mesmo ranking para se apoiar.`,
+      `Entre aqui ou crie sua conta primeiro: ${inviteUrl}`,
+    ].join('\n\n'),
+    nl: [
+      `${safeUserName} nodigt je uit voor de challenge "${safeTitle}" op Victory Fitness.`,
+      `Je krijgt je eigen ${days} dagen vanaf het moment dat je meedoet. Jullie staan toch op hetzelfde bord om elkaar te motiveren.`,
+      `Doe hier mee of maak eerst je account aan: ${inviteUrl}`,
+    ].join('\n\n'),
+    bn: [
+      `${safeUserName} তোমাকে Victory Fitness-এর "${safeTitle}" চ্যালেঞ্জে আমন্ত্রণ জানাচ্ছে।`,
+      `তুমি যোগ দেওয়ার সময় থেকে নিজের ${days} দিন পাবে। তবুও তোমরা একই বোর্ডে থাকবে এবং একে অন্যকে উৎসাহ দিতে পারবে।`,
+      `এখানে যোগ দাও অথবা আগে অ্যাকাউন্ট তৈরি করো: ${inviteUrl}`,
+    ].join('\n\n'),
+  };
+
+  return templates[language] || [
+    `${safeUserName} invited you to join the "${safeTitle}" challenge on Victory Fitness.`,
+    `You get your own ${days} days from the moment you join. You will still be on the same board so you can cheer each other on.`,
+    `Join here, or create your Victory Fitness account first: ${inviteUrl}`,
+  ].join('\n\n');
+}
+
 function buildChallengeInviteUrl({
   challengeId,
   inviterId,
@@ -320,7 +415,7 @@ function buildChallengeInviteUrl({
 }) {
   const baseUrl = Platform.OS === 'web' && typeof window !== 'undefined'
     ? window.location.origin
-    : 'https://victoryfitnessapp.com';
+    : 'https://app.victoryfitnessapp.com';
   const params = new URLSearchParams();
   if (challengeId) params.set('challenge_id', challengeId);
   if (inviterId) params.set('inviter_id', inviterId);
