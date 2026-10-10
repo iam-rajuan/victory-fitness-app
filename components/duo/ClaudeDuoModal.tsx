@@ -167,6 +167,46 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
     ]);
   };
 
+  const resetDuoState = () => {
+    setPairId('');
+    setInviteCode('');
+    setInputCode('');
+    setShowCodeInput(false);
+    setDuoState('inactive');
+    setPartnerName('');
+    setPartnerProfileImage('');
+    setDaysInSync(0);
+    setPartnerTrainedToday(false);
+    setYouTrainedToday(false);
+  };
+
+  const handleDiscardInvite = () => {
+    if (!pairId) {
+      resetDuoState();
+      return;
+    }
+
+    Alert.alert('Discard code', 'This will cancel the pending duo invite and return your account to normal.', [
+      { text: 'Keep code', style: 'cancel' },
+      {
+        text: 'Discard code',
+        style: 'destructive',
+        onPress: async () => {
+          setLoading(true);
+          try {
+            await unpairAccountabilityPartner(pairId);
+            resetDuoState();
+            Alert.alert('Code discarded', 'Your pending duo invite has been cancelled.');
+          } catch (error: any) {
+            Alert.alert('Could not discard code', error?.message || 'Please try again.');
+          } finally {
+            setLoading(false);
+          }
+        },
+      },
+    ]);
+  };
+
   const handleCreateInvite = async () => {
     setLoading(true);
     try {
@@ -350,6 +390,15 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
                     <Text style={styles.linkBtnText}>Link</Text>
                   </TouchableOpacity>
                 </View>
+
+                <TouchableOpacity
+                  style={styles.discardBtn}
+                  activeOpacity={0.85}
+                  disabled={loading}
+                  onPress={handleDiscardInvite}
+                >
+                  <Text style={styles.discardBtnText}>{loading ? 'Discarding...' : 'Discard code'}</Text>
+                </TouchableOpacity>
               </View>
             )}
 
@@ -671,6 +720,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: IVORY,
+  },
+  discardBtn: {
+    height: 46,
+    borderRadius: 13,
+    borderWidth: 1.5,
+    borderColor: 'rgba(181, 101, 29, 0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+  },
+  discardBtnText: {
+    fontFamily: DMSANS,
+    fontSize: 14,
+    fontWeight: '700',
+    color: COPPER,
   },
   statsRow: {
     flexDirection: 'row',

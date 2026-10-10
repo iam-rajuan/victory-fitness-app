@@ -66,10 +66,7 @@ export default function ClaudeAlsoTodayCard({
             { borderBottomColor: isDark ? 'rgba(247, 243, 238, 0.1)' : 'rgba(13, 43, 69, 0.08)' },
           ]}
           onPress={() =>
-            pushRoute(router, {
-              pathname: '/(tabs)/profile',
-              params: { openDuo: '1' },
-            })
+            pushRoute(router, '/duo')
           }
         >
           {partnerName ? (
