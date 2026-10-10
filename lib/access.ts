@@ -168,6 +168,7 @@ export function normalizeSubscriptionTier(value?: string | null): SubscriptionTi
 export function isGoldTrialActive(
   user?: {
     subscription_purchase_source?: string | null;
+    subscription_status?: string | null;
     gold_trial?: AuthUser['gold_trial'] | null;
     trial_tier_granted?: string | null;
   } | null,
@@ -177,7 +178,9 @@ export function isGoldTrialActive(
   }
 
   if (String(user.subscription_purchase_source ?? '').trim().toLowerCase() === 'beta_trial') {
-    return false;
+    // The API calculates beta expiry from trial_end_at and returns the
+    // resulting status.  Do not infer expiry from browser storage.
+    return String(user.subscription_status ?? '').trim().toUpperCase() === 'ACTIVE';
   }
 
   if (typeof user.gold_trial?.active === 'boolean') {

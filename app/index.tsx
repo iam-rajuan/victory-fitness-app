@@ -20,7 +20,9 @@ export default function Index() {
         const tokens = await getValidAuthTokens();
         if (cancelled) return;
         if (tokens?.access_token) {
-          const user = await fetchCurrentUser().catch(() => getAuthUser());
+          // Prefer the server record: onboarding completion and trial expiry
+          // are persisted there and a cached profile may be stale after login.
+          const user = await fetchCurrentUser({ forceRefresh: true }).catch(() => getAuthUser());
           if (cancelled) return;
           if (user) {
             if (await shouldRedirectGermanyUserToGermanyDomain(user)) {
@@ -48,7 +50,7 @@ export default function Index() {
     };
   }, [router]);
 
-  if (isAuthenticated === true) {
+  if (isAuthenticated === null || isAuthenticated === true) {
     return (
       <View style={{ flex: 1, backgroundColor: Colors.obsidian, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color={Colors.primary} />

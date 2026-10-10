@@ -104,7 +104,7 @@ function buildPlanOptions(apiPlans: SubscriptionPlan[]): TierOption[] {
     return {
       tier,
       planId: apiPlan?.id ?? (isBeta ? 'plan-gold-beta-21-day' : tier),
-      title: apiPlan?.title ?? (isBeta ? '21-Day Gold Beta' : local?.title ?? tier),
+      title: isBeta ? '21-Day Trial' : apiPlan?.title ?? local?.title ?? tier,
       description: apiPlan?.description || DEFAULT_DESCRIPTIONS[tier] || local?.description || '',
       yearly: isBeta ? 0 : apiPlan?.discountedPriceYearly ?? apiPlan?.priceYearly ?? DEFAULT_PRICES[tier]?.yearly ?? null,
       monthly: isBeta ? 0 : apiPlan?.discountedPriceMonthly ?? apiPlan?.priceMonthly ?? DEFAULT_PRICES[tier]?.monthly ?? null,
@@ -127,6 +127,7 @@ export default function PlanSelectionScreen() {
   const [saving, setSaving] = useState(false);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [currentTier, setCurrentTier] = useState<SubscriptionTier>('NONE');
+  const [betaTrialActive, setBetaTrialActive] = useState(false);
   const [selectedTier, setSelectedTier] = useState<SubscriptionTier>('GOLD_BETA');
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('yearly');
   const [errorMessage, setErrorMessage] = useState('');
@@ -145,10 +146,14 @@ export default function PlanSelectionScreen() {
         fetchSubscriptionPlans(),
       ]);
       const nextCurrentTier = getDisplayTierForUser(user);
+      const hasActiveBetaTrial =
+        String(user.subscription_purchase_source ?? '').trim().toLowerCase() === 'beta_trial'
+        && String(user.subscription_status ?? '').trim().toUpperCase() === 'ACTIVE';
       const items = Array.isArray(plansResponse?.items) ? plansResponse.items : [];
       setCurrentTier(nextCurrentTier);
+      setBetaTrialActive(hasActiveBetaTrial);
       setPlans(items);
-      setSelectedTier(nextCurrentTier === 'NONE' ? 'GOLD_BETA' : nextCurrentTier);
+      setSelectedTier(hasActiveBetaTrial ? 'GOLD_BETA' : nextCurrentTier === 'NONE' ? 'GOLD_BETA' : nextCurrentTier);
       return user;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to load subscription plans.';
@@ -201,7 +206,7 @@ export default function PlanSelectionScreen() {
   const options = useMemo(() => buildPlanOptions(plans), [plans]);
   const selectedPlan = options.find((option) => option.tier === selectedTier) ?? options[0];
   const isBetaSelected = selectedPlan?.planId === 'plan-gold-beta-21-day' || selectedPlan?.tier === 'GOLD_BETA';
-  const isCurrentPlan = currentTier === selectedPlan?.tier && currentTier !== 'NONE';
+  const isCurrentPlan = betaTrialActive || (currentTier === selectedPlan?.tier && currentTier !== 'NONE');
 
   const handleBack = () => {
     if (!requiresPlanSelection && router.canGoBack()) {
@@ -290,7 +295,7 @@ export default function PlanSelectionScreen() {
             </Text>
           </RequirementAuditBoundary>
 
-          <View style={styles.segmentTrack}>
+          {!betaTrialActive ? <View style={styles.segmentTrack}>
             <TouchableOpacity
               style={[styles.segmentButton, billingCycle === 'yearly' && styles.segmentButtonActive]}
               onPress={() => setBillingCycle('yearly')}
@@ -309,12 +314,19 @@ export default function PlanSelectionScreen() {
                 Monthly
               </Text>
             </TouchableOpacity>
-          </View>
+          </View> : null}
+
+          {betaTrialActive ? (
+            <View style={styles.trialNotice}>
+              <Text style={styles.trialNoticeText}>Your 21-Day Gold Beta is active. Paid plans unlock after your trial ends.</Text>
+            </View>
+          ) : null}
 
           <View style={styles.cardsWrap}>
             {options.map((option) => {
               const active = selectedTier === option.tier;
               const isBeta = option.tier === 'GOLD_BETA';
+              const disabledDuringBeta = betaTrialActive && !isBeta;
               const price = billingCycle === 'yearly' ? option.yearly : option.monthly;
               const companionPrice = billingCycle === 'yearly' ? option.monthly : option.yearly;
               const accent = getTierAccent(option.tier);
@@ -325,8 +337,10 @@ export default function PlanSelectionScreen() {
                     styles.planCard,
                     active && styles.planCardActive,
                     isBeta && styles.betaCard,
+                    disabledDuringBeta && styles.planCardDisabled,
                   ]}
-                  activeOpacity={0.86}
+                  activeOpacity={disabledDuringBeta ? 1 : 0.86}
+                  disabled={disabledDuringBeta}
                   onPress={() => setSelectedTier(option.tier)}
                 >
                   <View style={styles.cardHeaderRow}>
@@ -390,7 +404,7 @@ export default function PlanSelectionScreen() {
             ) : (
               <Text style={styles.ctaText}>
                 {isCurrentPlan
-                  ? 'Continue'
+                  ? 'Continue to Home'
                   : isBetaSelected
                     ? 'Start 21-Day Beta'
                     : `Choose ${selectedPlan?.title.replace('Victory ', '') ?? 'Plan'}`}
@@ -507,6 +521,24 @@ const styles = StyleSheet.create({
   planCardActive: {
     borderColor: GOLD,
     borderWidth: 2,
+  },
+  planCardDisabled: {
+    opacity: 0.48,
+  },
+  trialNotice: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(201,148,58,0.42)',
+    backgroundColor: 'rgba(201,148,58,0.12)',
+    padding: 12,
+    marginBottom: 18,
+  },
+  trialNoticeText: {
+    fontFamily: INTER,
+    color: IVORY,
+    fontSize: 12.5,
+    lineHeight: 18,
+    fontWeight: '700',
   },
   cardHeaderRow: {
     flexDirection: 'row',

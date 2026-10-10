@@ -55,12 +55,13 @@ export default function OnboardingScreen() {
 
       if (tokens) {
         try {
-          const user = await fetchCurrentUser();
-          // Only redirect if onboarding is completed, subscription is active,
-          // AND user does not have an active onboarding session in progress
-          const hasActiveSession = Boolean(params.step || savedStep);
-          if (!hasActiveSession && user.onboarding_completed) {
-            replaceRoute(router, '/(tabs)');
+          const user = await fetchCurrentUser({ forceRefresh: true });
+          // Completion is server-owned. A stale local step is only progress
+          // for an unfinished flow and must never reopen completed onboarding.
+          if (user.onboarding_completed) {
+            await AsyncStorage.removeItem(ONBOARDING_STEP_KEY);
+            await AsyncStorage.removeItem('@vf_onboarding_answers');
+            replaceRoute(router, getPostAuthRoute(user));
             return;
           }
           if (!cancelled) {

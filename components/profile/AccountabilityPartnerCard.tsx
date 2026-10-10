@@ -12,7 +12,9 @@ import {
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { Colors } from '../../constants/Colors';
+import { replaceRoute } from '../../lib/navigation';
 import { Fonts } from '../../constants/Typography';
 import { useLanguage } from '../../lib/i18n';
 import {
@@ -29,6 +31,7 @@ interface AccountabilityPartnerCardProps {
 }
 
 export default function AccountabilityPartnerCard({ onStatusChange }: AccountabilityPartnerCardProps) {
+  const router = useRouter();
   const { t } = useLanguage();
   const [data, setData] = useState<AccountabilityPartnerResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -75,6 +78,7 @@ export default function AccountabilityPartnerCard({ onStatusChange }: Accountabi
       );
       await loadPartnerData(true);
       onStatusChange?.();
+      replaceRoute(router, '/(tabs)');
     } catch (err: any) {
       Alert.alert(t('Error'), err?.detail || err?.message || t('Failed to create invite.'));
     } finally {

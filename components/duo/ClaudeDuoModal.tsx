@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'expo-router';
 import {
   StyleSheet,
   Text,
@@ -19,6 +20,7 @@ import {
   nudgeAccountabilityPartner,
   unpairAccountabilityPartner,
 } from '../../lib/api';
+import { replaceRoute } from '../../lib/navigation';
 
 interface ClaudeDuoModalProps {
   visible: boolean;
@@ -40,6 +42,7 @@ const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' })
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
 
 export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps) {
+  const router = useRouter();
   const [duoState, setDuoState] = useState<DuoState>('inactive');
   const [pairId, setPairId] = useState('');
   const [partnerName, setPartnerName] = useState('');
@@ -171,6 +174,9 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
       setPairId(res.pair_id || '');
       setInviteCode(res.invite_code || '');
       setDuoState('pending');
+      Alert.alert('Invite Created', 'Your duo code is ready to share.');
+      onClose();
+      replaceRoute(router, '/(tabs)');
     } catch (error: any) {
       Alert.alert('Could not create invite', error?.message || 'Please try again.');
     } finally {
