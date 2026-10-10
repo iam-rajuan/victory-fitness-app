@@ -55,6 +55,22 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
   const [youTrainedToday, setYouTrainedToday] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const notify = (title: string, message: string) => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.alert(`${title}\n\n${message}`);
+      return;
+    }
+    Alert.alert(title, message);
+  };
+
+  const copyText = async (text: string) => {
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+    await Clipboard.setStringAsync(text);
+  };
+
   useEffect(() => {
     if (!visible) return;
 
@@ -96,8 +112,23 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
 
   const handleCopyCode = async () => {
     if (!inviteCode) return;
-    await Clipboard.setStringAsync(inviteCode);
-    Alert.alert('Copied', `Pairing code ${inviteCode} copied to clipboard!`);
+    try {
+      await copyText(inviteCode);
+      notify('Copied', `Pairing code ${inviteCode} copied to clipboard.`);
+    } catch {
+      notify('Copy failed', `Copy this pairing code manually: ${inviteCode}`);
+    }
+  };
+
+  const handleCopyInviteText = async () => {
+    if (!inviteCode) return;
+    const text = `Join my Accountability Duo on Victory Fitness. Enter code: ${inviteCode}`;
+    try {
+      await copyText(text);
+      notify('Link copied', 'The duo invite text was copied to your clipboard.');
+    } catch {
+      notify('Copy failed', text);
+    }
   };
 
   const handleShareWhatsApp = () => {
@@ -106,7 +137,7 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
     } else {
-      Alert.alert('WhatsApp Share', text);
+      notify('WhatsApp Share', text);
     }
   };
 
@@ -121,9 +152,9 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
       setPartnerName(accepted.partner?.name || accepted.partner?.email?.split('@')[0] || '');
       setPartnerProfileImage('');
       setShowCodeInput(false);
-      Alert.alert('Duo Active', 'You are now synced with your accountability partner!');
+      notify('Duo Active', 'You are now synced with your accountability partner!');
     } catch (error: any) {
-      Alert.alert('Code not accepted', error?.message || 'That invite code could not be used.');
+      notify('Code not accepted', error?.message || 'That invite code could not be used.');
     } finally {
       setLoading(false);
     }
@@ -131,14 +162,14 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
 
   const handleNudge = async () => {
     if (!pairId) {
-      Alert.alert('Duo not ready', 'Your accountability pair is not active yet.');
+      notify('Duo not ready', 'Your accountability pair is not active yet.');
       return;
     }
     try {
       await nudgeAccountabilityPartner(pairId);
-      Alert.alert('Nudge Sent', `A gentle nudge was sent to ${partnerName}!`);
+      notify('Nudge Sent', `A gentle nudge was sent to ${partnerName}!`);
     } catch (error: any) {
-      Alert.alert('Could not send nudge', error?.message || 'Please try again.');
+      notify('Could not send nudge', error?.message || 'Please try again.');
     }
   };
 
@@ -180,9 +211,32 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
     setYouTrainedToday(false);
   };
 
+  const discardInvite = async () => {
+    setLoading(true);
+    try {
+      if (pairId) {
+        await unpairAccountabilityPartner(pairId);
+      }
+      resetDuoState();
+      notify('Code discarded', 'Your pending duo invite has been cancelled.');
+    } catch (error: any) {
+      notify('Could not discard code', error?.message || 'Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDiscardInvite = () => {
     if (!pairId) {
       resetDuoState();
+      return;
+    }
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const confirmed = window.confirm('Discard this pending duo invite and return your account to normal?');
+      if (confirmed) {
+        void discardInvite();
+      }
       return;
     }
 
@@ -191,17 +245,8 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
       {
         text: 'Discard code',
         style: 'destructive',
-        onPress: async () => {
-          setLoading(true);
-          try {
-            await unpairAccountabilityPartner(pairId);
-            resetDuoState();
-            Alert.alert('Code discarded', 'Your pending duo invite has been cancelled.');
-          } catch (error: any) {
-            Alert.alert('Could not discard code', error?.message || 'Please try again.');
-          } finally {
-            setLoading(false);
-          }
+        onPress: () => {
+          void discardInvite();
         },
       },
     ]);
@@ -214,11 +259,11 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
       setPairId(res.pair_id || '');
       setInviteCode(res.invite_code || '');
       setDuoState('pending');
-      Alert.alert('Invite Created', 'Your duo code is ready to share.');
+      notify('Invite Created', 'Your duo code is ready to share.');
       onClose();
       replaceRoute(router, '/(tabs)');
     } catch (error: any) {
-      Alert.alert('Could not create invite', error?.message || 'Please try again.');
+      notify('Could not create invite', error?.message || 'Please try again.');
     } finally {
       setLoading(false);
     }
@@ -385,7 +430,7 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
                   <TouchableOpacity
                     style={styles.linkBtn}
                     activeOpacity={0.85}
-                    onPress={handleCopyCode}
+                    onPress={handleCopyInviteText}
                   >
                     <Text style={styles.linkBtnText}>Link</Text>
                   </TouchableOpacity>
