@@ -199,6 +199,19 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
     }
   };
 
+  const swapPartner = async () => {
+    setLoading(true);
+    try {
+      if (pairId) await unpairAccountabilityPartner(pairId);
+      resetDuoState();
+      notify('Duo slot reopened', 'Your current duo has ended. Invite a new partner when you are ready.');
+    } catch (error: any) {
+      notify('Could not swap partner', error?.message || 'Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleEndDuo = () => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       const confirmed = window.confirm(`End your accountability duo with ${displayPartnerName}?`);
@@ -215,6 +228,27 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
         style: 'destructive',
         onPress: () => {
           void endDuo();
+        },
+      },
+    ]);
+  };
+
+  const handleSwapPartner = () => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const confirmed = window.confirm(`Swap ${displayPartnerName} and reopen your duo invite slot?`);
+      if (confirmed) {
+        void swapPartner();
+      }
+      return;
+    }
+
+    Alert.alert('Swap Partner', `${displayPartnerName} will be disconnected and your duo slot will reopen.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Swap partner',
+        style: 'destructive',
+        onPress: () => {
+          void swapPartner();
         },
       },
     ]);
@@ -526,7 +560,7 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
                 <TouchableOpacity
                   style={styles.manageRow}
                   activeOpacity={0.7}
-                  onPress={() => Alert.alert('Swap Partner', `${displayPartnerName} will be informed and the duo slot reopened.`)}
+                  onPress={handleSwapPartner}
                 >
                   <Text style={styles.manageRowTitle}>Swap partner</Text>
                   <Text style={styles.manageRowMeta}>{displayPartnerName} is told</Text>
