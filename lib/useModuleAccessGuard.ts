@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { fetchCurrentUser, getAuthUser, getValidAuthTokens } from './api';
-import { getPostAuthRoute, isRouteAllowedForPlan } from './access';
+import { getLoginRouteWithReturn, getPostAuthRoute, isRouteAllowedForPlan } from './access';
 import { appendRunLog } from './runLog';
 import { replaceRoute } from './navigation';
 
@@ -48,7 +48,7 @@ export function useModuleAccessGuard(routePath: string) {
             route: routePath,
             context: 'ModuleGuard',
           });
-          replaceRoute(router, '/login');
+          replaceRoute(router, getLoginRouteWithReturn(routePath));
           return;
         }
 
@@ -57,11 +57,7 @@ export function useModuleAccessGuard(routePath: string) {
           return;
         }
 
-        if (await applyAccess(cachedUser)) {
-          return;
-        }
-
-        const user = await fetchCurrentUser();
+        const user = await fetchCurrentUser({ forceRefresh: true }).catch(() => cachedUser);
         if (cancelled) {
           return;
         }
@@ -78,7 +74,7 @@ export function useModuleAccessGuard(routePath: string) {
             route: routePath,
             context: 'ModuleGuard',
           });
-          replaceRoute(router, '/login');
+          replaceRoute(router, getLoginRouteWithReturn(routePath, { reauth: true }));
           return;
         }
       } finally {

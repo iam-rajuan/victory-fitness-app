@@ -58,7 +58,7 @@ export default function OnboardingScreen() {
           const user = await fetchCurrentUser({ forceRefresh: true });
           // Completion is server-owned. A stale local step is only progress
           // for an unfinished flow and must never reopen completed onboarding.
-          if (user.onboarding_completed) {
+          if (user.onboarding_completed || isSubscriptionActive(user)) {
             await AsyncStorage.removeItem(ONBOARDING_STEP_KEY);
             await AsyncStorage.removeItem('@vf_onboarding_answers');
             replaceRoute(router, getPostAuthRoute(user));

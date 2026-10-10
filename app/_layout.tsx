@@ -7,7 +7,7 @@ import { Colors } from '../constants/Colors';
 import { Fonts } from '../constants/Typography';
 import PwaInstallPrompt from '../components/PwaInstallPrompt';
 import { clearAuthTokens, fetchCurrentUser, getAuthUser, getValidAuthTokens, setAuthFailureHandler } from '../lib/api';
-import { getPostAuthRoute, isAdminRestrictedFromApp, isPublicRoute, isRouteAllowedForPlan, isSubscriptionActive } from '../lib/access';
+import { getLoginRouteWithReturn, getPostAuthRoute, isAdminRestrictedFromApp, isPublicRoute, isRouteAllowedForPlan, isSubscriptionActive } from '../lib/access';
 import {
   authenticateWithBiometrics,
   isBiometricSessionUnlocked,
@@ -137,7 +137,7 @@ export default function RootLayout() {
           route: pathnameRef.current,
           context: 'RootLayout',
         });
-        replaceRoute(router, '/login?reauth=1');
+        replaceRoute(router, getLoginRouteWithReturn(pathnameRef.current, { reauth: true }));
       });
 
     return () => {
@@ -200,7 +200,7 @@ export default function RootLayout() {
               route: pathname,
               context: 'RootLayout',
             });
-            replaceRoute(router, '/login?reauth=1');
+            replaceRoute(router, getLoginRouteWithReturn(pathname, { reauth: true }));
             return true;
           }
 
@@ -264,11 +264,11 @@ export default function RootLayout() {
             void appendRunLog({
               level: 'warning',
               title: 'Route blocked',
-              message: `Blocked unauthenticated access to ${pathname}; redirecting to /welcome.`,
+              message: `Blocked unauthenticated access to ${pathname}; redirecting to /login.`,
               route: pathname,
               context: 'RootLayout',
             });
-            replaceRoute(router, '/welcome');
+            replaceRoute(router, getLoginRouteWithReturn(pathname));
           }
           setCheckingAccess(false);
           return;
@@ -283,11 +283,7 @@ export default function RootLayout() {
           return;
         }
 
-        if (await applyAccess(cachedUser)) {
-          return;
-        }
-
-        const user = await fetchCurrentUser();
+        const user = await fetchCurrentUser({ forceRefresh: true }).catch(() => cachedUser);
         if (cancelled) {
           return;
         }
@@ -314,7 +310,7 @@ export default function RootLayout() {
             route: pathname,
             context: 'RootLayout',
           });
-          replaceRoute(router, '/login?reauth=1');
+          replaceRoute(router, getLoginRouteWithReturn(pathname, { reauth: true }));
         }
 
         setCheckingAccess(false);

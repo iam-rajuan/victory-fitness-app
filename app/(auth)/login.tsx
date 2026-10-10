@@ -52,7 +52,7 @@ const WEB_USES = [
 export default function LoginScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const { reauth, challenge_id } = useLocalSearchParams<{ reauth?: string; challenge_id?: string }>();
+  const { reauth, challenge_id, from } = useLocalSearchParams<{ reauth?: string; challenge_id?: string; from?: string }>();
   const { t, useDefaultLanguage, syncLanguageWithCurrentUser } = useLanguage();
 
   const [email, setEmail] = useState('');
@@ -92,7 +92,7 @@ export default function LoginScreen() {
           }
 
           await syncLanguageWithCurrentUser(user.id);
-          replaceRoute(router, getPostAuthRoute(user));
+          replaceRoute(router, getPostAuthRoute(user, from));
           return;
         }
       } catch {
@@ -116,7 +116,7 @@ export default function LoginScreen() {
     return () => {
       cancelled = true;
     };
-  }, [reauth, router, syncLanguageWithCurrentUser, t, useDefaultLanguage]);
+  }, [from, reauth, router, syncLanguageWithCurrentUser, t, useDefaultLanguage]);
 
   const handleLogin = async () => {
     const normalizedEmail = email.trim().toLowerCase();
@@ -198,12 +198,12 @@ export default function LoginScreen() {
           auth.returning_user.message,
           [
             { text: 'Choose your subscription', onPress: () => replaceRoute(router, '/plan') },
-            { text: 'Continue', style: 'cancel', onPress: () => replaceRoute(router, getPostAuthRoute(auth.user)) },
+            { text: 'Continue', style: 'cancel', onPress: () => replaceRoute(router, getPostAuthRoute(auth.user, from)) },
           ]
         );
         return;
       }
-      replaceRoute(router, getPostAuthRoute(auth.user));
+      replaceRoute(router, getPostAuthRoute(auth.user, from));
     } catch (error) {
       setErrorDialog(formatAppError(error));
     } finally {
@@ -240,12 +240,12 @@ export default function LoginScreen() {
         auth.returning_user.message,
         [
           { text: 'Choose your subscription', onPress: () => replaceRoute(router, '/plan') },
-          { text: 'Continue', style: 'cancel', onPress: () => replaceRoute(router, getPostAuthRoute(auth.user)) },
+          { text: 'Continue', style: 'cancel', onPress: () => replaceRoute(router, getPostAuthRoute(auth.user, from)) },
         ]
       );
       return;
     }
-    replaceRoute(router, getPostAuthRoute(auth.user));
+    replaceRoute(router, getPostAuthRoute(auth.user, from));
   };
 
   const handleGoogleLogin = async () => {
@@ -449,7 +449,10 @@ export default function LoginScreen() {
                 </TouchableOpacity>
                 <View style={styles.signupWrap}>
                   <Text style={styles.signupPrompt}>No account? </Text>
-                  <TouchableOpacity onPress={() => pushRoute(router, '/register')} activeOpacity={0.7}>
+                  <TouchableOpacity
+                    onPress={() => pushRoute(router, from ? { pathname: '/register', params: { from } } : '/register')}
+                    activeOpacity={0.7}
+                  >
                     <Text style={styles.signupHighlight}>Start free</Text>
                   </TouchableOpacity>
                 </View>

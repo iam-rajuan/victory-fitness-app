@@ -92,6 +92,7 @@ export default function RegisterScreen() {
     challenge_id?: string;
     invite_id?: string;
     referral_code?: string;
+    from?: string;
   }>();
   const source = params.source;
   const { useDefaultLanguage, syncLanguageWithCurrentUser } = useLanguage();
@@ -194,6 +195,7 @@ export default function RegisterScreen() {
         params: {
           email: normalizedEmail,
           challenge_id: params.challenge_id,
+          from: params.from,
         },
       });
     } catch (error) {
@@ -224,7 +226,7 @@ export default function RegisterScreen() {
         auth.returning_user.message,
         [
           { text: 'Choose your subscription', onPress: () => replaceRoute(router, '/plan') },
-          { text: 'Continue', style: 'cancel', onPress: () => replaceRoute(router, getPostAuthRoute(auth.user)) },
+          { text: 'Continue', style: 'cancel', onPress: () => replaceRoute(router, getPostAuthRoute(auth.user, params.from)) },
         ]
       );
       return;
@@ -236,7 +238,7 @@ export default function RegisterScreen() {
       replaceRoute(router, `/challenges/${pendingChallengeId}` as any);
       return;
     }
-    const postAuthRoute = getPostAuthRoute(auth.user);
+    const postAuthRoute = getPostAuthRoute(auth.user, params.from);
     replaceRoute(router, postAuthRoute === '/onboarding' ? '/onboarding?step=2' : postAuthRoute);
   };
 

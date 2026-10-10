@@ -157,6 +157,12 @@ const ALLOWED_PUBLIC_PATHS = ['/', '/welcome', '/login', '/register', '/verifica
 const ALLOWED_AUTHENTICATED_PATHS = ['/journal'] as const;
 const PLAN_PATH = '/plan';
 
+function getPathnameFromHref(href: string): string {
+  const trimmed = href.trim();
+  const queryIndex = trimmed.search(/[?#]/);
+  return queryIndex >= 0 ? trimmed.slice(0, queryIndex) || '/' : trimmed || '/';
+}
+
 export function normalizeSubscriptionTier(value?: string | null): SubscriptionTier {
   const tier = String(value ?? '').trim().toUpperCase().replace(/\s+/g, '_');
   if (tier === 'GOLD_BETA' || tier === 'SILVER' || tier === 'GOLD' || tier === 'PLATINUM' || tier === 'INNER_CIRCLE') {
@@ -343,6 +349,46 @@ export function isPublicRoute(pathname: string): boolean {
   });
 }
 
+export function getSafeReturnPath(value?: string | string[] | null): string | null {
+  const rawValue = Array.isArray(value) ? value[0] : value;
+  if (!rawValue) {
+    return null;
+  }
+
+  let candidate = String(rawValue).trim();
+  try {
+    candidate = decodeURIComponent(candidate);
+  } catch {
+    // Expo already decodes URL params in normal navigation.
+  }
+
+  if (!candidate.startsWith('/') || candidate.startsWith('//') || candidate.includes('\\')) {
+    return null;
+  }
+
+  const pathname = getPathnameFromHref(candidate);
+  if (isPublicRoute(pathname)) {
+    return null;
+  }
+
+  return candidate;
+}
+
+export function getLoginRouteWithReturn(pathname: string, options?: { reauth?: boolean }): string {
+  const params = new URLSearchParams();
+  if (options?.reauth) {
+    params.set('reauth', '1');
+  }
+
+  const returnPath = getSafeReturnPath(pathname);
+  if (returnPath) {
+    params.set('from', returnPath);
+  }
+
+  const query = params.toString();
+  return query ? `/login?${query}` : '/login';
+}
+
 export function isAdminRestrictedFromApp(user?: Pick<AuthUser, 'is_admin'> | null): boolean {
   return Boolean(user?.is_admin);
 }
@@ -359,7 +405,10 @@ export function getPostAuthRoute(
     | 'subscription_purchase_source'
     | 'gold_trial'
     | 'trial_tier_granted'
+    | 'subscription_access'
+    | 'subscription'
   > | null,
+  returnPath?: string | string[] | null,
 ): string {
   if (!user) {
     return '/login';
@@ -369,6 +418,10 @@ export function getPostAuthRoute(
   }
   if (!hasCompletedSetup(user)) {
     return '/onboarding';
+  }
+  const safeReturnPath = getSafeReturnPath(returnPath);
+  if (safeReturnPath && isRouteAllowedForPlan(getPathnameFromHref(safeReturnPath), user)) {
+    return safeReturnPath;
   }
   return isSubscriptionActive(user) ? '/(tabs)' : PLAN_PATH;
 }

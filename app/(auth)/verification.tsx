@@ -53,7 +53,7 @@ export default function VerificationScreen() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 768;
 
-  const params = useLocalSearchParams<{ email?: string; challenge_id?: string }>();
+  const params = useLocalSearchParams<{ email?: string; challenge_id?: string; from?: string }>();
   const email = (params.email ?? '').trim().toLowerCase();
 
   const codeInputRef = useRef<TextInput>(null);
@@ -127,7 +127,7 @@ export default function VerificationScreen() {
         replaceRoute(router, `/challenges/${pendingChallengeId}` as any);
         return;
       }
-      const postAuthRoute = getPostAuthRoute(auth.user);
+      const postAuthRoute = getPostAuthRoute(auth.user, params.from);
       replaceRoute(router, postAuthRoute === '/onboarding' ? '/onboarding?step=2' : postAuthRoute);
     } catch (error) {
       setErrorDialog(formatAppError(error));
