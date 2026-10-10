@@ -7,7 +7,7 @@
     "android": "expo run:android ",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "build:web": "NODE_OPTIONS=--dns-result-order=ipv4first EXPO_NO_TELEMETRY=1 CI=1 expo export --platform web && node scripts/generate-web-push-sw.mjs"
+    "build:web": "NODE_OPTIONS=--dns-result-order=ipv4first EXPO_NO_TELEMETRY=1 CI=1 expo export --platform web && node scripts/optimize-web-export.mjs && node scripts/generate-web-push-sw.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",

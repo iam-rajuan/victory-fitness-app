@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Stack, usePathname, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, AppState, Platform, Text, TouchableOpacity, View, StyleSheet } from 'react-native';
-import { useFonts } from 'expo-font';
+import { FontDisplay, useFonts } from 'expo-font';
 import { Colors } from '../constants/Colors';
 import { Fonts } from '../constants/Typography';
 import PwaInstallPrompt from '../components/PwaInstallPrompt';
@@ -42,7 +42,7 @@ export default function RootLayout() {
   const pathnameRef = useRef(pathname);
   const lastLoggedRouteRef = useRef<string | null>(null);
   const knownNotificationIdsRef = useRef<Set<string> | null>(null);
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts(Object.fromEntries(Object.entries({
     // Role 1: Display / Hero
     'ClashDisplay-Bold': require('../assets/fonts/ClashDisplay-Bold.ttf'),
     'Clash Display': require('../assets/fonts/ClashDisplay-Bold.ttf'),
@@ -67,7 +67,9 @@ export default function RootLayout() {
     Inter_500Medium: require('../assets/fonts/Inter_500Medium.ttf'),
     Inter_600SemiBold: require('../assets/fonts/Inter_600SemiBold.ttf'),
     Inter_700Bold: require('../assets/fonts/Inter_700Bold.ttf'),
-  });
+  }).map(([name, uri]) => [name, Platform.OS === 'web' ? { uri, display: FontDisplay.SWAP } : uri])));
+  // Web uses fallback fonts immediately; native retains its font-loading behavior.
+  const fontsReady = Platform.OS === 'web' || fontsLoaded || Boolean(fontError);
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [toastNotification, setToastNotification] = useState<PushNotificationEvent | null>(null);
   const [biometricLocked, setBiometricLocked] = useState(false);
@@ -116,12 +118,12 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (!fontsLoaded || checkingAccess || isPublicRoute(pathname)) return;
+    if (!fontsReady || checkingAccess || isPublicRoute(pathname)) return;
     startForegroundNotificationStream();
     return () => {
       stopForegroundNotificationStream();
     };
-  }, [checkingAccess, fontsLoaded, pathname]);
+  }, [checkingAccess, fontsReady, pathname]);
 
   useEffect(() => {
     setAuthFailureHandler(() => {
@@ -144,7 +146,7 @@ export default function RootLayout() {
   }, [router]);
 
   useEffect(() => {
-    if (!fontsLoaded) {
+    if (!fontsReady) {
       return;
     }
 
@@ -324,7 +326,7 @@ export default function RootLayout() {
     return () => {
       cancelled = true;
     };
-  }, [biometricUnlockNonce, fontsLoaded, pathname, router]);
+  }, [biometricUnlockNonce, fontsReady, pathname, router]);
 
   useEffect(() => {
     pathnameRef.current = pathname;
@@ -335,14 +337,14 @@ export default function RootLayout() {
   }, [pathname]);
 
   useEffect(() => {
-    if (!fontsLoaded || checkingAccess || isPublicRoute(pathname)) {
+    if (!fontsReady || checkingAccess || isPublicRoute(pathname)) {
       return;
     }
 
     void registerForPushNotificationsAsync().catch(() => {
       // Notifications are optional and must not block app access.
     });
-  }, [checkingAccess, fontsLoaded, pathname]);
+  }, [checkingAccess, fontsReady, pathname]);
 
   useEffect(() => {
     if (lastLoggedRouteRef.current === pathname) {
@@ -402,8 +404,13 @@ export default function RootLayout() {
     };
   }, []);
 
-  if (!fontsLoaded || checkingAccess) {
-    return null;
+  if (!fontsReady || checkingAccess) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#0D0D0D', alignItems: 'center', justifyContent: 'center', gap: 16 }} accessibilityRole="progressbar" accessibilityLabel="Loading Victory Fitness">
+        <ActivityIndicator size="large" color="#C9943A" />
+        <Text style={{ color: '#F7F3EE', fontSize: 16 }}>Loading Victory Fitness…</Text>
+      </View>
+    );
   }
 
   if (biometricLocked && !isPublicRoute(pathname)) {
