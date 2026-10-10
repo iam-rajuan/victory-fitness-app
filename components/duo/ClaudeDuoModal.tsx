@@ -54,6 +54,7 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
   const [partnerTrainedToday, setPartnerTrainedToday] = useState(false);
   const [youTrainedToday, setYouTrainedToday] = useState(false);
   const [loading, setLoading] = useState(false);
+  const displayPartnerName = partnerName.trim() || 'Your partner';
 
   const notify = (title: string, message: string) => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -71,37 +72,48 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
     await Clipboard.setStringAsync(text);
   };
 
+  const returnHomeAfterInviteSent = () => {
+    onClose();
+    replaceRoute(router, '/(tabs)');
+  };
+
+  const applyPairResponse = (res: any) => {
+    setPairId(String(res?.pair_id || ''));
+    if (res && (res.partner || res.partner_name || res.partner_user_id) && res.status === 'active') {
+      const partner = res.partner || {};
+      const name = String(partner.name || res.partner_name || partner.email?.split('@')[0] || res.partner_email?.split('@')[0] || 'Your partner').trim();
+      setDuoState('active');
+      setPartnerName(name || 'Your partner');
+      setPartnerProfileImage(String(partner.profileImage || res.partner_profile_image || '').trim());
+      setDaysInSync(Math.max(0, Number(res.days_in_sync || partner.days_in_sync || 0)));
+      setPartnerTrainedToday(Boolean(partner.trained_today ?? res.partner_checked_in_today));
+      setYouTrainedToday(Boolean(res.your_checked_in_today));
+    } else if (res && res.invite_code) {
+      setDuoState('pending');
+      setInviteCode(String(res.invite_code || ''));
+      setPartnerName('');
+      setPartnerProfileImage('');
+      setDaysInSync(0);
+      setPartnerTrainedToday(false);
+      setYouTrainedToday(false);
+    } else {
+      setDuoState('inactive');
+      setInviteCode('');
+      setPartnerName('');
+      setPartnerProfileImage('');
+      setDaysInSync(0);
+      setPartnerTrainedToday(false);
+      setYouTrainedToday(false);
+    }
+  };
+
   useEffect(() => {
     if (!visible) return;
 
     const loadPair = async () => {
       try {
         const res = await fetchAccountabilityPartner() as any;
-        setPairId(String(res?.pair_id || ''));
-        if (res && res.partner) {
-          setDuoState('active');
-          setPartnerName(res.partner.name || res.partner.email?.split('@')[0] || '');
-          setPartnerProfileImage(String(res.partner.profileImage || res.partner_profile_image || '').trim());
-          setDaysInSync(Math.max(0, Number(res.days_in_sync || res.partner.days_in_sync || 0)));
-          setPartnerTrainedToday(Boolean(res.partner.trained_today ?? res.partner_checked_in_today));
-          setYouTrainedToday(Boolean(res.your_checked_in_today));
-        } else if (res && res.invite_code) {
-          setDuoState('pending');
-          setInviteCode(String(res.invite_code || ''));
-          setPartnerName('');
-          setPartnerProfileImage('');
-          setDaysInSync(0);
-          setPartnerTrainedToday(false);
-          setYouTrainedToday(false);
-        } else {
-          setDuoState('inactive');
-          setInviteCode('');
-          setPartnerName('');
-          setPartnerProfileImage('');
-          setDaysInSync(0);
-          setPartnerTrainedToday(false);
-          setYouTrainedToday(false);
-        }
+        applyPairResponse(res);
       } catch {
         // Keep the current visible state if the refresh fails.
       }
@@ -115,6 +127,7 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
     try {
       await copyText(inviteCode);
       notify('Copied', `Pairing code ${inviteCode} copied to clipboard.`);
+      returnHomeAfterInviteSent();
     } catch {
       notify('Copy failed', `Copy this pairing code manually: ${inviteCode}`);
     }
@@ -126,6 +139,7 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
     try {
       await copyText(text);
       notify('Link copied', 'The duo invite text was copied to your clipboard.');
+      returnHomeAfterInviteSent();
     } catch {
       notify('Copy failed', text);
     }
@@ -136,8 +150,10 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
     const text = `Join my Accountability Duo on Victory Fitness! Enter code: ${inviteCode}`;
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+      returnHomeAfterInviteSent();
     } else {
       notify('WhatsApp Share', text);
+      returnHomeAfterInviteSent();
     }
   };
 
@@ -146,11 +162,8 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
     setLoading(true);
     try {
       const res = await acceptAccountabilityInvite(inputCode.trim().toUpperCase());
-      const accepted = res as typeof res & { partner?: { name?: string | null; email?: string | null } };
-      setPairId(res.pair_id || '');
-      setDuoState('active');
-      setPartnerName(accepted.partner?.name || accepted.partner?.email?.split('@')[0] || '');
-      setPartnerProfileImage('');
+      const refreshed = await fetchAccountabilityPartner().catch(() => res);
+      applyPairResponse(refreshed);
       setShowCodeInput(false);
       notify('Duo Active', 'You are now synced with your accountability partner!');
     } catch (error: any) {
@@ -260,8 +273,6 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
       setInviteCode(res.invite_code || '');
       setDuoState('pending');
       notify('Invite Created', 'Your duo code is ready to share.');
-      onClose();
-      replaceRoute(router, '/(tabs)');
     } catch (error: any) {
       notify('Could not create invite', error?.message || 'Please try again.');
     } finally {
@@ -315,20 +326,20 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
           {/* Main Duo Card matching lines 1777-1821 */}
           <View style={styles.mainCard}>
             <View style={styles.cardHeader}>
-              {duoState === 'active' && partnerProfileImage ? (
-                <Image source={{ uri: partnerProfileImage }} style={styles.avatarWrap} />
-              ) : (
-                <View style={styles.avatarWrap}>
-                  <Text style={styles.avatarText}>
-                    {duoState === 'active' ? partnerName.slice(0, 2).toUpperCase() : 'AD'}
-                  </Text>
-                </View>
-              )}
+                {duoState === 'active' && partnerProfileImage ? (
+                  <Image source={{ uri: partnerProfileImage }} style={styles.avatarWrap} />
+                ) : (
+                  <View style={styles.avatarWrap}>
+                    <Text style={styles.avatarText}>
+                      {duoState === 'active' ? displayPartnerName.slice(0, 2).toUpperCase() : 'AD'}
+                    </Text>
+                  </View>
+                )}
 
               <View style={styles.cardHeaderTextWrap}>
                 <Text style={styles.cardHeading}>
                   {duoState === 'active'
-                    ? `${partnerName.toUpperCase()} IS YOUR PARTNER`
+                    ? `${displayPartnerName.toUpperCase()} IS YOUR PARTNER`
                     : duoState === 'pending'
                     ? 'WAITING ON YOUR PARTNER'
                     : 'ACCOUNTABILITY DUO'}
@@ -347,7 +358,7 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
 
             <Text style={styles.cardBody}>
               {duoState === 'active'
-                ? `You and ${partnerName} share a single daily check-in. When either logs a workout, the other gets a green tick.`
+                ? `You and ${displayPartnerName} share a single daily check-in. When either logs a workout, the other gets a green tick.`
                 : 'Choose one person to see whether you trained today. No scores, no weights — just a tick when either of you logs a session.'}
             </Text>
 
@@ -473,8 +484,8 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
                   <View style={[styles.dot, { backgroundColor: GREEN }]} />
                   <Text style={styles.indicatorText}>
                     {partnerTrainedToday
-                      ? `${partnerName} trained today.`
-                      : `${partnerName} has not logged a workout today.`}
+                      ? `${displayPartnerName} trained today.`
+                      : `${displayPartnerName} has not logged a workout today.`}
                   </Text>
                 </View>
 
@@ -506,10 +517,10 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
                 <TouchableOpacity
                   style={styles.manageRow}
                   activeOpacity={0.7}
-                  onPress={() => Alert.alert('Swap Partner', `${partnerName} will be informed and the duo slot reopened.`)}
+                  onPress={() => Alert.alert('Swap Partner', `${displayPartnerName} will be informed and the duo slot reopened.`)}
                 >
                   <Text style={styles.manageRowTitle}>Swap partner</Text>
-                  <Text style={styles.manageRowMeta}>{partnerName} is told</Text>
+                  <Text style={styles.manageRowMeta}>{displayPartnerName} is told</Text>
                   <Text style={styles.manageRowChevron}>›</Text>
                 </TouchableOpacity>
 

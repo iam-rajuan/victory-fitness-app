@@ -225,8 +225,8 @@ export default function ProfileScreen() {
     nudgeTime: '20:30',
     templates: [] as Array<{ type: string; title: string; enabled: boolean; approved: boolean; channels: string[] }>,
   });
-  const [partnerTitle, setPartnerTitle] = useState('');
-  const [partnerNote, setPartnerNote] = useState('');
+  const [partnerTitle, setPartnerTitle] = useState('No accountability duo yet');
+  const [partnerNote, setPartnerNote] = useState('Set it up in a minute.');
   const [planPrice, setPlanPrice] = useState('Free');
   const [planDescription, setPlanDescription] = useState('Choose the plan that fits your training.');
   const [wearableDevice, setWearableDevice] = useState('No wearable connected');
@@ -377,6 +377,9 @@ export default function ProfileScreen() {
         } else if ((accountability as any)?.status === 'pending') {
           setPartnerTitle('Duo invite pending');
           setPartnerNote((accountability as any)?.invite_code ? `Code ${(accountability as any).invite_code}` : 'Waiting for your partner.');
+        } else {
+          setPartnerTitle('No accountability duo yet');
+          setPartnerNote('Set it up in a minute.');
         }
 
         const normalizedTier = normalizeTierLabel(userObj.subscription_tier || userObj.tier || userObj.membership_tier);
