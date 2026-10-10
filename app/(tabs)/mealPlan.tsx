@@ -32,7 +32,6 @@ import ClaudeShoppingListModal from '../../components/nutrition/ClaudeShoppingLi
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../lib/i18n';
 import { CURRENT_USER_CACHE_KEY, getNutritionMealLogsCacheKey, NUTRITION_PLAN_LATEST_CACHE_KEY } from '../../lib/cacheKeys';
-import { hydrateCachedResource } from '../../lib/resourceCache';
 import { useResourceStore } from '../../lib/stores/resourceStore';
 
 const OBSIDIAN = '#0D0D0D';
@@ -57,6 +56,7 @@ export default function MealPlanScreen() {
   const [mealLogs, setMealLogs] = useState<NutritionMealLog[]>([]);
   const [proteinTarget, setProteinTarget] = useState(0);
   const [userWeight, setUserWeight] = useState(0);
+  const [isHydrating, setIsHydrating] = useState(true);
   const [updatingMealKey, setUpdatingMealKey] = useState<string | null>(null);
   const [selectedMealPhoto, setSelectedMealPhoto] = useState<{
     uri: string;
@@ -75,50 +75,29 @@ export default function MealPlanScreen() {
   const cachedCurrentUser = useResourceStore((state) => state.resources[CURRENT_USER_CACHE_KEY]?.data as AuthUser | undefined);
 
   useEffect(() => {
-    if (cachedCurrentUser) {
+    if (!isHydrating && cachedCurrentUser) {
       setCurrentUser(cachedCurrentUser);
     }
-  }, [cachedCurrentUser]);
+  }, [cachedCurrentUser, isHydrating]);
 
   useEffect(() => {
-    if (!cachedNutritionPlan) return;
+    if (isHydrating || !cachedNutritionPlan) return;
     setNutritionPlan(cachedNutritionPlan);
     if (cachedNutritionPlan.daily_protein_target) setProteinTarget(cachedNutritionPlan.daily_protein_target);
     if (cachedNutritionPlan.baseline_weight) setUserWeight(cachedNutritionPlan.baseline_weight);
-  }, [cachedNutritionPlan]);
+  }, [cachedNutritionPlan, isHydrating]);
 
   useEffect(() => {
-    if (Array.isArray(cachedMealLogs?.logs)) {
+    if (!isHydrating && Array.isArray(cachedMealLogs?.logs)) {
       setMealLogs(cachedMealLogs.logs);
     }
-  }, [cachedMealLogs]);
+  }, [cachedMealLogs, isHydrating]);
 
   useEffect(() => {
     let cancelled = false;
 
-    const hydrateCachedData = async () => {
-      const [cachedUser, cachedPlan, cachedLogs] = await Promise.all([
-        hydrateCachedResource<AuthUser>(CURRENT_USER_CACHE_KEY),
-        hydrateCachedResource<NutritionPlanApiResponse>(NUTRITION_PLAN_LATEST_CACHE_KEY),
-        hydrateCachedResource<{ logs: NutritionMealLog[] }>(getNutritionMealLogsCacheKey(todayIsoDate)),
-      ]);
-      if (cancelled) return;
-      if (cachedUser) {
-        setCurrentUser(cachedUser);
-      }
-      if (cachedPlan) {
-        setNutritionPlan(cachedPlan);
-        if (cachedPlan.daily_protein_target) setProteinTarget(cachedPlan.daily_protein_target);
-        if (cachedPlan.baseline_weight) setUserWeight(cachedPlan.baseline_weight);
-      }
-      if (cachedLogs?.logs) {
-        setMealLogs(cachedLogs.logs);
-      }
-    };
-
     const loadData = async () => {
       try {
-        await hydrateCachedData();
         const [user, metrics, plan, logsResponse] = await Promise.all([
           fetchCurrentUser().catch(() => null),
           fetchCurrentUserBodyMetrics().catch(() => null),
@@ -148,7 +127,9 @@ export default function MealPlanScreen() {
           setMealLogs(logsResponse.logs);
         }
       } catch {
-        // Fallback to defaults
+        // The empty state below is preferable to fabricated nutrition data.
+      } finally {
+        if (!cancelled) setIsHydrating(false);
       }
     };
 
@@ -454,6 +435,12 @@ export default function MealPlanScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {isHydrating ? (
+        <View style={styles.loadingState}>
+          <Text style={[styles.loadingKicker, { color: colors.primary }]}>FOOD</Text>
+          <Text style={[styles.loadingText, { color: colors.textMuted }]}>Loading today&apos;s nutrition data…</Text>
+        </View>
+      ) : (
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -520,6 +507,7 @@ export default function MealPlanScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      )}
 
       {/* Meal Analysis Modal matching lines 1074-1110 */}
       <ClaudeMealAnalysisModal
@@ -585,6 +573,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: OBSIDIAN,
+  },
+  loadingState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    padding: 24,
+  },
+  loadingKicker: {
+    fontFamily: DMSANS,
+    fontWeight: '900',
+    fontSize: 12,
+    letterSpacing: 2,
+  },
+  loadingText: {
+    fontFamily: INTER,
+    fontSize: 14,
   },
   scrollView: {
     flex: 1,

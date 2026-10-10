@@ -34,35 +34,7 @@ const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Jet
 
 export default function ClaudeFullDayMeals({ meals, updatingMealKey, onToggleMeal }: ClaudeFullDayMealsProps) {
   const { t } = useLanguage();
-  const visibleMeals = meals.length > 0 ? meals : [
-    {
-      id: 'empty-breakfast',
-      mealKey: 'breakfast',
-      name: t('Breakfast will appear here'),
-      sub: t('Build or refresh your food plan'),
-      proteinG: 0,
-      kcal: 0,
-      logged: false,
-    },
-    {
-      id: 'empty-lunch',
-      mealKey: 'lunch',
-      name: t('Lunch will appear here'),
-      sub: t('Your full day stays ready here'),
-      proteinG: 0,
-      kcal: 0,
-      logged: false,
-    },
-    {
-      id: 'empty-dinner',
-      mealKey: 'dinner',
-      name: t('Dinner will appear here'),
-      sub: t('Plan meals once and track them here'),
-      proteinG: 0,
-      kcal: 0,
-      logged: false,
-    },
-  ];
+  const visibleMeals = meals;
   const doneCount = meals.filter((meal) => meal.logged).length;
   const totalCount = meals.length;
 
@@ -76,7 +48,12 @@ export default function ClaudeFullDayMeals({ meals, updatingMealKey, onToggleMea
       </View>
 
       <View style={styles.card}>
-        {visibleMeals.map((m, idx) => {
+        {visibleMeals.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyTitle}>{t('No meals planned for today')}</Text>
+            <Text style={styles.emptyText}>{t('Build your food plan to see your meals and nutrition targets here.')}</Text>
+          </View>
+        ) : visibleMeals.map((m, idx) => {
           const isHighlight = m.isDinnerPlanned && !m.logged;
           const isLast = idx === visibleMeals.length - 1;
           const isUpdating = updatingMealKey === (m.mealKey || m.id);
@@ -169,6 +146,22 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: COPPER,
     overflow: 'hidden',
+  },
+  emptyState: {
+    padding: 20,
+  },
+  emptyTitle: {
+    fontFamily: DMSANS,
+    fontSize: 15,
+    fontWeight: '700',
+    color: IVORY,
+  },
+  emptyText: {
+    fontFamily: INTER,
+    fontSize: 13,
+    lineHeight: 19,
+    color: 'rgba(247,243,238,0.62)',
+    marginTop: 6,
   },
   mealRow: {
     flexDirection: 'row',
