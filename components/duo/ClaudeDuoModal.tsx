@@ -254,6 +254,13 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
     ]);
   };
 
+  const handleAddSecondPartner = () => {
+    notify(
+      'Second partner',
+      'Second partner support is reserved for Platinum and Inner Circle, but this account currently has one active duo slot available in the app.'
+    );
+  };
+
   const resetDuoState = () => {
     setPairId('');
     setInviteCode('');
@@ -550,7 +557,7 @@ export default function ClaudeDuoModal({ visible, onClose }: ClaudeDuoModalProps
                 <TouchableOpacity
                   style={styles.manageRow}
                   activeOpacity={0.7}
-                  onPress={() => Alert.alert('Second Partner', 'Second partner invite is available for Platinum & Inner Circle.')}
+                  onPress={handleAddSecondPartner}
                 >
                   <Text style={styles.manageRowTitle}>Add a second partner</Text>
                   <Text style={styles.manageRowMeta}>1 of 2</Text>
