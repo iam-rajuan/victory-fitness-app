@@ -133,6 +133,37 @@ export default function ChallengeDetailScreen() {
   const [completeDayConfirmVisible, setCompleteDayConfirmVisible] = useState(false);
   const [inviteCopied, setInviteCopied] = useState(false);
 
+  const copyInviteText = async (text: string) => {
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return;
+      } catch {
+        // Fall through to the textarea copy fallback for localhost/http browsers.
+      }
+    }
+
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.setAttribute('readonly', 'true');
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-9999px';
+      textArea.style.top = '0';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      const copied = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      if (!copied) {
+        throw new Error('Clipboard copy failed');
+      }
+      return;
+    }
+
+    await Clipboard.setStringAsync(text);
+  };
+
   const handleInviteFromDetail = async () => {
     if (!detail) return;
     try {
@@ -156,7 +187,7 @@ export default function ChallengeDetailScreen() {
         });
         return;
       }
-      await Clipboard.setStringAsync(msg);
+      await copyInviteText(msg);
       setInviteCopied(true);
       setTimeout(() => setInviteCopied(false), 3500);
       Alert.alert(

@@ -70,7 +70,29 @@ export default function ClaudeDuoModal({ visible, onClose, initialInviteCode }: 
 
   const copyText = async (text: string) => {
     if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
+      try {
+        await navigator.clipboard.writeText(text);
+        return;
+      } catch {
+        // Fall through to the textarea copy fallback for localhost/http browsers.
+      }
+    }
+
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.setAttribute('readonly', 'true');
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-9999px';
+      textArea.style.top = '0';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      const copied = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      if (!copied) {
+        throw new Error('Clipboard copy failed');
+      }
       return;
     }
     await Clipboard.setStringAsync(text);

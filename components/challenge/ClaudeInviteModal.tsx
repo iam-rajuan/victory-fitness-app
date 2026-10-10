@@ -68,6 +68,37 @@ export function ClaudeInviteView({
     inviteUrl,
   });
 
+  const copyText = async (text: string) => {
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return;
+      } catch {
+        // Fall through to the textarea copy fallback for localhost/http browsers.
+      }
+    }
+
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.setAttribute('readonly', 'true');
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-9999px';
+      textArea.style.top = '0';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      const copied = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      if (!copied) {
+        throw new Error('Clipboard copy failed');
+      }
+      return;
+    }
+
+    await Clipboard.setStringAsync(text);
+  };
+
   const prepareInvite = async () => {
     if (inviteState) return inviteState;
     setIsPreparingInvite(true);
@@ -136,11 +167,7 @@ export function ClaudeInviteView({
         challengeDays: displayDays,
         inviteUrl: invite.url,
       });
-      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(shareText);
-      } else {
-        await Clipboard.setStringAsync(shareText);
-      }
+      await copyText(shareText);
     } catch {
       Alert.alert('Invite Link', inviteUrl);
       return;
@@ -179,11 +206,7 @@ export function ClaudeInviteView({
         challengeDays: displayDays,
         inviteUrl: invite.url,
       });
-      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(shareText);
-      } else {
-        await Clipboard.setStringAsync(shareText);
-      }
+      await copyText(shareText);
     } catch {}
     Alert.alert(
       'Share to Instagram',
