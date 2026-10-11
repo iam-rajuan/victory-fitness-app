@@ -22,6 +22,8 @@ import {
   pauseMySubscription,
   resumeMySubscription,
   changeMySubscriptionPlan,
+  fetchSubscriptionPlans,
+  SubscriptionPlan,
   fetchProfileUpgradeOffer,
   recordAnalyticsEvent,
 } from '../../lib/api';
@@ -43,6 +45,7 @@ export default function SubscriptionManagementModal({
   const [loading, setLoading] = useState(true);
   const [subData, setSubData] = useState<SubscriptionStatusResponse['subscription'] | null>(null);
   const [upgradeOffer, setUpgradeOffer] = useState<any | null>(null);
+  const [catalogPlans, setCatalogPlans] = useState<SubscriptionPlan[]>([]);
   const [actionLoading, setActionLoading] = useState(false);
 
   // Sub-modals
@@ -54,11 +57,13 @@ export default function SubscriptionManagementModal({
   const loadData = async () => {
     setLoading(true);
     try {
-      const [res, offer] = await Promise.all([
+      const [res, offer, plansResponse] = await Promise.all([
         fetchMySubscription(),
         fetchProfileUpgradeOffer().catch(() => null),
+        fetchSubscriptionPlans().catch(() => null),
       ]);
       setSubData(res.subscription);
+      setCatalogPlans(Array.isArray(plansResponse?.items) ? plansResponse.items : []);
       if (offer && offer.eligible) {
         setUpgradeOffer(offer);
       } else if (res.upgrade_offer) {
@@ -151,6 +156,12 @@ export default function SubscriptionManagementModal({
   };
 
   const handleConfirmChangePlan = async () => {
+    const plan = catalogPlans.find((item) => String(item.subscriptionTier || '').toLowerCase() === selectedPlanToChange);
+    if (plan?.isComingSoon) {
+      Alert.alert(t('Coming soon'), t('This plan is not available yet.'));
+      return;
+    }
+
     setActionLoading(true);
     setShowChangePlanModal(false);
     try {
@@ -437,18 +448,34 @@ export default function SubscriptionManagementModal({
               </TouchableOpacity>
             </View>
 
-            {[
-              { id: 'silver', name: 'Silver Plan', price: selectedBillingCycle === 'yearly' ? '$99/yr' : '$14.99/mo', desc: 'Workout library & basic plans' },
-              { id: 'gold', name: 'Gold Plan', price: selectedBillingCycle === 'yearly' ? '$189/yr' : '$24.99/mo', desc: 'Coach Victor AI, Longevity OS, Identity statement' },
-              { id: 'platinum', name: 'Platinum Plan', price: selectedBillingCycle === 'yearly' ? '$349/yr' : '$49.99/mo', desc: 'Everything in Gold + 1-on-1 coach review' },
-            ].map((p) => {
+            {(['SILVER', 'GOLD', 'PLATINUM'] as const).map((tier) => {
+              const livePlan = catalogPlans.find((item) => item.subscriptionTier === tier);
+              const fallback = tier === 'SILVER'
+                ? { name: 'Silver Plan', yearly: 99, monthly: 14.99, desc: 'Workout library & basic plans' }
+                : tier === 'GOLD'
+                  ? { name: 'Gold Plan', yearly: 189, monthly: 24.99, desc: 'Coach Victor AI, Longevity OS, Identity statement' }
+                  : { name: 'Platinum Plan', yearly: 349, monthly: 49.99, desc: 'Everything in Gold + 1-on-1 coach review' };
+              const p = {
+                id: tier.toLowerCase(),
+                name: livePlan?.title || fallback.name,
+                price: livePlan?.isComingSoon
+                  ? t('Coming soon')
+                  : selectedBillingCycle === 'yearly'
+                    ? `€${livePlan?.discountedPriceYearly ?? livePlan?.priceYearly ?? fallback.yearly}/yr`
+                    : `€${livePlan?.discountedPriceMonthly ?? livePlan?.priceMonthly ?? fallback.monthly}/mo`,
+                desc: livePlan?.description || fallback.desc,
+                disabled: Boolean(livePlan?.isComingSoon),
+              };
               const selected = selectedPlanToChange === p.id;
               return (
                 <TouchableOpacity
                   key={p.id}
-                  style={[styles.planOptionCard, selected && styles.planOptionCardSelected]}
-                  onPress={() => setSelectedPlanToChange(p.id)}
-                  activeOpacity={0.8}
+                  style={[styles.planOptionCard, selected && styles.planOptionCardSelected, p.disabled && styles.planOptionCardDisabled]}
+                  onPress={() => {
+                    if (!p.disabled) setSelectedPlanToChange(p.id);
+                  }}
+                  activeOpacity={p.disabled ? 1 : 0.8}
+                  disabled={p.disabled}
                 >
                   <View style={{ flex: 1 }}>
                     <Text style={styles.planOptionName}>{p.name}</Text>
@@ -845,6 +872,9 @@ const styles = StyleSheet.create({
   planOptionCardSelected: {
     borderColor: Colors.gold,
     backgroundColor: 'rgba(201, 148, 58, 0.12)',
+  },
+  planOptionCardDisabled: {
+    opacity: 0.58,
   },
   planOptionName: {
     color: Colors.ivory,

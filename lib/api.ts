@@ -296,6 +296,7 @@ export type SubscriptionPlan = {
   discountEndDate: string | null;
   isDiscountActive: boolean;
   isApplicationOnly: boolean;
+  isComingSoon: boolean;
   isMostPopular: boolean;
   iconType: string;
   features: string[];

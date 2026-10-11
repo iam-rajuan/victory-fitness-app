@@ -129,6 +129,7 @@ function monthName(value?: string | null) {
 }
 
 function planPriceText(plan: any, userTier: string) {
+  if (plan?.isComingSoon) return 'Coming soon';
   const monthly = Number(plan?.discountedPriceMonthly ?? plan?.priceMonthly ?? 0);
   if (monthly > 0) return `€${monthly}/mo`;
   if (userTier === 'SILVER') return '€19/mo';

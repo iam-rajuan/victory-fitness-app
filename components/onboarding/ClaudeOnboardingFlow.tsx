@@ -206,7 +206,9 @@ const REGIONS: Record<string, RegionDef> = {
   },
 };
 
-const DEFAULT_PRICES: [string, number, number, string, string][] = [
+type OnboardingPlanPrice = [string, number, number, string, string, boolean?];
+
+const DEFAULT_PRICES: OnboardingPlanPrice[] = [
   ['Silver', 199, 19, 'Every workout, all 35 challenges, your accountability duo and the journal.', ''],
   ['Gold', 299, 29, 'Silver plus unlimited AI coaching, the nutrition planner and your habit fields.', 'MOST CHOSEN'],
   ['Platinum', 399, 39, 'Gold plus wearable sync, the Monday digest and a human coach each month.', ''],
@@ -253,7 +255,7 @@ export default function ClaudeOnboardingFlow({
   };
 
   const [pct, setPct] = useState<number>(0);
-  const [prices, setPrices] = useState<[string, number, number, string, string][]>(DEFAULT_PRICES);
+  const [prices, setPrices] = useState<OnboardingPlanPrice[]>(DEFAULT_PRICES);
   const [identity, setIdentity] = useState<string>('');
   const [tier, setTier] = useState<number>(BETA_TIER_INDEX); // Default 21-Day Gold Beta
   const [cycle, setCycle] = useState<'year' | 'month'>('year');
@@ -292,6 +294,7 @@ export default function ClaudeOnboardingFlow({
             silver?.discountedPriceMonthly ?? silver?.priceMonthly ?? 19,
             silver?.description || 'Every workout, all 35 challenges, your accountability duo and the journal.',
             silver?.isMostPopular ? 'MOST CHOSEN' : '',
+            Boolean(silver?.isComingSoon),
           ],
           [
             'Gold',
@@ -299,6 +302,7 @@ export default function ClaudeOnboardingFlow({
             gold?.discountedPriceMonthly ?? gold?.priceMonthly ?? 29,
             gold?.description || 'Silver plus unlimited AI coaching, the nutrition planner and your habit fields.',
             gold?.isMostPopular !== false ? 'MOST CHOSEN' : '',
+            Boolean(gold?.isComingSoon),
           ],
           [
             'Platinum',
@@ -306,6 +310,7 @@ export default function ClaudeOnboardingFlow({
             platinum?.discountedPriceMonthly ?? platinum?.priceMonthly ?? 39,
             platinum?.description || 'Gold plus wearable sync, the Monday digest and a human coach each month.',
             platinum?.isMostPopular ? 'MOST CHOSEN' : '',
+            Boolean(platinum?.isComingSoon),
           ],
         ]);
       })
@@ -831,8 +836,9 @@ export default function ClaudeOnboardingFlow({
 
   const isBetaTierSelected = tier === BETA_TIER_INDEX;
   const curTier = isBetaTierSelected
-    ? ['21-Day Gold Beta', 0, 0, '21 days of Gold access. No card required, no charge today.', '21 DAY BETA'] as [string, number, number, string, string]
+    ? ['21-Day Gold Beta', 0, 0, '21 days of Gold access. No card required, no charge today.', '21 DAY BETA'] as OnboardingPlanPrice
     : prices[tier] || prices[1] || DEFAULT_PRICES[1];
+  const isComingSoonTierSelected = Boolean(curTier[5]);
   const payAmount = yearly ? money(curTier[1]) : money(curTier[2]);
   const payRenewal = yearly ? `${money(curTier[1])} every year` : `${money(curTier[2])} every month`;
   const paySaving = yearly
@@ -1005,6 +1011,10 @@ export default function ClaudeOnboardingFlow({
     }
 
     if (step === 9) {
+      if (isComingSoonTierSelected) {
+        return;
+      }
+
       if (isBetaTierSelected) {
         setSubmitting(true);
         try {
@@ -1715,17 +1725,22 @@ export default function ClaudeOnboardingFlow({
                     </View>
                   </Pressable>
 
-                  {prices.map(([name, yearlyPrice, monthlyPrice, desc, tag], idx) => {
+                  {prices.map(([name, yearlyPrice, monthlyPrice, desc, tag, isComingSoon], idx) => {
                     const isSelected = idx === tier;
-                    const priceLabel = yearly ? `${money(yearlyPrice)} / year` : `${money(monthlyPrice)} / month`;
-                    const altLabel = yearly
+                    const priceLabel = isComingSoon ? 'Coming soon' : yearly ? `${money(yearlyPrice)} / year` : `${money(monthlyPrice)} / month`;
+                    const altLabel = isComingSoon
+                      ? 'Not available yet'
+                      : yearly
                       ? `or ${money(monthlyPrice)} a month`
                       : `${money(yearlyPrice)} a year saves ${saving(yearlyPrice, monthlyPrice)}%`;
                     return (
                       <Pressable
                         key={name}
-                        onPress={() => setTier(idx)}
-                        style={[styles.tierCard, isSelected && styles.tierCardActive]}
+                        onPress={() => {
+                          if (!isComingSoon) setTier(idx);
+                        }}
+                        style={[styles.tierCard, isSelected && styles.tierCardActive, isComingSoon && styles.tierCardDisabled]}
+                        disabled={isComingSoon}
                       >
                         <View style={styles.tierTopRow}>
                           <Text style={[styles.tierName, isSelected && styles.tierNameActive]}>{name}</Text>
@@ -1757,11 +1772,13 @@ export default function ClaudeOnboardingFlow({
                   <Text style={styles.innerCircleApplyLink}>Apply instead ›</Text>
                 </Pressable>
 
-                <Pressable style={styles.ctaButton} onPress={handleNext} disabled={submitting}>
+                <Pressable style={[styles.ctaButton, isComingSoonTierSelected && styles.ctaButtonDisabled]} onPress={handleNext} disabled={submitting || isComingSoonTierSelected}>
                   {submitting && isBetaTierSelected ? (
                     <ActivityIndicator color={OBSIDIAN} size="small" />
                   ) : isBetaTierSelected ? (
                     <Text style={styles.ctaButtonText}>Start 21-Day Gold Beta</Text>
+                  ) : isComingSoonTierSelected ? (
+                    <Text style={styles.ctaButtonText}>Coming soon</Text>
                   ) : (
                     <Text style={styles.ctaButtonText}>{`Continue with ${curTier[0]}`}</Text>
                   )}
@@ -2761,6 +2778,9 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: GOLD,
   },
+  tierCardDisabled: {
+    opacity: 0.62,
+  },
   tierTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -3159,6 +3179,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 18,
+  },
+  ctaButtonDisabled: {
+    opacity: 0.58,
   },
   ctaButtonText: {
     fontFamily: DMSANS,

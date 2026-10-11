@@ -48,6 +48,7 @@ type TierOption = {
   yearly: number | null;
   monthly: number | null;
   isApplicationOnly: boolean;
+  isComingSoon: boolean;
   badge?: string;
 };
 
@@ -109,6 +110,7 @@ function buildPlanOptions(apiPlans: SubscriptionPlan[]): TierOption[] {
       yearly: isBeta ? 0 : apiPlan?.discountedPriceYearly ?? apiPlan?.priceYearly ?? DEFAULT_PRICES[tier]?.yearly ?? null,
       monthly: isBeta ? 0 : apiPlan?.discountedPriceMonthly ?? apiPlan?.priceMonthly ?? DEFAULT_PRICES[tier]?.monthly ?? null,
       isApplicationOnly: Boolean(apiPlan?.isApplicationOnly ?? tier === 'INNER_CIRCLE'),
+      isComingSoon: Boolean(apiPlan?.isComingSoon),
       badge: isBeta ? '21 DAY BETA' : apiPlan?.isMostPopular || tier === 'GOLD' ? 'MOST CHOSEN' : undefined,
     };
   });
@@ -206,6 +208,7 @@ export default function PlanSelectionScreen() {
   const options = useMemo(() => buildPlanOptions(plans), [plans]);
   const selectedPlan = options.find((option) => option.tier === selectedTier) ?? options[0];
   const isBetaSelected = selectedPlan?.planId === 'plan-gold-beta-21-day' || selectedPlan?.tier === 'GOLD_BETA';
+  const isComingSoonSelected = Boolean(selectedPlan?.isComingSoon);
   const isCurrentPlan = betaTrialActive || (currentTier === selectedPlan?.tier && currentTier !== 'NONE');
 
   const handleBack = () => {
@@ -221,6 +224,11 @@ export default function PlanSelectionScreen() {
 
     if (isCurrentPlan) {
       replaceRoute(router, '/(tabs)');
+      return;
+    }
+
+    if (isComingSoonSelected) {
+      setErrorMessage('This plan is coming soon.');
       return;
     }
 
@@ -327,6 +335,7 @@ export default function PlanSelectionScreen() {
               const active = selectedTier === option.tier;
               const isBeta = option.tier === 'GOLD_BETA';
               const disabledDuringBeta = betaTrialActive && !isBeta;
+              const disabled = disabledDuringBeta || option.isComingSoon;
               const price = billingCycle === 'yearly' ? option.yearly : option.monthly;
               const companionPrice = billingCycle === 'yearly' ? option.monthly : option.yearly;
               const accent = getTierAccent(option.tier);
@@ -337,18 +346,18 @@ export default function PlanSelectionScreen() {
                     styles.planCard,
                     active && styles.planCardActive,
                     isBeta && styles.betaCard,
-                    disabledDuringBeta && styles.planCardDisabled,
+                    disabled && styles.planCardDisabled,
                   ]}
-                  activeOpacity={disabledDuringBeta ? 1 : 0.86}
-                  disabled={disabledDuringBeta}
+                  activeOpacity={disabled ? 1 : 0.86}
+                  disabled={disabled}
                   onPress={() => setSelectedTier(option.tier)}
                 >
                   <View style={styles.cardHeaderRow}>
                     <Text style={[styles.planTitle, { color: active ? GOLD : accent }]}>{option.title.replace('Victory ', '')}</Text>
                     <View style={styles.priceRow}>
-                      <Text style={styles.priceText}>{isBeta ? 'Free' : formatEuro(price)}</Text>
+                      <Text style={styles.priceText}>{option.isComingSoon ? 'Coming soon' : isBeta ? 'Free' : formatEuro(price)}</Text>
                       <Text style={styles.periodText}>
-                        {isBeta ? '' : ` / ${billingCycle === 'yearly' ? 'year' : 'month'}`}
+                        {option.isComingSoon || isBeta ? '' : ` / ${billingCycle === 'yearly' ? 'year' : 'month'}`}
                       </Text>
                     </View>
                   </View>
@@ -364,6 +373,8 @@ export default function PlanSelectionScreen() {
                     <Text style={styles.altPrice}>
                       {isBeta
                         ? 'No card required'
+                        : option.isComingSoon
+                          ? 'Not available yet'
                         : `or ${formatEuro(companionPrice)} ${billingCycle === 'yearly' ? 'a month' : 'a year'}`}
                     </Text>
                   </View>
@@ -405,6 +416,8 @@ export default function PlanSelectionScreen() {
               <Text style={styles.ctaText}>
                 {isCurrentPlan
                   ? 'Continue to Home'
+                  : isComingSoonSelected
+                    ? 'Coming soon'
                   : isBetaSelected
                     ? 'Start 21-Day Beta'
                     : `Choose ${selectedPlan?.title.replace('Victory ', '') ?? 'Plan'}`}
