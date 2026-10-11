@@ -114,11 +114,15 @@ export async function startNutritionPlanJob(payload: Record<string, unknown>) {
 }
 
 export async function createNutritionPlan(payload: Record<string, unknown>) {
-  return apiRequest<{ plan: NutritionPlanApiResponse }>('/ai/nutrition/plan', {
+  const response = await apiRequest<{ plan: NutritionPlanApiResponse }>('/ai/nutrition/plan', {
     method: 'POST',
     body: payload,
-    timeoutMs: 120_000,
+    // Weekly generation can exceed two minutes. Stay below the gateway's
+    // 180-second timeout while allowing completed plans to reach the client.
+    timeoutMs: 170_000,
   });
+  await primeCachedResource(NUTRITION_PLAN_LATEST_CACHE_KEY, response.plan);
+  return response;
 }
 
 export async function getNutritionPlanJob(jobId: string) {

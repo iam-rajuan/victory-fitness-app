@@ -7,7 +7,6 @@ import {
   Pressable,
   ScrollView,
   Platform,
-  Alert,
   TextInput,
 } from 'react-native';
 import { createNutritionPlan, NutritionPlanApiResponse, NutritionDayPlan } from '../../lib/nutrition';
@@ -96,6 +95,7 @@ export default function ClaudeWeekPlanModal({
   const [weeklyBudget, setWeeklyBudget] = useState('€120');
   const [generatedPlan, setGeneratedPlan] = useState<NutritionPlanApiResponse | null>(null);
   const [isBuilding, setIsBuilding] = useState(false);
+  const [buildError, setBuildError] = useState('');
   const activePlan = generatedPlan || plan || null;
   const dayPlans: DayPlan[] = (activePlan?.days || []).map((day) => ({
     day: formatDayName(day.day),
@@ -152,6 +152,7 @@ export default function ClaudeWeekPlanModal({
     const favoriteMeals = Array.from(new Set(meals)).slice(0, 8);
 
     setIsBuilding(true);
+    setBuildError('');
     try {
       const response = await createNutritionPlan({
         goal: 'maintenance',
@@ -166,14 +167,12 @@ export default function ClaudeWeekPlanModal({
         cooking_time_weekday: cookingTime.trim(),
         people_cooking_for: peopleCount.trim(),
         weekly_food_budget: weeklyBudget.trim(),
-        regenerate: true,
-        force_refresh: true,
       });
       setGeneratedPlan(response.plan);
       onPlanUpdated?.(response.plan);
       setViewMode('weekPlan');
     } catch (error: any) {
-      Alert.alert('Could not build meal plan', error?.message || 'Please try again.');
+      setBuildError(error?.message || 'Could not build your meal plan. Please try again.');
     } finally {
       setIsBuilding(false);
     }
@@ -342,6 +341,8 @@ export default function ClaudeWeekPlanModal({
               </View>
 
               {/* CTA */}
+              {buildError ? <Text accessibilityRole="alert" style={{ color: IVORY, marginBottom: 12 }}>{buildError}</Text> : null}
+              {isBuilding ? <Text style={{ color: IVORY, marginBottom: 12 }}>Preparing your week. A new plan can take a few minutes; please keep this screen open.</Text> : null}
               <Pressable style={[styles.primaryBtn, isBuilding && styles.primaryBtnDisabled]} onPress={handleBuildWeek} disabled={isBuilding}>
                 <Text style={styles.primaryBtnText}>{isBuilding ? 'Building...' : 'Build my week'}</Text>
               </Pressable>

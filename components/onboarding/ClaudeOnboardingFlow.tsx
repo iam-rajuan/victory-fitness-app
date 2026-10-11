@@ -2219,6 +2219,11 @@ export default function ClaudeOnboardingFlow({
 }
 
 const styles = StyleSheet.create({
+  validationText: {
+    color: COPPER,
+    fontSize: 14,
+    marginTop: 8,
+  },
   rootContainer: {
     flex: 1,
     backgroundColor: OBSIDIAN,
