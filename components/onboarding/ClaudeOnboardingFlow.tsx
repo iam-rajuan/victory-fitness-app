@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  Alert,
   Easing,
   LayoutAnimation,
   Platform,
@@ -317,6 +318,7 @@ export default function ClaudeOnboardingFlow({
   const [height, setHeight] = useState<number>(120);
   const [age, setAge] = useState<number>(14);
   const [expandedMetric, setExpandedMetric] = useState<'weight' | 'height' | 'age' | null>('weight');
+  const [ageValidationMessage, setAgeValidationMessage] = useState<string>('');
 
   const toggleMetric = (metric: 'weight' | 'height' | 'age') => {
     stopHold();
@@ -324,6 +326,16 @@ export default function ClaudeOnboardingFlow({
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     } catch {}
     setExpandedMetric((prev) => (prev === metric ? null : metric));
+  };
+
+  const showAgeValidationAlert = () => {
+    const message = 'Victory Fitness is available from age 14. Please increase your age to continue.';
+    setAgeValidationMessage(message);
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.alert(`Age needs to be 14 or older\n\n${message}`);
+      return;
+    }
+    Alert.alert('Age needs to be 14 or older', message);
   };
 
   const [pct, setPct] = useState<number>(0);
@@ -787,6 +799,7 @@ export default function ClaudeOnboardingFlow({
   // Age stepper handlers
   const startAgeIncrement = () => {
     stopHold();
+    setAgeValidationMessage('');
     setAge((prev) => Math.min(AGE_MAX, prev + 1));
     holdTimerRef.current = setTimeout(() => {
       holdIntervalRef.current = setInterval(() => {
@@ -803,6 +816,7 @@ export default function ClaudeOnboardingFlow({
 
   const startAgeDecrement = () => {
     stopHold();
+    setAgeValidationMessage('');
     setAge((prev) => Math.max(AGE_MIN, prev - 1));
     holdTimerRef.current = setTimeout(() => {
       holdIntervalRef.current = setInterval(() => {
@@ -848,6 +862,7 @@ export default function ClaudeOnboardingFlow({
     const clickX = e.nativeEvent.locationX;
     const ratio = Math.max(0, Math.min(1, clickX / ageTrackWidth));
     const targetAge = Math.round(AGE_MIN + ratio * (AGE_MAX - AGE_MIN));
+    setAgeValidationMessage('');
     setAge(targetAge);
   };
 
@@ -1086,6 +1101,13 @@ export default function ClaudeOnboardingFlow({
   // Navigation handlers
   const handleNext = async () => {
     if (step === 5) {
+      if (age < 14) {
+        stopHold();
+        setExpandedMetric('age');
+        showAgeValidationAlert();
+        return;
+      }
+
       // Moving to Building step
       setSubmitting(true);
       try {
@@ -1591,6 +1613,10 @@ export default function ClaudeOnboardingFlow({
                     </View>
                   </View>
                 </View>
+
+                {ageValidationMessage ? (
+                  <Text style={styles.validationText}>{ageValidationMessage}</Text>
+                ) : null}
 
                 {/* Live Calculated Targets Box */}
                 <View style={[styles.insightBox, styles.insightGlowBox]}>
