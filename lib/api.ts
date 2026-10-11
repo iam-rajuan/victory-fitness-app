@@ -633,11 +633,28 @@ let bodyMetricsRequestPromise: Promise<BodyMetrics> | null = null;
 let currentUserFetchedAt = 0;
 let bodyMetricsFetchedAt = 0;
 let bodyMetricsCache: BodyMetrics | null = null;
+let bodyMetricsCacheOwnerKey = '';
 
 const CURRENT_USER_CACHE_TTL_MS = 30_000;
 const BODY_METRICS_CACHE_TTL_MS = 30_000;
 const BROWSER_REFRESH_RETRY_MS = 30_000;
 const BODY_METRICS_RESOURCE_KEY = 'me-body-metrics';
+
+function getAuthUserScopedKey() {
+  return String(authUser?.id || authUser?.email || '').trim().toLowerCase();
+}
+
+function getBodyMetricsResourceKey() {
+  const userKey = getAuthUserScopedKey();
+  return userKey ? `${BODY_METRICS_RESOURCE_KEY}:${userKey}` : BODY_METRICS_RESOURCE_KEY;
+}
+
+function clearBodyMetricsCache() {
+  bodyMetricsRequestPromise = null;
+  bodyMetricsFetchedAt = 0;
+  bodyMetricsCache = null;
+  bodyMetricsCacheOwnerKey = '';
+}
 
 function normalizeBoolean(value: unknown, fallback = false) {
   if (typeof value === 'boolean') {
@@ -769,10 +786,8 @@ function normalizeBodyMetrics(metrics: Partial<BodyMetrics> | null | undefined):
 
 function clearDerivedUserCaches() {
   currentUserRequestPromise = null;
-  bodyMetricsRequestPromise = null;
   currentUserFetchedAt = 0;
-  bodyMetricsFetchedAt = 0;
-  bodyMetricsCache = null;
+  clearBodyMetricsCache();
 }
 
 function decodeJwtPayload(token: string): { exp?: number } | null {
@@ -925,8 +940,7 @@ export async function setAuthTokens(tokens: AuthTokens & { user?: AuthUser }) {
     authUser = normalizeAuthUser(tokens.user);
     authUserLoaded = true;
     currentUserFetchedAt = Date.now();
-    bodyMetricsCache = null;
-    bodyMetricsFetchedAt = 0;
+    clearBodyMetricsCache();
     await persistAuthUser(authUser);
   }
 }
@@ -1014,9 +1028,13 @@ export async function fetchCurrentUser(options?: { forceRefresh?: boolean }) {
   if (!currentUserRequestPromise) {
     currentUserRequestPromise = apiRequest<AuthUser & { role?: string; is_admin?: boolean; country?: string; country_code?: string | null; contact_number?: string | null; profileImage?: string }>('/me')
       .then(async (user) => {
+        const previousUserKey = getAuthUserScopedKey();
         authUser = normalizeAuthUser(user);
         authUserLoaded = true;
         currentUserFetchedAt = Date.now();
+        if (previousUserKey && previousUserKey !== getAuthUserScopedKey()) {
+          clearBodyMetricsCache();
+        }
         await persistAuthUser(authUser);
         return authUser;
       })
@@ -1241,10 +1259,12 @@ function normalizeOnboardingState(state: OnboardingState): OnboardingState {
       paymentMethodIndex: Math.max(Number(preferences.paymentMethodIndex || 0) || 0, 0),
       paymentMethodName: String(preferences.paymentMethodName || '').trim(),
       nudgeChannels: Array.isArray(preferences.nudgeChannels) ? preferences.nudgeChannels.map((item) => String(item).trim()).filter(Boolean) : [],
+      nudgeTime: /^\d{2}:\d{2}$/.test(String(preferences.nudgeTime || '').trim()) ? String(preferences.nudgeTime).trim() : '20:30',
       dialCode: String(preferences.dialCode || '').trim(),
       dialNumber: String(preferences.dialNumber || '').trim(),
       contactNumber: String(preferences.contactNumber || '').trim(),
       selectedKit: Array.isArray(preferences.selectedKit) ? preferences.selectedKit.map((item) => String(item).trim()).filter(Boolean) : [],
+      numbersConfirmed: Boolean(preferences.numbersConfirmed),
     },
     calculations: {
       proteinGrams: Math.max(Number(calculations.proteinGrams || 0) || 0, 0),
@@ -1490,22 +1510,34 @@ export async function deleteCurrentUserProfileImage() {
 
 export async function fetchCurrentUserBodyMetrics() {
   const now = Date.now();
-  if (bodyMetricsCache && bodyMetricsFetchedAt && now - bodyMetricsFetchedAt < BODY_METRICS_CACHE_TTL_MS) {
+  const resourceKey = getBodyMetricsResourceKey();
+  if (
+    bodyMetricsCache &&
+    bodyMetricsCacheOwnerKey === resourceKey &&
+    bodyMetricsFetchedAt &&
+    now - bodyMetricsFetchedAt < BODY_METRICS_CACHE_TTL_MS
+  ) {
     return bodyMetricsCache;
   }
 
-  const cachedMetrics = getCachedResourceSnapshot<BodyMetrics>(BODY_METRICS_RESOURCE_KEY);
+  if (bodyMetricsCacheOwnerKey && bodyMetricsCacheOwnerKey !== resourceKey) {
+    clearBodyMetricsCache();
+  }
+
+  const cachedMetrics = getCachedResourceSnapshot<BodyMetrics>(resourceKey);
   if (cachedMetrics && !bodyMetricsCache) {
     bodyMetricsCache = normalizeBodyMetrics(cachedMetrics);
+    bodyMetricsCacheOwnerKey = resourceKey;
     bodyMetricsFetchedAt = 0;
   }
 
   if (!bodyMetricsRequestPromise) {
-    bodyMetricsRequestPromise = fetchCachedResource(BODY_METRICS_RESOURCE_KEY, async () => {
+    bodyMetricsRequestPromise = fetchCachedResource(resourceKey, async () => {
       return apiRequest<BodyMetrics>('/me/body-metrics');
     })
       .then((metrics) => {
         bodyMetricsCache = normalizeBodyMetrics(metrics);
+        bodyMetricsCacheOwnerKey = resourceKey;
         bodyMetricsFetchedAt = Date.now();
         return bodyMetricsCache;
       })
@@ -1529,9 +1561,11 @@ export async function updateCurrentUserBodyMetrics(payload: Partial<BodyMetrics>
     method: 'PATCH',
     body: payload,
   });
+  const resourceKey = getBodyMetricsResourceKey();
   bodyMetricsCache = normalizeBodyMetrics(metrics);
+  bodyMetricsCacheOwnerKey = resourceKey;
   bodyMetricsFetchedAt = Date.now();
-  await primeCachedResource(BODY_METRICS_RESOURCE_KEY, bodyMetricsCache);
+  await primeCachedResource(resourceKey, bodyMetricsCache);
   return bodyMetricsCache;
 }
 
@@ -1540,9 +1574,11 @@ export async function confirmCurrentUserWeight(snoozeDays = 0) {
     method: 'POST',
     body: { snooze_days: snoozeDays },
   });
+  const resourceKey = getBodyMetricsResourceKey();
   bodyMetricsCache = normalizeBodyMetrics(metrics);
+  bodyMetricsCacheOwnerKey = resourceKey;
   bodyMetricsFetchedAt = Date.now();
-  await primeCachedResource(BODY_METRICS_RESOURCE_KEY, bodyMetricsCache);
+  await primeCachedResource(resourceKey, bodyMetricsCache);
   return bodyMetricsCache;
 }
 

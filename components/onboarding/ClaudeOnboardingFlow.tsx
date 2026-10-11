@@ -42,6 +42,14 @@ import ClaudeInnerCircleApplyModal from '../profile/ClaudeInnerCircleApplyModal'
 export const ONBOARDING_STEP_KEY = '@vf_onboarding_current_step';
 export const ONBOARDING_ANSWERS_KEY = '@vf_onboarding_answers';
 
+const getOnboardingDraftUserKey = (user?: AuthUser | null) =>
+  String((user as any)?.id || (user as any)?._id || user?.email || '').trim().toLowerCase();
+
+const getOnboardingAnswersKey = (user?: AuthUser | null) => {
+  const userKey = getOnboardingDraftUserKey(user);
+  return userKey ? `${ONBOARDING_ANSWERS_KEY}:${userKey}` : ONBOARDING_ANSWERS_KEY;
+};
+
 // Design tokens matching Claude reference
 const OBSIDIAN = '#0D0D0D';
 const NAVY = '#0D2B45';
@@ -220,6 +228,64 @@ const HEIGHT_MIN = 0;
 const HEIGHT_MAX = 230;
 const AGE_MIN = 0;
 const AGE_MAX = 100;
+const DEFAULT_NUDGE_TIME = '20:30';
+const NUDGE_TIME_OPTIONS = ['07:00', '12:30', '18:30', '20:30'];
+
+const isValidNudgeTime = (value?: string | null) => /^([01]\d|2[0-3]):[0-5]\d$/.test(String(value || '').trim());
+
+const normalizeNudgeTime = (value?: string | null) => {
+  const candidate = String(value || '').trim();
+  return isValidNudgeTime(candidate) ? candidate : DEFAULT_NUDGE_TIME;
+};
+
+const normalizeNudgeTimeInput = (value: string) => {
+  const digits = value.replace(/\D/g, '').slice(0, 4);
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+};
+
+const parseStoredNumber = (value: unknown) => {
+  const raw = String(value ?? '').trim();
+  if (!raw) return null;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const hydratePositiveNumber = (
+  primary: unknown,
+  fallback: unknown,
+  min: number,
+  max: number,
+  setter: (value: number) => void
+) => {
+  const parsed = parseStoredNumber(primary) ?? parseStoredNumber(fallback);
+  if (parsed !== null && parsed >= min && parsed <= max) {
+    setter(parsed);
+  }
+};
+
+const hydrateStoredNumber = (
+  primary: unknown,
+  fallback: unknown,
+  min: number,
+  max: number,
+  setter: (value: number) => void,
+  allowZero = false
+) => {
+  const parsed = parseStoredNumber(primary) ?? parseStoredNumber(fallback);
+  const effectiveMin = allowZero ? 0 : min;
+  if (parsed !== null && parsed >= effectiveMin && parsed <= max) {
+    setter(parsed);
+  }
+};
+
+const formatNudgeTime = (value: string) => {
+  const normalized = normalizeNudgeTime(value);
+  const [hourRaw, minuteRaw] = normalized.split(':').map((item) => Number(item));
+  const period = hourRaw >= 12 ? 'PM' : 'AM';
+  const hour = hourRaw % 12 || 12;
+  return `${hour}:${String(minuteRaw).padStart(2, '0')} ${period}`;
+};
 
 export interface ClaudeOnboardingFlowProps {
   user?: AuthUser | null;
@@ -268,6 +334,7 @@ export default function ClaudeOnboardingFlow({
   const [region, setRegion] = useState<string>('de');
   const [method, setMethod] = useState<number>(0);
   const [nudge, setNudge] = useState<string[]>(['Push']);
+  const [nudgeTime, setNudgeTime] = useState<string>(DEFAULT_NUDGE_TIME);
   const [dialCode, setDialCode] = useState<string>('+49');
   const [dialNumber, setDialNumber] = useState<string>('');
   const [submitting, setSubmitting] = useState<boolean>(false);
@@ -432,14 +499,10 @@ export default function ClaudeOnboardingFlow({
           const parsedMins = Number(realOnboarding.anamnese?.timePerSession);
           if (!isNaN(parsedMins) && parsedMins >= 10 && parsedMins <= 120) setMins(parsedMins);
 
-          const parsedWeight = Number(realOnboarding.personalProfile?.weight || realMetrics?.weight);
-          if (!isNaN(parsedWeight) && parsedWeight >= WEIGHT_MIN && parsedWeight <= WEIGHT_MAX) setWeight(parsedWeight);
-
-          const parsedHeight = Number(realOnboarding.personalProfile?.height || realMetrics?.height);
-          if (!isNaN(parsedHeight) && parsedHeight >= HEIGHT_MIN && parsedHeight <= HEIGHT_MAX) setHeight(parsedHeight);
-
-          const parsedAge = Number(realOnboarding.personalProfile?.age || realMetrics?.age);
-          if (!isNaN(parsedAge) && parsedAge >= AGE_MIN && parsedAge <= AGE_MAX) setAge(parsedAge);
+          const numbersConfirmed = Boolean(realOnboarding.preferences?.numbersConfirmed);
+          hydrateStoredNumber(realOnboarding.personalProfile?.weight, realMetrics?.weight, 1, WEIGHT_MAX, setWeight, numbersConfirmed);
+          hydrateStoredNumber(realOnboarding.personalProfile?.height, realMetrics?.height, 1, HEIGHT_MAX, setHeight, numbersConfirmed);
+          hydrateStoredNumber(realOnboarding.personalProfile?.age, realMetrics?.age, 14, AGE_MAX, setAge, numbersConfirmed);
 
           const realIdentity = realOnboarding.identityStatement || activeUser?.identity_statement;
           if (
@@ -476,6 +539,11 @@ export default function ClaudeOnboardingFlow({
           if (Array.isArray(realOnboarding.preferences?.nudgeChannels) && realOnboarding.preferences.nudgeChannels.length) {
             setNudge(realOnboarding.preferences.nudgeChannels);
           }
+          setNudgeTime(
+            normalizeNudgeTime(
+              realOnboarding.preferences?.nudgeTime || activeUser?.notification_nudge_time
+            )
+          );
 
           const storedSuggestionTitle = String(realOnboarding.suggestion?.title || '').toLowerCase();
           if (storedSuggestionTitle.includes('21-day gold beta')) {
@@ -516,7 +584,8 @@ export default function ClaudeOnboardingFlow({
         }
 
         // 3. Overlay any uncommitted answers from local storage
-        const savedAnswersRaw = await AsyncStorage.getItem(ONBOARDING_ANSWERS_KEY);
+        const scopedAnswersKey = getOnboardingAnswersKey(activeUser);
+        const savedAnswersRaw = await AsyncStorage.getItem(scopedAnswersKey);
         if (savedAnswersRaw && !cancelled) {
           try {
             const parsed = JSON.parse(savedAnswersRaw);
@@ -525,9 +594,10 @@ export default function ClaudeOnboardingFlow({
             if (Array.isArray(parsed.kit)) setKit(parsed.kit);
             if (typeof parsed.days === 'number') setDays(parsed.days);
             if (typeof parsed.mins === 'number') setMins(parsed.mins);
-            if (typeof parsed.weight === 'number') setWeight(parsed.weight);
-            if (typeof parsed.height === 'number') setHeight(parsed.height);
-            if (typeof parsed.age === 'number') setAge(parsed.age);
+            const savedNumbersConfirmed = Boolean(parsed.numbersConfirmed);
+            if (typeof parsed.weight === 'number' && parsed.weight >= (savedNumbersConfirmed ? 0 : 1) && parsed.weight <= WEIGHT_MAX) setWeight(parsed.weight);
+            if (typeof parsed.height === 'number' && parsed.height >= (savedNumbersConfirmed ? 0 : 1) && parsed.height <= HEIGHT_MAX) setHeight(parsed.height);
+            if (typeof parsed.age === 'number' && parsed.age >= (savedNumbersConfirmed ? 0 : 14) && parsed.age <= AGE_MAX) setAge(parsed.age);
             if (
               parsed.expandedMetric === 'weight' ||
               parsed.expandedMetric === 'height' ||
@@ -548,6 +618,7 @@ export default function ClaudeOnboardingFlow({
             if (typeof parsed.region === 'string') setRegion(parsed.region);
             if (typeof parsed.method === 'number') setMethod(parsed.method);
             if (Array.isArray(parsed.nudge)) setNudge(parsed.nudge);
+            if (typeof parsed.nudgeTime === 'string') setNudgeTime(normalizeNudgeTime(parsed.nudgeTime));
             if (!hydratedPhoneFromProfile && typeof parsed.dialCode === 'string' && parsed.dialCode.trim()) {
               setDialCode(normalizeDialCode(parsed.dialCode) || parsed.dialCode.trim());
             }
@@ -602,11 +673,14 @@ export default function ClaudeOnboardingFlow({
       region,
       method,
       nudge,
+      nudgeTime,
       dialCode,
       dialNumber,
+      numbersConfirmed: step >= 5,
+      userKey: getOnboardingDraftUserKey(currentUser),
       step,
     };
-    void AsyncStorage.setItem(ONBOARDING_ANSWERS_KEY, JSON.stringify(dataToSave)).catch(() => {});
+    void AsyncStorage.setItem(getOnboardingAnswersKey(currentUser), JSON.stringify(dataToSave)).catch(() => {});
   }, [
     goal,
     place,
@@ -623,6 +697,7 @@ export default function ClaudeOnboardingFlow({
     region,
     method,
     nudge,
+    nudgeTime,
     dialCode,
     dialNumber,
     step,
@@ -879,6 +954,8 @@ export default function ClaudeOnboardingFlow({
   const persistOnboardingAnswers = async (markComplete = false) => {
     const countryCode = region === 'uk' ? 'GB' : region.toUpperCase();
     const contactNumber = buildE164PhoneNumber(dialCode, dialNumber);
+    const selectedNudgeChannels = new Set(nudge.map((item) => item.trim().toLowerCase()));
+    const safeNudgeTime = normalizeNudgeTime(nudgeTime);
     const selectedTierTitle = String(curTier[0]);
     const selectedGoalTitles = selectedGoals
       .map((idx) => GOALS[idx]?.[0])
@@ -925,10 +1002,12 @@ export default function ClaudeOnboardingFlow({
         paymentMethodIndex: method,
         paymentMethodName: currentRegion.methods[method]?.[0] || '',
         nudgeChannels: nudge,
+        nudgeTime: safeNudgeTime,
         dialCode,
         dialNumber,
         contactNumber,
         selectedKit: kit,
+        numbersConfirmed: step >= 5 || markComplete,
       },
       calculations: {
         proteinGrams: protein,
@@ -956,6 +1035,10 @@ export default function ClaudeOnboardingFlow({
       country: currentRegion.n,
       country_code: countryCode,
       contact_number: contactNumber || undefined,
+      notification_push_enabled: markComplete ? selectedNudgeChannels.has('push') : undefined,
+      notification_whatsapp_enabled: markComplete ? selectedNudgeChannels.has('whatsapp') : undefined,
+      notification_email_enabled: markComplete ? selectedNudgeChannels.has('email') : undefined,
+      notification_nudge_time: markComplete ? safeNudgeTime : undefined,
       training_trigger_action: `${days} sessions of ${mins} minutes`,
       workout_unlock_label: firstSession,
       onboarding_completed: markComplete ? true : undefined,
@@ -1064,6 +1147,7 @@ export default function ClaudeOnboardingFlow({
           setCurrentUser(updated);
         }
         await AsyncStorage.removeItem(ONBOARDING_STEP_KEY).catch(() => {});
+        await AsyncStorage.removeItem(getOnboardingAnswersKey(updated || currentUser)).catch(() => {});
         await AsyncStorage.removeItem(ONBOARDING_ANSWERS_KEY).catch(() => {});
         if (Platform.OS === 'web' && typeof window !== 'undefined') {
           try {
@@ -1948,7 +2032,7 @@ export default function ClaudeOnboardingFlow({
                           style={[styles.segmentBtn, isSelected && styles.segmentBtnActive]}
                         >
                           <Text style={[styles.segmentBtnText, isSelected && styles.segmentBtnTextActive]}>
-                            {channel}
+                            {channel === 'Push' ? 'App' : channel}
                           </Text>
                         </Pressable>
                       );
@@ -1984,11 +2068,44 @@ export default function ClaudeOnboardingFlow({
                     </View>
                   ) : null}
 
+                  <View style={styles.nudgeTimePicker}>
+                    <Text style={styles.nudgeTimeLabel}>WHEN</Text>
+                    <View style={styles.nudgeTimeOptions}>
+                      {NUDGE_TIME_OPTIONS.map((timeOption) => {
+                        const isSelected = nudgeTime === timeOption;
+                        return (
+                          <Pressable
+                            key={timeOption}
+                            onPress={() => setNudgeTime(timeOption)}
+                            style={[styles.nudgeTimeChip, isSelected && styles.nudgeTimeChipActive]}
+                          >
+                            <Text style={[styles.nudgeTimeChipText, isSelected && styles.nudgeTimeChipTextActive]}>
+                              {formatNudgeTime(timeOption)}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                    <View style={styles.nudgeCustomTimeRow}>
+                      <Text style={styles.nudgeCustomTimeLabel}>CUSTOM</Text>
+                      <TextInput
+                        value={nudgeTime}
+                        onChangeText={(value) => setNudgeTime(normalizeNudgeTimeInput(value))}
+                        onBlur={() => setNudgeTime(normalizeNudgeTime(nudgeTime))}
+                        placeholder="20:30"
+                        placeholderTextColor="rgba(247,243,238,0.35)"
+                        keyboardType="number-pad"
+                        maxLength={5}
+                        style={styles.nudgeCustomTimeInput}
+                      />
+                    </View>
+                  </View>
+
                   <View style={styles.nudgeTimeRow}>
                     <Text style={styles.nudgeTimeText}>
                       {nudge.length === 1 && nudge[0] === 'Email'
-                        ? `One email a week, Monday 08:00 ${currentRegion.tz}`
-                        : `Evenings at ${currentRegion.zone}, only on days you planned to train`}
+                        ? `Email reminder at ${formatNudgeTime(nudgeTime)} ${currentRegion.tz}`
+                        : `Reminder at ${formatNudgeTime(nudgeTime)}, only on days you planned to train`}
                     </Text>
                   </View>
 
@@ -1996,7 +2113,7 @@ export default function ClaudeOnboardingFlow({
                     {currentRegion.nudge === 'WhatsApp'
                       ? `WhatsApp is pre-selected for ${currentRegion.n} — it is where people actually read messages. `
                       : ''}
-                    {`Reminders run on ${currentRegion.zone}, never on a day you did not plan to train.`}
+                    {`Reminders run at ${formatNudgeTime(nudgeTime)} ${currentRegion.tz}, never on a day you did not plan to train.`}
                   </Text>
                 </View>
 
@@ -3159,8 +3276,75 @@ const styles = StyleSheet.create({
     color: 'rgba(247,243,238,0.45)',
     marginTop: 6,
   },
+  nudgeTimePicker: {
+    marginTop: 8,
+  },
+  nudgeTimeLabel: {
+    fontFamily: MONO,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    color: 'rgba(247,243,238,0.45)',
+    marginBottom: 8,
+  },
+  nudgeTimeOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  nudgeTimeChip: {
+    minWidth: 104,
+    minHeight: 40,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(247,243,238,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(13,43,69,0.7)',
+  },
+  nudgeTimeChipActive: {
+    backgroundColor: GOLD,
+    borderColor: GOLD,
+  },
+  nudgeTimeChipText: {
+    fontFamily: DMSANS,
+    fontSize: 13,
+    fontWeight: '700',
+    color: 'rgba(247,243,238,0.72)',
+  },
+  nudgeTimeChipTextActive: {
+    color: OBSIDIAN,
+  },
+  nudgeCustomTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 10,
+  },
+  nudgeCustomTimeLabel: {
+    fontFamily: MONO,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    color: 'rgba(247,243,238,0.45)',
+  },
+  nudgeCustomTimeInput: {
+    width: 104,
+    minHeight: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(247,243,238,0.18)',
+    backgroundColor: 'rgba(0,0,0,0.18)',
+    paddingHorizontal: 12,
+    fontFamily: MONO,
+    fontSize: 15,
+    fontWeight: '700',
+    color: IVORY,
+    textAlign: 'center',
+  },
   nudgeTimeRow: {
-    marginTop: 6,
+    marginTop: 12,
   },
   nudgeTimeText: {
     fontFamily: INTER,

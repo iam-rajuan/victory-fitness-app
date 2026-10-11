@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Platform,
   Alert,
+  TextInput,
 } from 'react-native';
 
 interface ClaudeNotificationPreferencesModalProps {
@@ -39,6 +40,37 @@ const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", d
 const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
 const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+const DEFAULT_NUDGE_TIME = '20:30';
+const NUDGE_TIME_OPTIONS = ['07:00', '12:30', '18:30', '20:30'];
+
+const normalizeNudgeTime = (value?: string | null) => {
+  const candidate = String(value || '').trim();
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(candidate) ? candidate : DEFAULT_NUDGE_TIME;
+};
+
+const normalizeNudgeTimeInput = (value: string) => {
+  const digits = value.replace(/\D/g, '').slice(0, 4);
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+};
+
+const formatNudgeTime = (value: string) => {
+  const [hourRaw, minuteRaw] = normalizeNudgeTime(value).split(':').map((item) => Number(item));
+  const period = hourRaw >= 12 ? 'PM' : 'AM';
+  const hour = hourRaw % 12 || 12;
+  return `${hour}:${String(minuteRaw).padStart(2, '0')} ${period}`;
+};
+
+const formatTemplateChannels = (channels: string[] = []) => {
+  const labels = channels.map((channel) => {
+    const normalized = String(channel).trim().toLowerCase();
+    if (normalized === 'push') return 'APP';
+    if (normalized === 'whatsapp') return 'WHATSAPP';
+    if (normalized === 'email') return 'EMAIL';
+    return normalized.toUpperCase();
+  }).filter(Boolean);
+  return labels.length ? labels.join(' · ') : 'APP';
+};
 
 export default function ClaudeNotificationPreferencesModal({
   visible,
@@ -55,7 +87,7 @@ export default function ClaudeNotificationPreferencesModal({
   const [pushEnabled, setPushEnabled] = useState(initialPushEnabled);
   const [whatsappEnabled, setWhatsappEnabled] = useState(initialWhatsappEnabled);
   const [emailEnabled, setEmailEnabled] = useState(initialEmailEnabled);
-  const [nudgeTime, setNudgeTime] = useState(initialNudgeTime);
+  const [nudgeTime, setNudgeTime] = useState(normalizeNudgeTime(initialNudgeTime));
   const [templateStates, setTemplateStates] = useState(initialTemplates);
   const [saving, setSaving] = useState(false);
 
@@ -64,7 +96,7 @@ export default function ClaudeNotificationPreferencesModal({
     setPushEnabled(initialPushEnabled);
     setWhatsappEnabled(initialWhatsappEnabled);
     setEmailEnabled(initialEmailEnabled);
-    setNudgeTime(initialNudgeTime || '20:30');
+    setNudgeTime(normalizeNudgeTime(initialNudgeTime));
     setTemplateStates(initialTemplates);
   }, [initialEmailEnabled, initialNudgeTime, initialPushEnabled, initialTemplates, initialWhatsappEnabled, visible]);
 
@@ -76,13 +108,25 @@ export default function ClaudeNotificationPreferencesModal({
 
   const handleSave = async () => {
     if (saving) return;
+    if (!pushEnabled && !whatsappEnabled && !emailEnabled) {
+      Alert.alert('Choose a channel', 'Keep at least one reminder channel on.');
+      return;
+    }
+    if (whatsappEnabled && !String(contactNumber || '').trim()) {
+      Alert.alert('WhatsApp number missing', 'Add your phone number in profile before turning on WhatsApp reminders.');
+      return;
+    }
+    const safeNudgeTime = normalizeNudgeTime(nudgeTime);
+    if (safeNudgeTime !== nudgeTime) {
+      setNudgeTime(safeNudgeTime);
+    }
     setSaving(true);
     try {
       await onSave?.({
         pushEnabled,
         whatsappEnabled,
         emailEnabled,
-        nudgeTime,
+        nudgeTime: safeNudgeTime,
         templates: templateStates.map((item) => ({ type: item.type, enabled: item.enabled })),
       });
       Alert.alert('Preferences saved', 'Your reminder channels have been updated.');
@@ -127,7 +171,7 @@ export default function ClaudeNotificationPreferencesModal({
               onPress={() => setPushEnabled((prev) => !prev)}
             >
               <Text style={[styles.channelChipText, pushEnabled && styles.channelChipTextActive]}>
-                Push {pushEnabled ? '✓' : ''}
+                App {pushEnabled ? '✓' : ''}
               </Text>
             </TouchableOpacity>
 
@@ -190,7 +234,7 @@ export default function ClaudeNotificationPreferencesModal({
                     <View style={styles.templateTextCol}>
                       <Text style={styles.templateTitle}>{item.title}</Text>
                       <Text style={styles.templateMeta}>
-                        {(item.channels || []).join(' · ') || 'Push'} · {item.approved ? 'available' : 'silent until approved'}
+                        {formatTemplateChannels(item.channels)} · {item.approved ? 'available' : 'silent until approved'}
                       </Text>
                     </View>
                     <View style={[styles.templateSwitch, item.enabled && styles.templateSwitchOn]}>
@@ -212,7 +256,37 @@ export default function ClaudeNotificationPreferencesModal({
                 <Text style={styles.whenTitle}>Evening nudge</Text>
                 <Text style={styles.whenNote}>Only sent if you haven't trained by this time</Text>
               </View>
-              <Text style={styles.whenTime}>{nudgeTime}</Text>
+              <Text style={styles.whenTime}>{formatNudgeTime(nudgeTime)}</Text>
+            </View>
+            <View style={styles.whenOptions}>
+              {NUDGE_TIME_OPTIONS.map((timeOption) => {
+                const isSelected = nudgeTime === timeOption;
+                return (
+                  <TouchableOpacity
+                    key={timeOption}
+                    style={[styles.whenChip, isSelected && styles.whenChipActive]}
+                    activeOpacity={0.82}
+                    onPress={() => setNudgeTime(timeOption)}
+                  >
+                    <Text style={[styles.whenChipText, isSelected && styles.whenChipTextActive]}>
+                      {formatNudgeTime(timeOption)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <View style={styles.customTimeRow}>
+              <Text style={styles.customTimeLabel}>CUSTOM TIME</Text>
+              <TextInput
+                value={nudgeTime}
+                onChangeText={(value) => setNudgeTime(normalizeNudgeTimeInput(value))}
+                onBlur={() => setNudgeTime(normalizeNudgeTime(nudgeTime))}
+                placeholder="20:30"
+                placeholderTextColor="rgba(247, 243, 238, 0.35)"
+                keyboardType="number-pad"
+                maxLength={5}
+                style={styles.customTimeInput}
+              />
             </View>
           </View>
 
@@ -457,6 +531,62 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     color: GOLD,
+  },
+  whenOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 14,
+  },
+  whenChip: {
+    minWidth: 104,
+    minHeight: 40,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(247, 243, 238, 0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  whenChipActive: {
+    backgroundColor: GOLD,
+    borderColor: GOLD,
+  },
+  whenChipText: {
+    fontFamily: DMSANS,
+    fontSize: 13,
+    fontWeight: '700',
+    color: 'rgba(247, 243, 238, 0.72)',
+  },
+  whenChipTextActive: {
+    color: '#0D0D0D',
+  },
+  customTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 12,
+  },
+  customTimeLabel: {
+    fontFamily: MONO,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    color: 'rgba(247, 243, 238, 0.45)',
+  },
+  customTimeInput: {
+    width: 104,
+    minHeight: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(247, 243, 238, 0.18)',
+    backgroundColor: 'rgba(0, 0, 0, 0.18)',
+    paddingHorizontal: 12,
+    fontFamily: MONO,
+    fontSize: 15,
+    fontWeight: '700',
+    color: IVORY,
+    textAlign: 'center',
   },
   saveBtn: {
     height: 50,

@@ -37,10 +37,12 @@ export type OnboardingPreferences = {
   paymentMethodIndex: number;
   paymentMethodName: string;
   nudgeChannels: string[];
+  nudgeTime: string;
   dialCode: string;
   dialNumber: string;
   contactNumber: string;
   selectedKit: string[];
+  numbersConfirmed?: boolean;
 };
 
 export type OnboardingCalculations = {
@@ -110,10 +112,12 @@ const EMPTY_PREFERENCES: OnboardingPreferences = {
   paymentMethodIndex: 0,
   paymentMethodName: '',
   nudgeChannels: [],
+  nudgeTime: '20:30',
   dialCode: '',
   dialNumber: '',
   contactNumber: '',
   selectedKit: [],
+  numbersConfirmed: false,
 };
 
 const EMPTY_CALCULATIONS: OnboardingCalculations = {
@@ -192,12 +196,16 @@ function normalizeOnboardingData(raw: unknown): OnboardingData | null {
       nudgeChannels: Array.isArray((source.preferences as Record<string, unknown> | undefined)?.nudgeChannels)
         ? ((source.preferences as Record<string, unknown>).nudgeChannels as unknown[]).map((item) => String(item).trim()).filter(Boolean)
         : [],
+      nudgeTime: /^\d{2}:\d{2}$/.test(String((source.preferences as Record<string, unknown> | undefined)?.nudgeTime ?? '').trim())
+        ? String((source.preferences as Record<string, unknown>).nudgeTime).trim()
+        : '20:30',
       dialCode: String((source.preferences as Record<string, unknown> | undefined)?.dialCode ?? '').trim(),
       dialNumber: String((source.preferences as Record<string, unknown> | undefined)?.dialNumber ?? '').trim(),
       contactNumber: String((source.preferences as Record<string, unknown> | undefined)?.contactNumber ?? '').trim(),
       selectedKit: Array.isArray((source.preferences as Record<string, unknown> | undefined)?.selectedKit)
         ? ((source.preferences as Record<string, unknown>).selectedKit as unknown[]).map((item) => String(item).trim()).filter(Boolean)
         : [],
+      numbersConfirmed: Boolean((source.preferences as Record<string, unknown> | undefined)?.numbersConfirmed),
     },
     calculations: {
       proteinGrams: Math.max(Number((source.calculations as Record<string, unknown> | undefined)?.proteinGrams ?? 0) || 0, 0),
