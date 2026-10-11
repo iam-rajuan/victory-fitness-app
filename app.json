@@ -41,7 +41,14 @@
       "output": "single"
     },
     "plugins": [
-      "expo-router",
+      [
+        "expo-router",
+        {
+          "asyncRoutes": {
+            "web": true
+          }
+        }
+      ],
       "expo-font",
       "expo-audio",
       "expo-notifications",
