@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -13,6 +13,9 @@ import {
   TextInput,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Sharing from 'expo-sharing';
+import { captureRef } from 'react-native-view-shot';
+import QRCode from 'qrcode';
 
 import RequirementAuditBoundary from '../audit/RequirementAuditBoundary';
 
@@ -21,6 +24,7 @@ interface ClaudeSessionCompleteModalProps {
   onClose: () => void;
   initialStep?: 'feedback' | 'complete';
   workoutTitle?: string;
+  workoutUrl?: string;
   sessionNumber?: number;
   minutes?: number;
   setsLogged?: number;
@@ -59,11 +63,312 @@ const RPE_OPTS = [
 
 const PAIN_CHIPS = ['Shoulder', 'Lower back', 'Knee', 'Wrist', 'Nothing hurt'];
 
+function drawRoundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  if (typeof (ctx as any).roundRect === 'function') {
+    (ctx as any).roundRect(x, y, w, h, r);
+  } else {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.arcTo(x + w, y, x + w, y + r, r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+    ctx.lineTo(x + r, y + h);
+    ctx.arcTo(x, y + h, x, y + r, r);
+    ctx.lineTo(x, y + r);
+    ctx.arcTo(x, y, x + r, y, r);
+    ctx.closePath();
+  }
+}
+
+function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let currentLine = '';
+
+  for (const word of words) {
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    if (ctx.measureText(testLine).width > maxWidth && currentLine) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = testLine;
+    }
+  }
+  if (currentLine) lines.push(currentLine);
+  return lines;
+}
+
+function getLogoElement(): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return resolve(null);
+    }
+    try {
+      const resolved = Image.resolveAssetSource(require('../../assets/logo_dark.png'));
+      const src = resolved?.uri || '';
+      if (!src) return resolve(null);
+      const img = new (window as any).Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = src;
+      if (img.complete && img.naturalWidth) resolve(img);
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
+async function generateStoryCardCanvasAsync(data: {
+  workoutTitle: string;
+  minutes: number;
+  streakDays: number;
+  dateStr: string;
+  coachName: string;
+  userName: string;
+  intensityLabel: string;
+  intensityValue: string;
+  coachQuote: string;
+  workoutUrl: string;
+  exercises: { cardN: string }[];
+}): Promise<string | null> {
+  if (Platform.OS !== 'web' || typeof document === 'undefined') return null;
+
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1080;
+    canvas.height = 1920;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    // Background: Pure dark obsidian
+    ctx.fillStyle = '#0D0D0D';
+    ctx.fillRect(0, 0, 1080, 1920);
+
+    // Top 10px Copper accent bar
+    ctx.fillStyle = '#B5651D';
+    ctx.fillRect(0, 0, 1080, 10);
+
+    // Subtle ambient glow at bottom
+    const gradient = ctx.createRadialGradient(540, 1920, 60, 540, 1920, 1000);
+    gradient.addColorStop(0, 'rgba(201, 148, 58, 0.22)');
+    gradient.addColorStop(0.5, 'rgba(201, 148, 58, 0.08)');
+    gradient.addColorStop(1, 'rgba(13, 13, 13, 0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 950, 1080, 970);
+
+    const padX = 90;
+    let y = 110;
+
+    // Brand logo
+    const logoImg = await getLogoElement();
+    if (logoImg && logoImg.naturalWidth) {
+      const aspect = logoImg.naturalWidth / (logoImg.naturalHeight || 1);
+      const targetH = 56;
+      const targetW = targetH * aspect;
+      ctx.drawImage(logoImg, padX, y, targetW, targetH);
+      y += targetH + 34;
+    } else {
+      ctx.fillStyle = '#C9943A';
+      ctx.fillRect(padX, y, 6, 40);
+      ctx.fillStyle = '#F7F3EE';
+      ctx.font = '700 32px sans-serif';
+      ctx.fillText('VICTORY FITNESS', padX + 20, y + 32);
+      y += 75;
+    }
+
+    // Row: YOUR VICTORY & Date
+    ctx.fillStyle = '#C9943A';
+    ctx.font = '600 24px sans-serif';
+    ctx.fillText('YOUR VICTORY', padX, y);
+
+    ctx.fillStyle = 'rgba(247, 243, 238, 0.5)';
+    ctx.font = '500 22px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(data.dateStr, 1080 - padX, y);
+    ctx.textAlign = 'left';
+    y += 50;
+
+    // WORKOUT COMPLETE
+    ctx.fillStyle = 'rgba(247, 243, 238, 0.55)';
+    ctx.font = '600 24px sans-serif';
+    ctx.fillText('WORKOUT COMPLETE', padX, y);
+    y += 85;
+
+    // Title: Uppercase, wrapped nicely
+    ctx.fillStyle = '#F7F3EE';
+    ctx.font = '800 64px sans-serif';
+    const titleLines = wrapCanvasText(ctx, data.workoutTitle.toUpperCase(), 1080 - padX * 2);
+    for (const line of titleLines) {
+      ctx.fillText(line, padX, y);
+      y += 78;
+    }
+    y += 20;
+
+    // Orange/copper divider line
+    ctx.strokeStyle = 'rgba(181, 101, 29, 0.6)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(padX, y);
+    ctx.lineTo(1080 - padX, y);
+    ctx.stroke();
+    y += 60;
+
+    // Exercises: up to 5 with 7px gold bullet dots
+    const displayExercises = data.exercises.slice(0, 5);
+    for (const ex of displayExercises) {
+      ctx.fillStyle = '#C9943A';
+      ctx.beginPath();
+      ctx.arc(padX + 8, y - 9, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(247, 243, 238, 0.9)';
+      ctx.font = '600 28px sans-serif';
+      ctx.fillText(ex.cardN, padX + 35, y);
+      y += 55;
+    }
+
+    if (data.exercises.length > 5) {
+      ctx.fillStyle = 'rgba(247, 243, 238, 0.45)';
+      ctx.font = '500 22px monospace';
+      ctx.fillText(`+${data.exercises.length - 5} MORE MOVEMENTS COMPLETED`, padX + 35, y);
+    }
+
+    // Bottom metrics section
+    let botY = 1380;
+    const colWidth = (1080 - padX * 2) / 3;
+
+    // Divider above metrics
+    ctx.strokeStyle = 'rgba(247, 243, 238, 0.2)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(padX, botY);
+    ctx.lineTo(1080 - padX, botY);
+    ctx.stroke();
+
+    botY += 45;
+
+    // 1. STREAK
+    ctx.fillStyle = 'rgba(247, 243, 238, 0.5)';
+    ctx.font = '600 22px sans-serif';
+    ctx.fillText('STREAK', padX, botY);
+
+    ctx.fillStyle = '#C9943A';
+    ctx.font = '700 64px monospace';
+    ctx.fillText(String(data.streakDays), padX, botY + 70);
+
+    // 2. INTENSITY
+    ctx.fillStyle = 'rgba(247, 243, 238, 0.5)';
+    ctx.font = '600 22px sans-serif';
+    ctx.fillText(data.intensityLabel, padX + colWidth, botY);
+
+    ctx.fillStyle = '#F7F3EE';
+    ctx.font = '700 48px sans-serif';
+    ctx.fillText(data.intensityValue, padX + colWidth, botY + 70);
+
+    // 3. TIME
+    ctx.fillStyle = 'rgba(247, 243, 238, 0.5)';
+    ctx.font = '600 22px sans-serif';
+    ctx.fillText('TIME', padX + colWidth * 2, botY);
+
+    ctx.fillStyle = '#F7F3EE';
+    ctx.font = '700 64px monospace';
+    ctx.fillText(`${data.minutes}′`, padX + colWidth * 2, botY + 70);
+
+    botY += 155;
+
+    // Coach Box with copper vertical bar
+    const quoteLines = wrapCanvasText(ctx, data.coachQuote, 1080 - padX * 2 - 40);
+    const quoteHeight = Math.max(80, quoteLines.length * 40 + 35);
+
+    ctx.strokeStyle = '#B5651D';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(padX, botY);
+    ctx.lineTo(padX, botY + quoteHeight);
+    ctx.stroke();
+
+    ctx.fillStyle = '#B5651D';
+    ctx.font = '600 20px sans-serif';
+    ctx.fillText('FROM YOUR COACH', padX + 25, botY + 22);
+
+    ctx.fillStyle = 'rgba(247, 243, 238, 0.88)';
+    ctx.font = '400 28px sans-serif';
+    let qY = botY + 60;
+    for (const qLine of quoteLines) {
+      ctx.fillText(qLine, padX + 25, qY);
+      qY += 38;
+    }
+
+    botY += quoteHeight + 45;
+
+    // Footer: User Name, App URL & Working QR Box
+    ctx.fillStyle = '#F7F3EE';
+    ctx.font = '700 32px sans-serif';
+    ctx.fillText(data.userName, padX, botY + 12);
+
+    ctx.fillStyle = '#C9943A';
+    ctx.font = '600 22px monospace';
+    ctx.fillText('VICTORY-FITNESS.APP', padX, botY + 48);
+
+    // Real, Scannable QR Code
+    try {
+      const qr = QRCode.create(data.workoutUrl, { errorCorrectionLevel: 'M' });
+      const qrBoxSize = 136;
+      const qrX = 1080 - padX - qrBoxSize;
+      const qrY = botY - 50;
+
+      ctx.fillStyle = '#FFFFFF';
+      drawRoundRect(ctx, qrX, qrY, qrBoxSize, qrBoxSize, 14);
+      ctx.fill();
+
+      const qrPadding = 12;
+      const qrDrawSize = qrBoxSize - qrPadding * 2;
+      const moduleSize = qrDrawSize / qr.modules.size;
+      ctx.fillStyle = '#0D0D0D';
+
+      for (let r = 0; r < qr.modules.size; r++) {
+        for (let c = 0; c < qr.modules.size; c++) {
+          if (qr.modules.get(r, c)) {
+            ctx.fillRect(
+              qrX + qrPadding + c * moduleSize,
+              qrY + qrPadding + r * moduleSize,
+              moduleSize + 0.35,
+              moduleSize + 0.35
+            );
+          }
+        }
+      }
+    } catch (qrErr) {
+      console.warn('QR draw error on canvas:', qrErr);
+    }
+
+    return canvas.toDataURL('image/png');
+  } catch (err) {
+    console.error('Failed to generate story card', err);
+    return null;
+  }
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  if (typeof document === 'undefined') return;
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 export default function ClaudeSessionCompleteModal({
   visible,
   onClose,
   initialStep = 'feedback',
   workoutTitle = 'Workout',
+  workoutUrl,
   sessionNumber,
   minutes = 40,
   setsLogged = 12,
@@ -197,238 +502,194 @@ export default function ClaudeSessionCompleteModal({
     return [...base, ...extra];
   })();
 
-  const handleShareWhatsApp = async () => {
-    const text = `Just finished ${workoutTitle} with Victory Fitness! 🔥 ${minutes} minutes · ${setsLogged} sets · Streak ${streakDays} days.`;
-    if (Platform.OS === 'web') {
-      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-    } else {
-      try {
-        await Share.share({ message: text });
-      } catch {}
+  const cardRef = useRef<View>(null);
+  const [qrPreviewUri, setQrPreviewUri] = useState<string>('');
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [sharingLoading, setSharingLoading] = useState<boolean>(false);
+
+  const displayUserName = useMemo(() => {
+    const trimmed = (userName || '').trim();
+    if (trimmed && trimmed.toLowerCase() !== 'there') {
+      return trimmed.toUpperCase();
     }
+    return 'MICHAEL KRAUSE';
+  }, [userName]);
+
+  const intensityLabel = hasCoach ? 'INTENSITY' : 'COMPLETED';
+  const intensityText = useMemo(() => {
+    if (!hasCoach) return 'All 5 sections';
+    if (selectedRpe === 0) return 'Smooth';
+    if (selectedRpe === 2) return 'Hard';
+    return 'Strong';
+  }, [hasCoach, selectedRpe]);
+
+  const coachQuote = useMemo(() => {
+    if (streakDays > 1) {
+      const numWords = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen', 'Twenty', 'Twenty-one'];
+      const streakWord = numWords[streakDays] || `${streakDays}`;
+      return `${streakWord} days straight. That is not motivation any more — that is who you are.`;
+    }
+    return 'Show up, do the work, raise the standard. That is who you are.';
+  }, [streakDays]);
+
+  const resolvedWorkoutUrl = useMemo(() => {
+    if (workoutUrl) return workoutUrl;
+    if (typeof window !== 'undefined' && window.location?.origin) {
+      return `${window.location.origin}/(tabs)/workout?title=${encodeURIComponent(headlineTitle)}`;
+    }
+    return `https://victory-fitness.app/(tabs)/workout?title=${encodeURIComponent(headlineTitle)}`;
+  }, [workoutUrl, headlineTitle]);
+
+  useEffect(() => {
+    if (visible && resolvedWorkoutUrl) {
+      QRCode.toDataURL(resolvedWorkoutUrl, {
+        width: 140,
+        margin: 1,
+        color: {
+          dark: '#0D0D0D',
+          light: '#FFFFFF',
+        },
+      })
+        .then((url) => setQrPreviewUri(url))
+        .catch((err) => console.warn('QR code gen error:', err));
+    }
+  }, [visible, resolvedWorkoutUrl]);
+
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    setTimeout(() => {
+      setToastMessage((cur) => (cur === message ? null : cur));
+    }, 3500);
   };
-
-  const handleShareInstagram = async () => {
-    const text = `Workout Complete: ${workoutTitle} · ${minutes}m · ${setsLogged} sets · Streak ${streakDays} 🔥 @VictoryFitness`;
-    if (Platform.OS === 'web') {
-      window.open('https://instagram.com', '_blank');
-    } else {
-      try {
-        await Share.share({ message: text });
-      } catch {}
-    }
-  };
-
-  const handleShareX = async () => {
-    const tweet = `Finished ${workoutTitle} with @VictoryFitness! ${minutes}m · ${setsLogged} sets · Streak ${streakDays} days.`;
-    if (Platform.OS === 'web') {
-      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweet)}`, '_blank');
-    } else {
-      try {
-        await Share.share({ message: tweet });
-      } catch {}
-    }
-  };
-
-function generateStoryCardCanvas(data: {
-  workoutTitle: string;
-  minutes: number;
-  streakDays: number;
-  dateStr: string;
-  coachName: string;
-  exercises: { cardN: string }[];
-}): string | null {
-  if (Platform.OS !== 'web' || typeof document === 'undefined') return null;
-
-  try {
-    const canvas = document.createElement('canvas');
-    canvas.width = 1080;
-    canvas.height = 1920;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
-
-    // Background: Pure dark obsidian
-    ctx.fillStyle = '#0D0D0D';
-    ctx.fillRect(0, 0, 1080, 1920);
-
-    // Subtle ambient glow at bottom
-    const gradient = ctx.createRadialGradient(540, 1920, 50, 540, 1920, 950);
-    gradient.addColorStop(0, 'rgba(201, 148, 58, 0.15)');
-    gradient.addColorStop(1, 'rgba(13, 13, 13, 0)');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 1000, 1080, 920);
-
-    const padX = 100;
-    let y = 140;
-
-    // Brand logo
-    ctx.fillStyle = '#F7F3EE';
-    ctx.font = '700 32px sans-serif';
-    ctx.fillText('VICTORY FITNESS', padX, y);
-    y += 90;
-
-    // Row: YOUR VICTORY & Date
-    ctx.fillStyle = '#C9943A';
-    ctx.font = '600 24px sans-serif';
-    ctx.fillText('YOUR VICTORY', padX, y);
-
-    ctx.fillStyle = 'rgba(247, 243, 238, 0.5)';
-    ctx.font = '500 22px monospace';
-    ctx.textAlign = 'right';
-    ctx.fillText(data.dateStr, 1080 - padX, y);
-    ctx.textAlign = 'left';
-    y += 50;
-
-    // WORKOUT COMPLETE
-    ctx.fillStyle = 'rgba(247, 243, 238, 0.55)';
-    ctx.font = '600 24px sans-serif';
-    ctx.fillText('WORKOUT COMPLETE', padX, y);
-    y += 90;
-
-    // Title: UPPER BODY STRENGTH
-    ctx.fillStyle = '#F7F3EE';
-    ctx.font = '800 68px sans-serif';
-    const lines = data.workoutTitle.toUpperCase().split('\n');
-    if (lines.length === 1 && lines[0] === 'UPPER BODY STRENGTH') {
-      ctx.fillText('UPPER BODY', padX, y);
-      y += 82;
-      ctx.fillText('STRENGTH', padX, y);
-    } else {
-      for (const line of lines) {
-        ctx.fillText(line, padX, y);
-        y += 82;
-      }
-    }
-    y += 40;
-
-    // Orange divider line
-    ctx.strokeStyle = 'rgba(181, 101, 29, 0.4)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(padX, y);
-    ctx.lineTo(1080 - padX, y);
-    ctx.stroke();
-    y += 65;
-
-    // Exercises
-    for (const ex of data.exercises) {
-      // 4px gold bullet dot
-      ctx.fillStyle = '#C9943A';
-      ctx.beginPath();
-      ctx.arc(padX + 8, y - 9, 7, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Exercise name
-      ctx.fillStyle = 'rgba(247, 243, 238, 0.9)';
-      ctx.font = '600 28px sans-serif';
-      ctx.fillText(ex.cardN, padX + 35, y);
-      y += 55;
-    }
-
-    // Bottom metrics section
-    let botY = 1420;
-    const colWidth = (1080 - padX * 2) / 3;
-
-    // 3 column top lines
-    ctx.strokeStyle = 'rgba(247, 243, 238, 0.2)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(padX, botY);
-    ctx.lineTo(1080 - padX, botY);
-    ctx.stroke();
-
-    botY += 45;
-
-    // STREAK
-    ctx.fillStyle = 'rgba(247, 243, 238, 0.5)';
-    ctx.font = '600 22px sans-serif';
-    ctx.fillText('STREAK', padX, botY);
-
-    ctx.fillStyle = '#C9943A';
-    ctx.font = '700 64px monospace';
-    ctx.fillText(String(data.streakDays), padX, botY + 70);
-
-    // INTENSITY
-    ctx.fillStyle = 'rgba(247, 243, 238, 0.5)';
-    ctx.font = '600 22px sans-serif';
-    ctx.fillText('INTENSITY', padX + colWidth, botY);
-
-    ctx.fillStyle = '#F7F3EE';
-    ctx.font = '700 52px sans-serif';
-    ctx.fillText('Strong', padX + colWidth, botY + 70);
-
-    // TIME
-    ctx.fillStyle = 'rgba(247, 243, 238, 0.5)';
-    ctx.font = '600 22px sans-serif';
-    ctx.fillText('TIME', padX + colWidth * 2, botY);
-
-    ctx.fillStyle = '#F7F3EE';
-    ctx.font = '700 64px monospace';
-    ctx.fillText(`${data.minutes}′`, padX + colWidth * 2, botY + 70);
-
-    botY += 150;
-
-    // Coach Box
-    ctx.strokeStyle = '#B5651D';
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.moveTo(padX, botY);
-    ctx.lineTo(padX, botY + 95);
-    ctx.stroke();
-
-    ctx.fillStyle = '#B5651D';
-    ctx.font = '600 20px sans-serif';
-    ctx.fillText('FROM YOUR COACH', padX + 25, botY + 22);
-
-    ctx.fillStyle = 'rgba(247, 243, 238, 0.85)';
-    ctx.font = '400 28px sans-serif';
-    ctx.fillText('Thirteen days straight. That is not motivation any more —', padX + 25, botY + 60);
-    ctx.fillText('that is who you are.', padX + 25, botY + 96);
-
-    botY += 150;
-
-    // Footer
-    ctx.fillStyle = '#F7F3EE';
-    ctx.font = '700 30px sans-serif';
-    ctx.fillText(data.coachName, padX, botY);
-
-    ctx.fillStyle = '#C9943A';
-    ctx.font = '600 22px monospace';
-    ctx.fillText('VICTORY-FITNESS.APP', padX, botY + 36);
-
-    // QR box
-    const qrSize = 75;
-    ctx.strokeStyle = 'rgba(247, 243, 238, 0.3)';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(1080 - padX - qrSize, botY - 30, qrSize, qrSize);
-
-    ctx.fillStyle = 'rgba(247, 243, 238, 0.5)';
-    ctx.font = '700 20px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('QR', 1080 - padX - qrSize / 2, botY + 16);
-    ctx.textAlign = 'left';
-
-    return canvas.toDataURL('image/png');
-  } catch (err) {
-    console.error('Failed to generate story card', err);
-    return null;
-  }
-}
 
   const shareExerciseLines = completedExercises.length
     ? completedExercises.map((exercise) => `• ${exercise.cardN}`).join('\n')
     : '• WORKOUT COMPLETED';
-  const shareMessage = `YOUR VICTORY · ${storyTitle}\n\n${shareExerciseLines}\n\nStreak: ${streakDays} days | Time: ${minutes} min | Sets: ${setsLogged}\n\n${userStatement}\n\nhttps://victory-fitness.app`;
+  const shareMessage = `YOUR VICTORY · ${storyTitle}\n\n${shareExerciseLines}\n\nStreak: ${streakDays} days | Time: ${minutes} min | Sets: ${setsLogged}\n\n${userStatement}\n\n${resolvedWorkoutUrl}`;
 
-  const handleShareLinkedIn = async () => {
-    if (Platform.OS === 'web') {
-      window.open('https://www.linkedin.com/sharing/share-offsite/?url=https://victory-fitness.app', '_blank');
-    } else {
+  const handleShareAction = async (channel: 'whatsapp' | 'instagram' | 'x' | 'linkedin' | 'direct' | 'save') => {
+    setSharingLoading(true);
+    try {
+      let fileBlob: Blob | null = null;
+      let fileObj: File | null = null;
+      let nativeUri: string | null = null;
+      const fileName = `victory-fitness-${headlineTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-story.png`;
+
+      if (Platform.OS === 'web') {
+        const dataUrl = await generateStoryCardCanvasAsync({
+          workoutTitle,
+          minutes,
+          streakDays,
+          dateStr: displayDate,
+          coachName,
+          userName: displayUserName,
+          intensityLabel,
+          intensityValue: intensityText,
+          coachQuote,
+          workoutUrl: resolvedWorkoutUrl,
+          exercises: completedExercises,
+        });
+
+        if (dataUrl) {
+          const res = await fetch(dataUrl);
+          fileBlob = await res.blob();
+          if (typeof File !== 'undefined') {
+            fileObj = new File([fileBlob], fileName, { type: 'image/png' });
+          }
+        }
+      } else {
+        try {
+          if (cardRef.current) {
+            nativeUri = await captureRef(cardRef, {
+              format: 'png',
+              quality: 1,
+              width: 1080,
+              height: 1920,
+            });
+          }
+        } catch (captureErr) {
+          console.warn('Native view capture error:', captureErr);
+        }
+      }
+
+      if (channel === 'save') {
+        if (Platform.OS === 'web' && fileBlob) {
+          downloadBlob(fileBlob, fileName);
+          showToast('Card saved! 1080 × 1920 PNG downloaded.');
+        } else if (nativeUri && (await Sharing.isAvailableAsync())) {
+          await Sharing.shareAsync(nativeUri, {
+            mimeType: 'image/png',
+            dialogTitle: 'Save Story Card',
+            UTI: 'public.png',
+          });
+        } else {
+          await Share.share({ message: shareMessage });
+        }
+        return;
+      }
+
+      // Check modern Web Share API with file attachment (Mobile Safari, Chrome on Android, etc.)
+      if (Platform.OS === 'web' && fileObj && typeof navigator !== 'undefined' && (navigator as any).canShare && (navigator as any).canShare({ files: [fileObj] })) {
+        try {
+          await (navigator as any).share({
+            files: [fileObj],
+            title: `Victory Fitness · ${headlineTitle}`,
+            text: channel === 'x' ? `Finished ${headlineTitle} with @VictoryFitness! ${minutes}m · ${setsLogged} sets · Streak ${streakDays} days 🔥 ${resolvedWorkoutUrl}` : shareMessage,
+          });
+          return;
+        } catch (err: any) {
+          if (err?.name === 'AbortError') return;
+        }
+      }
+
+      // Native React Native sharing with file attachment
+      if (Platform.OS !== 'web' && nativeUri && (await Sharing.isAvailableAsync())) {
+        await Sharing.shareAsync(nativeUri, {
+          mimeType: 'image/png',
+          dialogTitle: `Share ${headlineTitle}`,
+          UTI: 'public.png',
+        });
+        return;
+      }
+
+      // Desktop web fallbacks (auto-download 1080x1920 PNG and open platform)
+      if (fileBlob) {
+        downloadBlob(fileBlob, fileName);
+      }
+
+      if (channel === 'whatsapp') {
+        const text = `Just finished ${headlineTitle} with Victory Fitness! 🔥 ${minutes} minutes · ${setsLogged} sets · Streak ${streakDays} days. ${resolvedWorkoutUrl}`;
+        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+        showToast('Story card (1080 × 1920 PNG) downloaded! You can attach it to WhatsApp.');
+      } else if (channel === 'instagram') {
+        window.open('https://instagram.com', '_blank');
+        showToast('Story card (1080 × 1920 PNG) downloaded! Ready for your Instagram Story.');
+      } else if (channel === 'x') {
+        const tweet = `Finished ${headlineTitle} with @VictoryFitness! ${minutes}m · ${setsLogged} sets · Streak ${streakDays} days 🔥 ${resolvedWorkoutUrl}`;
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweet)}`, '_blank');
+        showToast('Story card downloaded! You can attach it to your tweet.');
+      } else if (channel === 'linkedin') {
+        window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(resolvedWorkoutUrl)}`, '_blank');
+        showToast('Story card downloaded! Ready to share on LinkedIn.');
+      } else if (channel === 'direct') {
+        showToast('Story card downloaded (1080 × 1920 PNG)! Ready to share.');
+      }
+    } catch (err) {
+      console.error('Sharing failed:', err);
       try {
         await Share.share({ message: shareMessage });
       } catch {}
+    } finally {
+      setSharingLoading(false);
     }
   };
+
+  const handleShareWhatsApp = () => handleShareAction('whatsapp');
+  const handleShareInstagram = () => handleShareAction('instagram');
+  const handleShareX = () => handleShareAction('x');
+  const handleShareLinkedIn = () => handleShareAction('linkedin');
+  const handleSave = () => handleShareAction('save');
+  const handleDirectShare = () => handleShareAction('direct');
 
   const handleCircle = () => {
     if (Platform.OS === 'web') {
@@ -436,59 +697,6 @@ function generateStoryCardCanvas(data: {
     } else {
       onDoneHome();
     }
-  };
-
-  const handleSave = async () => {
-    if (Platform.OS === 'web' && typeof document !== 'undefined') {
-      const dataUrl = generateStoryCardCanvas({
-        workoutTitle,
-        minutes,
-        streakDays,
-        dateStr: displayDate,
-        coachName,
-        exercises: completedExercises,
-      });
-
-      if (dataUrl) {
-        const anchor = document.createElement('a');
-        anchor.href = dataUrl;
-        anchor.download = `victory-fitness-${workoutTitle.toLowerCase().replace(/\s+/g, '-')}-story.png`;
-        document.body.appendChild(anchor);
-        anchor.click();
-        document.body.removeChild(anchor);
-        alert('Card saved locally (1080 × 1920 PNG downloaded).');
-        return;
-      }
-    }
-
-    try {
-      await Share.share({
-        title: 'Victory Fitness Share Card',
-        message: shareMessage,
-        url: 'https://victory-fitness.app',
-      });
-    } catch {}
-  };
-
-  const handleDirectShare = async () => {
-    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && (navigator as any).share) {
-      try {
-        await (navigator as any).share({
-          title: 'Victory Fitness Share Card',
-          text: shareMessage,
-          url: 'https://victory-fitness.app',
-        });
-        return;
-      } catch {}
-    }
-
-    try {
-      await Share.share({
-        title: 'Victory Fitness Share Card',
-        message: shareMessage,
-        url: 'https://victory-fitness.app',
-      });
-    } catch {}
   };
 
   return (
@@ -727,88 +935,94 @@ function generateStoryCardCanvas(data: {
               <Text style={styles.shareSectionKicker}>YOUR SHARE CARD · 9:16</Text>
 
               <Pressable style={styles.storyCard} onPress={() => void handleDirectShare()}>
-                {/* 5px Top Copper Bar matching Claude reference */}
-                <View style={styles.storyTopAccent} />
+                <View ref={cardRef} collapsable={false} style={StyleSheet.absoluteFillObject}>
+                  {/* 5px Top Copper Bar matching Claude reference */}
+                  <View style={styles.storyTopAccent} />
 
-                {/* Ambient Radial Golden Glow at Bottom matching Claude reference */}
-                <LinearGradient
-                  colors={['transparent', 'rgba(201, 148, 58, 0.03)', 'rgba(201, 148, 58, 0.16)', 'rgba(201, 148, 58, 0.28)']}
-                  locations={[0, 0.45, 0.8, 1]}
-                  style={styles.storyBottomGlow}
-                  pointerEvents="none"
-                />
-
-                {/* Top Section */}
-                <View style={styles.storyTopSection}>
-                  {/* Victory Fitness White Logo */}
-                  <Image
-                    source={require('../../assets/logo_dark.png')}
-                    style={styles.storyLogo}
-                    resizeMode="contain"
+                  {/* Ambient Radial Golden Glow at Bottom matching Claude reference */}
+                  <LinearGradient
+                    colors={['transparent', 'rgba(201, 148, 58, 0.03)', 'rgba(201, 148, 58, 0.16)', 'rgba(201, 148, 58, 0.28)']}
+                    locations={[0, 0.45, 0.8, 1]}
+                    style={styles.storyBottomGlow}
+                    pointerEvents="none"
                   />
 
-                  <View style={styles.storyVictoryRow}>
-                    <Text style={styles.storyVictoryLabel}>YOUR VICTORY</Text>
-                    <Text style={styles.storyDateLabel}>{displayDate}</Text>
+                  {/* Top Section */}
+                  <View style={styles.storyTopSection}>
+                    {/* Victory Fitness White Logo */}
+                    <Image
+                      source={require('../../assets/logo_dark.png')}
+                      style={styles.storyLogo}
+                      resizeMode="contain"
+                    />
+
+                    <View style={styles.storyVictoryRow}>
+                      <Text style={styles.storyVictoryLabel}>YOUR VICTORY</Text>
+                      <Text style={styles.storyDateLabel}>{displayDate}</Text>
+                    </View>
+
+                    <Text style={styles.storyCompleteLabel}>WORKOUT COMPLETE</Text>
+                    <Text style={styles.storyWorkoutTitle}>{storyTitle}</Text>
+
+                    {/* Copper/Orange divider line */}
+                    <View style={styles.storyOrangeDivider} />
+
+                    {/* 4 Bulleted Exercises with 4px gold dots */}
+                    <View style={styles.storyExerciseList}>
+                      {(completedExercises.length > 0 ? completedExercises : [{ n: headlineTitle, s: '', cardN: storyTitle }]).map((e, idx) => (
+                        <View key={`${e.cardN}-${idx}`} style={styles.storyExerciseItem}>
+                          <View style={styles.storyGoldDot} />
+                          <Text style={styles.storyExerciseName}>{e.cardN}</Text>
+                        </View>
+                      ))}
+                    </View>
                   </View>
 
-                  <Text style={styles.storyCompleteLabel}>WORKOUT COMPLETE</Text>
-                  <Text style={styles.storyWorkoutTitle}>{storyTitle}</Text>
-
-                  {/* Copper/Orange divider line */}
-                  <View style={styles.storyOrangeDivider} />
-
-                  {/* 4 Bulleted Exercises with 4px gold dots */}
-                  <View style={styles.storyExerciseList}>
-                    {(completedExercises.length > 0 ? completedExercises : [{ n: headlineTitle, s: '', cardN: storyTitle }]).map((e, idx) => (
-                      <View key={`${e.cardN}-${idx}`} style={styles.storyExerciseItem}>
-                        <View style={styles.storyGoldDot} />
-                        <Text style={styles.storyExerciseName}>{e.cardN}</Text>
+                  {/* Bottom Section */}
+                  <View style={styles.storyBottomSection}>
+                    {/* 3 Metric Columns with top border */}
+                    <View style={styles.storyMetricsRow}>
+                      <View style={styles.storyMetricCol}>
+                        <Text style={styles.storyMetricLabel}>STREAK</Text>
+                        <Text style={[styles.storyMetricVal, styles.storyMetricValGold]}>
+                          {streakDays}
+                        </Text>
                       </View>
-                    ))}
-                  </View>
-                </View>
+                      <View style={styles.storyMetricCol}>
+                        <Text style={styles.storyMetricLabel}>
+                          {intensityLabel}
+                        </Text>
+                        <Text style={styles.storyMetricValClash}>
+                          {intensityText}
+                        </Text>
+                      </View>
+                      <View style={styles.storyMetricCol}>
+                        <Text style={styles.storyMetricLabel}>TIME</Text>
+                        <Text style={styles.storyMetricValMono}>{`${minutes}′`}</Text>
+                      </View>
+                    </View>
 
-                {/* Bottom Section */}
-                <View style={styles.storyBottomSection}>
-                  {/* 3 Metric Columns with top border */}
-                  <View style={styles.storyMetricsRow}>
-                    <View style={styles.storyMetricCol}>
-                      <Text style={styles.storyMetricLabel}>STREAK</Text>
-                      <Text style={[styles.storyMetricVal, styles.storyMetricValGold]}>
-                        {streakDays}
+                    {/* FROM YOUR COACH Quote with left copper border */}
+                    <View style={styles.storyCoachBox}>
+                      <Text style={styles.storyCoachKicker}>FROM YOUR COACH</Text>
+                      <Text style={styles.storyCoachQuote}>
+                        {coachQuote}
                       </Text>
                     </View>
-                    <View style={styles.storyMetricCol}>
-                      <Text style={styles.storyMetricLabel}>
-                        {hasCoach ? 'INTENSITY' : 'COMPLETED'}
-                      </Text>
-                      <Text style={styles.storyMetricValClash}>
-                        {hasCoach ? 'Strong' : 'All 5 sections'}
-                      </Text>
-                    </View>
-                    <View style={styles.storyMetricCol}>
-                      <Text style={styles.storyMetricLabel}>TIME</Text>
-                      <Text style={styles.storyMetricValMono}>{`${minutes}′`}</Text>
-                    </View>
-                  </View>
 
-                  {/* FROM YOUR COACH Quote with left copper border */}
-                  <View style={styles.storyCoachBox}>
-                    <Text style={styles.storyCoachKicker}>FROM YOUR COACH</Text>
-                    <Text style={styles.storyCoachQuote}>
-                      Thirteen days straight. That is not motivation any more — that is who you are.
-                    </Text>
-                  </View>
-
-                  {/* Footer with Coach Name, App URL, and QR Box */}
-                  <View style={styles.storyFooterRow}>
-                    <View>
-                      <Text style={styles.storyCoachName}>MICHAEL KRAUSE</Text>
-                      <Text style={styles.storyAppUrl}>VICTORY-FITNESS.APP</Text>
-                    </View>
-                    <View style={styles.storyQrBox}>
-                      <Text style={styles.storyQrText}>QR</Text>
+                    {/* Footer with Athlete Name, App URL, and QR Box */}
+                    <View style={styles.storyFooterRow}>
+                      <View>
+                        <Text style={styles.storyCoachName}>{displayUserName}</Text>
+                        <Text style={styles.storyAppUrl}>VICTORY-FITNESS.APP</Text>
+                      </View>
+                      <View style={styles.storyQrBox}>
+                        {qrPreviewUri ? (
+                          <Image source={{ uri: qrPreviewUri }} style={styles.storyQrImage} resizeMode="contain" />
+                        ) : (
+                          <Text style={styles.storyQrText}>QR</Text>
+                        )}
+                      </View>
                     </View>
                   </View>
                 </View>
@@ -822,24 +1036,44 @@ function generateStoryCardCanvas(data: {
               {/* SHARE & MOTIVATE FRIENDS */}
               <Text style={styles.shareFriendsKicker}>SHARE & MOTIVATE FRIENDS</Text>
               <View style={styles.socialRow1}>
-                <Pressable style={styles.whatsappBtn} onPress={() => void handleShareWhatsApp()}>
-                  <Text style={styles.whatsappBtnText}>WhatsApp</Text>
+                <Pressable
+                  style={[styles.whatsappBtn, sharingLoading && { opacity: 0.7 }]}
+                  onPress={() => void handleShareWhatsApp()}
+                  disabled={sharingLoading}
+                >
+                  <Text style={styles.whatsappBtnText}>{sharingLoading ? 'Preparing...' : 'WhatsApp'}</Text>
                 </Pressable>
-                <Pressable style={styles.instagramBtn} onPress={() => void handleShareInstagram()}>
-                  <Text style={styles.instagramBtnText}>Instagram</Text>
+                <Pressable
+                  style={[styles.instagramBtn, sharingLoading && { opacity: 0.7 }]}
+                  onPress={() => void handleShareInstagram()}
+                  disabled={sharingLoading}
+                >
+                  <Text style={styles.instagramBtnText}>{sharingLoading ? 'Preparing...' : 'Instagram'}</Text>
                 </Pressable>
               </View>
               <View style={styles.socialRow2}>
-                <Pressable style={styles.socialPillBtn} onPress={() => void handleShareX()}>
+                <Pressable
+                  style={[styles.socialPillBtn, sharingLoading && { opacity: 0.7 }]}
+                  onPress={() => void handleShareX()}
+                  disabled={sharingLoading}
+                >
                   <Text style={styles.socialPillText}>X</Text>
                 </Pressable>
-                <Pressable style={styles.socialPillBtn} onPress={() => void handleShareLinkedIn()}>
+                <Pressable
+                  style={[styles.socialPillBtn, sharingLoading && { opacity: 0.7 }]}
+                  onPress={() => void handleShareLinkedIn()}
+                  disabled={sharingLoading}
+                >
                   <Text style={styles.socialPillText}>LinkedIn</Text>
                 </Pressable>
                 <Pressable style={styles.socialPillBtn} onPress={handleCircle}>
                   <Text style={styles.socialPillText}>Circle</Text>
                 </Pressable>
-                <Pressable style={styles.socialPillBtn} onPress={() => void handleSave()}>
+                <Pressable
+                  style={[styles.socialPillBtn, sharingLoading && { opacity: 0.7 }]}
+                  onPress={() => void handleSave()}
+                  disabled={sharingLoading}
+                >
                   <Text style={styles.socialPillText}>Save</Text>
                 </Pressable>
               </View>
@@ -850,6 +1084,12 @@ function generateStoryCardCanvas(data: {
               <Text style={styles.doneBtnText}>Done</Text>
             </Pressable>
           </ScrollView>
+        )}
+
+        {toastMessage && (
+          <View style={styles.toastContainer} pointerEvents="none">
+            <Text style={styles.toastText}>{toastMessage}</Text>
+          </View>
         )}
       </View>
     </Modal>
@@ -1523,19 +1763,26 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   storyQrBox: {
-    width: 34,
-    height: 34,
+    width: 36,
+    height: 36,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(247, 243, 238, 0.2)',
+    borderColor: 'rgba(247, 243, 238, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'transparent',
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+    padding: 2,
+  },
+  storyQrImage: {
+    width: 30,
+    height: 30,
+    borderRadius: 4,
   },
   storyQrText: {
     fontFamily: MONO,
     fontSize: 8.5,
-    color: 'rgba(247, 243, 238, 0.5)',
+    color: '#0D0D0D',
   },
   shareCaption: {
     fontFamily: INTER,
@@ -1543,6 +1790,32 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     color: 'rgba(247, 243, 238, 0.42)',
     marginTop: 10,
+  },
+  toastContainer: {
+    position: 'absolute',
+    bottom: 30,
+    left: 20,
+    right: 20,
+    backgroundColor: '#1E1E1E',
+    borderColor: 'rgba(201, 148, 58, 0.6)',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 9999,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  toastText: {
+    fontFamily: DMSANS,
+    fontSize: 13,
+    color: IVORY,
+    textAlign: 'center',
   },
   shareFriendsKicker: {
     fontFamily: DMSANS,

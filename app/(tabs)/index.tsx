@@ -1109,6 +1109,7 @@ export default function HomeScreen() {
         streakDays={streakDays}
         identityStatement={currentUser?.identity_statement || undefined}
         motivationStatement={currentUser?.motivation_statement || undefined}
+        userName={currentUser?.name || ''}
         tier={tier}
         onDoneHome={() => setCompleteModalVisible(false)}
         onUpgrade={() => {
