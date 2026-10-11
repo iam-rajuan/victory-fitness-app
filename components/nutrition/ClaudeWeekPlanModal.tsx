@@ -182,6 +182,8 @@ export default function ClaudeWeekPlanModal({
     try {
       const response = await createNutritionPlan({
         goal: 'maintenance',
+        regenerate: true,
+        force_refresh: true,
         cuisine: selectedCuisines.join(', ') || 'balanced',
         favorite_meal: favoriteMeals[0],
         favorite_meals: favoriteMeals,

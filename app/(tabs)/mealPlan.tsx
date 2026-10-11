@@ -9,10 +9,12 @@ import {
   Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
 import { fetchCurrentUser, fetchCurrentUserBodyMetrics, AuthUser } from '../../lib/api';
 import { normalizeSubscriptionTier, SubscriptionTier } from '../../lib/access';
 import {
   calculateProteinTarget,
+  clearSavedNutritionPlan,
   createNutritionMealLog,
   getLatestNutritionPlan,
   getNutritionMealLogs,
@@ -47,6 +49,10 @@ const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", defau
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 export default function MealPlanScreen() {
+  const router = useRouter();
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const [savedWeekError, setSavedWeekError] = useState('');
   const { isDark, colors } = useTheme();
   const { t } = useLanguage();
 
@@ -489,6 +495,26 @@ export default function MealPlanScreen() {
 
         {/* Week Plan Builder Banner matching lines 1065-1070 */}
         <View style={styles.weekPlanBannerCard}>
+          <Text style={styles.weekPlanTitle}>{t('Your saved week')}</Text>
+          <Text style={styles.weekPlanSub}>{nutritionPlan ? `${nutritionPlan.days.length} days · ${nutritionPlan.shopping_list.reduce((sum, section) => sum + section.items.length, 0)} shopping items` : t('No saved week yet. Build a week to save your meals and shopping list here.')}</Text>
+          {nutritionPlan ? <>
+            <TouchableOpacity style={styles.buildPlanBtn} onPress={() => router.push('/mealPlan/week' as any)}><Text style={styles.buildPlanBtnText}>{t('View full week')}</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowShoppingModal(true)} style={{ paddingVertical: 16 }}><Text style={{ color: GOLD }}>{t('View shopping list')}</Text></TouchableOpacity>
+            <TouchableOpacity disabled={clearing} onPress={() => setConfirmClear(true)}><Text style={{ color: IVORY }}>{t('Clear saved week')}</Text></TouchableOpacity>
+            {confirmClear ? <View style={{ marginTop: 16 }}>
+              <Text style={styles.weekPlanSub}>{t('Clear your saved week and shopping list? Your logged meals will remain.')}</Text>
+              <TouchableOpacity disabled={clearing} style={styles.buildPlanBtn} onPress={async () => {
+                setClearing(true); setSavedWeekError('');
+                try { await clearSavedNutritionPlan(); setNutritionPlan(null); setConfirmClear(false); }
+                catch { setSavedWeekError('We couldn’t clear your saved week. Please try again.'); }
+                finally { setClearing(false); }
+              }}><Text style={styles.buildPlanBtnText}>{clearing ? 'Clearing…' : 'Confirm clear'}</Text></TouchableOpacity>
+              <TouchableOpacity disabled={clearing} onPress={() => setConfirmClear(false)} style={{ paddingVertical: 16 }}><Text style={{ color: IVORY }}>Keep saved week</Text></TouchableOpacity>
+            </View> : null}
+          </> : null}
+          {savedWeekError ? <Text accessibilityRole="alert" style={{ color: IVORY, marginTop: 12 }}>{savedWeekError}</Text> : null}
+        </View>
+        <View style={styles.weekPlanBannerCard}>
           <Text style={styles.weekPlanKicker}>
             {t('NUTRITION PLANNER · SIX WEEKS')}
           </Text>
@@ -536,6 +562,7 @@ export default function MealPlanScreen() {
 
       {/* Week Plan Modal matching lines 1567-1653 */}
       <ClaudeWeekPlanModal
+        key={String(showWeekPlanModal)}
         visible={showWeekPlanModal}
         onClose={() => setShowWeekPlanModal(false)}
         onOpenShoppingList={() => {

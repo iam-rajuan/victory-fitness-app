@@ -152,6 +152,11 @@ export async function getLatestNutritionPlan(options?: { forceRefresh?: boolean 
   );
 }
 
+export async function clearSavedNutritionPlan() {
+  await apiRequest('/ai/nutrition/plan/latest', { method: 'DELETE' });
+  await primeCachedResource(NUTRITION_PLAN_LATEST_CACHE_KEY, null);
+}
+
 export async function getLatestProgressiveNutritionPlan() {
   return apiRequest<NutritionPlanApiResponse>('/ai/nutrition/plan/progressive/latest');
 }
