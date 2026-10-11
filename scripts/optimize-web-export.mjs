@@ -1,10 +1,20 @@
 import fs from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const file = path.join(root, 'dist', 'index.html');
 let html = fs.readFileSync(file, 'utf8');
+// Metro's entry name can remain unchanged when its async route map changes.
+// Hash the final bytes so immutable browser caches cannot retain an old map.
+html = html.replace(/src="(\/_expo\/static\/js\/web\/entry-[^"/]+\.js)"/g, (tag, url) => {
+  const entryPath = path.join(root, 'dist', url);
+  const hash = createHash('sha256').update(fs.readFileSync(entryPath)).digest('hex').slice(0, 32);
+  const nextUrl = url.replace(/entry-[^/]+\.js$/, `entry-${hash}.js`);
+  fs.copyFileSync(entryPath, path.join(root, 'dist', nextUrl));
+  return `src="${nextUrl}"`;
+});
 const emptyRoot = '<div id="root"></div>';
 if (!html.includes(emptyRoot)) throw new Error('Unexpected Expo HTML: missing empty root. Update the startup shell integration.');
 // React replaces this shell when it mounts. It uses only inline CSS so it
