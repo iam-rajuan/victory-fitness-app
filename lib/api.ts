@@ -168,6 +168,7 @@ export function resolveRemoteAssetUrl(url: string | null | undefined): string {
 }
 
 type RequestOptions = {
+  signal?: AbortSignal;
   method?: string;
   body?: unknown;
   timeoutMs?: number;
@@ -856,6 +857,9 @@ async function ensureStoredApiUrlMatches() {
 
 async function fetchWithTimeout(input: string, init: RequestInit = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
   const controller = new AbortController();
+  const abortFromCaller = () => controller.abort();
+  init.signal?.addEventListener('abort', abortFromCaller, { once: true });
+  if (init.signal?.aborted) controller.abort();
   const timeout = setTimeout(() => {
     controller.abort();
   }, timeoutMs);
@@ -863,7 +867,7 @@ async function fetchWithTimeout(input: string, init: RequestInit = {}, timeoutMs
   try {
     return await fetch(input, {
       ...init,
-      signal: init.signal ?? controller.signal,
+      signal: controller.signal,
     });
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
@@ -871,6 +875,7 @@ async function fetchWithTimeout(input: string, init: RequestInit = {}, timeoutMs
     }
     throw error;
   } finally {
+    init.signal?.removeEventListener('abort', abortFromCaller);
     clearTimeout(timeout);
   }
 }
@@ -2066,6 +2071,7 @@ export async function apiRequest<T>(
 
   const requestPromise = (async () => {
     const response = await fetchWithTimeout(`${API_URL}${path}`, {
+      signal: options.signal,
       method,
       headers,
       credentials: APP_REQUEST_CREDENTIALS,

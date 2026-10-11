@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -96,6 +96,28 @@ export default function ClaudeWeekPlanModal({
   const [generatedPlan, setGeneratedPlan] = useState<NutritionPlanApiResponse | null>(null);
   const [isBuilding, setIsBuilding] = useState(false);
   const [buildError, setBuildError] = useState('');
+  const [progress, setProgress] = useState(0);
+  const buildRequest = useRef<AbortController | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  const cancelBuild = () => {
+    buildRequest.current?.abort();
+    buildRequest.current = null;
+    setIsBuilding(false);
+  };
+  useEffect(() => {
+    if (!visible) cancelBuild();
+    return () => { buildRequest.current?.abort(); buildRequest.current = null; };
+  }, [visible]);
+  useEffect(() => {
+    if (!isBuilding) return;
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+    const started = Date.now();
+    const timer = setInterval(() => {
+      // Estimated waiting progress: only a successful response means completion.
+      setProgress(Math.min(95, Math.floor(5 + 90 * (1 - Math.exp(-(Date.now() - started) / 60000)))));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isBuilding]);
   const activePlan = generatedPlan || plan || null;
   const dayPlans: DayPlan[] = (activePlan?.days || []).map((day) => ({
     day: formatDayName(day.day),
@@ -137,6 +159,7 @@ export default function ClaudeWeekPlanModal({
   };
 
   const handleBack = () => {
+    cancelBuild();
     if (viewMode === 'weekPlan') {
       setViewMode('questionnaire');
     } else {
@@ -145,7 +168,10 @@ export default function ClaudeWeekPlanModal({
   };
 
   const handleBuildWeek = async () => {
-    if (isBuilding) return;
+    if (buildRequest.current) return;
+    const controller = new AbortController();
+    buildRequest.current = controller;
+    setProgress(5);
     const meals = [...selectedMeals, customMeal]
       .map((meal) => meal.trim())
       .filter(Boolean);
@@ -167,19 +193,25 @@ export default function ClaudeWeekPlanModal({
         cooking_time_weekday: cookingTime.trim(),
         people_cooking_for: peopleCount.trim(),
         weekly_food_budget: weeklyBudget.trim(),
-      });
+      }, controller.signal);
+      if (controller.signal.aborted || buildRequest.current !== controller) return;
+      setProgress(100);
       setGeneratedPlan(response.plan);
       onPlanUpdated?.(response.plan);
       setViewMode('weekPlan');
     } catch (error: any) {
-      setBuildError(error?.message || 'Could not build your meal plan. Please try again.');
+      if (controller.signal.aborted || buildRequest.current !== controller) return;
+      setBuildError(error?.status === 401 ? 'Your session has expired. Please sign in again.' : error?.status === 429 ? 'You have reached your plan-generation limit. Please check your membership before trying again.' : 'We couldn’t finish your week plan right now. Your answers are still here. Please try again in a moment.');
     } finally {
-      setIsBuilding(false);
+      if (buildRequest.current === controller) {
+        buildRequest.current = null;
+        setIsBuilding(false);
+      }
     }
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={() => { cancelBuild(); onClose(); }}>
       <View style={styles.container}>
         {/* Top Header */}
         <View style={styles.topBar}>
@@ -193,8 +225,23 @@ export default function ClaudeWeekPlanModal({
           </Text>
         </View>
 
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {viewMode === 'questionnaire' ? (
+        <ScrollView ref={scrollRef} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {isBuilding ? (
+            <View style={styles.buildCard}>
+              <Text style={styles.buildEyebrow}>YOUR PERSONAL WEEK</Text>
+              <Text style={styles.headline}>Preparing your meal plan</Text>
+              <Text style={styles.subheadline}>We’re preparing meals around your preferences, portions, and budget.</Text>
+              <Text style={styles.buildPercentage}>{progress}%</Text>
+              <View accessibilityRole="progressbar" accessibilityLabel="Estimated meal plan progress" accessibilityValue={{ min: 0, max: 100, now: progress }} style={styles.progressTrack}>
+                <View style={[styles.progressFill, { width: `${progress}%` }]} />
+              </View>
+              <Text style={styles.buildHint}>Estimated progress · A new plan may take a few minutes.</Text>
+              <Pressable accessibilityRole="button" onPress={cancelBuild} style={styles.cancelButton}>
+                <Text style={styles.primaryBtnText}>Cancel</Text>
+              </Pressable>
+              <Text style={styles.buildHint}>Cancel stops waiting here. Preparation may still finish in the background.</Text>
+            </View>
+          ) : viewMode === 'questionnaire' ? (
             /* 1. Questionnaire View (matching prototype lines 1567-1619) */
             <View>
               <Text style={styles.headline}>Tell me what you like eating</Text>
@@ -341,7 +388,7 @@ export default function ClaudeWeekPlanModal({
               </View>
 
               {/* CTA */}
-              {buildError ? <Text accessibilityRole="alert" style={{ color: IVORY, marginBottom: 12 }}>{buildError}</Text> : null}
+              {buildError ? <View style={styles.errorCard} accessibilityRole="alert"><Text style={styles.buildEyebrow}>PLAN NOT READY</Text><Text style={styles.buildHint}>{buildError}</Text></View> : null}
               {isBuilding ? <Text style={{ color: IVORY, marginBottom: 12 }}>Preparing your week. A new plan can take a few minutes; please keep this screen open.</Text> : null}
               <Pressable style={[styles.primaryBtn, isBuilding && styles.primaryBtnDisabled]} onPress={handleBuildWeek} disabled={isBuilding}>
                 <Text style={styles.primaryBtnText}>{isBuilding ? 'Building...' : 'Build my week'}</Text>
@@ -412,6 +459,14 @@ export default function ClaudeWeekPlanModal({
 }
 
 const styles = StyleSheet.create({
+  buildCard: { backgroundColor: NAVY, borderRadius: 24, padding: 24, marginTop: 20, borderWidth: 1, borderColor: 'rgba(201,148,58,0.35)' },
+  buildEyebrow: { color: GOLD, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, marginBottom: 16 },
+  buildPercentage: { color: IVORY, fontSize: 48, fontWeight: '700', textAlign: 'center', marginVertical: 20 },
+  progressTrack: { height: 8, borderRadius: 4, backgroundColor: 'rgba(247,243,238,0.15)', overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: GOLD, borderRadius: 4 },
+  buildHint: { color: 'rgba(247,243,238,0.8)', fontSize: 14, lineHeight: 21, marginTop: 16, textAlign: 'center' },
+  cancelButton: { backgroundColor: GOLD, borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 28 },
+  errorCard: { backgroundColor: NAVY, borderLeftWidth: 3, borderLeftColor: COPPER, padding: 20, borderRadius: 12, marginBottom: 16 },
   container: {
     flex: 1,
     backgroundColor: OBSIDIAN,
