@@ -214,6 +214,12 @@ const DEFAULT_PRICES: OnboardingPlanPrice[] = [
   ['Platinum', 399, 39, 'Gold plus wearable sync, the Monday digest and a human coach each month.', ''],
 ];
 const BETA_TIER_INDEX = -1;
+const WEIGHT_MIN = 0;
+const WEIGHT_MAX = 140;
+const HEIGHT_MIN = 0;
+const HEIGHT_MAX = 230;
+const AGE_MIN = 0;
+const AGE_MAX = 100;
 
 export interface ClaudeOnboardingFlowProps {
   user?: AuthUser | null;
@@ -241,9 +247,9 @@ export default function ClaudeOnboardingFlow({
   const [kit, setKit] = useState<string[]>(['Dumbbells']);
   const [days, setDays] = useState<number>(4);
   const [mins, setMins] = useState<number>(40);
-  const [weight, setWeight] = useState<number>(77);
-  const [height, setHeight] = useState<number>(178);
-  const [age, setAge] = useState<number>(47);
+  const [weight, setWeight] = useState<number>(45);
+  const [height, setHeight] = useState<number>(120);
+  const [age, setAge] = useState<number>(14);
   const [expandedMetric, setExpandedMetric] = useState<'weight' | 'height' | 'age' | null>('weight');
 
   const toggleMetric = (metric: 'weight' | 'height' | 'age') => {
@@ -427,13 +433,13 @@ export default function ClaudeOnboardingFlow({
           if (!isNaN(parsedMins) && parsedMins >= 10 && parsedMins <= 120) setMins(parsedMins);
 
           const parsedWeight = Number(realOnboarding.personalProfile?.weight || realMetrics?.weight);
-          if (!isNaN(parsedWeight) && parsedWeight >= 45 && parsedWeight <= 140) setWeight(parsedWeight);
+          if (!isNaN(parsedWeight) && parsedWeight >= WEIGHT_MIN && parsedWeight <= WEIGHT_MAX) setWeight(parsedWeight);
 
           const parsedHeight = Number(realOnboarding.personalProfile?.height || realMetrics?.height);
-          if (!isNaN(parsedHeight) && parsedHeight >= 120 && parsedHeight <= 230) setHeight(parsedHeight);
+          if (!isNaN(parsedHeight) && parsedHeight >= HEIGHT_MIN && parsedHeight <= HEIGHT_MAX) setHeight(parsedHeight);
 
           const parsedAge = Number(realOnboarding.personalProfile?.age || realMetrics?.age);
-          if (!isNaN(parsedAge) && parsedAge >= 14 && parsedAge <= 100) setAge(parsedAge);
+          if (!isNaN(parsedAge) && parsedAge >= AGE_MIN && parsedAge <= AGE_MAX) setAge(parsedAge);
 
           const realIdentity = realOnboarding.identityStatement || activeUser?.identity_statement;
           if (
@@ -640,13 +646,13 @@ export default function ClaudeOnboardingFlow({
   // Weight stepper handlers
   const startIncrement = () => {
     stopHold();
-    setWeight((prev) => Math.min(140, prev + 1));
+    setWeight((prev) => Math.min(WEIGHT_MAX, prev + 1));
     holdTimerRef.current = setTimeout(() => {
       holdIntervalRef.current = setInterval(() => {
         setWeight((prev) => {
-          if (prev >= 140) {
+          if (prev >= WEIGHT_MAX) {
             stopHold();
-            return 140;
+            return WEIGHT_MAX;
           }
           return prev + 1;
         });
@@ -656,13 +662,13 @@ export default function ClaudeOnboardingFlow({
 
   const startDecrement = () => {
     stopHold();
-    setWeight((prev) => Math.max(45, prev - 1));
+    setWeight((prev) => Math.max(WEIGHT_MIN, prev - 1));
     holdTimerRef.current = setTimeout(() => {
       holdIntervalRef.current = setInterval(() => {
         setWeight((prev) => {
-          if (prev <= 45) {
+          if (prev <= WEIGHT_MIN) {
             stopHold();
-            return 45;
+            return WEIGHT_MIN;
           }
           return prev - 1;
         });
@@ -673,13 +679,13 @@ export default function ClaudeOnboardingFlow({
   // Height stepper handlers
   const startHeightIncrement = () => {
     stopHold();
-    setHeight((prev) => Math.min(230, prev + 1));
+    setHeight((prev) => Math.min(HEIGHT_MAX, prev + 1));
     holdTimerRef.current = setTimeout(() => {
       holdIntervalRef.current = setInterval(() => {
         setHeight((prev) => {
-          if (prev >= 230) {
+          if (prev >= HEIGHT_MAX) {
             stopHold();
-            return 230;
+            return HEIGHT_MAX;
           }
           return prev + 1;
         });
@@ -689,13 +695,13 @@ export default function ClaudeOnboardingFlow({
 
   const startHeightDecrement = () => {
     stopHold();
-    setHeight((prev) => Math.max(120, prev - 1));
+    setHeight((prev) => Math.max(HEIGHT_MIN, prev - 1));
     holdTimerRef.current = setTimeout(() => {
       holdIntervalRef.current = setInterval(() => {
         setHeight((prev) => {
-          if (prev <= 120) {
+          if (prev <= HEIGHT_MIN) {
             stopHold();
-            return 120;
+            return HEIGHT_MIN;
           }
           return prev - 1;
         });
@@ -706,13 +712,13 @@ export default function ClaudeOnboardingFlow({
   // Age stepper handlers
   const startAgeIncrement = () => {
     stopHold();
-    setAge((prev) => Math.min(100, prev + 1));
+    setAge((prev) => Math.min(AGE_MAX, prev + 1));
     holdTimerRef.current = setTimeout(() => {
       holdIntervalRef.current = setInterval(() => {
         setAge((prev) => {
-          if (prev >= 100) {
+          if (prev >= AGE_MAX) {
             stopHold();
-            return 100;
+            return AGE_MAX;
           }
           return prev + 1;
         });
@@ -722,13 +728,13 @@ export default function ClaudeOnboardingFlow({
 
   const startAgeDecrement = () => {
     stopHold();
-    setAge((prev) => Math.max(14, prev - 1));
+    setAge((prev) => Math.max(AGE_MIN, prev - 1));
     holdTimerRef.current = setTimeout(() => {
       holdIntervalRef.current = setInterval(() => {
         setAge((prev) => {
-          if (prev <= 14) {
+          if (prev <= AGE_MIN) {
             stopHold();
-            return 14;
+            return AGE_MIN;
           }
           return prev - 1;
         });
@@ -748,7 +754,7 @@ export default function ClaudeOnboardingFlow({
     if (sliderTrackWidth <= 0) return;
     const clickX = e.nativeEvent.locationX;
     const ratio = Math.max(0, Math.min(1, clickX / sliderTrackWidth));
-    const targetWeight = Math.round(45 + ratio * (140 - 45));
+    const targetWeight = Math.round(WEIGHT_MIN + ratio * (WEIGHT_MAX - WEIGHT_MIN));
     setWeight(targetWeight);
   };
 
@@ -757,7 +763,7 @@ export default function ClaudeOnboardingFlow({
     if (heightTrackWidth <= 0) return;
     const clickX = e.nativeEvent.locationX;
     const ratio = Math.max(0, Math.min(1, clickX / heightTrackWidth));
-    const targetHeight = Math.round(120 + ratio * (230 - 120));
+    const targetHeight = Math.round(HEIGHT_MIN + ratio * (HEIGHT_MAX - HEIGHT_MIN));
     setHeight(targetHeight);
   };
 
@@ -766,7 +772,7 @@ export default function ClaudeOnboardingFlow({
     if (ageTrackWidth <= 0) return;
     const clickX = e.nativeEvent.locationX;
     const ratio = Math.max(0, Math.min(1, clickX / ageTrackWidth));
-    const targetAge = Math.round(14 + ratio * (100 - 14));
+    const targetAge = Math.round(AGE_MIN + ratio * (AGE_MAX - AGE_MIN));
     setAge(targetAge);
   };
 
@@ -1346,7 +1352,7 @@ export default function ClaudeOnboardingFlow({
                             {
                               width: `${Math.max(
                                 0,
-                                Math.min(100, Math.round(((weight - 45) / 95) * 100))
+                                Math.min(100, Math.round(((weight - WEIGHT_MIN) / (WEIGHT_MAX - WEIGHT_MIN)) * 100))
                               )}%`,
                             },
                           ]}
@@ -1414,7 +1420,7 @@ export default function ClaudeOnboardingFlow({
                             {
                               width: `${Math.max(
                                 0,
-                                Math.min(100, Math.round(((height - 120) / (230 - 120)) * 100))
+                                Math.min(100, Math.round(((height - HEIGHT_MIN) / (HEIGHT_MAX - HEIGHT_MIN)) * 100))
                               )}%`,
                             },
                           ]}
@@ -1482,7 +1488,7 @@ export default function ClaudeOnboardingFlow({
                             {
                               width: `${Math.max(
                                 0,
-                                Math.min(100, Math.round(((age - 14) / (100 - 14)) * 100))
+                                Math.min(100, Math.round(((age - AGE_MIN) / (AGE_MAX - AGE_MIN)) * 100))
                               )}%`,
                             },
                           ]}
