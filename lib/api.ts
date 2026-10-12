@@ -144,8 +144,12 @@ const getResponsePromises = new Map<string, Promise<unknown>>();
 
 export function buildApiWebSocketUrl(path: string, params?: Record<string, string>) {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  const webSocketOrigin =
+    typeof window !== 'undefined'
+      ? `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`
+      : '';
   const apiUrl = API_URL.startsWith('/')
-    ? `${typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss' : 'ws'}://${typeof window !== 'undefined' ? window.location.host : ''}${API_URL}`
+    ? `${webSocketOrigin}${normalizedPath.startsWith('/ws/') ? '' : API_URL}`
     : API_URL.replace(/^http/, 'ws');
   const searchParams = new URLSearchParams(params || {});
   const query = searchParams.toString();

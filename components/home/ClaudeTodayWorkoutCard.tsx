@@ -71,6 +71,21 @@ export default function ClaudeTodayWorkoutCard({
     return Math.min(20, Math.max(12, fitted));
   }, [resolvedTitle, windowWidth]);
 
+  const formattedEquipment = useMemo(() => {
+    if (!equipment) return t('Bodyweight');
+    const parts = equipment
+      .split(/[,·+]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (!parts.length) return t('Bodyweight');
+    return parts
+      .map((p) => {
+        const translated = t(p);
+        return translated.charAt(0).toUpperCase() + translated.slice(1).toLowerCase();
+      })
+      .join(' · ');
+  }, [equipment, t]);
+
   const handleStart = () => {
     if (!hasActivePlan) {
       onCreatePlan?.();
@@ -137,49 +152,79 @@ export default function ClaudeTodayWorkoutCard({
           {resolvedTitle}
         </Text>
 
-        {/* Stats row */}
-        {hasActivePlan ? <View style={styles.statsRow}>
-          <View style={styles.statCol}>
-            <Text style={[styles.statVal, { color: isDark ? IVORY : NAVY }]}>{durationMinutes}</Text>
-            <Text
+        {/* Stats bar */}
+        {hasActivePlan ? (
+          <View
+            style={[
+              styles.statsBar,
+              {
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(13, 43, 69, 0.05)',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(13, 43, 69, 0.1)',
+              },
+            ]}
+          >
+            <View style={styles.statCol}>
+              <Text style={[styles.statVal, { color: isDark ? IVORY : NAVY }]}>
+                {durationMinutes}
+              </Text>
+              <Text
+                style={[
+                  styles.statLabel,
+                  { color: isDark ? 'rgba(247, 243, 238, 0.5)' : 'rgba(13, 43, 69, 0.5)' },
+                ]}
+              >
+                {t('MINUTES')}
+              </Text>
+            </View>
+
+            <View
               style={[
-                styles.statLabel,
-                { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
+                styles.statDivider,
+                { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(13, 43, 69, 0.1)' },
               ]}
-            >
-              {t('MINUTES')}
-            </Text>
-          </View>
-          <View style={styles.statCol}>
-            <Text style={[styles.statVal, { color: isDark ? IVORY : NAVY }]}>{exerciseCount}</Text>
-            <Text
+            />
+
+            <View style={styles.statCol}>
+              <Text style={[styles.statVal, { color: isDark ? IVORY : NAVY }]}>
+                {exerciseCount}
+              </Text>
+              <Text
+                style={[
+                  styles.statLabel,
+                  { color: isDark ? 'rgba(247, 243, 238, 0.5)' : 'rgba(13, 43, 69, 0.5)' },
+                ]}
+              >
+                {t('EXERCISES')}
+              </Text>
+            </View>
+
+            <View
               style={[
-                styles.statLabel,
-                { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
+                styles.statDivider,
+                { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(13, 43, 69, 0.1)' },
               ]}
-            >
-              {t('EXERCISES')}
-            </Text>
+            />
+
+            <View style={[styles.statCol, styles.equipmentStatCol]}>
+              <Text
+                style={[styles.equipmentVal, { color: isDark ? IVORY : NAVY }]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.75}
+              >
+                {formattedEquipment}
+              </Text>
+              <Text
+                style={[
+                  styles.statLabel,
+                  { color: isDark ? 'rgba(247, 243, 238, 0.5)' : 'rgba(13, 43, 69, 0.5)' },
+                ]}
+              >
+                {t('EQUIPMENT')}
+              </Text>
+            </View>
           </View>
-          <View style={[styles.statCol, styles.equipmentStatCol]}>
-            <Text
-              style={[styles.statVal, styles.equipmentStatVal, { color: isDark ? IVORY : NAVY }]}
-              numberOfLines={2}
-              adjustsFontSizeToFit
-              minimumFontScale={0.72}
-            >
-              {t(equipment).toUpperCase()}
-            </Text>
-            <Text
-              style={[
-                styles.statLabel,
-                { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
-              ]}
-            >
-              {t('EQUIPMENT')}
-            </Text>
-          </View>
-        </View> : null}
+        ) : null}
 
         {/* Primary CTA */}
         <Pressable style={[styles.startBtn, isGeneratingPlan && styles.startBtnDisabled]} onPress={handleStart} disabled={isGeneratingPlan}>
@@ -269,41 +314,60 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  statsRow: {
+  statsBar: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 14,
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     marginBottom: 20,
   },
   statCol: {
-    alignItems: 'flex-start',
-    width: 52,
-    flexShrink: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 54,
+  },
+  statDivider: {
+    width: 1,
+    height: 24,
+    marginHorizontal: 4,
   },
   equipmentStatCol: {
     flex: 1,
     minWidth: 0,
-    maxWidth: '100%',
-    width: undefined,
+    alignItems: 'center',
+    paddingHorizontal: 4,
   },
   statVal: {
-    fontFamily: MONO,
-    fontSize: 19,
-    fontWeight: '700',
+    fontFamily: CLASH,
+    fontSize: 20,
+    lineHeight: 22,
+    fontWeight: '600',
     color: IVORY,
-    marginBottom: 2,
   },
-  equipmentStatVal: {
-    maxWidth: '100%',
-    lineHeight: 21,
-    flexShrink: 1,
+  equipmentVal: {
+    fontFamily: DMSANS,
+    fontSize: 13.5,
+    lineHeight: 22,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+    color: IVORY,
+    textAlign: 'center',
+    ...Platform.select({
+      web: {
+        whiteSpace: 'nowrap',
+      },
+    }),
   },
   statLabel: {
     fontFamily: DMSANS,
-    fontSize: 10.5,
-    fontWeight: '500',
-    letterSpacing: 0.6,
-    color: 'rgba(247, 243, 238, 0.55)',
+    fontSize: 9.5,
+    fontWeight: '600',
+    letterSpacing: 0.8,
+    color: 'rgba(247, 243, 238, 0.5)',
+    marginTop: 2,
+    textTransform: 'uppercase',
   },
   startBtn: {
     width: '100%',

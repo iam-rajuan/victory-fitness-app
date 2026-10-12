@@ -46,6 +46,7 @@ interface ClaudeChallengeDirectoryProps {
 
 const NAVY = '#0D2B45';
 const GOLD = '#C9943A';
+const GOLD_LIGHT = '#F5CF87';
 const COPPER = '#B5651D';
 const IVORY = '#F7F3EE';
 
@@ -196,6 +197,15 @@ export default function ClaudeChallengeDirectory({
 
   const [selectedDay, setSelectedDay] = useState('All');
   const [selectedCat, setSelectedCat] = useState('All');
+  const [isFiltersExpanded, setIsFiltersExpanded] = useState(true);
+
+  const activeFiltersCount = (selectedDay !== 'All' ? 1 : 0) + (selectedCat !== 'All' ? 1 : 0);
+
+  const handleResetFilters = () => {
+    setSelectedDay('All');
+    setSelectedCat('All');
+  };
+
   const railScroll = useHorizontalWebScroll();
   const daysScroll = useHorizontalWebScroll();
   const catScroll = useHorizontalWebScroll();
@@ -328,101 +338,219 @@ export default function ClaudeChallengeDirectory({
         ))}
       </ScrollView>
 
-      {/* HOW MANY DAYS? Filter Chips */}
+      {/* Challenge Filters Panel - 100% NON-SCROLLABLE, STRUCTURED & SEGMENTED */}
       <View style={styles.filterSection}>
-        <Text style={[styles.filterLabel, { color: colors.textMuted, paddingHorizontal: hPad }]}>
-          {t('HOW MANY DAYS?')}
-        </Text>
-        <ScrollView
-          ref={daysScroll.scrollRef}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={[styles.chipRow, { paddingHorizontal: hPad }]}
-          style={daysScroll.webStyle}
-          {...daysScroll.webProps}
-        >
-          {DAY_FILTERS.map((d) => {
-            const isCircle = d !== 'All';
-            const isSelected = selectedDay === d;
-            return (
-              <TouchableOpacity
-                key={`day-${d}`}
-                style={[
-                  isCircle ? styles.circleChip : styles.chip,
-                  {
-                    backgroundColor: isSelected ? GOLD : (isDark ? 'transparent' : '#FFFFFF'),
-                    borderColor: isSelected ? GOLD : (isDark ? 'rgba(247, 243, 238, 0.22)' : 'rgba(13, 43, 69, 0.2)'),
-                  },
-                ]}
-                activeOpacity={0.8}
-                onPress={() => {
-                  if (daysScroll.hasDragged.current) return;
-                  setSelectedDay(d);
-                }}
-              >
-                <Text
-                  style={[
-                    styles.chipText,
-                    { color: isSelected ? '#0D0D0D' : (isDark ? 'rgba(247, 243, 238, 0.7)' : colors.text) },
-                    isSelected && styles.chipTextActive,
-                  ]}
-                >
-                  {d}
-                </Text>
+        {/* Filters Control Bar */}
+        <View style={[styles.filterControlBar, { paddingHorizontal: hPad }]}>
+          <View style={styles.filterControlLeft}>
+            <Text style={styles.filterKicker}>{t('FILTERS')}</Text>
+            {activeFiltersCount > 0 ? (
+              <View style={styles.activeCounterBadge}>
+                <Text style={styles.activeCounterBadgeText}>{activeFiltersCount}</Text>
+              </View>
+            ) : null}
+            {activeFiltersCount > 0 ? (
+              <TouchableOpacity onPress={handleResetFilters} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={styles.resetBtn}>
+                <Text style={styles.resetBtnText}>{t('Reset all')}</Text>
               </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
+            ) : null}
+          </View>
 
-      {/* WHAT KIND? Filter Chips */}
-      <View style={styles.filterSectionSmall}>
-        <Text style={[styles.filterLabel, { color: colors.textMuted, paddingHorizontal: hPad }]}>
-          {t('WHAT KIND?')}
-        </Text>
-        <ScrollView
-          ref={catScroll.scrollRef}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={[styles.chipRow, { paddingHorizontal: hPad }]}
-          style={catScroll.webStyle}
-          {...catScroll.webProps}
-        >
-          {CAT_FILTERS.map((cat) => {
-            const isSelected = selectedCat === cat;
-            return (
+          <TouchableOpacity
+            style={styles.toggleExpandBtn}
+            onPress={() => setIsFiltersExpanded((prev) => !prev)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.toggleExpandText}>
+              {isFiltersExpanded ? t('Collapse ▲') : t('Expand ▼')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Collapsed Active Filter Tags */}
+        {!isFiltersExpanded && activeFiltersCount > 0 ? (
+          <View style={[styles.collapsedTagsWrap, { paddingHorizontal: hPad }]}>
+            {selectedDay !== 'All' ? (
               <TouchableOpacity
-                key={`cat-${cat}`}
+                onPress={() => setSelectedDay('All')}
+                style={styles.collapsedTag}
+              >
+                <Text style={styles.collapsedTagText}>{selectedDay} {t('days')} ✕</Text>
+              </TouchableOpacity>
+            ) : null}
+            {selectedCat !== 'All' ? (
+              <TouchableOpacity
+                onPress={() => setSelectedCat('All')}
+                style={styles.collapsedTag}
+              >
+                <Text style={styles.collapsedTagText}>{t(selectedCat)} ✕</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        ) : null}
+
+        {/* Expanded Filter Card */}
+        {isFiltersExpanded ? (
+          <View
+            style={[
+              styles.filtersCard,
+              {
+                marginHorizontal: hPad,
+                backgroundColor: isDark ? 'rgba(15, 25, 37, 0.65)' : 'rgba(13, 43, 69, 0.05)',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(13, 43, 69, 0.1)',
+              },
+            ]}
+          >
+            {/* 1. HOW MANY DAYS? (Precision 6-Segment Control) */}
+            <View style={styles.facetSection}>
+              <View style={styles.facetHeaderRow}>
+                <Text style={styles.facetTitle}>{t('HOW MANY DAYS?')}</Text>
+                {selectedDay !== 'All' ? (
+                  <Text style={styles.facetActiveSummary}>{selectedDay} {t('days')}</Text>
+                ) : null}
+              </View>
+
+              <View
                 style={[
-                  styles.chip,
+                  styles.segmentedControl,
                   {
-                    backgroundColor: isSelected ? GOLD : (isDark ? 'transparent' : '#FFFFFF'),
-                    borderColor: isSelected ? GOLD : (isDark ? 'rgba(247, 243, 238, 0.22)' : 'rgba(13, 43, 69, 0.2)'),
+                    backgroundColor: isDark ? 'rgba(0, 0, 0, 0.28)' : 'rgba(13, 43, 69, 0.06)',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(13, 43, 69, 0.1)',
                   },
                 ]}
-                activeOpacity={0.8}
-                onPress={() => {
-                  if (catScroll.hasDragged.current) return;
-                  setSelectedCat(cat);
-                }}
               >
-                <Text
-                  style={[
-                    styles.chipText,
-                    { color: isSelected ? '#0D0D0D' : (isDark ? 'rgba(247, 243, 238, 0.7)' : colors.text) },
-                    isSelected && styles.chipTextActive,
-                  ]}
-                >
-                  {t(cat)}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+                {DAY_FILTERS.map((d) => {
+                  const isAll = d === 'All';
+                  const active = selectedDay === d;
+                  const label = isAll ? t('All') : `${d}d`;
+
+                  return (
+                    <TouchableOpacity
+                      key={`day-${d}`}
+                      onPress={() => setSelectedDay(d)}
+                      activeOpacity={0.8}
+                      style={[
+                        styles.segmentBtn,
+                        isAll
+                          ? (active && (isDark ? styles.segmentActiveNeutral : styles.segmentActiveNeutralLight))
+                          : (active && styles.segmentActiveGold),
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.segmentText,
+                          { color: isDark ? 'rgba(247, 243, 238, 0.62)' : 'rgba(13, 43, 69, 0.65)' },
+                          isAll
+                            ? (active && (isDark ? styles.segmentTextActiveNeutral : styles.segmentTextActiveNeutralLight))
+                            : (active && styles.segmentTextActiveGold),
+                        ]}
+                      >
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View
+              style={[
+                styles.sectionDivider,
+                { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(13, 43, 69, 0.08)' },
+              ]}
+            />
+
+            {/* 2. WHAT KIND? (Balanced 2-Row Squircle Grid) */}
+            <View style={styles.facetSection}>
+              <View style={styles.facetHeaderRow}>
+                <Text style={styles.facetTitle}>{t('WHAT KIND?')}</Text>
+                {selectedCat !== 'All' ? (
+                  <Text style={styles.facetActiveSummary}>{t(selectedCat)}</Text>
+                ) : null}
+              </View>
+
+              {/* Row 1: All, Physical, Mental */}
+              <View style={styles.catGridRow}>
+                {['All', 'Physical', 'Mental'].map((cat) => {
+                  const isAll = cat === 'All';
+                  const active = selectedCat === cat;
+
+                  return (
+                    <TouchableOpacity
+                      key={`cat-${cat}`}
+                      onPress={() => setSelectedCat(cat)}
+                      activeOpacity={0.8}
+                      style={[
+                        styles.catTile,
+                        isAll
+                          ? (active
+                              ? (isDark ? styles.tileActiveNeutral : styles.tileActiveNeutralLight)
+                              : (isDark ? styles.tileInactive : styles.tileInactiveLight))
+                          : (active
+                              ? styles.tileActiveGold
+                              : (isDark ? styles.tileInactive : styles.tileInactiveLight)),
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.catTileText,
+                          isAll
+                            ? (active
+                                ? (isDark ? styles.tileTextActiveNeutral : styles.tileTextActiveNeutralLight)
+                                : (isDark ? styles.tileTextInactive : styles.tileTextInactiveLight))
+                            : (active
+                                ? styles.tileTextActiveGold
+                                : (isDark ? styles.tileTextInactive : styles.tileTextInactiveLight)),
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {t(cat)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Row 2: Relational, Nutrition */}
+              <View style={[styles.catGridRow, { marginTop: 7 }]}>
+                {['Relational', 'Nutrition'].map((cat) => {
+                  const active = selectedCat === cat;
+
+                  return (
+                    <TouchableOpacity
+                      key={`cat-${cat}`}
+                      onPress={() => setSelectedCat(cat)}
+                      activeOpacity={0.8}
+                      style={[
+                        styles.catTile,
+                        active
+                          ? styles.tileActiveGold
+                          : (isDark ? styles.tileInactive : styles.tileInactiveLight),
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.catTileText,
+                          active
+                            ? styles.tileTextActiveGold
+                            : (isDark ? styles.tileTextInactive : styles.tileTextInactiveLight),
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {t(cat)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        ) : null}
       </View>
 
       {/* Challenge Count Indicator */}
       <View style={[styles.countLineRow, { paddingHorizontal: hPad }]}>
+        <View style={styles.resultDot} />
         <Text style={[styles.countLine, { color: GOLD }]}>
           {isLoading
             ? t('Preparing your challenges')
@@ -776,65 +904,238 @@ const styles = StyleSheet.create({
     color: 'rgba(247, 243, 238, 0.5)',
   },
   filterSection: {
-    paddingTop: 22,
+    paddingTop: 18,
   },
-  filterSectionSmall: {
-    paddingTop: 14,
+  filterControlBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
   },
-  filterLabel: {
-    fontFamily: DMSANS,
-    fontSize: 10,
-    fontWeight: '500',
-    letterSpacing: 1.4,
-    color: 'rgba(247, 243, 238, 0.42)',
-    marginBottom: 9,
-  },
-  chipRow: {
+  filterControlLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
-  chip: {
-    paddingHorizontal: 16,
-    height: 42,
-    borderRadius: 99,
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: 'rgba(247, 243, 238, 0.22)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  circleChip: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: 'rgba(247, 243, 238, 0.22)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chipActive: {
-    backgroundColor: GOLD,
-    borderColor: GOLD,
-  },
-  chipText: {
+  filterKicker: {
     fontFamily: DMSANS,
-    fontSize: 13,
-    fontWeight: '500',
-    color: 'rgba(247, 243, 238, 0.7)',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.4,
+    color: 'rgba(247, 243, 238, 0.45)',
   },
-  chipTextActive: {
+  activeCounterBadge: {
+    backgroundColor: GOLD,
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  activeCounterBadgeText: {
+    fontFamily: MONO,
+    fontSize: 10,
+    fontWeight: '700',
     color: '#0D0D0D',
+  },
+  resetBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: 'rgba(201, 148, 58, 0.15)',
+  },
+  resetBtnText: {
+    fontFamily: DMSANS,
+    fontSize: 11,
+    fontWeight: '700',
+    color: GOLD,
+  },
+  toggleExpandBtn: {
+    paddingVertical: 3,
+    paddingHorizontal: 4,
+  },
+  toggleExpandText: {
+    fontFamily: DMSANS,
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: 'rgba(247, 243, 238, 0.5)',
+  },
+  collapsedTagsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 10,
+  },
+  collapsedTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(201, 148, 58, 0.14)',
+    borderColor: 'rgba(201, 148, 58, 0.6)',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 9,
+  },
+  collapsedTagText: {
+    fontFamily: DMSANS,
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: GOLD_LIGHT,
+  },
+  filtersCard: {
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 16,
+  },
+  facetSection: {
+    gap: 9,
+  },
+  facetHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 1,
+  },
+  facetTitle: {
+    fontFamily: DMSANS,
+    fontSize: 10.5,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    color: 'rgba(247, 243, 238, 0.45)',
+  },
+  facetActiveSummary: {
+    fontFamily: DMSANS,
+    fontSize: 11,
+    fontWeight: '600',
+    color: GOLD_LIGHT,
+  },
+  sectionDivider: {
+    height: 1,
+    marginVertical: 14,
+  },
+  segmentedControl: {
+    flexDirection: 'row',
+    borderRadius: 10,
+    padding: 3,
+    borderWidth: 1,
+    width: '100%',
+    height: 38,
+  },
+  segmentBtn: {
+    flex: 1,
+    height: '100%',
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+  segmentActiveNeutral: {
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  segmentActiveNeutralLight: {
+    backgroundColor: 'rgba(13, 43, 69, 0.12)',
+  },
+  segmentActiveGold: {
+    backgroundColor: 'rgba(201, 148, 58, 0.22)',
+    borderWidth: 1,
+    borderColor: '#C9943A',
+  },
+  segmentText: {
+    fontFamily: DMSANS,
+    fontSize: 11.5,
+    fontWeight: '500',
+  },
+  segmentTextActiveNeutral: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  segmentTextActiveNeutralLight: {
+    color: '#0D2B45',
+    fontWeight: '600',
+  },
+  segmentTextActiveGold: {
+    color: GOLD_LIGHT,
+    fontWeight: '700',
+  },
+  catGridRow: {
+    flexDirection: 'row',
+    gap: 7,
+  },
+  catTile: {
+    flex: 1,
+    height: 38,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  catTileText: {
+    fontFamily: DMSANS,
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  tileInactive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.035)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.07)',
+  },
+  tileInactiveLight: {
+    backgroundColor: 'rgba(13, 43, 69, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(13, 43, 69, 0.08)',
+  },
+  tileTextInactive: {
+    color: 'rgba(247, 243, 238, 0.68)',
+    fontWeight: '500',
+  },
+  tileTextInactiveLight: {
+    color: 'rgba(13, 43, 69, 0.7)',
+    fontWeight: '500',
+  },
+  tileActiveNeutral: {
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.24)',
+  },
+  tileActiveNeutralLight: {
+    backgroundColor: 'rgba(13, 43, 69, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(13, 43, 69, 0.2)',
+  },
+  tileTextActiveNeutral: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  tileTextActiveNeutralLight: {
+    color: '#0D2B45',
+    fontWeight: '600',
+  },
+  tileActiveGold: {
+    backgroundColor: 'rgba(201, 148, 58, 0.18)',
+    borderWidth: 1,
+    borderColor: '#C9943A',
+  },
+  tileTextActiveGold: {
+    color: GOLD_LIGHT,
     fontWeight: '700',
   },
   countLineRow: {
-    paddingTop: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 16,
     paddingBottom: 10,
+    gap: 7,
+  },
+  resultDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: GOLD,
+    opacity: 0.8,
   },
   countLine: {
-    fontFamily: MONO,
+    fontFamily: DMSANS,
     fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
   challengeList: {
     gap: 12,
