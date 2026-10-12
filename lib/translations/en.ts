@@ -798,6 +798,7 @@ export const en: Record<string, string> = {
   "Resistance Bands": "Resistance Bands",
   "Rest": "Rest",
   "Resting HR, sleep, calories and heart-rate zones": "Resting HR, sleep, calories and heart-rate zones",
+  "Reset all": "Reset all",
   "Resume": "Resume",
   "RESUME WORKOUT": "RESUME WORKOUT",
   "Retry Connect": "Retry Connect",

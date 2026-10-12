@@ -804,6 +804,13 @@ export default function WorkoutScreen() {
           selectedKit={selectedKit}
           onSelectKit={setSelectedKit}
           resultCountText={resultCountText}
+          onResetFilters={() => {
+            setSelectedPurposes(['All']);
+            setSelectedDifficulty('Any');
+            setSelectedDuration('Any');
+            setSelectedKit('Any');
+            setSearchQuery('');
+          }}
         />
 
         {/* 8. 2-Column Workout Grid */}

@@ -796,6 +796,7 @@ export const de: Record<string, string> = {
   "Reps": "Wiederholungen",
   "Research-backed nutrition guidance tailored to your health profile.": "Wissenschaftlich fundierte Ernährungsberatung, abgestimmt auf dein Gesundheitsprofil.",
   "Reset": "Zurücksetzen",
+  "Reset all": "Alle zurücksetzen",
   "Resistance Bands": "Widerstandsbänder",
   "Rest": "Pause",
   "Resting HR, sleep, calories and heart-rate zones": "Ruhepuls, Schlaf, Kalorien und Pulszonen",
