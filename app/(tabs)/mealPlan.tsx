@@ -678,17 +678,18 @@ const styles = StyleSheet.create({
   },
   weekPlanTitle: {
     fontFamily: CLASH,
-    fontSize: 19,
-    lineHeight: 25,
+    fontSize: 16,
+    lineHeight: 21,
     fontWeight: '600',
     color: IVORY,
+    letterSpacing: -0.2,
   },
   weekPlanSub: {
     fontFamily: INTER,
-    fontSize: 13.5,
-    lineHeight: 21,
+    fontSize: 13,
+    lineHeight: 19,
     color: 'rgba(247, 243, 238, 0.65)',
-    marginTop: 7,
+    marginTop: 6,
   },
   buildPlanBtn: {
     height: 48,
