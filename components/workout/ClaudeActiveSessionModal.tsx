@@ -32,6 +32,7 @@ interface ClaudeActiveSessionModalProps {
   exercises?: ActiveExerciseItem[];
   vimeoId?: string;
   videoUrl?: string;
+  showVideo?: boolean;
   onEndSession: (stats: { minutes: number; setsLogged: number; volumeKg: number; durationSeconds: number }) => void;
 }
 
@@ -78,6 +79,7 @@ export default function ClaudeActiveSessionModal({
   exercises = [],
   vimeoId = '',
   videoUrl = '',
+  showVideo = true,
   onEndSession,
 }: ClaudeActiveSessionModalProps) {
   const [seconds, setSeconds] = useState(0);
@@ -86,7 +88,7 @@ export default function ClaudeActiveSessionModal({
   const [loggedSets, setLoggedSets] = useState<Record<string, string>>({});
   const [restRemainingSeconds, setRestRemainingSeconds] = useState(0);
 
-  const resolvedVideoUrl = resolveWorkoutEmbedUrl(videoUrl, vimeoId);
+  const resolvedVideoUrl = showVideo ? resolveWorkoutEmbedUrl(videoUrl, vimeoId) : '';
 
   const currentExercise = exercises[currentExIdx] || null;
   const [weightKg, setWeightKg] = useState(currentExercise?.defaultKg || 0);

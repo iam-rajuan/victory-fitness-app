@@ -1092,6 +1092,7 @@ export default function HomeScreen() {
         exercises={activeExercises}
         vimeoId={homeLibraryWorkout?.vimeoId || ''}
         videoUrl={homeLibraryWorkout?.videoUrl || ''}
+        showVideo={false}
         onEndSession={(stats) => {
           setActiveSessionVisible(false);
           if (stats) {
