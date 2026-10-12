@@ -184,7 +184,7 @@ export default function ClaudeTodayWorkoutCard({
         {/* Primary CTA */}
         <Pressable style={[styles.startBtn, isGeneratingPlan && styles.startBtnDisabled]} onPress={handleStart} disabled={isGeneratingPlan}>
           <Text style={styles.startBtnText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
-            {hasActivePlan ? t('Start my session') : isGeneratingPlan ? t('Generating plan...') : t('Build your 7-day plan')}
+            {hasActivePlan ? t('Start my session') : isGeneratingPlan ? t('Generating plan...') : t('Build my plan')}
           </Text>
         </Pressable>
 

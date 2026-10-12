@@ -29,6 +29,7 @@ export const nl: Record<string, string> = {
   "Coach sees your habit brief before every session": "Coach ziet je gewoontenoverzicht voor elke sessie",
   "Community": "Gemeenschap",
   "Completed": "Voltooid",
+  "Build my plan": "Bouw mijn plan",
   "Build your 7-day plan": "Bouw je 7-daagse plan",
   "Create 7-day plan": "Maak 7-dagenplan",
   "Create your 7 day workout plan": "Maak je 7-daagse workoutplan",

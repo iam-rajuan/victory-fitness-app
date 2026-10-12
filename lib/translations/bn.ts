@@ -242,6 +242,7 @@ export const bn: Record<string, string> = {
   "Copy failed": "কপি ব্যর্থ",
   "Copy List": "কপি লিস্ট",
   "Country": "দেশ",
+  "Build my plan": "আমার প্ল্যান তৈরি করুন",
   "Build your 7-day plan": "৭ দিনের প্ল্যান তৈরি করুন",
   "Create 7-day plan": "৭ দিনের প্ল্যান তৈরি করুন",
   "Create a plan first from the wizard to see it here.": "এটি এখানে দেখতে উইজার্ড থেকে প্রথমে একটি পরিকল্পনা তৈরি করুন৷",
