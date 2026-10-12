@@ -51,8 +51,6 @@ export default function ClaudeWorkoutDetailModal({
   completed = false,
   exercises = [],
 }: ClaudeWorkoutDetailModalProps) {
-  const [isSaved, setIsSaved] = useState(false);
-  const [isDownloaded, setIsDownloaded] = useState(false);
   const resolvedVideoUrl = videoUrl || (vimeoId ? `https://player.vimeo.com/video/${encodeURIComponent(vimeoId)}?title=0&byline=0&portrait=0&playsinline=1&dnt=1` : '');
 
   return (
@@ -110,24 +108,6 @@ export default function ClaudeWorkoutDetailModal({
             <View style={styles.actionsRow}>
               <Pressable style={styles.startBtn} onPress={onStartWorkout}>
                 <Text style={styles.startBtnText}>{completed ? 'Start again' : 'Start workout'}</Text>
-              </Pressable>
-
-              <Pressable
-                style={[styles.iconBtn, isSaved && styles.iconBtnActive]}
-                onPress={() => setIsSaved((s) => !s)}
-              >
-                <Text style={[styles.iconBtnText, isSaved && styles.iconBtnTextActive]}>
-                  {isSaved ? 'Saved' : 'Save'}
-                </Text>
-              </Pressable>
-
-              <Pressable
-                style={[styles.iconBtn, isDownloaded && styles.iconBtnActive]}
-                onPress={() => setIsDownloaded((d) => !d)}
-              >
-                <Text style={[styles.iconBtnText, isDownloaded && styles.iconBtnTextActive]}>
-                  {isDownloaded ? '✓' : '↓'}
-                </Text>
               </Pressable>
             </View>
 
@@ -272,7 +252,6 @@ const styles = StyleSheet.create({
   actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 9,
     marginBottom: 20,
   },
   startBtn: {
@@ -288,29 +267,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: OBSIDIAN,
-  },
-  iconBtn: {
-    width: 56,
-    height: 52,
-    borderRadius: 13,
-    borderWidth: 1.5,
-    borderColor: 'rgba(247, 243, 238, 0.24)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'transparent',
-  },
-  iconBtnActive: {
-    borderColor: GOLD,
-    backgroundColor: 'rgba(201, 148, 58, 0.15)',
-  },
-  iconBtnText: {
-    fontFamily: DMSANS,
-    fontSize: 12,
-    fontWeight: '700',
-    color: IVORY,
-  },
-  iconBtnTextActive: {
-    color: GOLD,
   },
   movementsTitle: {
     fontFamily: DMSANS,

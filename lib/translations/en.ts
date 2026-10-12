@@ -177,6 +177,7 @@ export const en: Record<string, string> = {
   "Build muscle": "Build muscle",
   "Build Muscle": "Build Muscle",
   "Build your personalized start": "Build your personalized start",
+  "Build your 7-day plan": "Build your 7-day plan",
   "Building your nutrition plan...": "Building your nutrition plan...",
   "BUILT BY YOUR COACH": "BUILT BY YOUR COACH",
   "Built for users who want a deeper coaching and tracking experience.": "Built for users who want a deeper coaching and tracking experience.",

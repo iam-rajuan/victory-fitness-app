@@ -175,6 +175,7 @@ export const de: Record<string, string> = {
   "Build muscle": "Muskeln aufbauen",
   "Build Muscle": "Muskeln aufbauen",
   "Build your personalized start": "Erstelle deinen personalisierten Start",
+  "Build your 7-day plan": "7-Tage-Plan erstellen",
   "Building your nutrition plan...": "Dein Ernährungsplan wird erstellt...",
   "BUILT BY YOUR COACH": "VON DEINEM COACH ERSTELLT",
   "Built for users who want a deeper coaching and tracking experience.": "Für Nutzer, die ein intensiveres Coaching- und Tracking-Erlebnis wollen.",

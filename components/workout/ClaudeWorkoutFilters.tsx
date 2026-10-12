@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, Text, View, TextInput, ScrollView, Pressable, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, View, TextInput, Pressable, Platform } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../lib/i18n';
 import { WORKOUT_PURPOSE_FILTER_OPTIONS } from '../../constants/WorkoutCategories';
@@ -16,6 +16,7 @@ interface ClaudeWorkoutFiltersProps {
   selectedKit: string;
   onSelectKit: (k: string) => void;
   resultCountText?: string;
+  onResetFilters?: () => void;
 }
 
 const GOLD = '#C9943A';
@@ -43,20 +44,45 @@ export default function ClaudeWorkoutFilters({
   selectedKit,
   onSelectKit,
   resultCountText,
+  onResetFilters,
 }: ClaudeWorkoutFiltersProps) {
   const { isDark } = useTheme();
   const { t } = useLanguage();
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  const activePurposes = selectedPurpose.filter((p) => p !== 'All');
+  const activeFiltersCount =
+    activePurposes.length +
+    (selectedDifficulty !== 'Any' ? 1 : 0) +
+    (selectedDuration !== 'Any' ? 1 : 0) +
+    (selectedKit !== 'Any' ? 1 : 0);
+
+  const handleReset = () => {
+    onSelectPurpose('All');
+    onSelectDifficulty('Any');
+    onSelectDuration('Any');
+    onSelectKit('Any');
+    onResetFilters?.();
+  };
 
   return (
     <View style={styles.container}>
-      {/* Header with Title & Count */}
+      {/* Header with Title & Total Count */}
       <View style={styles.headerRow}>
-        <Text style={styles.sectionTitle}>{t('The whole library')}</Text>
+        <View style={styles.titleWrap}>
+          <Text style={styles.sectionTitle}>{t('The whole library')}</Text>
+          {activeFiltersCount > 0 ? (
+            <View style={styles.activePillBadge}>
+              <Text style={styles.activePillBadgeText}>{activeFiltersCount}</Text>
+            </View>
+          ) : null}
+        </View>
         <Text style={styles.totalBadge}>{t('170 workouts')}</Text>
       </View>
 
-      {/* Search Input */}
+      {/* Search Input with Search Icon & Clear Button */}
       <View style={styles.searchBox}>
+        <Text style={styles.searchIcon}>🔍</Text>
         <TextInput
           style={[
             styles.searchInput,
@@ -76,166 +102,168 @@ export default function ClaudeWorkoutFilters({
           value={searchQuery}
           onChangeText={onSearchChange}
         />
+        {searchQuery ? (
+          <Pressable onPress={() => onSearchChange('')} hitSlop={10} style={styles.clearSearchBtn}>
+            <Text style={styles.clearSearchText}>✕</Text>
+          </Pressable>
+        ) : null}
       </View>
 
-      {/* Purpose Filter Row */}
-      <SlideableChipsRow
-        label="PURPOSE"
-        items={WORKOUT_PURPOSE_FILTER_OPTIONS}
-        selectedItem={selectedPurpose}
-        onSelect={onSelectPurpose}
-        paddingTop={16}
-      />
+      {/* Filter Section Header Bar: Controls & Reset button */}
+      <View style={styles.filterSectionHeader}>
+        <View style={styles.filterHeaderLeft}>
+          <Text style={styles.filterSectionTitle}>{t('FILTERS')}</Text>
+          {activeFiltersCount > 0 ? (
+            <Pressable onPress={handleReset} hitSlop={8} style={styles.resetBtn}>
+              <Text style={styles.resetBtnText}>{t('Reset all')}</Text>
+            </Pressable>
+          ) : null}
+        </View>
 
-      <SlideableChipsRow
-        label="DIFFICULTY"
-        items={DIFFICULTIES}
-        selectedItem={selectedDifficulty}
-        onSelect={onSelectDifficulty}
-        paddingTop={14}
-      />
+        <Pressable
+          style={styles.toggleExpandBtn}
+          onPress={() => setIsExpanded((prev) => !prev)}
+          hitSlop={8}
+        >
+          <Text style={styles.toggleExpandText}>
+            {isExpanded ? t('Collapse ▲') : t('Expand ▼')}
+          </Text>
+        </Pressable>
+      </View>
 
-      {/* Minutes Filter Row */}
-      <SlideableChipsRow
-        label="MINUTES"
-        items={DURATIONS}
-        selectedItem={selectedDuration}
-        onSelect={onSelectDuration}
-        paddingTop={14}
-      />
+      {/* Collapsed Active Filters Quick Bar */}
+      {!isExpanded && activeFiltersCount > 0 ? (
+        <View style={styles.collapsedTagsWrap}>
+          {activePurposes.map((p) => (
+            <Pressable
+              key={`collapsed-${p}`}
+              onPress={() => onSelectPurpose(p)}
+              style={styles.collapsedTag}
+            >
+              <Text style={styles.collapsedTagText}>{t(p)} ✕</Text>
+            </Pressable>
+          ))}
+          {selectedDifficulty !== 'Any' ? (
+            <Pressable
+              onPress={() => onSelectDifficulty('Any')}
+              style={styles.collapsedTag}
+            >
+              <Text style={styles.collapsedTagText}>{t(selectedDifficulty)} ✕</Text>
+            </Pressable>
+          ) : null}
+          {selectedDuration !== 'Any' ? (
+            <Pressable
+              onPress={() => onSelectDuration('Any')}
+              style={styles.collapsedTag}
+            >
+              <Text style={styles.collapsedTagText}>{selectedDuration}m ✕</Text>
+            </Pressable>
+          ) : null}
+          {selectedKit !== 'Any' ? (
+            <Pressable
+              onPress={() => onSelectKit('Any')}
+              style={styles.collapsedTag}
+            >
+              <Text style={styles.collapsedTagText}>{t(selectedKit)} ✕</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
 
-      {/* Kit Filter Row */}
-      <SlideableChipsRow
-        label="KIT"
-        items={KITS}
-        selectedItem={selectedKit}
-        onSelect={onSelectKit}
-        paddingTop={14}
-      />
+      {/* Expanded Filter Panel - 100% NON-SCROLLABLE, WRAPPED & SEGMENTED */}
+      {isExpanded ? (
+        <View style={styles.filtersCard}>
+          {/* 1. Purpose (Wrap Chips) */}
+          <View style={styles.facetGroup}>
+            <Text style={styles.facetLabel}>{t('PURPOSE')}</Text>
+            <View style={styles.wrapChipsContainer}>
+              {WORKOUT_PURPOSE_FILTER_OPTIONS.map((item) => {
+                const active = selectedPurpose.includes(item);
+                return (
+                  <Pressable
+                    key={`purpose-${item}`}
+                    onPress={() => onSelectPurpose(item)}
+                    style={[styles.wrapChip, active && styles.wrapChipActive]}
+                  >
+                    <Text style={[styles.wrapChipText, active && styles.wrapChipTextActive]}>
+                      {t(item)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* 2. Difficulty (Full-width Segmented Control) */}
+          <View style={styles.facetGroup}>
+            <Text style={styles.facetLabel}>{t('DIFFICULTY')}</Text>
+            <View style={styles.segmentedControl}>
+              {DIFFICULTIES.map((item) => {
+                const active = selectedDifficulty === item;
+                return (
+                  <Pressable
+                    key={`diff-${item}`}
+                    onPress={() => onSelectDifficulty(item)}
+                    style={[styles.segmentBtn, active && styles.segmentBtnActive]}
+                  >
+                    <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
+                      {t(item)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* 3. Minutes / Duration (Segmented Number Badge Grid) */}
+          <View style={styles.facetGroup}>
+            <Text style={styles.facetLabel}>{t('MINUTES')}</Text>
+            <View style={styles.durationGrid}>
+              {DURATIONS.map((item) => {
+                const active = selectedDuration === item;
+                const displayLabel = item === 'Any' ? t('Any') : `${item}m`;
+                return (
+                  <Pressable
+                    key={`dur-${item}`}
+                    onPress={() => onSelectDuration(item)}
+                    style={[styles.durationBadge, active && styles.durationBadgeActive]}
+                  >
+                    <Text style={[styles.durationText, active && styles.durationTextActive]}>
+                      {displayLabel}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* 4. Kit / Equipment (Wrap Pills) */}
+          <View style={[styles.facetGroup, styles.facetGroupLast]}>
+            <Text style={styles.facetLabel}>{t('KIT')}</Text>
+            <View style={styles.wrapChipsContainer}>
+              {KITS.map((item) => {
+                const active = selectedKit === item;
+                return (
+                  <Pressable
+                    key={`kit-${item}`}
+                    onPress={() => onSelectKit(item)}
+                    style={[styles.wrapChip, active && styles.wrapChipActive]}
+                  >
+                    <Text style={[styles.wrapChipText, active && styles.wrapChipTextActive]}>
+                      {t(item)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+      ) : null}
 
       {/* Result Count Banner */}
-      <Text style={styles.resultCount}>{resultCountText || t('170 of 170 workouts · shortest first')}</Text>
-    </View>
-  );
-}
-
-interface SlideableChipsRowProps {
-  label: string;
-  items: string[];
-  selectedItem: string | string[];
-  onSelect: (item: string) => void;
-  paddingTop?: number;
-}
-
-function SlideableChipsRow({
-  label,
-  items,
-  selectedItem,
-  onSelect,
-  paddingTop = 16,
-}: SlideableChipsRowProps) {
-  const { t } = useLanguage();
-  const scrollRef = React.useRef<ScrollView>(null);
-  const isMouseDown = React.useRef(false);
-  const startX = React.useRef(0);
-  const scrollStartLeft = React.useRef(0);
-  const hasDragged = React.useRef(false);
-
-  const getDomNode = () => {
-    return (
-      (scrollRef.current as any)?.getScrollResponder?.()?.getScrollableNode?.() ||
-      (scrollRef.current as any)
-    );
-  };
-
-  const handleMouseDown = (e: any) => {
-    if (Platform.OS !== 'web') return;
-    isMouseDown.current = true;
-    hasDragged.current = false;
-    startX.current = e.nativeEvent?.pageX ?? e.pageX ?? 0;
-    const node = getDomNode();
-    scrollStartLeft.current = node?.scrollLeft || 0;
-  };
-
-  const handleMouseMove = (e: any) => {
-    if (Platform.OS !== 'web' || !isMouseDown.current) return;
-    const currentX = e.nativeEvent?.pageX ?? e.pageX ?? 0;
-    const diff = currentX - startX.current;
-    if (Math.abs(diff) > 4) {
-      hasDragged.current = true;
-    }
-    const node = getDomNode();
-    if (node) {
-      node.scrollLeft = scrollStartLeft.current - diff;
-    }
-  };
-
-  const handleMouseUp = () => {
-    if (Platform.OS !== 'web') return;
-    isMouseDown.current = false;
-  };
-
-  React.useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    const node = getDomNode();
-    if (!node) return;
-
-    const onWheel = (e: WheelEvent) => {
-      if (Math.abs(e.deltaX) < Math.abs(e.deltaY) && e.deltaY !== 0) {
-        node.scrollLeft += e.deltaY * 0.8;
-      }
-    };
-
-    node.addEventListener('wheel', onWheel, { passive: true });
-    return () => {
-      node.removeEventListener('wheel', onWheel);
-    };
-  }, []);
-
-  return (
-    <View style={[styles.filterRow, { paddingTop }]}>
-      <Text style={styles.filterLabel}>{t(label)}</Text>
-      <ScrollView
-        ref={scrollRef}
-        horizontal
-        showsHorizontalScrollIndicator={true}
-        contentContainerStyle={styles.chipsScroll}
-        style={
-          Platform.OS === 'web'
-            ? ({
-                cursor: 'grab',
-                userSelect: 'none',
-                WebkitOverflowScrolling: 'touch',
-              } as any)
-            : undefined
-        }
-        {...(Platform.OS === 'web'
-          ? {
-              onMouseDown: handleMouseDown,
-              onMouseMove: handleMouseMove,
-              onMouseUp: handleMouseUp,
-              onMouseLeave: handleMouseUp,
-            }
-          : {})}
-      >
-        {items.map((item) => {
-          const active = Array.isArray(selectedItem) ? selectedItem.includes(item) : item === selectedItem;
-          return (
-            <Pressable
-              key={item}
-              onPress={() => {
-                if (hasDragged.current) return;
-                onSelect(item);
-              }}
-              style={[styles.chip, active && styles.chipActive]}
-            >
-              <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                {t(item)}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+      <Text style={styles.resultCount}>
+        {resultCountText || t('170 of 170 workouts · shortest first')}
+      </Text>
     </View>
   );
 }
@@ -249,16 +277,33 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     marginBottom: 12,
   },
+  titleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   sectionTitle: {
     fontFamily: CLASH,
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '600',
     color: IVORY,
+  },
+  activePillBadge: {
+    backgroundColor: GOLD,
+    borderRadius: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 1,
+  },
+  activePillBadgeText: {
+    fontFamily: MONO,
+    fontSize: 11,
+    fontWeight: '700',
+    color: OBSIDIAN,
   },
   totalBadge: {
     fontFamily: MONO,
@@ -267,15 +312,23 @@ const styles = StyleSheet.create({
     color: 'rgba(247, 243, 238, 0.45)',
   },
   searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginHorizontal: 20,
     borderWidth: 1,
     borderColor: 'rgba(247, 243, 238, 0.18)',
     borderRadius: 14,
-    paddingHorizontal: 15,
-    paddingVertical: 13,
-    backgroundColor: 'transparent',
+    paddingHorizontal: 14,
+    height: 48,
+    backgroundColor: 'rgba(247, 243, 238, 0.04)',
+  },
+  searchIcon: {
+    fontSize: 14,
+    marginRight: 8,
+    opacity: 0.6,
   },
   searchInput: {
+    flex: 1,
     fontFamily: INTER,
     fontSize: 14.5,
     color: IVORY,
@@ -287,43 +340,182 @@ const styles = StyleSheet.create({
     outlineWidth: 0 as any,
     outlineColor: 'transparent' as any,
   },
-  filterRow: {
-    paddingTop: 16,
+  clearSearchBtn: {
+    padding: 4,
   },
-  filterLabel: {
+  clearSearchText: {
+    color: 'rgba(247, 243, 238, 0.6)',
+    fontSize: 14,
+  },
+  filterSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginTop: 16,
+    marginBottom: 10,
+  },
+  filterHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  filterSectionTitle: {
+    fontFamily: DMSANS,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.4,
+    color: 'rgba(247, 243, 238, 0.5)',
+  },
+  resetBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: 'rgba(201, 148, 58, 0.15)',
+  },
+  resetBtnText: {
+    fontFamily: DMSANS,
+    fontSize: 11,
+    fontWeight: '700',
+    color: GOLD,
+  },
+  toggleExpandBtn: {
+    paddingVertical: 2,
+    paddingHorizontal: 4,
+  },
+  toggleExpandText: {
+    fontFamily: DMSANS,
+    fontSize: 11,
+    fontWeight: '600',
+    color: 'rgba(247, 243, 238, 0.55)',
+  },
+  collapsedTagsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    paddingHorizontal: 20,
+    marginBottom: 8,
+  },
+  collapsedTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(201, 148, 58, 0.18)',
+    borderColor: GOLD,
+    borderWidth: 1,
+    borderRadius: 99,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+  },
+  collapsedTagText: {
+    fontFamily: DMSANS,
+    fontSize: 12,
+    fontWeight: '600',
+    color: GOLD,
+  },
+  filtersCard: {
+    marginHorizontal: 20,
+    backgroundColor: 'rgba(13, 43, 69, 0.45)',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(247, 243, 238, 0.08)',
+    padding: 16,
+    gap: 16,
+  },
+  facetGroup: {
+    gap: 8,
+  },
+  facetGroupLast: {
+    marginBottom: 2,
+  },
+  facetLabel: {
     fontFamily: DMSANS,
     fontSize: 10,
-    fontWeight: '500',
-    letterSpacing: 1.4,
-    color: 'rgba(247, 243, 238, 0.42)',
-    paddingHorizontal: 20,
-    paddingBottom: 9,
+    fontWeight: '600',
+    letterSpacing: 1.2,
+    color: 'rgba(247, 243, 238, 0.45)',
   },
-  chipsScroll: {
-    paddingHorizontal: 20,
-    gap: 8,
-    paddingBottom: 6,
+  wrapChipsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 7,
   },
-  chip: {
-    paddingVertical: 9,
-    paddingHorizontal: 15,
+  wrapChip: {
+    paddingVertical: 7,
+    paddingHorizontal: 13,
     borderRadius: 99,
     borderWidth: 1,
-    borderColor: 'rgba(247, 243, 238, 0.22)',
-    backgroundColor: 'transparent',
+    borderColor: 'rgba(247, 243, 238, 0.18)',
+    backgroundColor: 'rgba(247, 243, 238, 0.04)',
     ...(Platform.OS === 'web' ? { whiteSpace: 'nowrap' as any } : {}),
   },
-  chipActive: {
+  wrapChipActive: {
     backgroundColor: GOLD,
     borderColor: GOLD,
   },
-  chipText: {
+  wrapChipText: {
     fontFamily: DMSANS,
-    fontSize: 13,
+    fontSize: 12.5,
+    fontWeight: '500',
+    color: 'rgba(247, 243, 238, 0.75)',
+  },
+  wrapChipTextActive: {
+    color: OBSIDIAN,
+    fontWeight: '700',
+  },
+  segmentedControl: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(247, 243, 238, 0.06)',
+    borderRadius: 12,
+    padding: 3,
+    width: '100%',
+  },
+  segmentBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 9,
+  },
+  segmentBtnActive: {
+    backgroundColor: GOLD,
+  },
+  segmentText: {
+    fontFamily: DMSANS,
+    fontSize: 12,
     fontWeight: '500',
     color: 'rgba(247, 243, 238, 0.7)',
   },
-  chipTextActive: {
+  segmentTextActive: {
+    color: OBSIDIAN,
+    fontWeight: '700',
+  },
+  durationGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  durationBadge: {
+    flex: 1,
+    minWidth: 40,
+    height: 35,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: 'rgba(247, 243, 238, 0.14)',
+    backgroundColor: 'rgba(247, 243, 238, 0.04)',
+  },
+  durationBadgeActive: {
+    backgroundColor: GOLD,
+    borderColor: GOLD,
+  },
+  durationText: {
+    fontFamily: MONO,
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'rgba(247, 243, 238, 0.75)',
+  },
+  durationTextActive: {
     color: OBSIDIAN,
     fontWeight: '700',
   },
@@ -333,7 +525,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: GOLD,
     paddingHorizontal: 20,
-    paddingTop: 18,
+    paddingTop: 16,
     paddingBottom: 10,
   },
 });

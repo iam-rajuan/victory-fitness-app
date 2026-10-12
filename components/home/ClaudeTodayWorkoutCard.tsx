@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
+import React, { useMemo } from 'react';
+import { StyleSheet, Text, View, Pressable, Platform, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { pushRoute } from '../../lib/navigation';
 import { useTheme } from '../../context/ThemeContext';
@@ -45,6 +45,7 @@ export default function ClaudeTodayWorkoutCard({
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const { t } = useLanguage();
+  const { width: windowWidth } = useWindowDimensions();
   const hasCoach = tier !== 'SILVER' && tier !== 'NONE';
 
   const planLabel = !hasActivePlan
@@ -57,6 +58,18 @@ export default function ClaudeTodayWorkoutCard({
     ? (isPlanBuilt ? t('DAY 1 OF WEEK 1 · {duration} MIN', { duration: durationMinutes }) : t('DAY 3 OF WEEK 2 · {duration} MIN', { duration: durationMinutes }))
     : t('PICKED FOR TODAY · {duration} MIN', { duration: durationMinutes });
   const planAlt = hasCoach ? t('Adjust this plan with your coach') : t('Pick a different video instead');
+
+  const resolvedTitle = hasActivePlan ? t(workoutTitle) : t('Create your 7 day workout plan');
+
+  // Dynamically compute font size to ensure the title always stays on 1 line across screen sizes and languages
+  const titleFontSize = useMemo(() => {
+    const textLen = (resolvedTitle || '').length;
+    if (!textLen) return 20;
+    const effectiveWidth = Math.max(220, Math.min(windowWidth || 375, 520) - 94);
+    const factor = 0.55;
+    const fitted = Math.floor(effectiveWidth / (textLen * factor));
+    return Math.min(20, Math.max(12, fitted));
+  }, [resolvedTitle, windowWidth]);
 
   const handleStart = () => {
     if (!hasActivePlan) {
@@ -108,8 +121,20 @@ export default function ClaudeTodayWorkoutCard({
         <Text style={[styles.dayKicker, { color: isDark ? GOLD : '#B5651D' }]}>
           {hasActivePlan ? planDayLine : t('READY WHEN YOU ARE')}
         </Text>
-        <Text style={[styles.title, { color: isDark ? IVORY : NAVY }]}>
-          {hasActivePlan ? t(workoutTitle) : t('Create your 7 day workout plan')}
+        <Text
+          style={[
+            styles.title,
+            {
+              color: isDark ? IVORY : NAVY,
+              fontSize: titleFontSize,
+              lineHeight: Math.max(18, Math.round(titleFontSize * 1.25)),
+            },
+          ]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.7}
+        >
+          {resolvedTitle}
         </Text>
 
         {/* Stats row */}
@@ -158,8 +183,8 @@ export default function ClaudeTodayWorkoutCard({
 
         {/* Primary CTA */}
         <Pressable style={[styles.startBtn, isGeneratingPlan && styles.startBtnDisabled]} onPress={handleStart} disabled={isGeneratingPlan}>
-          <Text style={styles.startBtnText}>
-            {hasActivePlan ? t('Start my session') : isGeneratingPlan ? t('Generating plan...') : t('Create your 7 day workout plan')}
+          <Text style={styles.startBtnText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
+            {hasActivePlan ? t('Start my session') : isGeneratingPlan ? t('Generating plan...') : t('Build your 7-day plan')}
           </Text>
         </Pressable>
 
@@ -232,12 +257,17 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: CLASH,
-    fontSize: 32,
-    lineHeight: 34,
+    fontSize: 20,
+    lineHeight: 25,
     fontWeight: '600',
     color: IVORY,
     marginBottom: 14,
     letterSpacing: -0.3,
+    ...Platform.select({
+      web: {
+        whiteSpace: 'nowrap',
+      },
+    }),
   },
   statsRow: {
     flexDirection: 'row',

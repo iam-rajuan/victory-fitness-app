@@ -883,6 +883,8 @@ export default function WorkoutScreen() {
         workoutTitle={selectedWorkout?.name || 'Workout'}
         unlockNote={currentUser?.identity_statement || 'Your unlock is ready — your true-crime podcast is yours for this workout.'}
         exercises={selectedExercises}
+        vimeoId={selectedWorkout?.vimeoId || ''}
+        videoUrl={selectedWorkout?.videoUrl || ''}
         onEndSession={(stats) => handleFinishSession(stats, 'feedback')}
       />
 

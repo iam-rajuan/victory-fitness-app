@@ -48,12 +48,18 @@ export default function ClaudeInspirationCard({
     };
   }, []);
 
+  // Ensure daily inspiration is always displayed in English without quotation marks
+  const cleanQuoteText = (quote.text || '')
+    .trim()
+    .replace(/^["“'”\s]+|["“'”\s]+$/g, '')
+    .trim();
+
   return (
     <View style={styles.container}>
       <Text style={[styles.kicker, { color: colors.textMuted }]}>{t('DAILY INSPIRATION')}</Text>
       <View style={styles.quoteBox}>
-        <Text style={[styles.quoteText, { color: colors.text }]}>{`“${t(quote.text).replace(/^["“]|["”]$/g, '')}”`}</Text>
-        <Text style={styles.authorText}>{quote.author.toUpperCase()}</Text>
+        <Text style={[styles.quoteText, { color: colors.text }]}>{cleanQuoteText}</Text>
+        <Text style={styles.authorText}>{(quote.author || 'Victor Akko').toUpperCase()}</Text>
       </View>
     </View>
   );
