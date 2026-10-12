@@ -22,8 +22,13 @@ declare const process: {
   env?: Record<string, string | undefined>;
 };
 
-const PRODUCTION_WEB_API_URL = 'https://victory-fitness-backend.onrender.com';
 const CUSTOM_DOMAIN_API_URL = 'https://api.victoryfitnessapp.com';
+const PRODUCTION_APP_HOSTNAMES = new Set([
+  'victoryfitnessapp.com',
+  'www.victoryfitnessapp.com',
+  'app.victoryfitnessapp.com',
+  'victoryfitnessapp.de',
+]);
 
 function getWebHostname(): string {
   if (Platform.OS !== 'web' || typeof window === 'undefined') {
@@ -41,22 +46,26 @@ function isLocalApiUrl(url: string): boolean {
   return url.includes('://localhost') || url.includes('://127.0.0.1') || url.includes('://0.0.0.0');
 }
 
+function isProductionAppHostname(hostname: string): boolean {
+  return PRODUCTION_APP_HOSTNAMES.has(hostname);
+}
+
 function getDefaultWebApiUrl(): string {
   const hostname = getWebHostname();
 
-  if (!hostname || isLocalHostname(hostname) || hostname.endsWith('.vercel.app')) {
-    return PRODUCTION_WEB_API_URL;
+  if (!hostname || isLocalHostname(hostname)) {
+    return 'http://localhost:8000';
   }
 
-  if (hostname === 'victoryfitnessapp.com' || hostname === 'www.victoryfitnessapp.com') {
-    return CUSTOM_DOMAIN_API_URL;
+  if (hostname === 'app.victoryfitnessapp.com' || hostname === 'victoryfitnessapp.de') {
+    return '/api';
   }
 
   if (hostname.startsWith('app.')) {
     return `https://api.${hostname.slice(4)}`;
   }
 
-  return PRODUCTION_WEB_API_URL;
+  return CUSTOM_DOMAIN_API_URL;
 }
 
 function getDefaultApiUrl(): string {
@@ -71,7 +80,23 @@ function getDefaultApiUrl(): string {
   return 'http://localhost:8000';
 }
 
-const RAW_API_URL = String(process.env?.EXPO_PUBLIC_API_URL ?? '').trim() || getDefaultApiUrl();
+function getConfiguredApiUrl(): string {
+  const rawEnvApiUrl = String(process.env?.EXPO_PUBLIC_API_URL ?? '').trim();
+
+  if (Platform.OS === 'web') {
+    const hostname = getWebHostname();
+    if (isProductionAppHostname(hostname)) {
+      return getDefaultWebApiUrl();
+    }
+    if (hostname && !isLocalHostname(hostname) && rawEnvApiUrl && isLocalApiUrl(rawEnvApiUrl)) {
+      return getDefaultWebApiUrl();
+    }
+  }
+
+  return rawEnvApiUrl || getDefaultApiUrl();
+}
+
+const RAW_API_URL = getConfiguredApiUrl();
 export const CONFIGURED_API_URL = RAW_API_URL.replace(/\/+$/, '');
 
 function resolveApiUrl(url: string): string {
