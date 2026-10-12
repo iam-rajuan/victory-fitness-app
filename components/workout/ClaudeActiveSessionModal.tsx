@@ -9,6 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import RequirementAuditBoundary from '../audit/RequirementAuditBoundary';
+import CrossPlatformWebView from '../CrossPlatformWebView';
 
 interface ActiveExerciseItem {
   id: string;
@@ -29,7 +30,31 @@ interface ClaudeActiveSessionModalProps {
   workoutTitle?: string;
   unlockNote?: string;
   exercises?: ActiveExerciseItem[];
+  vimeoId?: string;
+  videoUrl?: string;
   onEndSession: (stats: { minutes: number; setsLogged: number; volumeKg: number; durationSeconds: number }) => void;
+}
+
+function resolveWorkoutEmbedUrl(videoUrl?: string, vimeoId?: string): string {
+  const direct = String(videoUrl || '').trim();
+  const vId = String(vimeoId || '').trim();
+
+  if (vId) {
+    return `https://player.vimeo.com/video/${encodeURIComponent(vId)}?title=0&byline=0&portrait=0&playsinline=1&dnt=1`;
+  }
+
+  if (direct) {
+    if (direct.includes('player.vimeo.com/video/')) {
+      return direct.includes('playsinline') ? direct : `${direct}${direct.includes('?') ? '&' : '?'}playsinline=1`;
+    }
+    const vimeoMatch = direct.match(/vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/([^\/]*)\/videos\/|album\/(\d+)\/video\/|video\/|)(\d+)/);
+    if (vimeoMatch && vimeoMatch[3]) {
+      return `https://player.vimeo.com/video/${encodeURIComponent(vimeoMatch[3])}?title=0&byline=0&portrait=0&playsinline=1&dnt=1`;
+    }
+    return direct;
+  }
+
+  return '';
 }
 
 const OBSIDIAN = '#0D0D0D';
@@ -51,6 +76,8 @@ export default function ClaudeActiveSessionModal({
   workoutTitle = 'Workout',
   unlockNote = 'Your unlock is ready — your true-crime podcast is yours for this workout.',
   exercises = [],
+  vimeoId = '',
+  videoUrl = '',
   onEndSession,
 }: ClaudeActiveSessionModalProps) {
   const [seconds, setSeconds] = useState(0);
@@ -58,6 +85,8 @@ export default function ClaudeActiveSessionModal({
   const [currentSetIdx, setCurrentSetIdx] = useState(0);
   const [loggedSets, setLoggedSets] = useState<Record<string, string>>({});
   const [restRemainingSeconds, setRestRemainingSeconds] = useState(0);
+
+  const resolvedVideoUrl = resolveWorkoutEmbedUrl(videoUrl, vimeoId);
 
   const currentExercise = exercises[currentExIdx] || null;
   const [weightKg, setWeightKg] = useState(currentExercise?.defaultKg || 0);
@@ -268,6 +297,28 @@ export default function ClaudeActiveSessionModal({
               {currentExercise?.note || 'This workout has no admin-programmed movements yet.'}
             </Text>
           </View>
+
+          {/* Workout Video Player */}
+          {resolvedVideoUrl ? (
+            <View style={styles.videoCard}>
+              <View style={styles.videoPlayerContainer}>
+                <CrossPlatformWebView
+                  source={{ uri: resolvedVideoUrl }}
+                  style={StyleSheet.absoluteFill}
+                  javaScriptEnabled
+                  domStorageEnabled
+                  allowsInlineMediaPlayback
+                  mediaPlaybackRequiresUserAction={false}
+                  scrollEnabled={false}
+                />
+              </View>
+              <View style={styles.videoFooterBar}>
+                <Text style={styles.videoMetaText}>
+                  {vimeoId ? 'vimeo' : 'video'} · 1080p · follow along
+                </Text>
+              </View>
+            </View>
+          ) : null}
 
           {/* Set Rows matching lines 570-577 & lines 3083-3102 */}
           <View style={styles.setRowsContainer}>
@@ -588,6 +639,41 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     color: 'rgba(247, 243, 238, 0.55)',
     marginTop: 7,
+  },
+  videoCard: {
+    marginHorizontal: 20,
+    marginTop: 16,
+    marginBottom: 16,
+    borderRadius: 18,
+    overflow: 'hidden',
+    backgroundColor: '#000000',
+    borderWidth: 1,
+    borderColor: 'rgba(247, 243, 238, 0.12)',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  videoPlayerContainer: {
+    width: '100%',
+    height: 226,
+    position: 'relative',
+    backgroundColor: '#000000',
+  },
+  videoFooterBar: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(13, 43, 69, 0.75)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  videoMetaText: {
+    fontFamily: MONO,
+    fontSize: 10.5,
+    color: 'rgba(247, 243, 238, 0.65)',
+    letterSpacing: 0.4,
   },
   setRowsContainer: {
     paddingHorizontal: 20,

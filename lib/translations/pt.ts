@@ -29,6 +29,8 @@ export const pt: Record<string, string> = {
   "Coach sees your habit brief before every session": "O treinador vê seu resumo de hábitos antes de cada sessão",
   "Community": "Comunidade",
   "Completed": "Concluído",
+  "Build my plan": "Criar meu plano",
+  "Build your 7-day plan": "Criar meu plano de 7 dias",
   "Create 7-day plan": "Criar plano de 7 dias",
   "Create your 7 day workout plan": "Crie seu plano de treino de 7 dias",
   "DAILY INSPIRATION": "INSPIRAÇÃO DIÁRIA",

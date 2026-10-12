@@ -157,12 +157,18 @@ export default function ClaudeResumeSessionCard({
         {/* Bottom details row */}
         <View style={styles.bottomRow}>
           <View style={styles.textCol}>
-            <Text style={[styles.title, { color: isDark ? IVORY : NAVY }]}>{sessionTitle}</Text>
+            <Text
+              style={[styles.title, { color: isDark ? IVORY : NAVY }]}
+              numberOfLines={2}
+            >
+              {sessionTitle}
+            </Text>
             <Text
               style={[
                 styles.line,
                 { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
               ]}
+              numberOfLines={2}
             >
               {completed ? `Previously completed · ${sessionLine}` : sessionLine}
             </Text>
@@ -294,13 +300,16 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: CLASH,
-    fontSize: 19,
+    fontSize: 15.5,
+    lineHeight: 20,
     fontWeight: '600',
+    letterSpacing: -0.2,
     color: IVORY,
   },
   line: {
     fontFamily: MONO,
-    fontSize: 12,
+    fontSize: 11.5,
+    lineHeight: 16,
     fontWeight: '400',
     color: 'rgba(247, 243, 238, 0.55)',
     marginTop: 4,

@@ -1090,6 +1090,8 @@ export default function HomeScreen() {
         tier={tier}
         workoutTitle={workoutTitle}
         exercises={activeExercises}
+        vimeoId={homeLibraryWorkout?.vimeoId || ''}
+        videoUrl={homeLibraryWorkout?.videoUrl || ''}
         onEndSession={(stats) => {
           setActiveSessionVisible(false);
           if (stats) {

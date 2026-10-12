@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, Text, View, TextInput, ScrollView, Pressable, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, View, TextInput, Pressable, Platform } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../lib/i18n';
 import { WORKOUT_PURPOSE_FILTER_OPTIONS } from '../../constants/WorkoutCategories';
@@ -16,9 +16,11 @@ interface ClaudeWorkoutFiltersProps {
   selectedKit: string;
   onSelectKit: (k: string) => void;
   resultCountText?: string;
+  onResetFilters?: () => void;
 }
 
 const GOLD = '#C9943A';
+const GOLD_LIGHT = '#F5CF87';
 const OBSIDIAN = '#0D0D0D';
 const IVORY = '#F7F3EE';
 
@@ -27,9 +29,22 @@ const DMSANS = Platform.select({ web: 'DM Sans', default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: 'Inter', default: 'Inter-Regular' });
 const MONO = Platform.select({ web: 'JetBrains Mono', default: 'JetBrainsMono-Bold' });
 
+const ORDERED_PURPOSES = [
+  'All',
+  'Full Body',
+  'Strength',
+  'Upper Body',
+  'Lower Body',
+  'Core',
+  'Cardio',
+  'HIIT',
+  'Yoga',
+  'Pilates',
+  'Sport in Schwangerschaft',
+];
+
 const DIFFICULTIES = ['Any', 'Beginner', 'Intermediate', 'Advanced'];
-const DURATIONS = ['Any', '10', '15', '25', '35', '45', '60'];
-const KITS = ['Any', 'No kit', 'Dumbbells', 'Bands', 'Mat'];
+const DURATIONS = ['Any', '15', '30', '45', '60'];
 
 export default function ClaudeWorkoutFilters({
   searchQuery,
@@ -43,20 +58,60 @@ export default function ClaudeWorkoutFilters({
   selectedKit,
   onSelectKit,
   resultCountText,
+  onResetFilters,
 }: ClaudeWorkoutFiltersProps) {
   const { isDark } = useTheme();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  const activePurposes = selectedPurpose.filter((p) => p !== 'All');
+  const activeFiltersCount =
+    activePurposes.length +
+    (selectedDifficulty !== 'Any' ? 1 : 0) +
+    (selectedDuration !== 'Any' ? 1 : 0) +
+    (selectedKit !== 'Any' ? 1 : 0);
+
+  const handleReset = () => {
+    onSelectPurpose('All');
+    onSelectDifficulty('Any');
+    onSelectDuration('Any');
+    onSelectKit('Any');
+    onResetFilters?.();
+  };
+
+  const getCategoryLabel = (cat: string) => {
+    if (cat === 'Sport in Schwangerschaft') {
+      return language === 'de' ? 'Schwangerschaft' : 'Prenatal';
+    }
+    return t(cat);
+  };
+
+  const isDurationActive = (dur: string) => {
+    if (dur === 'Any') return selectedDuration === 'Any';
+    if (selectedDuration === dur) return true;
+    if (dur === '15' && selectedDuration === '10') return true;
+    if (dur === '30' && (selectedDuration === '25' || selectedDuration === '35')) return true;
+    return false;
+  };
 
   return (
     <View style={styles.container}>
-      {/* Header with Title & Count */}
+      {/* Header: Title & Total Count */}
       <View style={styles.headerRow}>
-        <Text style={styles.sectionTitle}>{t('The whole library')}</Text>
+        <View style={styles.titleWrap}>
+          <Text style={styles.sectionTitle}>{t('The whole library')}</Text>
+          {activeFiltersCount > 0 ? (
+            <View style={styles.activeCounterBadge}>
+              <Text style={styles.activeCounterBadgeText}>{activeFiltersCount}</Text>
+            </View>
+          ) : null}
+        </View>
         <Text style={styles.totalBadge}>{t('170 workouts')}</Text>
       </View>
 
-      {/* Search Input */}
+      {/* Search Input Bar */}
       <View style={styles.searchBox}>
+        <Text style={styles.searchIconSymbol}>⌕</Text>
         <TextInput
           style={[
             styles.searchInput,
@@ -72,170 +127,300 @@ export default function ClaudeWorkoutFilters({
             }),
           ]}
           placeholder={t('Search by name, muscle or kit…')}
-          placeholderTextColor="rgba(247, 243, 238, 0.45)"
+          placeholderTextColor="rgba(247, 243, 238, 0.42)"
           value={searchQuery}
           onChangeText={onSearchChange}
         />
+        {searchQuery ? (
+          <Pressable onPress={() => onSearchChange('')} hitSlop={10} style={styles.clearSearchBtn}>
+            <Text style={styles.clearSearchText}>✕</Text>
+          </Pressable>
+        ) : null}
       </View>
 
-      {/* Purpose Filter Row */}
-      <SlideableChipsRow
-        label="PURPOSE"
-        items={WORKOUT_PURPOSE_FILTER_OPTIONS}
-        selectedItem={selectedPurpose}
-        onSelect={onSelectPurpose}
-        paddingTop={16}
-      />
+      {/* Filters Control Bar (Title, Active count, Reset, Collapse) */}
+      <View style={styles.filterControlBar}>
+        <View style={styles.filterControlLeft}>
+          <Text style={styles.filterKicker}>{t('FILTERS')}</Text>
+          {activeFiltersCount > 0 ? (
+            <Pressable onPress={handleReset} hitSlop={8} style={styles.resetBtn}>
+              <Text style={styles.resetBtnText}>{t('Reset all')}</Text>
+            </Pressable>
+          ) : null}
+        </View>
 
-      <SlideableChipsRow
-        label="DIFFICULTY"
-        items={DIFFICULTIES}
-        selectedItem={selectedDifficulty}
-        onSelect={onSelectDifficulty}
-        paddingTop={14}
-      />
+        <Pressable
+          style={styles.toggleExpandBtn}
+          onPress={() => setIsExpanded((prev) => !prev)}
+          hitSlop={8}
+        >
+          <Text style={styles.toggleExpandText}>
+            {isExpanded ? t('Collapse ▲') : t('Expand ▼')}
+          </Text>
+        </Pressable>
+      </View>
 
-      {/* Minutes Filter Row */}
-      <SlideableChipsRow
-        label="MINUTES"
-        items={DURATIONS}
-        selectedItem={selectedDuration}
-        onSelect={onSelectDuration}
-        paddingTop={14}
-      />
+      {/* Collapsed Active Filters Bar */}
+      {!isExpanded && activeFiltersCount > 0 ? (
+        <View style={styles.collapsedTagsWrap}>
+          {activePurposes.map((p) => (
+            <Pressable
+              key={`collapsed-${p}`}
+              onPress={() => onSelectPurpose(p)}
+              style={styles.collapsedTag}
+            >
+              <Text style={styles.collapsedTagText}>{getCategoryLabel(p)} ✕</Text>
+            </Pressable>
+          ))}
+          {selectedDifficulty !== 'Any' ? (
+            <Pressable
+              onPress={() => onSelectDifficulty('Any')}
+              style={styles.collapsedTag}
+            >
+              <Text style={styles.collapsedTagText}>{t(selectedDifficulty)} ✕</Text>
+            </Pressable>
+          ) : null}
+          {selectedDuration !== 'Any' ? (
+            <Pressable
+              onPress={() => onSelectDuration('Any')}
+              style={styles.collapsedTag}
+            >
+              <Text style={styles.collapsedTagText}>≤ {selectedDuration}m ✕</Text>
+            </Pressable>
+          ) : null}
+          {selectedKit !== 'Any' ? (
+            <Pressable
+              onPress={() => onSelectKit('Any')}
+              style={styles.collapsedTag}
+            >
+              <Text style={styles.collapsedTagText}>{t(selectedKit)} ✕</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
 
-      {/* Kit Filter Row */}
-      <SlideableChipsRow
-        label="KIT"
-        items={KITS}
-        selectedItem={selectedKit}
-        onSelect={onSelectKit}
-        paddingTop={14}
-      />
+      {/* Expanded Filter Panel */}
+      {isExpanded && (
+        <View style={styles.filtersCard}>
+          {/* 1. PURPOSE / FOCUS (Balanced 3-Column Squircle Tiles) */}
+          <View style={styles.facetSection}>
+            <View style={styles.facetHeaderRow}>
+              <Text style={styles.facetTitle}>{t('FOCUS / PURPOSE')}</Text>
+              {activePurposes.length > 0 ? (
+                <Text style={styles.facetActiveSummary}>
+                  {activePurposes.length === 1
+                    ? getCategoryLabel(activePurposes[0])
+                    : `${activePurposes.length} ${t('selected')}`}
+                </Text>
+              ) : null}
+            </View>
+
+            <View style={styles.purposeGrid}>
+              {ORDERED_PURPOSES.map((item) => {
+                const isAll = item === 'All';
+                const active = isAll
+                  ? selectedPurpose.includes('All') || activePurposes.length === 0
+                  : selectedPurpose.includes(item);
+
+                return (
+                  <Pressable
+                    key={`purpose-${item}`}
+                    onPress={() => onSelectPurpose(item)}
+                    style={[
+                      styles.purposeTile,
+                      isAll
+                        ? (active ? styles.tileActiveNeutral : styles.tileInactive)
+                        : (active ? styles.tileActiveGold : styles.tileInactive),
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.purposeTileText,
+                        isAll
+                          ? (active ? styles.tileTextActiveNeutral : styles.tileTextInactive)
+                          : (active ? styles.tileTextActiveGold : styles.tileTextInactive),
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {getCategoryLabel(item)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          <View style={styles.sectionDivider} />
+
+          {/* 2. DIFFICULTY (Precision 4-Segment Control) */}
+          <View style={styles.facetSection}>
+            <View style={styles.facetHeaderRow}>
+              <Text style={styles.facetTitle}>{t('DIFFICULTY')}</Text>
+              {selectedDifficulty !== 'Any' ? (
+                <Text style={styles.facetActiveSummary}>{t(selectedDifficulty)}</Text>
+              ) : null}
+            </View>
+
+            <View style={styles.segmentedControl}>
+              {DIFFICULTIES.map((item) => {
+                const isAny = item === 'Any';
+                const active = selectedDifficulty === item;
+
+                return (
+                  <Pressable
+                    key={`diff-${item}`}
+                    onPress={() => onSelectDifficulty(item)}
+                    style={[
+                      styles.segmentBtn,
+                      isAny
+                        ? (active && styles.segmentActiveNeutral)
+                        : (active && styles.segmentActiveGold),
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.segmentText,
+                        isAny
+                          ? (active && styles.segmentTextActiveNeutral)
+                          : (active && styles.segmentTextActiveGold),
+                      ]}
+                    >
+                      {t(item)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          <View style={styles.sectionDivider} />
+
+          {/* 3. DURATION (Precision 5-Segment Control) */}
+          <View style={styles.facetSection}>
+            <View style={styles.facetHeaderRow}>
+              <Text style={styles.facetTitle}>{t('MAX DURATION')}</Text>
+              {selectedDuration !== 'Any' ? (
+                <Text style={styles.facetActiveSummary}>≤ {selectedDuration}m</Text>
+              ) : null}
+            </View>
+
+            <View style={styles.segmentedControl}>
+              {DURATIONS.map((item) => {
+                const isAny = item === 'Any';
+                const active = isDurationActive(item);
+                const displayLabel = isAny ? t('Any') : `${item}m`;
+
+                return (
+                  <Pressable
+                    key={`dur-${item}`}
+                    onPress={() => onSelectDuration(item)}
+                    style={[
+                      styles.segmentBtn,
+                      isAny
+                        ? (active && styles.segmentActiveNeutral)
+                        : (active && styles.segmentActiveGold),
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.segmentText,
+                        isAny
+                          ? (active && styles.segmentTextActiveNeutral)
+                          : (active && styles.segmentTextActiveGold),
+                      ]}
+                    >
+                      {displayLabel}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          <View style={styles.sectionDivider} />
+
+          {/* 4. EQUIPMENT / KIT (Structured 2-Row Balanced Layout) */}
+          <View style={styles.facetSection}>
+            <View style={styles.facetHeaderRow}>
+              <Text style={styles.facetTitle}>{t('EQUIPMENT')}</Text>
+              {selectedKit !== 'Any' ? (
+                <Text style={styles.facetActiveSummary}>{t(selectedKit)}</Text>
+              ) : null}
+            </View>
+
+            {/* Row 1: Any & No kit */}
+            <View style={styles.kitRow}>
+              <Pressable
+                onPress={() => onSelectKit('Any')}
+                style={[
+                  styles.kitTile,
+                  selectedKit === 'Any' ? styles.tileActiveNeutral : styles.tileInactive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.kitTileText,
+                    selectedKit === 'Any' ? styles.tileTextActiveNeutral : styles.tileTextInactive,
+                  ]}
+                >
+                  {t('Any equipment')}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => onSelectKit('No kit')}
+                style={[
+                  styles.kitTile,
+                  selectedKit === 'No kit' ? styles.tileActiveGold : styles.tileInactive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.kitTileText,
+                    selectedKit === 'No kit' ? styles.tileTextActiveGold : styles.tileTextInactive,
+                  ]}
+                >
+                  {t('Bodyweight / No kit')}
+                </Text>
+              </Pressable>
+            </View>
+
+            {/* Row 2: Dumbbells, Bands, Mat */}
+            <View style={[styles.kitRow, { marginTop: 7 }]}>
+              {['Dumbbells', 'Bands', 'Mat'].map((item) => {
+                const active = selectedKit === item;
+                return (
+                  <Pressable
+                    key={`kit-${item}`}
+                    onPress={() => onSelectKit(item)}
+                    style={[
+                      styles.kitTile,
+                      active ? styles.tileActiveGold : styles.tileInactive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.kitTileText,
+                        active ? styles.tileTextActiveGold : styles.tileTextInactive,
+                      ]}
+                    >
+                      {t(item)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+      )}
 
       {/* Result Count Banner */}
-      <Text style={styles.resultCount}>{resultCountText || t('170 of 170 workouts · shortest first')}</Text>
-    </View>
-  );
-}
-
-interface SlideableChipsRowProps {
-  label: string;
-  items: string[];
-  selectedItem: string | string[];
-  onSelect: (item: string) => void;
-  paddingTop?: number;
-}
-
-function SlideableChipsRow({
-  label,
-  items,
-  selectedItem,
-  onSelect,
-  paddingTop = 16,
-}: SlideableChipsRowProps) {
-  const { t } = useLanguage();
-  const scrollRef = React.useRef<ScrollView>(null);
-  const isMouseDown = React.useRef(false);
-  const startX = React.useRef(0);
-  const scrollStartLeft = React.useRef(0);
-  const hasDragged = React.useRef(false);
-
-  const getDomNode = () => {
-    return (
-      (scrollRef.current as any)?.getScrollResponder?.()?.getScrollableNode?.() ||
-      (scrollRef.current as any)
-    );
-  };
-
-  const handleMouseDown = (e: any) => {
-    if (Platform.OS !== 'web') return;
-    isMouseDown.current = true;
-    hasDragged.current = false;
-    startX.current = e.nativeEvent?.pageX ?? e.pageX ?? 0;
-    const node = getDomNode();
-    scrollStartLeft.current = node?.scrollLeft || 0;
-  };
-
-  const handleMouseMove = (e: any) => {
-    if (Platform.OS !== 'web' || !isMouseDown.current) return;
-    const currentX = e.nativeEvent?.pageX ?? e.pageX ?? 0;
-    const diff = currentX - startX.current;
-    if (Math.abs(diff) > 4) {
-      hasDragged.current = true;
-    }
-    const node = getDomNode();
-    if (node) {
-      node.scrollLeft = scrollStartLeft.current - diff;
-    }
-  };
-
-  const handleMouseUp = () => {
-    if (Platform.OS !== 'web') return;
-    isMouseDown.current = false;
-  };
-
-  React.useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    const node = getDomNode();
-    if (!node) return;
-
-    const onWheel = (e: WheelEvent) => {
-      if (Math.abs(e.deltaX) < Math.abs(e.deltaY) && e.deltaY !== 0) {
-        node.scrollLeft += e.deltaY * 0.8;
-      }
-    };
-
-    node.addEventListener('wheel', onWheel, { passive: true });
-    return () => {
-      node.removeEventListener('wheel', onWheel);
-    };
-  }, []);
-
-  return (
-    <View style={[styles.filterRow, { paddingTop }]}>
-      <Text style={styles.filterLabel}>{t(label)}</Text>
-      <ScrollView
-        ref={scrollRef}
-        horizontal
-        showsHorizontalScrollIndicator={true}
-        contentContainerStyle={styles.chipsScroll}
-        style={
-          Platform.OS === 'web'
-            ? ({
-                cursor: 'grab',
-                userSelect: 'none',
-                WebkitOverflowScrolling: 'touch',
-              } as any)
-            : undefined
-        }
-        {...(Platform.OS === 'web'
-          ? {
-              onMouseDown: handleMouseDown,
-              onMouseMove: handleMouseMove,
-              onMouseUp: handleMouseUp,
-              onMouseLeave: handleMouseUp,
-            }
-          : {})}
-      >
-        {items.map((item) => {
-          const active = Array.isArray(selectedItem) ? selectedItem.includes(item) : item === selectedItem;
-          return (
-            <Pressable
-              key={item}
-              onPress={() => {
-                if (hasDragged.current) return;
-                onSelect(item);
-              }}
-              style={[styles.chip, active && styles.chipActive]}
-            >
-              <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                {t(item)}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+      <View style={styles.resultCountWrap}>
+        <View style={styles.resultDot} />
+        <Text style={styles.resultCountText}>
+          {resultCountText || t('170 of 170 workouts · shortest first')}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -245,20 +430,37 @@ const styles = StyleSheet.create({
     marginTop: 26,
     paddingTop: 22,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(247, 243, 238, 0.14)',
+    borderTopColor: 'rgba(247, 243, 238, 0.1)',
   },
   headerRow: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    marginBottom: 12,
+    marginBottom: 14,
+  },
+  titleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   sectionTitle: {
     fontFamily: CLASH,
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '600',
     color: IVORY,
+  },
+  activeCounterBadge: {
+    backgroundColor: GOLD,
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 1,
+  },
+  activeCounterBadgeText: {
+    fontFamily: MONO,
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: OBSIDIAN,
   },
   totalBadge: {
     fontFamily: MONO,
@@ -267,17 +469,25 @@ const styles = StyleSheet.create({
     color: 'rgba(247, 243, 238, 0.45)',
   },
   searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginHorizontal: 20,
     borderWidth: 1,
-    borderColor: 'rgba(247, 243, 238, 0.18)',
+    borderColor: 'rgba(247, 243, 238, 0.14)',
     borderRadius: 14,
-    paddingHorizontal: 15,
-    paddingVertical: 13,
-    backgroundColor: 'transparent',
+    paddingHorizontal: 14,
+    height: 46,
+    backgroundColor: 'rgba(247, 243, 238, 0.035)',
+  },
+  searchIconSymbol: {
+    fontSize: 18,
+    marginRight: 8,
+    color: 'rgba(247, 243, 238, 0.45)',
   },
   searchInput: {
+    flex: 1,
     fontFamily: INTER,
-    fontSize: 14.5,
+    fontSize: 14,
     color: IVORY,
     padding: 0,
     borderWidth: 0,
@@ -287,53 +497,241 @@ const styles = StyleSheet.create({
     outlineWidth: 0 as any,
     outlineColor: 'transparent' as any,
   },
-  filterRow: {
-    paddingTop: 16,
+  clearSearchBtn: {
+    padding: 4,
   },
-  filterLabel: {
-    fontFamily: DMSANS,
-    fontSize: 10,
-    fontWeight: '500',
-    letterSpacing: 1.4,
-    color: 'rgba(247, 243, 238, 0.42)',
-    paddingHorizontal: 20,
-    paddingBottom: 9,
-  },
-  chipsScroll: {
-    paddingHorizontal: 20,
-    gap: 8,
-    paddingBottom: 6,
-  },
-  chip: {
-    paddingVertical: 9,
-    paddingHorizontal: 15,
-    borderRadius: 99,
-    borderWidth: 1,
-    borderColor: 'rgba(247, 243, 238, 0.22)',
-    backgroundColor: 'transparent',
-    ...(Platform.OS === 'web' ? { whiteSpace: 'nowrap' as any } : {}),
-  },
-  chipActive: {
-    backgroundColor: GOLD,
-    borderColor: GOLD,
-  },
-  chipText: {
-    fontFamily: DMSANS,
+  clearSearchText: {
+    color: 'rgba(247, 243, 238, 0.55)',
     fontSize: 13,
-    fontWeight: '500',
-    color: 'rgba(247, 243, 238, 0.7)',
   },
-  chipTextActive: {
-    color: OBSIDIAN,
+  filterControlBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginTop: 18,
+    marginBottom: 10,
+  },
+  filterControlLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  filterKicker: {
+    fontFamily: DMSANS,
+    fontSize: 11,
     fontWeight: '700',
+    letterSpacing: 1.4,
+    color: 'rgba(247, 243, 238, 0.45)',
   },
-  resultCount: {
-    fontFamily: MONO,
-    fontSize: 12,
+  resetBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: 'rgba(201, 148, 58, 0.15)',
+  },
+  resetBtnText: {
+    fontFamily: DMSANS,
+    fontSize: 11,
     fontWeight: '700',
     color: GOLD,
+  },
+  toggleExpandBtn: {
+    paddingVertical: 3,
+    paddingHorizontal: 4,
+  },
+  toggleExpandText: {
+    fontFamily: DMSANS,
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: 'rgba(247, 243, 238, 0.5)',
+  },
+  collapsedTagsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
     paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 10,
+    marginBottom: 10,
+  },
+  collapsedTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(201, 148, 58, 0.14)',
+    borderColor: 'rgba(201, 148, 58, 0.6)',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 9,
+  },
+  collapsedTagText: {
+    fontFamily: DMSANS,
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: GOLD_LIGHT,
+  },
+  filtersCard: {
+    marginHorizontal: 20,
+    backgroundColor: 'rgba(15, 25, 37, 0.65)',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 16,
+  },
+  facetSection: {
+    gap: 9,
+  },
+  facetHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 1,
+  },
+  facetTitle: {
+    fontFamily: DMSANS,
+    fontSize: 10.5,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    color: 'rgba(247, 243, 238, 0.45)',
+  },
+  facetActiveSummary: {
+    fontFamily: DMSANS,
+    fontSize: 11,
+    fontWeight: '600',
+    color: GOLD_LIGHT,
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    marginVertical: 14,
+  },
+  // PURPOSE Grid: 3-column balanced squircle tiles
+  purposeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 7,
+  },
+  purposeTile: {
+    flexBasis: '31%',
+    flexGrow: 1,
+    height: 38,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+  },
+  purposeTileText: {
+    fontFamily: DMSANS,
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  // Tile States
+  tileInactive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.035)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.07)',
+  },
+  tileTextInactive: {
+    color: 'rgba(247, 243, 238, 0.68)',
+    fontWeight: '500',
+  },
+  tileActiveNeutral: {
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.24)',
+  },
+  tileTextActiveNeutral: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  tileActiveGold: {
+    backgroundColor: 'rgba(201, 148, 58, 0.18)',
+    borderWidth: 1,
+    borderColor: '#C9943A',
+  },
+  tileTextActiveGold: {
+    color: GOLD_LIGHT,
+    fontWeight: '700',
+  },
+  // Segmented Controls (DIFFICULTY & MINUTES)
+  segmentedControl: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(0, 0, 0, 0.28)',
+    borderRadius: 10,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    width: '100%',
+    height: 38,
+  },
+  segmentBtn: {
+    flex: 1,
+    height: '100%',
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+  segmentActiveNeutral: {
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  segmentActiveGold: {
+    backgroundColor: 'rgba(201, 148, 58, 0.22)',
+    borderWidth: 1,
+    borderColor: '#C9943A',
+  },
+  segmentText: {
+    fontFamily: DMSANS,
+    fontSize: 11.5,
+    fontWeight: '500',
+    color: 'rgba(247, 243, 238, 0.62)',
+  },
+  segmentTextActiveNeutral: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  segmentTextActiveGold: {
+    color: GOLD_LIGHT,
+    fontWeight: '700',
+  },
+  // KIT / EQUIPMENT Rows
+  kitRow: {
+    flexDirection: 'row',
+    gap: 7,
+  },
+  kitTile: {
+    flex: 1,
+    height: 38,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  kitTileText: {
+    fontFamily: DMSANS,
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  // Result Count Banner
+  resultCountWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
+    gap: 7,
+  },
+  resultDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: GOLD,
+    opacity: 0.8,
+  },
+  resultCountText: {
+    fontFamily: DMSANS,
+    fontSize: 12,
+    fontWeight: '600',
+    color: GOLD,
+    letterSpacing: 0.2,
   },
 });

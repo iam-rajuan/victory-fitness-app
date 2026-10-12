@@ -804,6 +804,13 @@ export default function WorkoutScreen() {
           selectedKit={selectedKit}
           onSelectKit={setSelectedKit}
           resultCountText={resultCountText}
+          onResetFilters={() => {
+            setSelectedPurposes(['All']);
+            setSelectedDifficulty('Any');
+            setSelectedDuration('Any');
+            setSelectedKit('Any');
+            setSearchQuery('');
+          }}
         />
 
         {/* 8. 2-Column Workout Grid */}
@@ -883,6 +890,8 @@ export default function WorkoutScreen() {
         workoutTitle={selectedWorkout?.name || 'Workout'}
         unlockNote={currentUser?.identity_statement || 'Your unlock is ready — your true-crime podcast is yours for this workout.'}
         exercises={selectedExercises}
+        vimeoId={selectedWorkout?.vimeoId || ''}
+        videoUrl={selectedWorkout?.videoUrl || ''}
         onEndSession={(stats) => handleFinishSession(stats, 'feedback')}
       />
 
