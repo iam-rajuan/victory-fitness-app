@@ -86,22 +86,10 @@ export default function TabsLayout() {
         if (cachedUser) {
           setProfileImage(String(cachedUser.profileImage || '').trim());
           setProfileImageFailed(false);
-
-          if (!isSubscriptionActive(cachedUser)) {
-            replaceRoute(routerRef.current, '/plan');
-            return;
-          }
-
-          setAllowedTabs(getAllowedTabNames(cachedUser));
-          setCheckingAuth(false);
-
-          if (!hasStartedPreloadRef.current) {
-            hasStartedPreloadRef.current = true;
-            void preloadAppData();
-          }
         }
 
-        const authUser = await fetchCurrentUser();
+        // Refresh entitlements before opening tabs or redirecting to plans.
+        const authUser = await fetchCurrentUser({ forceRefresh: true });
         if (cancelled) {
           return;
         }
