@@ -211,11 +211,11 @@ export function isSubscriptionActive(user?: Pick<AuthUser, 'is_admin' | 'subscri
     return true;
   }
 
-  if (normalizeSubscriptionTier(user.subscription_tier) !== 'NONE' && String(user.subscription_status ?? '').toUpperCase() === 'ACTIVE') {
-    return true;
+  if (String(user.subscription_purchase_source ?? '').trim().toLowerCase() === 'beta_trial') {
+    return false;
   }
 
-  if (Boolean(user.onboarding_completed)) {
+  if (normalizeSubscriptionTier(user.subscription_tier) !== 'NONE' && ['ACTIVE', 'PENDING_PAYMENT'].includes(String(user.subscription_status ?? '').trim().toUpperCase())) {
     return true;
   }
 
@@ -247,7 +247,8 @@ function getEffectiveFeatureAccess(
     return getSubscriptionCard('GOLD').featureAccess;
   }
 
-  return getSubscriptionCard(normalizeSubscriptionTier(user?.subscription_tier)).featureAccess;
+  const tier = normalizeSubscriptionTier(user?.subscription_tier);
+  return tier === 'NONE' ? [] : getSubscriptionCard(tier).featureAccess;
 }
 
 function getTabsForFeatureAccess(featureAccess: string[]): string[] {
