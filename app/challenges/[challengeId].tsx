@@ -25,6 +25,7 @@ import { apiRequest, getAuthUser } from '../../lib/api';
 import { ErrorPopupModal } from '../../components/ErrorPopupModal';
 import { formatAppError } from '../../lib/error';
 import { useLanguage } from '../../lib/i18n';
+import { registerCanonicalChallengeTitle } from '../../lib/challengeTerminology';
 import { goBackOrReplace, pushRoute } from '../../lib/navigation';
 import { getCachedResourceSnapshot } from '../../lib/resourceCache';
 import { fetchChallengeDetailData, getChallengeDetailCacheKey } from '../../lib/screenData';
@@ -287,6 +288,9 @@ export default function ChallengeDetailScreen() {
     }
     try {
       const response = await fetchChallengeDetailData<ChallengeDetail>(challengeId);
+      if (response?.title) {
+        registerCanonicalChallengeTitle(response.title);
+      }
       setDetail(response);
     } catch (error) {
       setErrorDialog(formatAppError(error, t('Failed to load challenge details.')));

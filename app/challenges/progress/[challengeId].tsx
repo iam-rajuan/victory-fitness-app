@@ -22,6 +22,7 @@ import { Colors } from '../../../constants/Colors';
 import { Fonts } from '../../../constants/Typography';
 import { apiRequest, fetchCurrentUser } from '../../../lib/api';
 import { useLanguage } from '../../../lib/i18n';
+import { registerCanonicalChallengeTitle } from '../../../lib/challengeTerminology';
 import { ErrorPopupModal } from '../../../components/ErrorPopupModal';
 import { formatAppError } from '../../../lib/error';
 import { getCachedResourceSnapshot } from '../../../lib/resourceCache';
@@ -667,6 +668,9 @@ export default function ChallengeProgressScreen() {
         response.duration_days || response.plan_days.length || 1,
         nextIncompleteDay?.day_number || 1,
       );
+      if (response?.title) {
+        registerCanonicalChallengeTitle(response.title);
+      }
       setThread(response);
       setExpandedDays((current) => {
         if (Object.keys(current).length > 0) {

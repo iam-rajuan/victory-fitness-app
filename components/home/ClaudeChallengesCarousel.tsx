@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { pushRoute } from '../../lib/navigation';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../lib/i18n';
+import { canonicalizeChallengeTitle, registerCanonicalChallengeTitle } from '../../lib/challengeTerminology';
 
 export interface ChallengeItem {
   id?: string;
@@ -56,6 +57,14 @@ export default function ClaudeChallengesCarousel({
   const hasDragged = useRef(false);
 
   const list = Array.isArray(challenges) ? challenges : [];
+
+  useEffect(() => {
+    if (Array.isArray(challenges)) {
+      challenges.forEach((c) => {
+        if (c?.n) registerCanonicalChallengeTitle(c.n);
+      });
+    }
+  }, [challenges]);
 
   const screenWidth = Dimensions.get('window').width;
   const defaultWidth = Math.min(600, screenWidth);
@@ -233,7 +242,7 @@ export default function ClaudeChallengesCarousel({
             onPress={() => handleCardPress(c)}
           >
             <View style={styles.cardTopRow}>
-              <Text style={[styles.challengeName, { color: isDark ? IVORY : NAVY }]}>{t(c.n)}</Text>
+              <Text style={[styles.challengeName, { color: isDark ? IVORY : NAVY }]}>{canonicalizeChallengeTitle(c.n)}</Text>
               <Text style={styles.rankBadge}>{t(c.rank)}</Text>
             </View>
 

@@ -22,6 +22,7 @@ import { apiRequest, buildApiWebSocketUrl, fetchCurrentUser, getValidAuthTokens 
 import { ErrorPopupModal } from '../../../components/ErrorPopupModal';
 import { formatAppError } from '../../../lib/error';
 import { useLanguage } from '../../../lib/i18n';
+import { registerCanonicalChallengeTitle } from '../../../lib/challengeTerminology';
 import { pushRoute } from '../../../lib/navigation';
 import RequirementAuditBoundary from '../../../components/audit/RequirementAuditBoundary';
 import { getCachedResourceSnapshot } from '../../../lib/resourceCache';
@@ -348,6 +349,9 @@ export default function ChallengeChatScreen() {
 
     try {
       const response = await fetchChallengeChatData<ChallengeChatThread>(challengeId);
+      if (response?.title) {
+        registerCanonicalChallengeTitle(response.title);
+      }
       setThread(response);
     } catch (error) {
       setErrorDialog(formatAppError(error, t('Failed to load challenge chat.')));

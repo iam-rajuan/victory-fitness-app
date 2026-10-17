@@ -61,6 +61,7 @@ import ClaudeInspirationCard from '../../components/home/ClaudeInspirationCard';
 import ClaudeFreshPlanBanner from '../../components/home/ClaudeFreshPlanBanner';
 import ClaudeTodayWorkoutCard from '../../components/home/ClaudeTodayWorkoutCard';
 import ClaudeChallengesCarousel, { ChallengeItem } from '../../components/home/ClaudeChallengesCarousel';
+import { registerCanonicalChallengeTitle, canonicalizeChallengeTitle } from '../../lib/challengeTerminology';
 import ClaudeFoodTodayCard from '../../components/home/ClaudeFoodTodayCard';
 import ClaudeHydrationCard from '../../components/home/ClaudeHydrationCard';
 import ClaudeCoachBar from '../../components/home/ClaudeCoachBar';
@@ -226,9 +227,11 @@ function mapHomeChallengeItems(challenges: Array<Record<string, any>> = []): Cha
     const currentDay = Math.max(1, totalDays - daysLeft);
     const rawProgress = Number(ch.progress || 0);
     const pct = Math.min(100, Math.max(0, Math.round(rawProgress <= 1 ? rawProgress * 100 : rawProgress)));
+    const rawTitle = ch.title || 'Active Challenge';
+    registerCanonicalChallengeTitle(rawTitle);
     return {
       id: ch.challenge_id || ch.id,
-      n: ch.title || 'Active Challenge',
+      n: canonicalizeChallengeTitle(rawTitle),
       d: `Day ${currentDay} of ${totalDays}`,
       pct,
       rank: ch.points ? `${ch.points} pts` : 'Active',

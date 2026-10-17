@@ -24,6 +24,7 @@ import ClaudeInviteModal from '../../components/challenge/ClaudeInviteModal';
 import ClaudeCommunityFeed, { CommunityComment, CommunityPost, CommunityPostDraft } from '../../components/challenge/ClaudeCommunityFeed';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../lib/i18n';
+import { registerCanonicalChallengeTitle, canonicalizeChallengeTitle } from '../../lib/challengeTerminology';
 
 const OBSIDIAN = '#0D0D0D';
 const IVORY = '#F7F3EE';
@@ -81,10 +82,13 @@ function buildChallengeItem(raw: Record<string, any>, status: ChallengeItem['sta
     })
     .filter((item: { i: string; image: string }) => item.i || item.image)
     .slice(0, 4);
+  const rawTitle = String(raw.title || 'Untitled challenge').trim();
+  registerCanonicalChallengeTitle(rawTitle);
+  const challengeTitle = canonicalizeChallengeTitle(rawTitle);
   return {
     id: challengeId,
     challengeId,
-    n: String(raw.title || 'Untitled challenge').trim(),
+    n: challengeTitle,
     d: Math.max(1, Number(raw.duration_days || raw.total_days || 1)),
     c: formatCategory(raw.type || raw.category),
     p: formatPoints(points),
