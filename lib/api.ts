@@ -1151,6 +1151,15 @@ export async function markAppNotificationRead(notificationId: string) {
   });
 }
 
+export async function markAllAppNotificationsRead(payload?: { ids?: string[] }) {
+  invalidateApiCache('/me/notifications');
+  return apiRequest<{ read: boolean; count: number }>('/me/notifications/read-all', {
+    method: 'PATCH',
+    body: payload?.ids ? { ids: payload.ids } : undefined,
+    skipResponseCache: true,
+  });
+}
+
 export type NotificationPreferenceTemplate = {
   id: string;
   type: string;

@@ -11,11 +11,13 @@
  * 7. Unread count calculation & instant update
  * 8. Refresh persistence & cache invalidation
  * 9. Destructive action confirmation gating
+ * 10. Mark all as read action & instantaneous unread count clearing
+ * 11. Mark selected as read action in selection mode
  */
 
 import { AppNotification } from '../lib/api';
 
-console.log('=== AUDITING & VALIDATING NOTIFICATION BULK MANAGEMENT ===\n');
+console.log('=== AUDITING & VALIDATING NOTIFICATION BULK MANAGEMENT & MARK ALL AS READ ===\n');
 
 type ActivityNotification = {
   id: string;
@@ -29,9 +31,11 @@ type ActivityNotification = {
 class NotificationScreenModel {
   pushNotifications: AppNotification[] = [];
   activityNotifications: ActivityNotification[] = [];
+  readActivityIds = new Set<string>();
   isSelectMode = false;
   selectedIds = new Set<string>();
   isDeletingBulk = false;
+  isMarkingRead = false;
   bulkConfirmAction: string | null = null;
   cacheInvalidated = false;
 
@@ -49,17 +53,25 @@ class NotificationScreenModel {
       { id: 'a1', category: 'CHALLENGE ACTIVE', title: '21-Day Gold Beta', message: '50% complete', route: '/challenges/1', created_at: new Date(Date.now() - 1800000).toISOString() },
       { id: 'a2', category: 'COMMUNITY POST', title: 'Sarah posted', message: 'Great job team!', route: '/community', created_at: new Date(Date.now() - 5400000).toISOString() },
     ];
+    this.readActivityIds = new Set<string>();
     this.isSelectMode = false;
     this.selectedIds = new Set();
     this.isDeletingBulk = false;
+    this.isMarkingRead = false;
     this.bulkConfirmAction = null;
     this.cacheInvalidated = false;
   }
 
+  get unreadPushCount(): number {
+    return this.pushNotifications.filter((n) => !n.read).length;
+  }
+
+  get unreadActivityCount(): number {
+    return this.activityNotifications.filter((n) => !this.readActivityIds.has(n.id)).length;
+  }
+
   get unreadCount(): number {
-    const unreadPush = this.pushNotifications.filter((n) => !n.read).length;
-    const activity = this.activityNotifications.length;
-    return (unreadPush + activity) as number;
+    return this.unreadPushCount + this.unreadActivityCount;
   }
 
   get allVisibleIds(): string[] {
@@ -104,6 +116,31 @@ class NotificationScreenModel {
     this.pushNotifications = this.pushNotifications.filter((n) => n.id !== id);
     this.activityNotifications = this.activityNotifications.filter((n) => n.id !== id);
     this.selectedIds.delete(id);
+    this.readActivityIds.delete(id);
+    this.cacheInvalidated = true;
+  }
+
+  // Mark all as read
+  handleMarkAllRead() {
+    if (this.isMarkingRead || this.unreadCount === 0) return;
+    this.pushNotifications = this.pushNotifications.map((n) => ({ ...n, read: true }));
+    this.readActivityIds = new Set(this.activityNotifications.map((n) => n.id));
+    this.cacheInvalidated = true;
+  }
+
+  // Mark selected as read
+  handleMarkSelectedRead() {
+    if (this.selectedIds.size === 0 || this.isMarkingRead) return;
+    const selected = new Set(this.selectedIds);
+    this.pushNotifications = this.pushNotifications.map((n) =>
+      selected.has(n.id) ? { ...n, read: true } : n,
+    );
+    this.activityNotifications.forEach((n) => {
+      if (selected.has(n.id)) {
+        this.readActivityIds.add(n.id);
+      }
+    });
+    this.selectedIds.clear();
     this.cacheInvalidated = true;
   }
 
@@ -125,6 +162,7 @@ class NotificationScreenModel {
       const selected = new Set(this.selectedIds);
       this.pushNotifications = this.pushNotifications.filter((n) => !selected.has(n.id));
       this.activityNotifications = this.activityNotifications.filter((n) => !selected.has(n.id));
+      selected.forEach((id) => this.readActivityIds.delete(id));
       this.selectedIds.clear();
       this.cacheInvalidated = true;
       if (this.totalCount === 0) {
@@ -133,6 +171,7 @@ class NotificationScreenModel {
     } else if (this.bulkConfirmAction === 'all') {
       this.pushNotifications = [];
       this.activityNotifications = [];
+      this.readActivityIds.clear();
       this.selectedIds.clear();
       this.isSelectMode = false;
       this.cacheInvalidated = true;
@@ -280,4 +319,35 @@ if (remainingPushIds.includes('p1') || remainingPushIds.includes('p3')) {
 }
 console.log('✓ PASS: Deleted notifications do not return after refresh (persistence verified)\n');
 
-console.log('=== ALL 7 VALIDATION SUITES PASSED SUCCESSFULLY ===');
+// TEST 8: Mark all as read
+console.log('Test 8: Mark all as read');
+model.reset();
+assertEq(model.unreadCount, 4, 'Unread count before mark all read');
+model.handleMarkAllRead();
+console.log(`After Mark All Read: unreadCount=${model.unreadCount}`);
+assertEq(model.unreadCount, 0, 'Unread count after mark all read');
+assertEq(model.totalCount, 5, 'Total count should remain unchanged after mark all read');
+assertEq(model.pushNotifications.every((n) => n.read), true, 'All push notifications marked read');
+assertEq(model.readActivityIds.size, 2, 'All activity notifications marked read');
+console.log('✓ PASS: Mark all as read clears unread state while keeping notifications\n');
+
+// TEST 9: Mark selected as read in select mode
+console.log('Test 9: Mark selected as read in select mode');
+model.reset();
+assertEq(model.unreadCount, 4, 'Unread count before mark selected read');
+model.toggleSelectMode();
+// Select p1 (unread) and a1 (unread)
+model.toggleItemSelection('p1');
+model.toggleItemSelection('a1');
+assertEq(model.selectedIds.size, 2, '2 items selected');
+
+model.handleMarkSelectedRead();
+console.log(`After Mark Selected Read: unreadCount=${model.unreadCount}`);
+assertEq(model.unreadCount, 2, 'Unread count should decrease by 2');
+assertEq(model.selectedIds.size, 0, 'selectedIds should be cleared after marking read');
+const p1 = model.pushNotifications.find((n) => n.id === 'p1');
+assertEq(p1?.read, true, 'p1 is read');
+assertEq(model.readActivityIds.has('a1'), true, 'a1 is marked read');
+console.log('✓ PASS: Mark selected as read selectively marks items read and clears selection\n');
+
+console.log('=== ALL 9 VALIDATION SUITES PASSED SUCCESSFULLY ===');

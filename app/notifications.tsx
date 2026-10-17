@@ -17,6 +17,7 @@ import {
   fetchAppNotifications,
   fetchCurrentUser,
   fetchDismissedActivityNotifications,
+  markAllAppNotificationsRead,
   markAppNotificationRead,
 } from '../lib/api';
 import { registerForPushNotificationsAsync, requestNotificationPermissionAsync, subscribeToPushNotifications } from '../lib/pushNotifications';
@@ -245,6 +246,8 @@ export default function NotificationsScreen() {
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
   const [isDeletingBulk, setIsDeletingBulk] = React.useState(false);
   const [bulkConfirmAction, setBulkConfirmAction] = React.useState<'selected' | 'all' | null>(null);
+  const [readActivityIds, setReadActivityIds] = React.useState<Set<string>>(new Set());
+  const [isMarkingRead, setIsMarkingRead] = React.useState(false);
 
   const loadNotifications = React.useCallback(async (initialLoad = false) => {
     if (initialLoad) setLoading(true);
@@ -344,7 +347,9 @@ export default function NotificationsScreen() {
   const startedAt = user?.subscription_started_at ?? user?.subscription?.started_at;
   const trialDay = getTrialDay(startedAt);
   const isComplete = trialDay !== null && trialDay >= 5;
-  const unreadCount = pushNotifications.filter((item) => !item.read).length + activityNotifications.length;
+  const unreadPushCount = pushNotifications.filter((item) => !item.read).length;
+  const unreadActivityCount = activityNotifications.filter((item) => !readActivityIds.has(item.id)).length;
+  const unreadCount = unreadPushCount + unreadActivityCount;
 
   const allVisibleIds = React.useMemo(
     () => [...pushNotifications.map((n) => n.id), ...activityNotifications.map((n) => n.id)],
@@ -376,6 +381,52 @@ export default function NotificationsScreen() {
       setSelectedIds(new Set());
     } else {
       setSelectedIds(new Set(allVisibleIds));
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    if (isMarkingRead || unreadCount === 0) return;
+    setIsMarkingRead(true);
+
+    // Optimistically mark all push notifications and activity notifications as read
+    setPushNotifications((current) => current.map((n) => ({ ...n, read: true })));
+    setReadActivityIds(new Set(activityNotifications.map((n) => n.id)));
+
+    try {
+      await markAllAppNotificationsRead();
+    } catch {
+      setLoadError('Unable to mark all notifications as read. Pull down to refresh.');
+    } finally {
+      setIsMarkingRead(false);
+    }
+  };
+
+  const handleMarkSelectedRead = async () => {
+    if (selectedIds.size === 0 || isMarkingRead) return;
+    setIsMarkingRead(true);
+
+    const selectedSet = new Set(selectedIds);
+    setPushNotifications((current) =>
+      current.map((n) => (selectedSet.has(n.id) ? { ...n, read: true } : n)),
+    );
+    setReadActivityIds((current) => {
+      const next = new Set(current);
+      activityNotifications.forEach((n) => {
+        if (selectedSet.has(n.id)) next.add(n.id);
+      });
+      return next;
+    });
+
+    try {
+      const pushIds = pushNotifications.filter((n) => selectedSet.has(n.id)).map((n) => n.id);
+      if (pushIds.length > 0) {
+        await markAllAppNotificationsRead({ ids: pushIds });
+      }
+    } catch {
+      setLoadError('Unable to mark selected notifications as read.');
+    } finally {
+      setIsMarkingRead(false);
+      setSelectedIds(new Set());
     }
   };
 
@@ -567,14 +618,24 @@ export default function NotificationsScreen() {
 
             <View style={styles.bulkActionsRow}>
               <TouchableOpacity
+                style={[styles.markSelectedReadButton, selectedIds.size === 0 && styles.deleteButtonDisabled]}
+                onPress={() => void handleMarkSelectedRead()}
+                disabled={selectedIds.size === 0 || isMarkingRead}
+                accessibilityLabel="Mark selected notifications as read"
+              >
+                <Ionicons name="checkmark-done" size={15} color={Colors.accentGold} />
+                <Text style={styles.markSelectedReadText}>Mark Read</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
                 style={[styles.deleteSelectedButton, selectedIds.size === 0 && styles.deleteButtonDisabled]}
                 onPress={() => setBulkConfirmAction('selected')}
                 disabled={selectedIds.size === 0 || isDeletingBulk}
                 accessibilityLabel="Delete selected notifications"
               >
-                <Ionicons name="trash-outline" size={16} color="#FFFFFF" />
+                <Ionicons name="trash-outline" size={15} color="#FFFFFF" />
                 <Text style={styles.deleteSelectedButtonText}>
-                  Delete Selected ({selectedIds.size})
+                  Delete ({selectedIds.size})
                 </Text>
               </TouchableOpacity>
 
@@ -587,6 +648,29 @@ export default function NotificationsScreen() {
                 <Text style={styles.deleteAllButtonText}>Delete All</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        ) : null}
+
+        {unreadCount > 0 && !isSelectMode ? (
+          <View style={styles.unreadHeaderBar}>
+            <View style={styles.unreadHeaderLeft}>
+              <View style={styles.unreadPulseDot} />
+              <Text style={styles.unreadHeaderText}>
+                {unreadCount} UNREAD {unreadCount === 1 ? 'NOTIFICATION' : 'NOTIFICATIONS'}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.markAllReadButton}
+              onPress={() => void handleMarkAllRead()}
+              disabled={isMarkingRead}
+              activeOpacity={0.75}
+              accessibilityLabel="Mark all notifications as read"
+            >
+              <Ionicons name="checkmark-done" size={15} color={Colors.accentGold} />
+              <Text style={styles.markAllReadButtonText}>
+                {isMarkingRead ? 'Marking...' : 'Mark all as read'}
+              </Text>
+            </TouchableOpacity>
           </View>
         ) : null}
 
@@ -603,7 +687,7 @@ export default function NotificationsScreen() {
               const presentation = getNotificationPresentation(item);
               const isSelected = selectedIds.has(item.id);
               return (
-                <View key={item.id} style={[styles.activityItem, isSelectMode && isSelected && styles.activityItemSelected]}>
+                <View key={item.id} style={[styles.activityItem, isSelectMode && isSelected && styles.activityItemSelected, !item.read && styles.activityItemUnread]}>
                   {isSelectMode ? (
                     <TouchableOpacity
                       style={styles.checkboxTouchTarget}
@@ -636,7 +720,10 @@ export default function NotificationsScreen() {
                       <Text style={styles.activityTitle}>{item.title}</Text>
                       <Text style={styles.activityText}>{item.message}</Text>
                     </View>
-                    <Text style={styles.notificationTime}>{formatDate(item.created_at)}</Text>
+                    <View style={styles.notificationTimeContainer}>
+                      {!item.read ? <View style={styles.unreadDot} /> : null}
+                      <Text style={styles.notificationTime}>{formatDate(item.created_at)}</Text>
+                    </View>
                   </TouchableOpacity>
                   {!isSelectMode ? (
                     <TouchableOpacity
@@ -677,8 +764,9 @@ export default function NotificationsScreen() {
             <Text style={styles.activitySectionTitle}>CHALLENGES & COMMUNITY</Text>
             {activityNotifications.map((item) => {
               const isSelected = selectedIds.has(item.id);
+              const isUnread = !readActivityIds.has(item.id);
               return (
-                <View key={item.id} style={[styles.activityItem, isSelectMode && isSelected && styles.activityItemSelected]}>
+                <View key={item.id} style={[styles.activityItem, isSelectMode && isSelected && styles.activityItemSelected, isUnread && styles.activityItemUnread]}>
                   {isSelectMode ? (
                     <TouchableOpacity
                       style={styles.checkboxTouchTarget}
@@ -698,6 +786,7 @@ export default function NotificationsScreen() {
                       if (isSelectMode) {
                         toggleItemSelection(item.id);
                       } else {
+                        setReadActivityIds((current) => new Set(current).add(item.id));
                         setSelectedNotification({ title: item.title, message: item.message, category: item.category, created_at: item.created_at, route: item.route, actionLabel: 'Open' });
                       }
                     }}
@@ -711,7 +800,10 @@ export default function NotificationsScreen() {
                       <Text style={styles.activityTitle}>{item.title}</Text>
                       <Text style={styles.activityText}>{item.message}</Text>
                     </View>
-                    <Text style={styles.notificationTime}>{formatDate(item.created_at)}</Text>
+                    <View style={styles.notificationTimeContainer}>
+                      {isUnread ? <View style={styles.unreadDot} /> : null}
+                      <Text style={styles.notificationTime}>{formatDate(item.created_at)}</Text>
+                    </View>
                     {!isSelectMode ? <Ionicons name="chevron-forward" size={18} color={Colors.textMuted} /> : null}
                   </TouchableOpacity>
                   {!isSelectMode ? (
@@ -1101,4 +1193,84 @@ const styles = StyleSheet.create({
   retryText: { color: Colors.obsidian, fontSize: 13, fontFamily: Fonts.heading },
   inlineError: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(127, 29, 29, 0.22)', borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.35)', borderRadius: 10, padding: 10, marginBottom: 14 },
   inlineErrorText: { flex: 1, color: '#FECACA', fontSize: 12, fontFamily: Fonts.body },
+  unreadHeaderBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(201, 148, 58, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(201, 148, 58, 0.3)',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginBottom: 16,
+  },
+  unreadHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  unreadPulseDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: Colors.accentGold,
+  },
+  unreadHeaderText: {
+    color: Colors.accentGold,
+    fontSize: 11,
+    letterSpacing: 0.8,
+    fontFamily: Fonts.heading,
+  },
+  markAllReadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: 'rgba(201, 148, 58, 0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(201, 148, 58, 0.45)',
+  },
+  markAllReadButtonText: {
+    color: Colors.accentGold,
+    fontSize: 11,
+    fontFamily: Fonts.heading,
+    letterSpacing: 0.3,
+  },
+  markSelectedReadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: 'rgba(201, 148, 58, 0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(201, 148, 58, 0.4)',
+  },
+  markSelectedReadText: {
+    color: Colors.accentGold,
+    fontSize: 12,
+    fontFamily: Fonts.heading,
+  },
+  activityItemUnread: {
+    borderColor: 'rgba(201, 148, 58, 0.45)',
+    backgroundColor: 'rgba(201, 148, 58, 0.04)',
+  },
+  notificationTimeContainer: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    marginLeft: 8,
+    minWidth: 58,
+  },
+  unreadDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: Colors.accentGold,
+    marginBottom: 4,
+  },
 });
