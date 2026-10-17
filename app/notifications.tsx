@@ -611,21 +611,53 @@ export default function NotificationsScreen() {
                 />
                 <Text style={styles.selectAllText}>{isAllSelected ? 'Deselect All' : 'Select All'}</Text>
               </TouchableOpacity>
-              <Text style={styles.selectedCountText}>
-                {selectedIds.size} of {totalNotificationsCount} selected
-              </Text>
+
+              <TouchableOpacity
+                style={[
+                  styles.markAllReadToolbarButton,
+                  (unreadCount === 0 || isMarkingRead) && styles.actionButtonDisabled,
+                ]}
+                onPress={() => void handleMarkAllRead()}
+                disabled={unreadCount === 0 || isMarkingRead}
+                activeOpacity={0.75}
+                accessibilityLabel="Mark all notifications as read"
+              >
+                <Ionicons
+                  name="checkmark-done"
+                  size={15}
+                  color={unreadCount > 0 ? Colors.accentGold : Colors.textMuted}
+                />
+                <Text
+                  style={[
+                    styles.markAllReadToolbarButtonText,
+                    unreadCount === 0 && styles.actionButtonTextDisabled,
+                  ]}
+                >
+                  {isMarkingRead ? 'Marking...' : unreadCount === 0 ? 'All Read' : 'Mark all as read'}
+                </Text>
+              </TouchableOpacity>
             </View>
 
+            {selectedIds.size > 0 ? (
+              <View style={styles.selectionInfoRow}>
+                <Text style={styles.selectedCountText}>
+                  {selectedIds.size} of {totalNotificationsCount} selected
+                </Text>
+              </View>
+            ) : null}
+
             <View style={styles.bulkActionsRow}>
-              <TouchableOpacity
-                style={[styles.markSelectedReadButton, selectedIds.size === 0 && styles.deleteButtonDisabled]}
-                onPress={() => void handleMarkSelectedRead()}
-                disabled={selectedIds.size === 0 || isMarkingRead}
-                accessibilityLabel="Mark selected notifications as read"
-              >
-                <Ionicons name="checkmark-done" size={15} color={Colors.accentGold} />
-                <Text style={styles.markSelectedReadText}>Mark Read</Text>
-              </TouchableOpacity>
+              {selectedIds.size > 0 ? (
+                <TouchableOpacity
+                  style={[styles.markSelectedReadButton, isMarkingRead && styles.deleteButtonDisabled]}
+                  onPress={() => void handleMarkSelectedRead()}
+                  disabled={isMarkingRead}
+                  accessibilityLabel="Mark selected notifications as read"
+                >
+                  <Ionicons name="checkmark" size={15} color={Colors.accentGold} />
+                  <Text style={styles.markSelectedReadText}>Mark Read</Text>
+                </TouchableOpacity>
+              ) : null}
 
               <TouchableOpacity
                 style={[styles.deleteSelectedButton, selectedIds.size === 0 && styles.deleteButtonDisabled]}
@@ -635,7 +667,7 @@ export default function NotificationsScreen() {
               >
                 <Ionicons name="trash-outline" size={15} color="#FFFFFF" />
                 <Text style={styles.deleteSelectedButtonText}>
-                  Delete ({selectedIds.size})
+                  {selectedIds.size > 0 ? `Delete (${selectedIds.size})` : 'Delete Selected'}
                 </Text>
               </TouchableOpacity>
 
@@ -648,29 +680,6 @@ export default function NotificationsScreen() {
                 <Text style={styles.deleteAllButtonText}>Delete All</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        ) : null}
-
-        {unreadCount > 0 && !isSelectMode ? (
-          <View style={styles.unreadHeaderBar}>
-            <View style={styles.unreadHeaderLeft}>
-              <View style={styles.unreadPulseDot} />
-              <Text style={styles.unreadHeaderText}>
-                {unreadCount} UNREAD {unreadCount === 1 ? 'NOTIFICATION' : 'NOTIFICATIONS'}
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={styles.markAllReadButton}
-              onPress={() => void handleMarkAllRead()}
-              disabled={isMarkingRead}
-              activeOpacity={0.75}
-              accessibilityLabel="Mark all notifications as read"
-            >
-              <Ionicons name="checkmark-done" size={15} color={Colors.accentGold} />
-              <Text style={styles.markAllReadButtonText}>
-                {isMarkingRead ? 'Marking...' : 'Mark all as read'}
-              </Text>
-            </TouchableOpacity>
           </View>
         ) : null}
 
@@ -1193,51 +1202,35 @@ const styles = StyleSheet.create({
   retryText: { color: Colors.obsidian, fontSize: 13, fontFamily: Fonts.heading },
   inlineError: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(127, 29, 29, 0.22)', borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.35)', borderRadius: 10, padding: 10, marginBottom: 14 },
   inlineErrorText: { flex: 1, color: '#FECACA', fontSize: 12, fontFamily: Fonts.body },
-  unreadHeaderBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(201, 148, 58, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(201, 148, 58, 0.3)',
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    marginBottom: 16,
-  },
-  unreadHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  unreadPulseDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    backgroundColor: Colors.accentGold,
-  },
-  unreadHeaderText: {
-    color: Colors.accentGold,
-    fontSize: 11,
-    letterSpacing: 0.8,
-    fontFamily: Fonts.heading,
-  },
-  markAllReadButton: {
+  markAllReadToolbarButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
     borderRadius: 8,
-    backgroundColor: 'rgba(201, 148, 58, 0.16)',
+    backgroundColor: 'rgba(201, 148, 58, 0.14)',
     borderWidth: 1,
-    borderColor: 'rgba(201, 148, 58, 0.45)',
+    borderColor: 'rgba(201, 148, 58, 0.4)',
   },
-  markAllReadButtonText: {
+  markAllReadToolbarButtonText: {
     color: Colors.accentGold,
     fontSize: 11,
     fontFamily: Fonts.heading,
     letterSpacing: 0.3,
+  },
+  actionButtonDisabled: {
+    opacity: 0.45,
+    backgroundColor: 'rgba(247, 243, 238, 0.05)',
+    borderColor: 'rgba(247, 243, 238, 0.12)',
+  },
+  actionButtonTextDisabled: {
+    color: Colors.textMuted,
+  },
+  selectionInfoRow: {
+    marginBottom: 10,
+    marginTop: -2,
+    paddingHorizontal: 4,
   },
   markSelectedReadButton: {
     flexDirection: 'row',
