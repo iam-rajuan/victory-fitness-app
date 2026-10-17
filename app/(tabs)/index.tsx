@@ -269,6 +269,7 @@ export default function HomeScreen() {
     setsLogged: 6,
     volumeKg: 840,
   });
+  const [sessionCompletedExercises, setSessionCompletedExercises] = useState<Array<{ name: string; s?: string; cardN?: string }>>([]);
 
   // Challenge Detail and Cohort Modals
   const [challengeDetailVisible, setChallengeDetailVisible] = useState(false);
@@ -750,8 +751,24 @@ export default function HomeScreen() {
     }
   }, [targetWaterLiters]);
 
-  const handleCompletedHomeSession = useCallback(async (stats: { minutes: number; setsLogged: number; volumeKg: number; durationSeconds: number }) => {
+  const handleCompletedHomeSession = useCallback(async (stats: {
+    minutes: number;
+    setsLogged: number;
+    volumeKg: number;
+    durationSeconds: number;
+    completedExercises?: Array<{ id?: string; name: string; s?: string; cardN?: string }>;
+  }) => {
     setCompletedStats(stats);
+    const actualCompleted: Array<{ name: string; s?: string; cardN?: string }> =
+      stats.completedExercises && stats.completedExercises.length > 0
+        ? stats.completedExercises.map((e) => ({
+            name: e.name,
+            s: e.s || '',
+            cardN: e.cardN || e.name,
+          }))
+        : [];
+    setSessionCompletedExercises(actualCompleted);
+
     try {
       await createWorkoutLog({
         workout_id: strengthPlan?.plan_id ? `${strengthPlan.plan_id}-${strengthDay?.day || 'day'}` : homeLibraryWorkout?.id || 'home-session',
@@ -759,13 +776,10 @@ export default function HomeScreen() {
         duration_seconds: stats.durationSeconds || stats.minutes * 60,
         sets_logged: stats.setsLogged,
         volume_kg: stats.volumeKg,
-        movements: activeExercises.map((exercise: HomeActiveExercise) => ({
-          id: exercise.id,
+        movements: actualCompleted.map((exercise, index) => ({
+          order: index,
           name: exercise.name,
-          sets: exercise.targetSets,
-          reps: exercise.targetReps,
-          rest_seconds: exercise.restSeconds,
-          default_kg: exercise.defaultKg,
+          prescription: exercise.s || '',
         })),
         status: 'completed',
       });
@@ -1046,11 +1060,17 @@ export default function HomeScreen() {
         vimeoId={homeLibraryWorkout?.vimeoId || ''}
         onFinishSession={() => {
           setVimeoModalVisible(false);
+          const silverExercises = (homeLibraryWorkout?.movements || []).map((m: any) => ({
+            name: m.name,
+            s: `${m.sets || 1} sets`,
+            cardN: m.name,
+          }));
           void handleCompletedHomeSession({
             minutes: homeLibraryWorkout?.durationMinutes || workoutDurationMinutes,
             setsLogged: homeLibraryWorkout?.movements?.length || 0,
             volumeKg: 0,
             durationSeconds: homeLibraryWorkout?.durationSeconds || workoutDurationMinutes * 60,
+            completedExercises: silverExercises,
           });
         }}
       />
@@ -1110,6 +1130,15 @@ export default function HomeScreen() {
         setsLogged={completedStats.setsLogged}
         volumeKg={completedStats.volumeKg}
         streakDays={streakDays}
+        exercises={
+          sessionCompletedExercises.length > 0
+            ? sessionCompletedExercises
+            : (latestCompletedToday?.movements?.map((m: any) => ({
+                name: String(m.name || m.title || ''),
+                s: String(m.prescription || m.sets || ''),
+                cardN: String(m.name || m.title || '').trim(),
+              })) || [])
+        }
         identityStatement={currentUser?.identity_statement || undefined}
         motivationStatement={currentUser?.motivation_statement || undefined}
         userName={currentUser?.name || ''}

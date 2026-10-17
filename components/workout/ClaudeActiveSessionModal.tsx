@@ -7,11 +7,12 @@ import {
   Pressable,
   ScrollView,
   Platform,
+  TextInput,
 } from 'react-native';
 import RequirementAuditBoundary from '../audit/RequirementAuditBoundary';
 import CrossPlatformWebView from '../CrossPlatformWebView';
 
-interface ActiveExerciseItem {
+export interface ActiveExerciseItem {
   id: string;
   name: string;
   note: string;
@@ -23,7 +24,16 @@ interface ActiveExerciseItem {
   isHold?: boolean;
 }
 
-interface ClaudeActiveSessionModalProps {
+export interface CompletedSessionExercise {
+  id?: string;
+  name: string;
+  s?: string;
+  cardN?: string;
+  setsLogged?: number;
+  targetSets?: number;
+}
+
+export interface ClaudeActiveSessionModalProps {
   visible: boolean;
   onClose: () => void;
   tier?: string;
@@ -33,7 +43,13 @@ interface ClaudeActiveSessionModalProps {
   vimeoId?: string;
   videoUrl?: string;
   showVideo?: boolean;
-  onEndSession: (stats: { minutes: number; setsLogged: number; volumeKg: number; durationSeconds: number }) => void;
+  onEndSession: (stats: {
+    minutes: number;
+    setsLogged: number;
+    volumeKg: number;
+    durationSeconds: number;
+    completedExercises?: CompletedSessionExercise[];
+  }) => void;
 }
 
 function resolveWorkoutEmbedUrl(videoUrl?: string, vimeoId?: string): string {
@@ -87,10 +103,17 @@ export default function ClaudeActiveSessionModal({
   const [currentSetIdx, setCurrentSetIdx] = useState(0);
   const [loggedSets, setLoggedSets] = useState<Record<string, string>>({});
   const [restRemainingSeconds, setRestRemainingSeconds] = useState(0);
+  const [sessionExercises, setSessionExercises] = useState<ActiveExerciseItem[]>(exercises);
+  const [swapModalVisible, setSwapModalVisible] = useState(false);
+  const [swapDraftName, setSwapDraftName] = useState('');
+
+  useEffect(() => {
+    setSessionExercises(exercises);
+  }, [exercises]);
 
   const resolvedVideoUrl = showVideo ? resolveWorkoutEmbedUrl(videoUrl, vimeoId) : '';
 
-  const currentExercise = exercises[currentExIdx] || null;
+  const currentExercise = sessionExercises[currentExIdx] || null;
   const [weightKg, setWeightKg] = useState(currentExercise?.defaultKg || 0);
   const [reps, setReps] = useState<number | 'max'>(currentExercise?.targetReps || 1);
 
@@ -134,6 +157,31 @@ export default function ClaudeActiveSessionModal({
     ? `${Math.floor(restRemainingSeconds / 60)}:${(restRemainingSeconds % 60).toString().padStart(2, '0')}`
     : currentExercise?.restTime || '--';
 
+  const handleSkipExercise = () => {
+    if (!currentExercise) {
+      handleFinish();
+      return;
+    }
+    setRestRemainingSeconds(0);
+    if (currentExIdx < sessionExercises.length - 1) {
+      setCurrentExIdx((prev) => prev + 1);
+      setCurrentSetIdx(0);
+    } else {
+      handleFinish();
+    }
+  };
+
+  const handleConfirmSwap = (name: string) => {
+    const nextName = name.trim();
+    if (nextName && currentExercise) {
+      setSessionExercises((prev) =>
+        prev.map((item, idx) => (idx === currentExIdx ? { ...item, name: nextName } : item))
+      );
+    }
+    setSwapModalVisible(false);
+    setSwapDraftName('');
+  };
+
   const handleLogSet = () => {
     if (!currentExercise) {
       handleFinish();
@@ -152,7 +200,7 @@ export default function ClaudeActiveSessionModal({
     // If more sets remain in this exercise
     if (currentSetIdx < currentExercise.targetSets - 1) {
       setCurrentSetIdx((prev) => prev + 1);
-    } else if (currentExIdx < exercises.length - 1) {
+    } else if (currentExIdx < sessionExercises.length - 1) {
       // Advance to next exercise
       setCurrentExIdx((prev) => prev + 1);
       setCurrentSetIdx(0);
@@ -187,7 +235,7 @@ export default function ClaudeActiveSessionModal({
 
     if (currentExIdx > 0) {
       const previousExerciseIdx = currentExIdx - 1;
-      const previousExercise = exercises[previousExerciseIdx];
+      const previousExercise = sessionExercises[previousExerciseIdx];
       const previousSetIdx = Math.max((previousExercise?.targetSets || 1) - 1, 0);
       const previousKey = `${previousExerciseIdx}:${previousSetIdx}`;
       const nextLogged = { ...loggedSets };
@@ -206,11 +254,28 @@ export default function ClaudeActiveSessionModal({
       if (!match) return total;
       return total + Number(match[1] || 0) * Number(match[2] || 0);
     }, 0);
+
+    const completedExercisesList: CompletedSessionExercise[] = sessionExercises
+      .map((ex, idx) => {
+        const loggedCount = Object.keys(finalLogged).filter((k) => k.startsWith(`${idx}:`)).length;
+        if (loggedCount === 0) return null;
+        return {
+          id: ex.id,
+          name: ex.name,
+          s: `${loggedCount} sets`,
+          cardN: ex.name.trim(),
+          setsLogged: loggedCount,
+          targetSets: ex.targetSets,
+        };
+      })
+      .filter((ex): ex is { id: string; name: string; s: string; cardN: string; setsLogged: number; targetSets: number } => Boolean(ex));
+
     onEndSession({
       minutes: Math.max(1, Math.round(seconds / 60)),
       setsLogged: totalLoggedCount,
       volumeKg: Math.max(0, volume),
       durationSeconds: Math.max(0, seconds),
+      completedExercises: completedExercisesList,
     });
   };
 
@@ -219,12 +284,12 @@ export default function ClaudeActiveSessionModal({
     !currentExercise
       ? 'Finish workout'
       : currentSetIdx >= currentExercise.targetSets - 1
-      ? currentExIdx >= exercises.length - 1
+      ? currentExIdx >= sessionExercises.length - 1
         ? 'Finish workout'
         : 'Next exercise'
       : `Log set ${currentSetIdx + 1}`;
 
-  const totalWorkoutSets = exercises.reduce((acc, e) => acc + e.targetSets, 0);
+  const totalWorkoutSets = sessionExercises.reduce((acc, e) => acc + e.targetSets, 0);
   const setsDoneCount = Object.keys(loggedSets).length;
   const progressPct =
     totalWorkoutSets <= 0
@@ -289,9 +354,30 @@ export default function ClaudeActiveSessionModal({
 
           {/* Exercise Info matching lines 563-567 */}
           <View style={styles.exerciseHeader}>
-            <Text style={styles.exerciseKicker}>
-              {currentExercise ? `EXERCISE ${currentExIdx + 1} OF ${exercises.length}` : 'NO MOVEMENTS ADDED'}
-            </Text>
+            <View style={styles.exerciseHeaderTopRow}>
+              <Text style={styles.exerciseKicker}>
+                {currentExercise ? `EXERCISE ${currentExIdx + 1} OF ${sessionExercises.length}` : 'NO MOVEMENTS ADDED'}
+              </Text>
+              {currentExercise ? (
+                <View style={styles.exerciseActionRow}>
+                  <Pressable
+                    style={styles.exerciseActionBtn}
+                    onPress={() => {
+                      setSwapDraftName(currentExercise.name);
+                      setSwapModalVisible(true);
+                    }}
+                  >
+                    <Text style={styles.exerciseActionBtnText}>Swap</Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.exerciseActionBtn}
+                    onPress={handleSkipExercise}
+                  >
+                    <Text style={styles.exerciseActionBtnText}>Skip</Text>
+                  </Pressable>
+                </View>
+              ) : null}
+            </View>
             <Text style={styles.exerciseName}>
               {currentExercise?.name || 'Follow the workout video'}
             </Text>
@@ -492,6 +578,56 @@ export default function ClaudeActiveSessionModal({
             <Text style={styles.logSetBtnText}>{setCtaText}</Text>
           </Pressable>
         </View>
+
+        {/* Swap Movement Modal */}
+        <Modal
+          visible={swapModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setSwapModalVisible(false)}
+        >
+          <View style={styles.swapModalOverlay}>
+            <View style={styles.swapModalCard}>
+              <Text style={styles.swapModalTitle}>Swap Movement</Text>
+              <Text style={styles.swapModalSubtitle}>
+                Substitute with an alternative exercise for this session:
+              </Text>
+              <TextInput
+                style={styles.swapInput}
+                value={swapDraftName}
+                onChangeText={setSwapDraftName}
+                placeholder="Enter exercise name..."
+                placeholderTextColor="rgba(247, 243, 238, 0.4)"
+                autoFocus
+              />
+              <View style={styles.swapChipsRow}>
+                {['Incline Press', 'Dumbbell Row', 'Goblet Squat', 'Lat Pulldown', 'Push-ups', 'Romanian Deadlift'].map((chip) => (
+                  <Pressable
+                    key={chip}
+                    style={styles.swapChip}
+                    onPress={() => setSwapDraftName(chip)}
+                  >
+                    <Text style={styles.swapChipText}>{chip}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <View style={styles.swapModalActions}>
+                <Pressable
+                  style={styles.swapCancelBtn}
+                  onPress={() => setSwapModalVisible(false)}
+                >
+                  <Text style={styles.swapCancelBtnText}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.swapSaveBtn}
+                  onPress={() => handleConfirmSwap(swapDraftName)}
+                >
+                  <Text style={styles.swapSaveBtnText}>Confirm Swap</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     </Modal>
   );
@@ -619,6 +755,32 @@ const styles = StyleSheet.create({
   exerciseHeader: {
     paddingHorizontal: 20,
     paddingTop: 18,
+  },
+  exerciseHeaderTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  exerciseActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  exerciseActionBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(201, 148, 58, 0.4)',
+    backgroundColor: 'rgba(201, 148, 58, 0.12)',
+  },
+  exerciseActionBtnText: {
+    fontFamily: DMSANS,
+    fontSize: 11,
+    fontWeight: '700',
+    color: GOLD,
+    letterSpacing: 0.5,
   },
   exerciseKicker: {
     fontFamily: DMSANS,
@@ -920,6 +1082,94 @@ const styles = StyleSheet.create({
   logSetBtnText: {
     fontFamily: DMSANS,
     fontSize: 17,
+    fontWeight: '700',
+    color: OBSIDIAN,
+  },
+  swapModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  swapModalCard: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: NAVY,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(201, 148, 58, 0.3)',
+    padding: 22,
+  },
+  swapModalTitle: {
+    fontFamily: CLASH,
+    fontSize: 20,
+    color: IVORY,
+    marginBottom: 6,
+  },
+  swapModalSubtitle: {
+    fontFamily: INTER,
+    fontSize: 13,
+    color: 'rgba(247, 243, 238, 0.7)',
+    marginBottom: 16,
+    lineHeight: 18,
+  },
+  swapInput: {
+    height: 48,
+    backgroundColor: 'rgba(13, 13, 13, 0.6)',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(247, 243, 238, 0.16)',
+    paddingHorizontal: 14,
+    color: IVORY,
+    fontFamily: DMSANS,
+    fontSize: 15,
+    marginBottom: 14,
+  },
+  swapChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 20,
+  },
+  swapChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(247, 243, 238, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(247, 243, 238, 0.14)',
+  },
+  swapChipText: {
+    fontFamily: DMSANS,
+    fontSize: 12,
+    color: 'rgba(247, 243, 238, 0.85)',
+  },
+  swapModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+  },
+  swapCancelBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  swapCancelBtnText: {
+    fontFamily: DMSANS,
+    fontSize: 14,
+    color: 'rgba(247, 243, 238, 0.6)',
+    fontWeight: '600',
+  },
+  swapSaveBtn: {
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: GOLD,
+  },
+  swapSaveBtnText: {
+    fontFamily: DMSANS,
+    fontSize: 14,
     fontWeight: '700',
     color: OBSIDIAN,
   },

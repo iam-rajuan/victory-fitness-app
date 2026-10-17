@@ -99,6 +99,15 @@ function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: n
   return lines;
 }
 
+function truncateCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
+  if (ctx.measureText(text).width <= maxWidth) return text;
+  let truncated = text;
+  while (truncated.length > 1 && ctx.measureText(truncated + '…').width > maxWidth) {
+    truncated = truncated.slice(0, -1);
+  }
+  return truncated.trim() + '…';
+}
+
 function getLogoElement(): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
     if (typeof window === 'undefined' || typeof document === 'undefined') {
@@ -217,6 +226,7 @@ async function generateStoryCardCanvasAsync(data: {
 
     // Exercises: up to 5 with 7px gold bullet dots
     const displayExercises = data.exercises.slice(0, 5);
+    const maxExerciseWidth = 1080 - padX * 2 - 45;
     for (const ex of displayExercises) {
       ctx.fillStyle = '#C9943A';
       ctx.beginPath();
@@ -225,7 +235,8 @@ async function generateStoryCardCanvasAsync(data: {
 
       ctx.fillStyle = 'rgba(247, 243, 238, 0.9)';
       ctx.font = '600 28px sans-serif';
-      ctx.fillText(ex.cardN, padX + 35, y);
+      const label = truncateCanvasText(ctx, ex.cardN, maxExerciseWidth);
+      ctx.fillText(label, padX + 35, y);
       y += 55;
     }
 
@@ -233,6 +244,15 @@ async function generateStoryCardCanvasAsync(data: {
       ctx.fillStyle = 'rgba(247, 243, 238, 0.45)';
       ctx.font = '500 22px monospace';
       ctx.fillText(`+${data.exercises.length - 5} MORE MOVEMENTS COMPLETED`, padX + 35, y);
+    } else if (data.exercises.length === 0) {
+      ctx.fillStyle = '#C9943A';
+      ctx.beginPath();
+      ctx.arc(padX + 8, y - 9, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(247, 243, 238, 0.9)';
+      ctx.font = '600 28px sans-serif';
+      ctx.fillText('FULL SESSION COMPLETED', padX + 35, y);
     }
 
     // Bottom metrics section
@@ -413,7 +433,7 @@ export default function ClaudeSessionCompleteModal({
         return {
           n: name,
           s: summary,
-          cardN: String(exercise.cardN || name).trim().toUpperCase(),
+          cardN: String(exercise.cardN || name).trim(),
         };
       })
       .filter((exercise): exercise is { n: string; s: string; cardN: string } => Boolean(exercise));
@@ -935,7 +955,7 @@ export default function ClaudeSessionCompleteModal({
               <Text style={styles.shareSectionKicker}>YOUR SHARE CARD · 9:16</Text>
 
               <Pressable style={styles.storyCard} onPress={() => void handleDirectShare()}>
-                <View ref={cardRef} collapsable={false} style={StyleSheet.absoluteFillObject}>
+                <View ref={cardRef} collapsable={false} style={[StyleSheet.absoluteFillObject, { justifyContent: 'space-between' }]}>
                   {/* 5px Top Copper Bar matching Claude reference */}
                   <View style={styles.storyTopAccent} />
 
@@ -967,14 +987,34 @@ export default function ClaudeSessionCompleteModal({
                     {/* Copper/Orange divider line */}
                     <View style={styles.storyOrangeDivider} />
 
-                    {/* 4 Bulleted Exercises with 4px gold dots */}
+                    {/* Bulleted Exercises with 4px gold dots */}
                     <View style={styles.storyExerciseList}>
-                      {(completedExercises.length > 0 ? completedExercises : [{ n: headlineTitle, s: '', cardN: storyTitle }]).map((e, idx) => (
-                        <View key={`${e.cardN}-${idx}`} style={styles.storyExerciseItem}>
+                      {completedExercises.length > 0 ? (
+                        <>
+                          {completedExercises.slice(0, 5).map((e, idx) => (
+                            <View key={`${e.cardN}-${idx}`} style={styles.storyExerciseItem}>
+                              <View style={styles.storyGoldDot} />
+                              <Text style={styles.storyExerciseName} numberOfLines={1} ellipsizeMode="tail">
+                                {e.cardN}
+                              </Text>
+                            </View>
+                          ))}
+                          {completedExercises.length > 5 ? (
+                            <View style={styles.storyMoreItem}>
+                              <Text style={styles.storyMoreText}>
+                                +{completedExercises.length - 5} MORE MOVEMENTS COMPLETED
+                              </Text>
+                            </View>
+                          ) : null}
+                        </>
+                      ) : (
+                        <View style={styles.storyExerciseItem}>
                           <View style={styles.storyGoldDot} />
-                          <Text style={styles.storyExerciseName}>{e.cardN}</Text>
+                          <Text style={styles.storyExerciseName} numberOfLines={1} ellipsizeMode="tail">
+                            SESSION COMPLETED
+                          </Text>
                         </View>
-                      ))}
+                      )}
                     </View>
                   </View>
 
@@ -1673,11 +1713,21 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   storyExerciseName: {
+    flex: 1,
     fontFamily: DMSANS,
     fontSize: 12.5,
     letterSpacing: 0.6,
     color: 'rgba(247, 243, 238, 0.9)',
-    textTransform: 'uppercase',
+  },
+  storyMoreItem: {
+    paddingLeft: 13,
+    marginTop: 2,
+  },
+  storyMoreText: {
+    fontFamily: MONO,
+    fontSize: 9.5,
+    letterSpacing: 0.8,
+    color: 'rgba(247, 243, 238, 0.45)',
   },
   storyBottomSection: {
     paddingHorizontal: 22,
