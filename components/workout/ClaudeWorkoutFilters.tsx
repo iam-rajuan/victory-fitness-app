@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View, TextInput, Pressable, Platform } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../lib/i18n';
+import { canonicalizeFitnessText } from '../../lib/workoutTerminology';
 import { WORKOUT_PURPOSE_FILTER_OPTIONS } from '../../constants/WorkoutCategories';
 
 interface ClaudeWorkoutFiltersProps {
@@ -80,10 +81,13 @@ export default function ClaudeWorkoutFilters({
   };
 
   const getCategoryLabel = (cat: string) => {
-    if (cat === 'Sport in Schwangerschaft') {
-      return language === 'de' ? 'Schwangerschaft' : 'Prenatal';
+    if (cat === 'Sport in Schwangerschaft' || cat === 'Prenatal') {
+      return 'Prenatal';
     }
-    return t(cat);
+    if (cat === 'All') {
+      return t('All');
+    }
+    return canonicalizeFitnessText(cat);
   };
 
   const isDurationActive = (dur: string) => {

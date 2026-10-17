@@ -11,6 +11,8 @@ import {
 } from 'react-native';
 import RequirementAuditBoundary from '../audit/RequirementAuditBoundary';
 import CrossPlatformWebView from '../CrossPlatformWebView';
+import { useLanguage } from '../../lib/i18n';
+import { canonicalizeFitnessText } from '../../lib/workoutTerminology';
 
 export interface ActiveExerciseItem {
   id: string;
@@ -98,6 +100,7 @@ export default function ClaudeActiveSessionModal({
   showVideo = true,
   onEndSession,
 }: ClaudeActiveSessionModalProps) {
+  const { t } = useLanguage();
   const [seconds, setSeconds] = useState(0);
   const [currentExIdx, setCurrentExIdx] = useState(0);
   const [currentSetIdx, setCurrentSetIdx] = useState(0);
@@ -259,11 +262,12 @@ export default function ClaudeActiveSessionModal({
       .map((ex, idx) => {
         const loggedCount = Object.keys(finalLogged).filter((k) => k.startsWith(`${idx}:`)).length;
         if (loggedCount === 0) return null;
+        const canonicalName = canonicalizeFitnessText(ex.name);
         return {
           id: ex.id,
-          name: ex.name,
+          name: canonicalName,
           s: `${loggedCount} sets`,
-          cardN: ex.name.trim(),
+          cardN: canonicalName.trim(),
           setsLogged: loggedCount,
           targetSets: ex.targetSets,
         };
@@ -282,12 +286,12 @@ export default function ClaudeActiveSessionModal({
   // Button text matching prototype
   const setCtaText =
     !currentExercise
-      ? 'Finish workout'
+      ? t('Finish workout')
       : currentSetIdx >= currentExercise.targetSets - 1
       ? currentExIdx >= sessionExercises.length - 1
-        ? 'Finish workout'
-        : 'Next exercise'
-      : `Log set ${currentSetIdx + 1}`;
+        ? t('Finish workout')
+        : t('Next exercise')
+      : `${t('Log set')} ${currentSetIdx + 1}`;
 
   const totalWorkoutSets = sessionExercises.reduce((acc, e) => acc + e.targetSets, 0);
   const setsDoneCount = Object.keys(loggedSets).length;
@@ -303,16 +307,16 @@ export default function ClaudeActiveSessionModal({
         {/* Top Header */}
         <View style={styles.topBar}>
           <Pressable onPress={onClose} hitSlop={10}>
-            <Text style={styles.pauseBtn}>Pause</Text>
+            <Text style={styles.pauseBtn}>{t('Pause')}</Text>
           </Pressable>
 
           <View style={styles.headerCenter}>
-            <Text style={styles.workoutHeaderTitle}>{workoutTitle.toUpperCase()}</Text>
+            <Text style={styles.workoutHeaderTitle}>{canonicalizeFitnessText(workoutTitle).toUpperCase()}</Text>
             <Text style={styles.headerClock}>{clockString}</Text>
           </View>
 
           <Pressable onPress={() => handleFinish()} hitSlop={10}>
-            <Text style={styles.endBtn}>End</Text>
+            <Text style={styles.endBtn}>{t('End')}</Text>
           </Pressable>
         </View>
 
@@ -356,7 +360,7 @@ export default function ClaudeActiveSessionModal({
           <View style={styles.exerciseHeader}>
             <View style={styles.exerciseHeaderTopRow}>
               <Text style={styles.exerciseKicker}>
-                {currentExercise ? `EXERCISE ${currentExIdx + 1} OF ${sessionExercises.length}` : 'NO MOVEMENTS ADDED'}
+                {currentExercise ? `${t('EXERCISE')} ${currentExIdx + 1} ${t('OF')} ${sessionExercises.length}` : t('NO MOVEMENTS ADDED')}
               </Text>
               {currentExercise ? (
                 <View style={styles.exerciseActionRow}>
@@ -367,22 +371,22 @@ export default function ClaudeActiveSessionModal({
                       setSwapModalVisible(true);
                     }}
                   >
-                    <Text style={styles.exerciseActionBtnText}>Swap</Text>
+                    <Text style={styles.exerciseActionBtnText}>{t('Swap')}</Text>
                   </Pressable>
                   <Pressable
                     style={styles.exerciseActionBtn}
                     onPress={handleSkipExercise}
                   >
-                    <Text style={styles.exerciseActionBtnText}>Skip</Text>
+                    <Text style={styles.exerciseActionBtnText}>{t('Skip')}</Text>
                   </Pressable>
                 </View>
               ) : null}
             </View>
             <Text style={styles.exerciseName}>
-              {currentExercise?.name || 'Follow the workout video'}
+              {currentExercise?.name ? canonicalizeFitnessText(currentExercise.name) : t('Follow the workout video')}
             </Text>
             <Text style={styles.exerciseNote}>
-              {currentExercise?.note || 'This workout has no admin-programmed movements yet.'}
+              {currentExercise?.note || t('This workout has no admin-programmed movements yet.')}
             </Text>
           </View>
 
@@ -564,14 +568,14 @@ export default function ClaudeActiveSessionModal({
             onPress={handlePreviousStep}
             disabled={!canGoBack}
           >
-            <Text style={[styles.previousBtnText, !canGoBack && styles.previousBtnTextDisabled]}>Back</Text>
+            <Text style={[styles.previousBtnText, !canGoBack && styles.previousBtnTextDisabled]}>{t('Back')}</Text>
           </Pressable>
 
           <View style={styles.restBox}>
             <Text style={[styles.restTime, restRemainingSeconds > 0 && styles.restTimeActive]}>
               {restClockString}
             </Text>
-            <Text style={styles.restLabel}>REST</Text>
+            <Text style={styles.restLabel}>{t('REST')}</Text>
           </View>
 
           <Pressable style={styles.logSetBtn} onPress={handleLogSet}>

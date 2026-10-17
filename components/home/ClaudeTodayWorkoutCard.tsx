@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { pushRoute } from '../../lib/navigation';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../lib/i18n';
+import { canonicalizeFitnessText } from '../../lib/workoutTerminology';
 
 interface ClaudeTodayWorkoutCardProps {
   tier: 'SILVER' | 'GOLD' | 'GOLD_BETA' | 'PLATINUM' | 'INNER_CIRCLE' | 'NONE';
@@ -59,7 +60,7 @@ export default function ClaudeTodayWorkoutCard({
     : t('PICKED FOR TODAY · {duration} MIN', { duration: durationMinutes });
   const planAlt = hasCoach ? t('Adjust this plan with your coach') : t('Pick a different video instead');
 
-  const resolvedTitle = hasActivePlan ? t(workoutTitle) : t('Create your 7 day workout plan');
+  const resolvedTitle = hasActivePlan ? canonicalizeFitnessText(workoutTitle) : t('Create your 7 day workout plan');
 
   // Dynamically compute font size to ensure the title always stays on 1 line across screen sizes and languages
   const titleFontSize = useMemo(() => {
@@ -72,19 +73,16 @@ export default function ClaudeTodayWorkoutCard({
   }, [resolvedTitle, windowWidth]);
 
   const formattedEquipment = useMemo(() => {
-    if (!equipment) return t('Bodyweight');
+    if (!equipment) return 'Bodyweight';
     const parts = equipment
       .split(/[,·+]/)
       .map((s) => s.trim())
       .filter(Boolean);
-    if (!parts.length) return t('Bodyweight');
+    if (!parts.length) return 'Bodyweight';
     return parts
-      .map((p) => {
-        const translated = t(p);
-        return translated.charAt(0).toUpperCase() + translated.slice(1).toLowerCase();
-      })
+      .map((p) => canonicalizeFitnessText(p))
       .join(' · ');
-  }, [equipment, t]);
+  }, [equipment]);
 
   const handleStart = () => {
     if (!hasActivePlan) {

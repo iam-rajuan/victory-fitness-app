@@ -157,7 +157,7 @@ export const de: Record<string, string> = {
   "Before we build your plan — what’s this for?": "Bevor wir deinen Plan erstellen — wofür ist das?",
   "Before we build your plan, write one short commitment in your own words. This step is optional and can be edited later.": "Bevor wir deinen Plan erstellen, schreibe ein kurzes Commitment in deinen eigenen Worten. Dieser Schritt ist optional und kann später bearbeitet werden.",
   "Beginner": "Anfänger",
-  "Bench": "Bank",
+  "Bench": "Bench",
   "Bengali": "Bengalisch",
   "BEST VALUE": "BESTER PREIS",
   "Body Metrics": "Körpermaße",

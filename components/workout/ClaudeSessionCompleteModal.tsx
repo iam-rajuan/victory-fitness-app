@@ -18,6 +18,7 @@ import { captureRef } from 'react-native-view-shot';
 import QRCode from 'qrcode';
 
 import RequirementAuditBoundary from '../audit/RequirementAuditBoundary';
+import { canonicalizeFitnessText } from '../../lib/workoutTerminology';
 
 interface ClaudeSessionCompleteModalProps {
   visible: boolean;
@@ -427,13 +428,14 @@ export default function ClaudeSessionCompleteModal({
   const completedExercises = React.useMemo(() => {
     return exercises
       .map((exercise) => {
-        const name = String(exercise.name || exercise.n || '').trim();
-        if (!name) return null;
+        const rawName = String(exercise.name || exercise.n || '').trim();
+        if (!rawName) return null;
+        const name = canonicalizeFitnessText(rawName);
         const summary = String(exercise.s || '').trim();
         return {
           n: name,
           s: summary,
-          cardN: String(exercise.cardN || name).trim(),
+          cardN: canonicalizeFitnessText(String(exercise.cardN || name)).trim(),
         };
       })
       .filter((exercise): exercise is { n: string; s: string; cardN: string } => Boolean(exercise));
@@ -444,7 +446,7 @@ export default function ClaudeSessionCompleteModal({
     day: 'numeric',
     month: 'short',
   }).toUpperCase();
-  const headlineTitle = workoutTitle.trim() || 'Workout';
+  const headlineTitle = canonicalizeFitnessText(workoutTitle.trim()) || 'Workout';
   const storyTitle = headlineTitle.toUpperCase();
 
   const handleTogglePain = (p: string) => {

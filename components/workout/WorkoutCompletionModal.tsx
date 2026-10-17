@@ -18,6 +18,7 @@ import { useRouter } from 'expo-router';
 import { Colors } from '../../constants/Colors';
 import { BrandConfetti } from '../confetti/BrandConfetti';
 import { useLanguage } from '../../lib/i18n';
+import { canonicalizeFitnessText } from '../../lib/workoutTerminology';
 import { submitStrengthWorkoutFeedback, StrengthFeedbackResponse } from '../../lib/workout-plans';
 import {
   createCompletionCardRecord,
@@ -223,14 +224,14 @@ export default function WorkoutCompletionModal({
       params: {
         tab: 'COMMUNITY',
         prefillSource: 'workout_completion',
-        prefillWorkoutName: dayLabel || t('Strength Workout'),
+        prefillWorkoutName: canonicalizeFitnessText(dayLabel || 'Strength Workout'),
         prefillDurationMinutes: String(mins),
         prefillCalories: String(estimatedCals),
         prefillStreakCount: String(streak),
         prefillImageUri: cardImg,
         prefillImageFileName: completionCard?.fileName || 'workout-completion.png',
         prefillImageMimeType: 'image/png',
-        prefillStatus: `🔥 Completed ${dayLabel || t('Strength Workout')}!\n⏱️ Duration: ${mins} mins | ⚡ Burned: ~${estimatedCals} kcal | 🏆 Streak: ${streak} days\n${completionCard?.shareMessage || ''}\n#WorkoutCompleted #VictoryFitness`,
+        prefillStatus: `🔥 Completed ${canonicalizeFitnessText(dayLabel || 'Strength Workout')}!\n⏱️ Duration: ${mins} mins | ⚡ Burned: ~${estimatedCals} kcal | 🏆 Streak: ${streak} days\n${completionCard?.shareMessage || ''}\n#WorkoutCompleted #VictoryFitness`,
       },
     } as any);
   };
@@ -316,7 +317,7 @@ export default function WorkoutCompletionModal({
             ) : (
               <View style={styles.achievementPlaceholder}>
                 <Ionicons name="trophy" size={48} color="#EAB308" />
-                <Text style={styles.achievementTitle}>{dayLabel} {t('Completed')}</Text>
+                <Text style={styles.achievementTitle}>{canonicalizeFitnessText(dayLabel || 'Strength Workout')} {t('Completed')}</Text>
                 <Text style={styles.achievementSubtitle}>
                   {completionCard?.shareMessage || t('Crushed volume and intensity targets!')}
                 </Text>

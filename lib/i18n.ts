@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchCurrentUser, getAuthUser, setApiLanguage, translateTextBatch } from './api';
 import { isGermanyDomain } from './domainContext';
 import { STATIC_TRANSLATIONS } from './translations';
+import { isCanonicalFitnessTerm, canonicalizeFitnessText } from './workoutTerminology';
 
 export const SUPPORTED_LANGUAGES = [
   { code: 'en', label: 'English', nativeLabel: 'English' },
@@ -94,6 +95,9 @@ function getTranslationCacheKey(language: LanguageCode) {
 function shouldAutoTranslateText(value: string) {
   const text = String(value || '').replace(/\s+/g, ' ').trim();
   if (text.length < 2 || text.length > 500) {
+    return false;
+  }
+  if (isCanonicalFitnessTerm(text)) {
     return false;
   }
   if (/^https?:\/\//i.test(text) || /^[\d\s.,:%+/#-]+$/.test(text)) {
@@ -316,6 +320,10 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const t = React.useCallback(
     (key: string, params?: Record<string, string | number>) => {
       if (!key) return '';
+      // Canonical English workout/exercise terminology bypasses translation
+      if (isCanonicalFitnessTerm(key)) {
+        return canonicalizeFitnessText(key);
+      }
       const template = TRANSLATIONS[language]?.[key] ?? remoteTranslations[language]?.[key] ?? TRANSLATIONS.en?.[key] ?? key;
       if (template === key && language !== DEFAULT_LANGUAGE) {
         queueTranslation(key);
