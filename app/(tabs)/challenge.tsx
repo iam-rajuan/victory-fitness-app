@@ -9,7 +9,7 @@ import {
   RefreshControl,
   useWindowDimensions,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { apiRequest, fetchCurrentUser, resolveRemoteAssetUrl } from '../../lib/api';
 import { fetchChallengeOverviewData } from '../../lib/screenData';
 import { CHALLENGE_OVERVIEW_CACHE_KEY, CURRENT_USER_CACHE_KEY, getCommunityPostsCacheKey } from '../../lib/cacheKeys';
@@ -207,6 +207,16 @@ export default function ChallengeScreen() {
   const [challengeItems, setChallengeItems] = useState<ChallengeItem[]>([]);
   const [activeChallenge, setActiveChallenge] = useState<ChallengeItem | null>(null);
   const [isLoadingChallenges, setIsLoadingChallenges] = useState(true);
+  const [selectedChallengeDay, setSelectedChallengeDay] = useState('All');
+  const [selectedChallengeCat, setSelectedChallengeCat] = useState('All');
+  const [isChallengeFiltersExpanded, setIsChallengeFiltersExpanded] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      setIsChallengeFiltersExpanded(false);
+    }, [])
+  );
+
   const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([]);
   const [communityScope, setCommunityScope] = useState<'auto' | 'tier' | 'all'>('auto');
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -529,6 +539,12 @@ export default function ChallengeScreen() {
             <ClaudeChallengeDirectory
               challenges={challengeItems}
               isLoading={isLoadingChallenges}
+              selectedDay={selectedChallengeDay}
+              onSelectDay={setSelectedChallengeDay}
+              selectedCat={selectedChallengeCat}
+              onSelectCat={setSelectedChallengeCat}
+              isFiltersExpanded={isChallengeFiltersExpanded}
+              onToggleFiltersExpanded={() => setIsChallengeFiltersExpanded((prev) => !prev)}
               onSelectChallenge={handleSelectChallenge}
               onOpenInviteGuest={handleInviteSomeone}
             />

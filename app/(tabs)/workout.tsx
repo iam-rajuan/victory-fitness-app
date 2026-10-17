@@ -8,7 +8,7 @@ import {
   Alert,
   Image,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
@@ -268,6 +268,13 @@ export default function WorkoutScreen() {
   const [selectedDifficulty, setSelectedDifficulty] = useState('Any');
   const [selectedDuration, setSelectedDuration] = useState('Any');
   const [selectedKit, setSelectedKit] = useState('Any');
+  const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      setIsFiltersExpanded(false);
+    }, [])
+  );
 
   // Plan Build State
   const [planBuilt, setPlanBuilt] = useState(false);
@@ -818,6 +825,8 @@ export default function WorkoutScreen() {
           selectedKit={selectedKit}
           onSelectKit={setSelectedKit}
           resultCountText={resultCountText}
+          isExpanded={isFiltersExpanded}
+          onToggleExpanded={() => setIsFiltersExpanded((prev) => !prev)}
           onResetFilters={() => {
             setSelectedPurposes(['All']);
             setSelectedDifficulty('Any');

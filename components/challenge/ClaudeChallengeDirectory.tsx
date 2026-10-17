@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
 import {
   StyleSheet,
   Text,
@@ -42,6 +43,12 @@ interface ClaudeChallengeDirectoryProps {
   isLoading?: boolean;
   onSelectChallenge: (challenge: ChallengeItem) => void;
   onOpenInviteGuest: () => void;
+  selectedDay?: string;
+  onSelectDay?: (day: string) => void;
+  selectedCat?: string;
+  onSelectCat?: (cat: string) => void;
+  isFiltersExpanded?: boolean;
+  onToggleFiltersExpanded?: () => void;
 }
 
 const NAVY = '#0D2B45';
@@ -186,6 +193,12 @@ export default function ClaudeChallengeDirectory({
   isLoading = false,
   onSelectChallenge,
   onOpenInviteGuest,
+  selectedDay: propSelectedDay,
+  onSelectDay: propOnSelectDay,
+  selectedCat: propSelectedCat,
+  onSelectCat: propOnSelectCat,
+  isFiltersExpanded: propIsFiltersExpanded,
+  onToggleFiltersExpanded: propOnToggleFiltersExpanded,
 }: ClaudeChallengeDirectoryProps) {
   const { colors, isDark } = useTheme();
   const { t } = useLanguage();
@@ -195,9 +208,29 @@ export default function ClaudeChallengeDirectory({
   const isUltraSlim = windowWidth > 0 && windowWidth < 330;
   const hPad = isSlim ? 14 : 20;
 
-  const [selectedDay, setSelectedDay] = useState('All');
-  const [selectedCat, setSelectedCat] = useState('All');
-  const [isFiltersExpanded, setIsFiltersExpanded] = useState(true);
+  const [internalDay, setInternalDay] = useState('All');
+  const [internalCat, setInternalCat] = useState('All');
+  const [internalFiltersExpanded, setInternalFiltersExpanded] = useState(false);
+
+  const selectedDay = propSelectedDay !== undefined ? propSelectedDay : internalDay;
+  const setSelectedDay = propOnSelectDay || setInternalDay;
+  const selectedCat = propSelectedCat !== undefined ? propSelectedCat : internalCat;
+  const setSelectedCat = propOnSelectCat || setInternalCat;
+  const isFiltersExpanded = propIsFiltersExpanded !== undefined ? propIsFiltersExpanded : internalFiltersExpanded;
+
+  const handleToggleExpanded = () => {
+    if (propOnToggleFiltersExpanded) {
+      propOnToggleFiltersExpanded();
+    } else {
+      setInternalFiltersExpanded((prev) => !prev);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      setInternalFiltersExpanded(false);
+    }, [])
+  );
 
   const activeFiltersCount = (selectedDay !== 'All' ? 1 : 0) + (selectedCat !== 'All' ? 1 : 0);
 
@@ -358,7 +391,7 @@ export default function ClaudeChallengeDirectory({
 
           <TouchableOpacity
             style={styles.toggleExpandBtn}
-            onPress={() => setIsFiltersExpanded((prev) => !prev)}
+            onPress={handleToggleExpanded}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Text style={styles.toggleExpandText}>
