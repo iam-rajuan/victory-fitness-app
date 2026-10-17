@@ -28,7 +28,6 @@ const GOLD_LIGHT = '#F5CF87';
 const OBSIDIAN = '#0D0D0D';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: 'Clash Display', default: 'ClashDisplay-Bold' });
 const DMSANS = Platform.select({ web: 'DM Sans', default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: 'Inter', default: 'Inter-Regular' });
 const MONO = Platform.select({ web: 'JetBrains Mono', default: 'JetBrainsMono-Bold' });
@@ -474,9 +473,11 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sectionTitle: {
-    fontFamily: CLASH,
+    fontFamily: DMSANS,
     fontSize: 18,
+    lineHeight: 24,
     fontWeight: '600',
+    letterSpacing: -0.2,
     color: IVORY,
   },
   activeCounterBadge: {

@@ -14,9 +14,8 @@ interface ClaudeHomeHeaderProps {
 
 const GOLD = '#C9943A';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'DMSans-SemiBold' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 export default function ClaudeHomeHeader({
   name,
@@ -121,8 +120,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   greetingTitle: {
-    fontFamily: CLASH,
-    fontSize: 21,
+    fontFamily: DMSANS,
+    fontSize: 22,
     lineHeight: 28,
     fontWeight: '600',
     letterSpacing: -0.3,

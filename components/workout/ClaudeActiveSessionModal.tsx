@@ -83,7 +83,6 @@ const COPPER = '#B5651D';
 const GREEN = '#1A7A4A';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
 const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
@@ -794,10 +793,11 @@ const styles = StyleSheet.create({
     color: COPPER,
   },
   exerciseName: {
-    fontFamily: CLASH,
-    fontSize: 31,
-    lineHeight: 34,
+    fontFamily: DMSANS,
+    fontSize: 26,
+    lineHeight: 32,
     fontWeight: '600',
+    letterSpacing: -0.3,
     color: IVORY,
     marginTop: 5,
   },
@@ -1106,8 +1106,11 @@ const styles = StyleSheet.create({
     padding: 22,
   },
   swapModalTitle: {
-    fontFamily: CLASH,
+    fontFamily: DMSANS,
     fontSize: 20,
+    lineHeight: 26,
+    fontWeight: '600',
+    letterSpacing: -0.2,
     color: IVORY,
     marginBottom: 6,
   },

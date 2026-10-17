@@ -29,10 +29,9 @@ const COPPER = '#B5651D';
 const GREEN = '#1A7A4A';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'Inter-Regular' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 const INITIAL_DEVICES: DeviceItem[] = [
   { id: 'garmin', name: 'Garmin Connect', sub: 'Forerunner, Fenix, Epix, Venu', connected: false },
@@ -188,10 +187,11 @@ const styles = StyleSheet.create({
     color: '#0D0D0D',
   },
   title: {
-    fontFamily: CLASH,
-    fontSize: 30,
-    lineHeight: 34,
+    fontFamily: DMSANS,
+    fontSize: 26,
+    lineHeight: 32,
     fontWeight: '600',
+    letterSpacing: -0.3,
     color: IVORY,
     marginBottom: 10,
   },

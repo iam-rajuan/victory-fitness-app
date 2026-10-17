@@ -35,10 +35,9 @@ const GOLD = '#C9943A';
 const COPPER = '#B5651D';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'Inter-Regular' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 const RESEND_COOLDOWN_SECONDS = 120; // 2 minutes cooldown
 
@@ -365,10 +364,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   heading: {
-    fontFamily: CLASH,
-    fontSize: 32,
-    lineHeight: 36,
-    fontWeight: '700',
+    fontFamily: DMSANS,
+    fontSize: 26,
+    lineHeight: 32,
+    fontWeight: '600',
     color: IVORY,
     marginBottom: 10,
     letterSpacing: -0.3,

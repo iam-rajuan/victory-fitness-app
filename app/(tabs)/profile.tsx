@@ -52,10 +52,9 @@ const GOLD = '#C9943A';
 const COPPER = '#B5651D';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'Inter-Regular' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 const FEEDBACK_THEME_OPTIONS = [
   { key: 'nutrition_logging', title: 'Nutrition logging', note: 'Meals, calories, or logging speed.' },
@@ -1107,10 +1106,11 @@ const styles = StyleSheet.create({
     color: 'rgba(247, 243, 238, 0.5)',
   },
   journalTitle: {
-    fontFamily: CLASH,
-    fontSize: 18,
-    lineHeight: 24,
+    fontFamily: DMSANS,
+    fontSize: 17,
+    lineHeight: 23,
     fontWeight: '600',
+    letterSpacing: -0.2,
     color: IVORY,
   },
   journalBottomRow: {
@@ -1395,10 +1395,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   feedbackTitle: {
-    fontFamily: CLASH,
-    fontSize: 22,
-    lineHeight: 27,
-    fontWeight: '700',
+    fontFamily: DMSANS,
+    fontSize: 20,
+    lineHeight: 26,
+    fontWeight: '600',
+    letterSpacing: -0.2,
     color: IVORY,
   },
   feedbackCloseBtn: {

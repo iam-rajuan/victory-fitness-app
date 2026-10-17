@@ -954,7 +954,7 @@ const styles = StyleSheet.create({
   headerCopy: { flex: 1, marginLeft: 12 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   eyebrow: { color: Colors.gold, fontSize: 11, fontFamily: Fonts.heading, letterSpacing: 1.2 },
-  title: { color: Colors.text, fontSize: 26, fontFamily: Fonts.display, marginTop: 3 },
+  title: { color: Colors.text, fontSize: 26, lineHeight: 32, fontFamily: Fonts.heading, fontWeight: '600', letterSpacing: -0.3, marginTop: 3 },
   unreadBadge: { minWidth: 24, height: 24, paddingHorizontal: 7, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.accentDanger },
   unreadBadgeText: { color: '#FFFFFF', fontSize: 12, fontFamily: Fonts.dataBold },
   headerSelectButton: {

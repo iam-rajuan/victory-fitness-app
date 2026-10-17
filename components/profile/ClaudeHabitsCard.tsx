@@ -31,9 +31,8 @@ const COPPER = '#B5651D';
 const GREEN = '#1A7A4A';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
+const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'Inter-Regular' });
 
 export default function ClaudeHabitsCard({
   identity = 'Set the person you are becoming.',
@@ -289,10 +288,11 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   identityStatement: {
-    fontFamily: CLASH,
-    fontSize: 19,
-    lineHeight: 26,
+    fontFamily: DMSANS,
+    fontSize: 18,
+    lineHeight: 25,
     fontWeight: '600',
+    letterSpacing: -0.2,
     color: IVORY,
   },
   duoCard: {

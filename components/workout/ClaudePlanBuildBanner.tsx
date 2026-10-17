@@ -13,7 +13,6 @@ interface ClaudePlanBuildBannerProps {
 const GOLD = '#C9943A';
 const GREEN = '#1A7A4A';
 const IVORY = '#F7F3EE';
-const CLASH = Platform.select({ web: 'Clash Display', default: 'ClashDisplay-Bold' });
 const DMSANS = Platform.select({ web: 'DM Sans', default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: 'Inter', default: 'Inter-Regular' });
 
@@ -89,9 +88,9 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   title: {
-    fontFamily: CLASH,
-    fontSize: 17,
-    lineHeight: 21,
+    fontFamily: DMSANS,
+    fontSize: 16.5,
+    lineHeight: 22,
     fontWeight: '600',
     color: IVORY,
   },

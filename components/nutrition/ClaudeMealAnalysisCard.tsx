@@ -13,7 +13,6 @@ const COPPER = '#B5651D';
 const OBSIDIAN = '#0D0D0D';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
 const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 
@@ -137,9 +136,9 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   title: {
-    fontFamily: CLASH,
-    fontSize: 16,
-    lineHeight: 21,
+    fontFamily: DMSANS,
+    fontSize: 16.5,
+    lineHeight: 22,
     fontWeight: '600',
     color: IVORY,
     letterSpacing: -0.2,

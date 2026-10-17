@@ -51,7 +51,6 @@ const COPPER = '#B5651D';
 const GREEN = '#1A7A4A';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
 const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
@@ -1185,10 +1184,11 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   headline: {
-    fontFamily: CLASH,
-    fontSize: 30,
-    lineHeight: 34,
+    fontFamily: DMSANS,
+    fontSize: 26,
+    lineHeight: 32,
     fontWeight: '600',
+    letterSpacing: -0.3,
     color: IVORY,
     marginBottom: 10,
   },
@@ -1381,11 +1381,11 @@ const styles = StyleSheet.create({
     color: GREEN,
   },
   workoutHeadline: {
-    fontFamily: CLASH,
-    fontSize: 34,
-    lineHeight: 36,
+    fontFamily: DMSANS,
+    fontSize: 26,
+    lineHeight: 32,
     fontWeight: '600',
-    letterSpacing: -0.34,
+    letterSpacing: -0.3,
     color: IVORY,
   },
   statsRow: {
@@ -1529,10 +1529,11 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   readTwiceQuote: {
-    fontFamily: CLASH,
+    fontFamily: DMSANS,
     fontSize: 20,
     lineHeight: 28,
     fontWeight: '600',
+    letterSpacing: -0.2,
     color: IVORY,
     marginBottom: 12,
   },
@@ -1550,8 +1551,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   unlabelledSentence: {
-    fontFamily: CLASH,
-    fontSize: 17,
+    fontFamily: DMSANS,
+    fontSize: 16.5,
     lineHeight: 24,
     fontWeight: '600',
     color: IVORY,
@@ -1686,11 +1687,12 @@ const styles = StyleSheet.create({
   },
   storyWorkoutTitle: {
     marginTop: 10,
-    fontFamily: CLASH,
-    fontSize: 28,
+    fontFamily: DMSANS,
+    fontSize: 26,
     lineHeight: 30,
+    fontWeight: '600',
     color: IVORY,
-    letterSpacing: -0.5,
+    letterSpacing: -0.3,
     textTransform: 'uppercase',
   },
   storyOrangeDivider: {
@@ -1764,9 +1766,10 @@ const styles = StyleSheet.create({
     color: GOLD,
   },
   storyMetricValClash: {
-    fontFamily: CLASH,
+    fontFamily: DMSANS,
     fontSize: 22,
     lineHeight: 26,
+    fontWeight: '600',
     color: IVORY,
   },
   storyMetricValMono: {

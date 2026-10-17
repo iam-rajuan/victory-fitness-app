@@ -2,13 +2,13 @@ import React from 'react';
 import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../lib/i18n';
+import { Typography } from '../../constants/Typography';
 
 interface ClaudeTrainHeaderProps {
   totalWorkouts?: number;
   onPressFilter?: () => void;
 }
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif", default: 'ClashDisplay-Bold' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 export default function ClaudeTrainHeader({
@@ -60,10 +60,11 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   title: {
-    fontFamily: CLASH,
-    fontSize: 27,
-    lineHeight: 32,
-    fontWeight: '600',
+    fontFamily: Typography.h1.fontFamily,
+    fontSize: Typography.h1.fontSize,
+    lineHeight: Typography.h1.lineHeight,
+    fontWeight: Typography.h1.fontWeight,
+    letterSpacing: Typography.h1.letterSpacing,
   },
   rightGroup: {
     flexDirection: 'row',

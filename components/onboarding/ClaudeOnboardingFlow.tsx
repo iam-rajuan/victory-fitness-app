@@ -60,10 +60,10 @@ const IVORY = '#F7F3EE';
 const GREEN = '#1A7A4A';
 const BLUE_GRAY = '#8FA8C4';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+const CLASH = Platform.select({ web: "'DM Sans', sans-serif", default: 'DMSans-SemiBold' });
+const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'Inter-Regular' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 const STEPS_META = [
   ['Welcome', '0:00 · install to first tap', 'One promise, three numbers, one language', 'No carousel, no sign-up wall, no permission prompts. A single sentence that names the real problem — showing up on the bad days.'],

@@ -36,85 +36,54 @@ export const Fonts = {
 } as const;
 
 export const Typography = {
-  // Display / Hero Presets
-  heroTitle: {
-    fontFamily: Fonts.display,
-    fontSize: 28,
-    lineHeight: 38,
-    fontWeight: '700' as const,
-    letterSpacing: 0,
-  },
-  displayLarge: {
-    fontFamily: Fonts.display,
-    fontSize: 24,
-    lineHeight: 34,
-    fontWeight: '700' as const,
-    letterSpacing: 0,
-  },
-  displayMedium: {
-    fontFamily: Fonts.display,
-    fontSize: 20,
-    lineHeight: 29,
-    fontWeight: '700' as const,
-    letterSpacing: 0,
-  },
-
-  // Heading Presets
+  // ========================================================
+  // ROLE 1: H1 / Main Heading / Screen Title
+  // Clean, readable DM Sans (SemiBold). Not bloated or fat.
+  // ========================================================
   h1: {
     fontFamily: Fonts.heading,
-    fontSize: 20,
-    lineHeight: 28,
+    fontSize: 26,
+    lineHeight: 32,
     fontWeight: '600' as const,
-    letterSpacing: 0,
-  },
-  h2: {
-    fontFamily: Fonts.heading,
-    fontSize: 18,
-    lineHeight: 26,
-    fontWeight: '600' as const,
-    letterSpacing: 0,
-  },
-  h3: {
-    fontFamily: Fonts.heading,
-    fontSize: 16,
-    lineHeight: 23,
-    fontWeight: '600' as const,
-    letterSpacing: 0,
-  },
-  cardTitle: {
-    fontFamily: Fonts.heading,
-    fontSize: 17,
-    lineHeight: 24,
-    fontWeight: '600' as const,
-    letterSpacing: 0,
-  },
-  sectionEyebrow: {
-    fontFamily: Fonts.heading,
-    fontSize: 11,
-    lineHeight: 15,
-    fontWeight: '600' as const,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase' as const,
-  },
-  navLabel: {
-    fontFamily: Fonts.heading,
-    fontSize: 11,
-    lineHeight: 14,
-    fontWeight: '600' as const,
-    letterSpacing: 0.3,
+    letterSpacing: -0.3,
   },
 
-  // Body Presets
-  bodyLarge: {
-    fontFamily: Fonts.body,
-    fontSize: 15,
-    lineHeight: 22,
-    fontWeight: '400' as const,
+  // ========================================================
+  // ROLE 2: H2 / Secondary Heading / Subtitle / Modal Title
+  // ========================================================
+  h2: {
+    fontFamily: Fonts.heading,
+    fontSize: 20,
+    lineHeight: 26,
+    fontWeight: '600' as const,
+    letterSpacing: -0.2,
   },
+
+  // ========================================================
+  // ROLE 3: H3 / Card Title / Section Subtitle
+  // ========================================================
+  h3: {
+    fontFamily: Fonts.heading,
+    fontSize: 16.5,
+    lineHeight: 22,
+    fontWeight: '600' as const,
+    letterSpacing: 0,
+  },
+
+  // ========================================================
+  // ROLE 4: Body Text / Paragraphs (Inter)
+  // Crisp, highly readable, standard weight.
+  // ========================================================
   body: {
     fontFamily: Fonts.body,
     fontSize: 14,
     lineHeight: 20,
+    fontWeight: '400' as const,
+  },
+  bodyLarge: {
+    fontFamily: Fonts.body,
+    fontSize: 15.5,
+    lineHeight: 22,
     fontWeight: '400' as const,
   },
   bodyMedium: {
@@ -123,6 +92,16 @@ export const Typography = {
     lineHeight: 20,
     fontWeight: '500' as const,
   },
+  bodySmall: {
+    fontFamily: Fonts.body,
+    fontSize: 12.5,
+    lineHeight: 18,
+    fontWeight: '400' as const,
+  },
+
+  // ========================================================
+  // Caption & Meta Text
+  // ========================================================
   caption: {
     fontFamily: Fonts.body,
     fontSize: 12,
@@ -134,6 +113,83 @@ export const Typography = {
     fontSize: 12,
     lineHeight: 16,
     fontWeight: '500' as const,
+  },
+
+  // ========================================================
+  // Eyebrows / Kickers (Uppercase Section Labels)
+  // ========================================================
+  eyebrow: {
+    fontFamily: Fonts.heading,
+    fontSize: 10.5,
+    lineHeight: 15,
+    fontWeight: '600' as const,
+    letterSpacing: 1.3,
+    textTransform: 'uppercase' as const,
+  },
+
+  // ========================================================
+  // Button Labels
+  // ========================================================
+  button: {
+    fontFamily: Fonts.heading,
+    fontSize: 13.5,
+    lineHeight: 18,
+    fontWeight: '600' as const,
+    letterSpacing: 0.3,
+  },
+  buttonSmall: {
+    fontFamily: Fonts.heading,
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '600' as const,
+    letterSpacing: 0.2,
+  },
+
+  // ========================================================
+  // Backward-Compatibility Aliases
+  // ========================================================
+  heroTitle: {
+    fontFamily: Fonts.heading,
+    fontSize: 28,
+    lineHeight: 36,
+    fontWeight: '600' as const,
+    letterSpacing: -0.4,
+  },
+  displayLarge: {
+    fontFamily: Fonts.heading,
+    fontSize: 26,
+    lineHeight: 32,
+    fontWeight: '600' as const,
+    letterSpacing: -0.3,
+  },
+  displayMedium: {
+    fontFamily: Fonts.heading,
+    fontSize: 20,
+    lineHeight: 26,
+    fontWeight: '600' as const,
+    letterSpacing: -0.2,
+  },
+  cardTitle: {
+    fontFamily: Fonts.heading,
+    fontSize: 16.5,
+    lineHeight: 22,
+    fontWeight: '600' as const,
+    letterSpacing: 0,
+  },
+  sectionEyebrow: {
+    fontFamily: Fonts.heading,
+    fontSize: 10.5,
+    lineHeight: 15,
+    fontWeight: '600' as const,
+    letterSpacing: 1.3,
+    textTransform: 'uppercase' as const,
+  },
+  navLabel: {
+    fontFamily: Fonts.heading,
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '600' as const,
+    letterSpacing: 0.3,
   },
   formLabel: {
     fontFamily: Fonts.bodyMedium,
@@ -153,29 +209,31 @@ export const Typography = {
   },
   dataMetricLarge: {
     fontFamily: Fonts.dataBold,
-    fontSize: 22,
-    lineHeight: 26,
+    fontSize: 20,
+    lineHeight: 24,
     fontWeight: '700' as const,
     letterSpacing: -0.3,
   },
   dataMetricValue: {
     fontFamily: Fonts.dataBold,
-    fontSize: 18,
-    lineHeight: 22,
+    fontSize: 16,
+    lineHeight: 20,
     fontWeight: '700' as const,
   },
   dataStat: {
     fontFamily: Fonts.data,
-    fontSize: 14,
+    fontSize: 13,
     lineHeight: 18,
     fontWeight: '500' as const,
   },
   dataSmall: {
     fontFamily: Fonts.data,
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '500' as const,
   },
 } as const;
+
+export const typography = Typography;
 
 export default Typography;

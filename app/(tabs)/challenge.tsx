@@ -25,11 +25,8 @@ import ClaudeCommunityFeed, { CommunityComment, CommunityPost, CommunityPostDraf
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../lib/i18n';
 import { registerCanonicalChallengeTitle, canonicalizeChallengeTitle } from '../../lib/challengeTerminology';
-
+import { Typography } from '../../constants/Typography';
 const OBSIDIAN = '#0D0D0D';
-const IVORY = '#F7F3EE';
-
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
 
 type ChallengeOverviewPayload = {
   active_chats?: Array<{
@@ -627,10 +624,8 @@ const styles = StyleSheet.create({
     paddingBottom: 110,
   },
   screenTitle: {
-    fontFamily: CLASH,
-    fontSize: 27,
-    fontWeight: '600',
-    color: IVORY,
+    ...Typography.h1,
+    color: '#F7F3EE',
     paddingTop: 4,
   },
 });

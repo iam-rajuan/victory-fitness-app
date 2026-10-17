@@ -22,10 +22,9 @@ const GOLD = '#C9943A';
 const COPPER = '#B5651D';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'Inter-Regular' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 const PROMPTS = [
   'What went better than you expected?',
@@ -283,9 +282,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   screenTitle: {
-    fontFamily: CLASH,
-    fontSize: 27,
+    fontFamily: DMSANS,
+    fontSize: 26,
+    lineHeight: 32,
     fontWeight: '600',
+    letterSpacing: -0.3,
     color: IVORY,
   },
   streakBadge: {
@@ -318,10 +319,11 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   promptText: {
-    fontFamily: CLASH,
-    fontSize: 21,
+    fontFamily: DMSANS,
+    fontSize: 20,
     lineHeight: 28,
     fontWeight: '600',
+    letterSpacing: -0.2,
     color: IVORY,
     marginBottom: 16,
   },

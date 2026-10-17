@@ -23,7 +23,6 @@ const GOLD = '#C9943A';
 const COPPER = '#B5651D';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'ClashDisplay-Bold' });
 const DMSANS_BOLD = Platform.select({ web: "'DM Sans', sans-serif", default: 'DMSans-Bold' });
 const DMSANS_SEMI = Platform.select({ web: "'DM Sans', sans-serif", default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'Inter-Regular' });
@@ -181,10 +180,11 @@ const styles = StyleSheet.create({
   },
   pageTitle: {
     color: IVORY,
-    fontSize: 30,
-    lineHeight: 36,
-    fontFamily: CLASH,
-    letterSpacing: 0,
+    fontSize: 26,
+    lineHeight: 32,
+    fontFamily: DMSANS_SEMI,
+    fontWeight: '600',
+    letterSpacing: -0.3,
     marginBottom: 10,
   },
   summaryText: {

@@ -34,10 +34,9 @@ const COPPER = '#B5651D';
 const IVORY = '#F7F3EE';
 const JADE = '#1A7A4A';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'Inter-Regular' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 const FALLBACK_WORKOUT_IMAGE =
   'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&q=80';
@@ -412,9 +411,10 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontFamily: CLASH,
-    fontWeight: '700',
-    letterSpacing: -0.3,
+    lineHeight: 26,
+    fontFamily: DMSANS,
+    fontWeight: '600',
+    letterSpacing: -0.2,
   },
   countPill: {
     paddingHorizontal: 10,
@@ -439,9 +439,10 @@ const styles = StyleSheet.create({
   },
   heroHeadline: {
     fontSize: 26,
-    fontFamily: CLASH,
-    fontWeight: '700',
-    letterSpacing: -0.5,
+    lineHeight: 32,
+    fontFamily: DMSANS,
+    fontWeight: '600',
+    letterSpacing: -0.3,
     marginBottom: 6,
   },
   heroSubhead: {
@@ -553,10 +554,11 @@ const styles = StyleSheet.create({
   },
   cardWorkoutTitle: {
     color: '#F7F3EE',
-    fontSize: 20,
-    fontFamily: CLASH,
-    fontWeight: '700',
-    letterSpacing: -0.3,
+    fontSize: 19,
+    lineHeight: 25,
+    fontFamily: DMSANS,
+    fontWeight: '600',
+    letterSpacing: -0.2,
     marginBottom: 6,
     textShadowColor: 'rgba(0, 0, 0, 0.6)',
     textShadowOffset: { width: 0, height: 1 },
@@ -606,8 +608,9 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 18,
-    fontFamily: CLASH,
-    fontWeight: '700',
+    lineHeight: 24,
+    fontFamily: DMSANS,
+    fontWeight: '600',
     marginBottom: 6,
   },
   emptySubtitle: {

@@ -37,7 +37,6 @@ const IVORY = '#F7F3EE';
 const GREEN = '#1A7A4A';
 const EMERALD = '#5FC48E';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
 const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
@@ -504,10 +503,11 @@ const styles = StyleSheet.create({
     color: 'rgba(247, 243, 238, 0.5)',
   },
   title: {
-    fontFamily: CLASH,
-    fontSize: 28,
+    fontFamily: DMSANS,
+    fontSize: 26,
     lineHeight: 32,
     fontWeight: '600',
+    letterSpacing: -0.3,
     color: IVORY,
     marginBottom: 10,
   },

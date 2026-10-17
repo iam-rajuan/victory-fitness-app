@@ -25,7 +25,6 @@ const GOLD = '#C9943A';
 const OBSIDIAN = '#0D0D0D';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: 'Clash Display', default: 'ClashDisplay-Bold' });
 const DMSANS = Platform.select({ web: 'DM Sans', default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: 'Inter', default: 'Inter-Regular' });
 const MONO = Platform.select({ web: 'JetBrains Mono', default: 'JetBrainsMono-Bold' });
@@ -299,13 +298,13 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   title: {
-    fontFamily: CLASH,
+    fontFamily: DMSANS,
     fontSize: 20,
     lineHeight: 25,
     fontWeight: '600',
     color: IVORY,
     marginBottom: 14,
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
     ...Platform.select({
       web: {
         whiteSpace: 'nowrap',
@@ -338,10 +337,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   statVal: {
-    fontFamily: CLASH,
-    fontSize: 20,
+    fontFamily: MONO,
+    fontSize: 19,
     lineHeight: 22,
-    fontWeight: '600',
+    fontWeight: '700',
     color: IVORY,
   },
   equipmentVal: {

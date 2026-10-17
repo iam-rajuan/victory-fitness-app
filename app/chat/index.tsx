@@ -59,10 +59,9 @@ const GOLD = '#C9943A';
 const GREEN = '#1A7A4A';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'Inter-Regular' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 const QUICK_PROMPTS = [
   'Adjust my current routine',
@@ -894,9 +893,11 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(247, 243, 238, 0.12)',
   },
   coachName: {
-    fontFamily: CLASH,
+    fontFamily: DMSANS,
     fontSize: 20,
+    lineHeight: 26,
     fontWeight: '600',
+    letterSpacing: -0.2,
     color: IVORY,
   },
   coachStatusText: {
@@ -1106,9 +1107,9 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   coachHeadingText: {
-    fontFamily: CLASH,
+    fontFamily: DMSANS,
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: GOLD,
     lineHeight: 22,
     marginTop: 10,
@@ -1325,9 +1326,11 @@ const styles = StyleSheet.create({
     borderTopWidth: 8,
   },
   lockedTitle: {
-    fontFamily: CLASH,
-    fontSize: 22,
+    fontFamily: DMSANS,
+    fontSize: 20,
+    lineHeight: 26,
     fontWeight: '600',
+    letterSpacing: -0.2,
     color: IVORY,
     textAlign: 'center',
     marginBottom: 10,
