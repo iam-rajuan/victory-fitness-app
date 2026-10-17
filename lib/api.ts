@@ -142,6 +142,18 @@ let apiLanguage: string | undefined;
 const getResponseCache = new Map<string, { expiresAt: number; data: unknown }>();
 const getResponsePromises = new Map<string, Promise<unknown>>();
 
+export function invalidateApiCache(pathPrefix?: string) {
+  if (!pathPrefix) {
+    getResponseCache.clear();
+    return;
+  }
+  for (const key of getResponseCache.keys()) {
+    if (key.startsWith(pathPrefix)) {
+      getResponseCache.delete(key);
+    }
+  }
+}
+
 export function buildApiWebSocketUrl(path: string, params?: Record<string, string>) {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   const webSocketOrigin =
@@ -1096,20 +1108,46 @@ export type AppNotification = {
   read: boolean;
 };
 
-export async function fetchAppNotifications() {
-  const response = await apiRequest<{ items: AppNotification[] }>('/me/notifications');
+export async function fetchAppNotifications(options?: { skipResponseCache?: boolean }) {
+  const response = await apiRequest<{ items: AppNotification[] }>('/me/notifications', {
+    skipResponseCache: options?.skipResponseCache,
+  });
   return response.items || [];
 }
 
 export async function deleteAppNotification(notificationId: string) {
+  invalidateApiCache('/me/notifications');
   return apiRequest<{ deleted: boolean }>(`/me/notifications/${encodeURIComponent(notificationId)}`, {
     method: 'DELETE',
+    skipResponseCache: true,
+  });
+}
+
+export async function deleteAppNotificationsBatch(payload: { ids?: string[]; clear_all?: boolean }) {
+  invalidateApiCache('/me/notifications');
+  return apiRequest<{ deleted: boolean; count: number }>('/me/notifications/delete-batch', {
+    method: 'POST',
+    body: {
+      ids: payload.ids ?? [],
+      clear_all: Boolean(payload.clear_all),
+    },
+    skipResponseCache: true,
+  });
+}
+
+export async function clearAllAppNotifications() {
+  invalidateApiCache('/me/notifications');
+  return apiRequest<{ deleted: boolean; count: number }>('/me/notifications/all', {
+    method: 'DELETE',
+    skipResponseCache: true,
   });
 }
 
 export async function markAppNotificationRead(notificationId: string) {
+  invalidateApiCache('/me/notifications');
   return apiRequest<{ read: boolean }>(`/me/notifications/${encodeURIComponent(notificationId)}/read`, {
     method: 'PATCH',
+    skipResponseCache: true,
   });
 }
 
@@ -1156,6 +1194,18 @@ export async function fetchDismissedActivityNotifications() {
 export async function deleteActivityNotification(notificationId: string) {
   return apiRequest<{ deleted: boolean }>(`/me/activity-notifications/${encodeURIComponent(notificationId)}`, {
     method: 'DELETE',
+    skipResponseCache: true,
+  });
+}
+
+export async function deleteActivityNotificationsBatch(payload: { ids: string[] }) {
+  return apiRequest<{ deleted: boolean; count: number }>('/me/activity-notifications/delete-batch', {
+    method: 'POST',
+    body: {
+      ids: payload.ids ?? [],
+      clear_all: false,
+    },
+    skipResponseCache: true,
   });
 }
 
