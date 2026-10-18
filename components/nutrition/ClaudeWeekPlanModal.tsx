@@ -9,7 +9,9 @@ import {
   Platform,
   TextInput,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { createNutritionPlan, NutritionPlanApiResponse, NutritionDayPlan } from '../../lib/nutrition';
+import { useLanguage } from '../../lib/i18n';
 
 interface DayPlan {
   day: string;
@@ -83,7 +85,9 @@ export default function ClaudeWeekPlanModal({
   defaultWeight = 75,
   onPlanUpdated,
 }: ClaudeWeekPlanModalProps) {
+  const { t } = useLanguage();
   const [viewMode, setViewMode] = useState<'questionnaire' | 'weekPlan'>('questionnaire');
+  const [expandedDayKey, setExpandedDayKey] = useState<string | null>(null);
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [selectedMeals, setSelectedMeals] = useState<string[]>([]);
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
@@ -419,33 +423,120 @@ export default function ClaudeWeekPlanModal({
 
               {/* Days Card */}
               <View style={styles.card}>
-                {(dayPlans.length > 0 ? dayPlans : []).map((d, idx) => (
-                  <View
-                    key={d.day}
-                    style={[
-                      styles.dayBlock,
-                      idx < dayPlans.length - 1 && styles.dayBlockBorder,
-                    ]}
-                  >
-                    <View style={styles.dayTopRow}>
-                      <Text style={styles.dayTitle}>{d.day}</Text>
-                      <Text style={styles.dayProtein}>{d.proteinText}</Text>
-                    </View>
+                {(activePlan?.days || []).map((d, idx) => {
+                  const isExpanded = expandedDayKey === d.day;
+                  const dayName = t(formatDayName(d.day));
+                  const proteinText = `${proteinForDay(d)} g protein`;
+                  const allMeals = [d.breakfast, d.lunch, d.dinner, d.pre_workout, d.post_workout].filter(Boolean);
+                  const totalKcal = allMeals.reduce((sum, m: any) => sum + Math.max(0, Number(m?.kcal || 0)), 0);
 
-                    <Text style={styles.dayMeals}>{d.meals}</Text>
+                  return (
+                    <View
+                      key={d.day}
+                      style={[
+                        styles.dayBlock,
+                        idx < (activePlan?.days?.length || 0) - 1 && styles.dayBlockBorder,
+                      ]}
+                    >
+                      <Pressable
+                        style={styles.dayTopRow}
+                        onPress={() => setExpandedDayKey((prev) => (prev === d.day ? null : d.day))}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${dayName}, ${isExpanded ? t('Collapse day') : t('Expand day')}`}
+                      >
+                        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingRight: 8 }}>
+                          <Text style={styles.dayTitle}>{dayName}</Text>
+                          <Text style={styles.dayProtein}>
+                            {totalKcal > 0 ? `${totalKcal} kcal · ` : ''}
+                            {proteinText}
+                          </Text>
+                        </View>
+                        <Ionicons
+                          name={isExpanded ? 'chevron-down' : 'chevron-forward'}
+                          size={18}
+                          color={isExpanded ? GOLD : 'rgba(247, 243, 238, 0.4)'}
+                        />
+                      </Pressable>
 
-                    <View style={styles.dayActionRow}>
-                      <Text style={styles.prepLink}>Preparation steps ›</Text>
-                      <Text style={styles.prepTime}>{d.prepTime}</Text>
+                      {isExpanded ? (
+                        <View style={styles.expandedDayContent}>
+                          {d.breakfast ? (
+                            <View style={styles.modalMealCard}>
+                              <Text style={styles.modalMealKicker}>{t('Breakfast').toUpperCase()}</Text>
+                              <Text style={styles.modalMealName}>{d.breakfast.name}</Text>
+                              <Text style={styles.modalMealMacros}>
+                                {d.breakfast.kcal} kcal · {d.breakfast.p}g P · {d.breakfast.c}g C · {d.breakfast.f}g F
+                              </Text>
+                              {d.breakfast.instructions && d.breakfast.instructions.length > 0 ? (
+                                <Text style={styles.modalMealPrep}>Prep: {d.breakfast.instructions.join(' ')}</Text>
+                              ) : null}
+                            </View>
+                          ) : null}
+                          {d.lunch ? (
+                            <View style={styles.modalMealCard}>
+                              <Text style={styles.modalMealKicker}>{t('Lunch').toUpperCase()}</Text>
+                              <Text style={styles.modalMealName}>{d.lunch.name}</Text>
+                              <Text style={styles.modalMealMacros}>
+                                {d.lunch.kcal} kcal · {d.lunch.p}g P · {d.lunch.c}g C · {d.lunch.f}g F
+                              </Text>
+                              {d.lunch.instructions && d.lunch.instructions.length > 0 ? (
+                                <Text style={styles.modalMealPrep}>Prep: {d.lunch.instructions.join(' ')}</Text>
+                              ) : null}
+                            </View>
+                          ) : null}
+                          {d.pre_workout ? (
+                            <View style={styles.modalMealCard}>
+                              <Text style={styles.modalMealKicker}>{t('Pre-workout snack').toUpperCase()}</Text>
+                              <Text style={styles.modalMealName}>{d.pre_workout.name}</Text>
+                              <Text style={styles.modalMealMacros}>
+                                {d.pre_workout.kcal} kcal · {d.pre_workout.p}g P · {d.pre_workout.c}g C · {d.pre_workout.f}g F
+                              </Text>
+                              {d.pre_workout.instructions && d.pre_workout.instructions.length > 0 ? (
+                                <Text style={styles.modalMealPrep}>Prep: {d.pre_workout.instructions.join(' ')}</Text>
+                              ) : null}
+                            </View>
+                          ) : null}
+                          {d.post_workout ? (
+                            <View style={styles.modalMealCard}>
+                              <Text style={styles.modalMealKicker}>{t('Post-workout snack').toUpperCase()}</Text>
+                              <Text style={styles.modalMealName}>{d.post_workout.name}</Text>
+                              <Text style={styles.modalMealMacros}>
+                                {d.post_workout.kcal} kcal · {d.post_workout.p}g P · {d.post_workout.c}g C · {d.post_workout.f}g F
+                              </Text>
+                              {d.post_workout.instructions && d.post_workout.instructions.length > 0 ? (
+                                <Text style={styles.modalMealPrep}>Prep: {d.post_workout.instructions.join(' ')}</Text>
+                              ) : null}
+                            </View>
+                          ) : null}
+                          {d.dinner ? (
+                            <View style={styles.modalMealCard}>
+                              <Text style={styles.modalMealKicker}>{t('Dinner').toUpperCase()}</Text>
+                              <Text style={styles.modalMealName}>{d.dinner.name}</Text>
+                              <Text style={styles.modalMealMacros}>
+                                {d.dinner.kcal} kcal · {d.dinner.p}g P · {d.dinner.c}g C · {d.dinner.f}g F
+                              </Text>
+                              {d.dinner.instructions && d.dinner.instructions.length > 0 ? (
+                                <Text style={styles.modalMealPrep}>Prep: {d.dinner.instructions.join(' ')}</Text>
+                              ) : null}
+                            </View>
+                          ) : null}
+                        </View>
+                      ) : (
+                        <Pressable onPress={() => setExpandedDayKey(d.day)}>
+                          <Text style={styles.dayMeals}>{mealNamesForDay(d)}</Text>
+                          <View style={styles.dayActionRow}>
+                            <Text style={styles.prepLink}>{t('Preparation steps')} ›</Text>
+                            <Text style={styles.prepTime}>{`${Math.max(15, Math.min(45, (d.breakfast?.instructions?.length || 1) * 5 + 20))} min total`}</Text>
+                          </View>
+                        </Pressable>
+                      )}
                     </View>
-                  </View>
-                ))}
+                  );
+                })}
               </View>
-              {dayPlans.length === 0 ? (
+              {(!activePlan?.days || activePlan.days.length === 0) ? (
                 <Text style={styles.moreDaysNote}>No saved plan yet. Go back and build your week.</Text>
               ) : null}
-
-              <Text style={styles.moreDaysNote}>Thursday to Sunday below ⌄</Text>
 
               {/* Bottom Button */}
               <Pressable style={styles.primaryBtn} onPress={onOpenShoppingList}>
@@ -743,5 +834,42 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: 'rgba(247, 243, 238, 0.45)',
     marginVertical: 14,
+  },
+  expandedDayContent: {
+    marginTop: 10,
+    gap: 10,
+  },
+  modalMealCard: {
+    backgroundColor: '#071826',
+    borderRadius: 10,
+    padding: 12,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  modalMealKicker: {
+    fontFamily: DMSANS,
+    fontSize: 10,
+    fontWeight: '700',
+    color: GOLD,
+    letterSpacing: 1,
+  },
+  modalMealName: {
+    fontFamily: DMSANS,
+    fontSize: 14,
+    fontWeight: '600',
+    color: IVORY,
+  },
+  modalMealMacros: {
+    fontFamily: MONO,
+    fontSize: 11.5,
+    color: GOLD,
+  },
+  modalMealPrep: {
+    fontFamily: INTER,
+    fontSize: 12,
+    color: 'rgba(247, 243, 238, 0.7)',
+    lineHeight: 17,
+    marginTop: 2,
   },
 });
