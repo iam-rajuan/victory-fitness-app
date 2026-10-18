@@ -9,6 +9,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface OptionWithNote {
   title: string;
@@ -158,7 +159,7 @@ export default function ClaudePlanBuildModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
           {/* Top Header */}
           <View style={styles.topBar}>
             <Pressable
@@ -231,7 +232,7 @@ export default function ClaudePlanBuildModal({
               )}
             </Pressable>
           </View>
-        </View>
+        </SafeAreaView>
     </Modal>
   );
 }
@@ -246,8 +247,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 54,
-    paddingBottom: 14,
+    paddingTop: Platform.select({ web: 10, default: 4 }),
+    paddingBottom: 8,
   },
   backBtn: {
     fontFamily: DMSANS,

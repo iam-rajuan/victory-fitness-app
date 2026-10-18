@@ -9,6 +9,7 @@ import {
   Platform,
   TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import {
   createNutritionPlan,
@@ -427,7 +428,7 @@ export default function ClaudeWeekPlanModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={() => { cancelBuild(); onClose(); }}>
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         {/* Top Header */}
         <View style={styles.topBar}>
           <Pressable onPress={handleBack} hitSlop={10}>
@@ -945,7 +946,7 @@ export default function ClaudeWeekPlanModal({
             </View>
           )}
         </ScrollView>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 }
@@ -968,8 +969,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 54,
-    paddingBottom: 14,
+    paddingTop: Platform.select({ web: 10, default: 4 }),
+    paddingBottom: 8,
   },
   backBtn: {
     fontFamily: DMSANS,
@@ -985,28 +986,29 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingTop: 4,
+    paddingBottom: 36,
   },
   headline: {
     fontFamily: DMSANS,
-    fontSize: 26,
-    lineHeight: 32,
+    fontSize: 24,
+    lineHeight: 30,
     fontWeight: '600',
     letterSpacing: -0.3,
     color: IVORY,
-    marginBottom: 10,
+    marginBottom: 6,
   },
   subheadline: {
     fontFamily: INTER,
-    fontSize: 14.5,
-    lineHeight: 23,
+    fontSize: 14,
+    lineHeight: 20,
     color: 'rgba(247, 243, 238, 0.6)',
-    marginBottom: 14,
+    marginBottom: 10,
   },
   summaryPills: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 14,
+    marginBottom: 10,
   },
   summaryPill: {
     flex: 1,

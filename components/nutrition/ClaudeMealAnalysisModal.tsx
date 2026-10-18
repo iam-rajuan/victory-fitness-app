@@ -12,6 +12,7 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { analyzeMealImage, MealImageAnalysisResponse } from '../../lib/nutrition';
 import { useLanguage } from '../../lib/i18n';
 
@@ -158,7 +159,7 @@ export default function ClaudeMealAnalysisModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false}>
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         {/* Top Header */}
         <View style={styles.topBar}>
           <Pressable onPress={onClose} hitSlop={10}>
@@ -266,7 +267,7 @@ export default function ClaudeMealAnalysisModal({
             {t('Estimates from a photo, not laboratory numbers. Correct the portion and it learns your plates — and your photos are deleted once the meal is logged.')}
           </Text>
         </ScrollView>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 }
@@ -281,8 +282,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 54,
-    paddingBottom: 14,
+    paddingTop: Platform.select({ web: 10, default: 4 }),
+    paddingBottom: 8,
   },
   backBtn: {
     fontFamily: DMSANS,

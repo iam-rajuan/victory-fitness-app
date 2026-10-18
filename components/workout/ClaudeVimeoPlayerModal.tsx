@@ -8,6 +8,7 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import CrossPlatformWebView from '../CrossPlatformWebView';
 
 interface ChapterItem {
@@ -69,7 +70,7 @@ export default function ClaudeVimeoPlayerModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false}>
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         {/* Top Header */}
         <View style={styles.topBar}>
           <Pressable onPress={onClose} hitSlop={10}>
@@ -170,7 +171,7 @@ export default function ClaudeVimeoPlayerModal({
             <Text style={styles.finishBtnText}>I finished this session</Text>
           </Pressable>
         </View>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 }
@@ -185,8 +186,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 54,
-    paddingBottom: 14,
+    paddingTop: Platform.select({ web: 10, default: 4 }),
+    paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(247, 243, 238, 0.08)',
   },

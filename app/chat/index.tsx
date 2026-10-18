@@ -26,6 +26,7 @@ import { savePlanBuiltData } from '../../lib/planStorage';
 import { saveLatestStrengthWorkoutPlan } from '../../lib/workout-plans';
 import { normalizeSubscriptionTier } from '../../lib/access';
 import { pushRoute, goBackOrReplace } from '../../lib/navigation';
+import { useLanguage } from '../../lib/i18n';
 
 interface ChatMessage {
   id: string;
@@ -296,13 +297,46 @@ export default function ClaudeCoachScreen() {
     prescriptionThumbnail?: string;
     contextNote?: string;
   }>();
+  const { t } = useLanguage();
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [inputText, setInputText] = useState('');
+  const [contentHeight, setContentHeight] = useState(38);
   const [sending, setSending] = useState(false);
   const [conversationLanguage, setConversationLanguage] = useState<string | null>(null);
   const [insertingPlanMessageId, setInsertingPlanMessageId] = useState<string | null>(null);
   const autoPromptHandledRef = useRef(false);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  // Auto-reset content height when input is cleared
+  useEffect(() => {
+    if (!inputText) {
+      setContentHeight(38);
+    }
+  }, [inputText]);
+
+  const composerHeight = Math.min(140, Math.max(38, contentHeight));
+
+  const isMac = useMemo(() => {
+    if (Platform.OS !== 'web' || typeof navigator === 'undefined') return false;
+    return /Mac|iPod|iPhone|iPad/.test(navigator.platform) || /Macintosh/.test(navigator.userAgent);
+  }, []);
+
+  const handleKeyPress = (e: any) => {
+    const key = e.nativeEvent?.key || e.key;
+    if (key === 'Enter') {
+      const isCtrlOrCmd = Boolean(
+        e.nativeEvent?.ctrlKey ||
+        e.nativeEvent?.metaKey ||
+        e.ctrlKey ||
+        e.metaKey
+      );
+      if (isCtrlOrCmd) {
+        e.preventDefault?.();
+        handleSubmitInput();
+      }
+      // Plain Enter naturally creates a newline in multiline mode
+    }
+  };
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -533,6 +567,8 @@ export default function ClaudeCoachScreen() {
     autoPromptHandledRef.current = true;
     if (params.autoSend === '1') {
       void handleSendText(initialPrompt, buildPrescriptionOptionsFromParams());
+    } else {
+      setInputText(initialPrompt);
     }
   }, [currentUser, hasCoach, params.autoSend, params.initialPrompt]);
 
@@ -842,6 +878,7 @@ export default function ClaudeCoachScreen() {
           <TextInput
             style={[
               styles.textInput,
+              { height: composerHeight },
               Platform.select({
                 web: {
                   outlineStyle: 'none',
@@ -850,24 +887,47 @@ export default function ClaudeCoachScreen() {
                   borderWidth: 0,
                   borderColor: 'transparent',
                   boxShadow: 'none',
+                  resize: 'none',
+                  overflowY: 'auto',
                 } as any,
               }),
             ]}
-            placeholder="Ask anything…"
+            placeholder={t('Ask your coach anything…')}
             placeholderTextColor="rgba(247, 243, 238, 0.45)"
             value={inputText}
             onChangeText={setInputText}
-            onSubmitEditing={handleSubmitInput}
-            returnKeyType="send"
+            onKeyPress={handleKeyPress}
+            onContentSizeChange={(e) => {
+              const h = e.nativeEvent?.contentSize?.height;
+              if (h && h > 0) {
+                setContentHeight(h);
+              }
+            }}
+            multiline
+            blurOnSubmit={false}
+            scrollEnabled
+            textAlignVertical="top"
           />
           <Pressable
-            style={[styles.sendBtn, !inputText.trim() && styles.sendBtnDisabled]}
+            style={[styles.sendBtn, (!inputText.trim() || sending) && styles.sendBtnDisabled]}
             disabled={!inputText.trim() || sending}
             onPress={handleSubmitInput}
+            accessibilityRole="button"
+            accessibilityLabel={t('Send message')}
           >
-            <View style={styles.sendArrow} />
+            {sending ? (
+              <ActivityIndicator size="small" color={OBSIDIAN} />
+            ) : (
+              <View style={styles.sendArrow} />
+            )}
           </Pressable>
         </View>
+
+        {Platform.OS === 'web' && (
+          <Text style={styles.shortcutHint}>
+            {isMac ? '⌘+Enter' : 'Ctrl+Enter'} to send • Enter for new line
+          </Text>
+        )}
 
         <Text style={styles.disclaimer}>
           Your coach never diagnoses, treats, or prescribes. For pain or medical questions it will tell you to see a doctor.
@@ -1250,15 +1310,16 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(247, 243, 238, 0.25)',
     borderRadius: 14,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 8,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     backgroundColor: 'rgba(247, 243, 238, 0.02)',
   },
   textInput: {
     flex: 1,
     fontFamily: INTER,
     fontSize: 14,
+    lineHeight: 20,
     color: IVORY,
     paddingVertical: 6,
     paddingHorizontal: 0,
@@ -1268,15 +1329,18 @@ const styles = StyleSheet.create({
     outlineStyle: 'none' as any,
     outlineWidth: 0 as any,
     outlineColor: 'transparent' as any,
+    minHeight: 38,
+    maxHeight: 140,
   },
   sendBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     backgroundColor: GOLD,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8,
+    marginBottom: 2,
   },
   sendBtnDisabled: {
     opacity: 0.4,
@@ -1292,12 +1356,20 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
     marginLeft: 2,
   },
+  shortcutHint: {
+    fontFamily: DMSANS,
+    fontSize: 11,
+    color: 'rgba(201, 148, 58, 0.75)',
+    marginTop: 6,
+    textAlign: 'center',
+    letterSpacing: 0.3,
+  },
   disclaimer: {
     fontFamily: INTER,
     fontSize: 11.5,
     lineHeight: 16,
     color: 'rgba(247, 243, 238, 0.38)',
-    marginTop: 10,
+    marginTop: 6,
     textAlign: 'center',
   },
   // Locked styles for Silver
