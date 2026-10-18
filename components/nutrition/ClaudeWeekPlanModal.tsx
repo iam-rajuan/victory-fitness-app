@@ -98,6 +98,7 @@ export default function ClaudeWeekPlanModal({
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [selectedMeals, setSelectedMeals] = useState<string[]>([]);
   const [mealHealthPreferences, setMealHealthPreferences] = useState<Record<string, 'healthy_for_me' | 'not_healthy_for_me'>>({});
+  const [editingMeal, setEditingMeal] = useState<string | null>(null);
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
   const [customMeal, setCustomMeal] = useState('');
   const [customAllergy, setCustomAllergy] = useState('');
@@ -304,6 +305,7 @@ export default function ClaudeWeekPlanModal({
         });
         return prev.filter((x) => x !== m);
       } else {
+        setEditingMeal(m);
         return [...prev, m];
       }
     });
@@ -316,24 +318,28 @@ export default function ClaudeWeekPlanModal({
       delete next[m];
       return next;
     });
+    setEditingMeal((cur) => (cur === m ? null : cur));
   };
 
   const setMealHealthPreference = (meal: string, preference: 'healthy_for_me' | 'not_healthy_for_me') => {
     setMealHealthPreferences((cur) => {
       const next = { ...cur };
-      if (next[meal] === preference) {
-        delete next[meal];
-      } else {
-        next[meal] = preference;
-      }
+      next[meal] = preference;
       return next;
     });
+    setEditingMeal(null);
   };
 
   const addCustomMeal = () => {
     const meal = customMeal.trim();
     if (!meal) return;
-    setSelectedMeals((prev) => (prev.some((item) => item.toLowerCase() === meal.toLowerCase()) ? prev : [...prev, meal]));
+    setSelectedMeals((prev) => {
+      if (prev.some((item) => item.toLowerCase() === meal.toLowerCase())) {
+        return prev;
+      }
+      setEditingMeal(meal);
+      return [...prev, meal];
+    });
     setCustomMeal('');
   };
 
@@ -501,82 +507,220 @@ export default function ClaudeWeekPlanModal({
                   </Pressable>
                 </View>
 
-                {/* Popular suggestions if none selected yet */}
-                {selectedMeals.length === 0 ? (
-                  <View style={{ marginTop: 12 }}>
-                    <Text style={styles.favPromptHint}>Popular favourites to pick from:</Text>
-                    <View style={styles.chipsWrap}>
-                      {['Grilled Chicken & Rice', 'Fufu', 'Salmon & Vegetables', 'Pasta Bolognese', 'Waakye'].map((s) => (
-                        <Pressable key={s} style={styles.chip} onPress={() => toggleMeal(s)}>
-                          <Text style={styles.chipText}>+ {s}</Text>
-                        </Pressable>
-                      ))}
+                {/* Popular suggestions: filter out any already selected */}
+                {(() => {
+                  const availableSuggestions = [
+                    'Grilled Chicken & Rice',
+                    'Fufu',
+                    'Salmon & Vegetables',
+                    'Pasta Bolognese',
+                    'Waakye',
+                  ].filter(
+                    (s) => !selectedMeals.some((m) => m.toLowerCase() === s.toLowerCase())
+                  );
+                  if (availableSuggestions.length === 0) return null;
+                  return (
+                    <View style={{ marginTop: 12 }}>
+                      <Text style={styles.favPromptHint}>{t('Quick add:')}</Text>
+                      <View style={styles.chipsWrap}>
+                        {availableSuggestions.map((s) => (
+                          <Pressable key={s} style={styles.chip} onPress={() => toggleMeal(s)}>
+                            <Text style={styles.chipText}>+ {s}</Text>
+                          </Pressable>
+                        ))}
+                      </View>
                     </View>
-                  </View>
-                ) : null}
+                  );
+                })()}
 
-                {/* Render EACH favourite food with Healthy / Not Healthy choice */}
+                {/* Render EACH favourite food with streamlined luxury layout */}
                 {selectedMeals.length > 0 ? (
                   <View style={styles.favFoodsContainer}>
                     {selectedMeals.map((m) => {
                       const pref = mealHealthPreferences[m];
+                      const formattedName =
+                        m.trim().length > 0
+                          ? m.trim().charAt(0).toUpperCase() + m.trim().slice(1)
+                          : m;
+                      const isHealthy = pref === 'healthy_for_me';
+                      const isNotHealthy = pref === 'not_healthy_for_me';
+                      const isConfirmed = isHealthy || isNotHealthy;
+                      const isEditing = editingMeal === m || !isConfirmed;
+
                       return (
-                        <View key={m} style={styles.favFoodItemCard}>
-                          <View style={styles.favFoodHeader}>
-                            <Text style={styles.favFoodName}>{m}</Text>
-                            <Pressable
-                              hitSlop={10}
-                              onPress={() => removeMeal(m)}
-                              accessibilityRole="button"
-                              accessibilityLabel={`Remove ${m}`}
-                            >
-                              <Ionicons name="close-circle-outline" size={20} color="rgba(247,243,238,0.5)" />
-                            </Pressable>
-                          </View>
-
-                          <Text style={styles.favFoodQuestion}>
-                            {t('Is this food healthy/suitable for you?')}
-                          </Text>
-
-                          <View style={styles.healthChoiceRow}>
-                            <Pressable
-                              style={[
-                                styles.healthChoiceBtn,
-                                pref === 'healthy_for_me' && styles.healthChoiceBtnHealthyActive,
-                              ]}
-                              onPress={() => setMealHealthPreference(m, 'healthy_for_me')}
-                              accessibilityRole="button"
-                              accessibilityLabel={`${m} ${t('Healthy for me')}`}
-                            >
+                        <View
+                          key={m}
+                          style={[
+                            styles.favFoodItemCard,
+                            isHealthy && styles.favFoodItemCardHealthy,
+                            isNotHealthy && styles.favFoodItemCardNotHealthy,
+                          ]}
+                        >
+                          {/* Card Main Row: Title & Subtitle on Left, Pill & Delete on Right */}
+                          <View style={styles.favFoodTopRow}>
+                            <View style={styles.favFoodTitleGroup}>
+                              <Text style={styles.favFoodName} numberOfLines={1}>
+                                {formattedName}
+                              </Text>
                               <Text
                                 style={[
-                                  styles.healthChoiceText,
-                                  pref === 'healthy_for_me' && styles.healthChoiceTextActive,
+                                  styles.favFoodMeta,
+                                  isHealthy && styles.favFoodMetaHealthy,
+                                  isNotHealthy && styles.favFoodMetaNotHealthy,
+                                  !isConfirmed && styles.favFoodMetaUnconfirmed,
                                 ]}
+                                numberOfLines={1}
                               >
-                                {pref === 'healthy_for_me' ? '✓ ' : ''}{t('Healthy for me')}
+                                {isHealthy
+                                  ? t('Regular · Macro-balanced')
+                                  : isNotHealthy
+                                  ? t('1–3x/wk · Smart moderation')
+                                  : t('Select frequency')}
                               </Text>
-                            </Pressable>
+                            </View>
 
-                            <Pressable
-                              style={[
-                                styles.healthChoiceBtn,
-                                pref === 'not_healthy_for_me' && styles.healthChoiceBtnNotHealthyActive,
-                              ]}
-                              onPress={() => setMealHealthPreference(m, 'not_healthy_for_me')}
-                              accessibilityRole="button"
-                              accessibilityLabel={`${m} ${t('Not healthy for me')}`}
-                            >
-                              <Text
-                                style={[
-                                  styles.healthChoiceText,
-                                  pref === 'not_healthy_for_me' && styles.healthChoiceTextActive,
+                            <View style={styles.favFoodRightControls}>
+                              {isConfirmed ? (
+                                <Pressable
+                                  hitSlop={6}
+                                  onPress={() => setEditingMeal(isEditing ? null : m)}
+                                  style={[
+                                    styles.favInteractivePill,
+                                    isHealthy
+                                      ? styles.favInteractivePillHealthy
+                                      : styles.favInteractivePillNotHealthy,
+                                  ]}
+                                  accessibilityRole="button"
+                                  accessibilityLabel={`${m} ${isHealthy ? 'Regular' : '1–3x/wk'}`}
+                                >
+                                  <View
+                                    style={
+                                      isHealthy
+                                        ? styles.statusDotHealthy
+                                        : styles.statusDotNotHealthy
+                                    }
+                                  />
+                                  <Text
+                                    style={
+                                      isHealthy
+                                        ? styles.favPillTextHealthy
+                                        : styles.favPillTextNotHealthy
+                                    }
+                                  >
+                                    {isHealthy ? t('Regular') : t('1–3x/wk')}
+                                  </Text>
+                                  <Ionicons
+                                    name={isEditing ? 'chevron-up' : 'chevron-down'}
+                                    size={11}
+                                    color={isHealthy ? GOLD : COPPER}
+                                  />
+                                </Pressable>
+                              ) : null}
+
+                              <Pressable
+                                hitSlop={10}
+                                onPress={() => removeMeal(m)}
+                                style={({ pressed }) => [
+                                  styles.favRemoveCircleBtn,
+                                  pressed && styles.favRemoveCircleBtnPressed,
                                 ]}
+                                accessibilityRole="button"
+                                accessibilityLabel={`Remove ${m}`}
                               >
-                                {pref === 'not_healthy_for_me' ? '✓ ' : ''}{t('Not healthy for me')}
-                              </Text>
-                            </Pressable>
+                                <Ionicons name="close" size={13} color="rgba(247, 243, 238, 0.65)" />
+                              </Pressable>
+                            </View>
                           </View>
+
+                          {/* When editing or unselected: show high-contrast interactive buttons */}
+                          {isEditing ? (
+                            <View style={styles.favEditChoiceContainer}>
+                              <Text style={styles.favEditPrompt}>{t('Frequency')}</Text>
+                              <View style={styles.favChoiceRow}>
+                                <Pressable
+                                  style={[
+                                    styles.favChoiceBtn,
+                                    isHealthy
+                                      ? styles.favChoiceBtnHealthyActive
+                                      : styles.favChoiceBtnInactive,
+                                  ]}
+                                  onPress={() => setMealHealthPreference(m, 'healthy_for_me')}
+                                  accessibilityRole="button"
+                                  accessibilityLabel={`${m} Regular`}
+                                >
+                                  <Ionicons
+                                    name="restaurant-outline"
+                                    size={13}
+                                    color={isHealthy ? OBSIDIAN : GOLD}
+                                    style={{ marginRight: 6 }}
+                                  />
+                                  <View>
+                                    <Text
+                                      style={[
+                                        styles.favChoiceText,
+                                        isHealthy
+                                          ? styles.favChoiceTextHealthyActive
+                                          : styles.favChoiceTextInactive,
+                                      ]}
+                                    >
+                                      {t('Regular')}
+                                    </Text>
+                                    <Text
+                                      style={[
+                                        styles.favChoiceSubText,
+                                        isHealthy
+                                          ? styles.favChoiceSubHealthyActive
+                                          : styles.favChoiceSubInactive,
+                                      ]}
+                                    >
+                                      {t('Daily rotation')}
+                                    </Text>
+                                  </View>
+                                </Pressable>
+
+                                <Pressable
+                                  style={[
+                                    styles.favChoiceBtn,
+                                    isNotHealthy
+                                      ? styles.favChoiceBtnNotHealthyActive
+                                      : styles.favChoiceBtnInactive,
+                                  ]}
+                                  onPress={() => setMealHealthPreference(m, 'not_healthy_for_me')}
+                                  accessibilityRole="button"
+                                  accessibilityLabel={`${m} 1–3x/wk`}
+                                >
+                                  <Ionicons
+                                    name="shield-outline"
+                                    size={13}
+                                    color={isNotHealthy ? OBSIDIAN : COPPER}
+                                    style={{ marginRight: 6 }}
+                                  />
+                                  <View>
+                                    <Text
+                                      style={[
+                                        styles.favChoiceText,
+                                        isNotHealthy
+                                          ? styles.favChoiceTextNotHealthyActive
+                                          : styles.favChoiceTextInactive,
+                                      ]}
+                                    >
+                                      {t('1–3x / week')}
+                                    </Text>
+                                    <Text
+                                      style={[
+                                        styles.favChoiceSubText,
+                                        isNotHealthy
+                                          ? styles.favChoiceSubNotHealthyActive
+                                          : styles.favChoiceSubInactive,
+                                      ]}
+                                    >
+                                      {t('Smart treat')}
+                                    </Text>
+                                  </View>
+                                </Pressable>
+                              </View>
+                            </View>
+                          ) : null}
                         </View>
                       );
                     })}
@@ -584,7 +728,9 @@ export default function ClaudeWeekPlanModal({
                 ) : null}
 
                 <Text style={styles.cardFootnote}>
-                  Add your favourites. Marking a favourite as "Not healthy for me" limits it to 1–3 meals/week without removing it completely.
+                  {t(
+                    'Victor integrates your favourites while keeping weekly calories and macros balanced.'
+                  )}
                 </Text>
               </View>
 
@@ -950,26 +1096,27 @@ const styles = StyleSheet.create({
   },
   mealInput: {
     flex: 1,
-    minHeight: 42,
+    minHeight: 44,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(247, 243, 238, 0.18)',
-    paddingHorizontal: 12,
+    borderColor: 'rgba(247, 243, 238, 0.16)',
+    backgroundColor: 'rgba(4, 14, 24, 0.45)',
+    paddingHorizontal: 14,
     fontFamily: INTER,
-    fontSize: 13,
+    fontSize: 13.5,
     color: IVORY,
   },
   addMealBtn: {
-    height: 42,
+    height: 44,
     borderRadius: 12,
     backgroundColor: GOLD,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   addMealBtnText: {
     fontFamily: DMSANS,
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: '700',
     color: OBSIDIAN,
   },
@@ -1179,66 +1326,186 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   favFoodsContainer: {
-    marginTop: 12,
-    gap: 10,
-  },
-  favFoodItemCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    padding: 12,
+    marginTop: 14,
     gap: 8,
   },
-  favFoodHeader: {
+  favFoodItemCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(247, 243, 238, 0.12)',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    gap: 8,
+  },
+  favFoodItemCardHealthy: {
+    borderColor: 'rgba(201, 148, 58, 0.35)',
+    backgroundColor: 'rgba(201, 148, 58, 0.05)',
+  },
+  favFoodItemCardNotHealthy: {
+    borderColor: 'rgba(181, 101, 29, 0.4)',
+    backgroundColor: 'rgba(181, 101, 29, 0.06)',
+  },
+  favFoodTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  favFoodTitleGroup: {
+    flex: 1,
+    paddingRight: 10,
+    justifyContent: 'center',
+  },
   favFoodName: {
     fontFamily: DMSANS,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
     color: IVORY,
+    textTransform: 'capitalize',
+    letterSpacing: 0.2,
   },
-  favFoodQuestion: {
+  favFoodMeta: {
     fontFamily: INTER,
-    fontSize: 12,
-    color: 'rgba(247, 243, 238, 0.65)',
-  },
-  healthChoiceRow: {
-    flexDirection: 'row',
-    gap: 8,
+    fontSize: 11.5,
+    letterSpacing: 0.2,
     marginTop: 2,
   },
-  healthChoiceBtn: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 6,
+  favFoodMetaHealthy: {
+    color: 'rgba(201, 148, 58, 0.85)',
+  },
+  favFoodMetaNotHealthy: {
+    color: 'rgba(232, 152, 88, 0.85)',
+  },
+  favFoodMetaUnconfirmed: {
+    color: 'rgba(247, 243, 238, 0.5)',
+  },
+  favFoodRightControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  favInteractivePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 3.5,
+    paddingHorizontal: 8,
+    borderRadius: 99,
+    gap: 4,
     borderWidth: 1,
-    borderColor: 'rgba(247, 243, 238, 0.15)',
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+  },
+  favInteractivePillHealthy: {
+    backgroundColor: 'rgba(201, 148, 58, 0.15)',
+    borderColor: 'rgba(201, 148, 58, 0.45)',
+  },
+  favInteractivePillNotHealthy: {
+    backgroundColor: 'rgba(181, 101, 29, 0.18)',
+    borderColor: 'rgba(181, 101, 29, 0.45)',
+  },
+  statusDotHealthy: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: GOLD,
+  },
+  statusDotNotHealthy: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: COPPER,
+  },
+  favPillTextHealthy: {
+    fontFamily: DMSANS,
+    fontSize: 11,
+    fontWeight: '700',
+    color: GOLD,
+    letterSpacing: 0.2,
+  },
+  favPillTextNotHealthy: {
+    fontFamily: DMSANS,
+    fontSize: 11,
+    fontWeight: '700',
+    color: COPPER,
+    letterSpacing: 0.2,
+  },
+  favRemoveCircleBtn: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  healthChoiceBtnHealthyActive: {
-    backgroundColor: 'rgba(201, 148, 58, 0.22)',
+  favRemoveCircleBtnPressed: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  favEditChoiceContainer: {
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(247, 243, 238, 0.08)',
+    marginTop: 2,
+  },
+  favEditPrompt: {
+    fontFamily: DMSANS,
+    fontSize: 10,
+    fontWeight: '600',
+    color: 'rgba(247, 243, 238, 0.5)',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 6,
+  },
+  favChoiceRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  favChoiceBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  favChoiceBtnInactive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: 'rgba(247, 243, 238, 0.16)',
+  },
+  favChoiceBtnHealthyActive: {
+    backgroundColor: GOLD,
     borderColor: GOLD,
   },
-  healthChoiceBtnNotHealthyActive: {
-    backgroundColor: 'rgba(181, 101, 29, 0.25)',
+  favChoiceBtnNotHealthyActive: {
+    backgroundColor: COPPER,
     borderColor: COPPER,
   },
-  healthChoiceText: {
+  favChoiceText: {
     fontFamily: DMSANS,
-    fontSize: 12,
-    fontWeight: '600',
-    color: 'rgba(247, 243, 238, 0.75)',
-  },
-  healthChoiceTextActive: {
-    color: IVORY,
+    fontSize: 12.5,
     fontWeight: '700',
+  },
+  favChoiceTextInactive: {
+    color: IVORY,
+  },
+  favChoiceTextHealthyActive: {
+    color: OBSIDIAN,
+  },
+  favChoiceTextNotHealthyActive: {
+    color: OBSIDIAN,
+  },
+  favChoiceSubText: {
+    fontFamily: INTER,
+    fontSize: 10,
+    marginTop: 1,
+  },
+  favChoiceSubInactive: {
+    color: 'rgba(247, 243, 238, 0.55)',
+  },
+  favChoiceSubHealthyActive: {
+    color: 'rgba(4, 14, 24, 0.85)',
+  },
+  favChoiceSubNotHealthyActive: {
+    color: 'rgba(4, 14, 24, 0.85)',
   },
   favPromptHint: {
     fontFamily: DMSANS,
