@@ -97,6 +97,7 @@ export default function ClaudeWeekPlanModal({
   const [expandedDayKey, setExpandedDayKey] = useState<string | null>(null);
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [selectedMeals, setSelectedMeals] = useState<string[]>([]);
+  const [mealHealthPreferences, setMealHealthPreferences] = useState<Record<string, 'healthy_for_me' | 'not_healthy_for_me'>>({});
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
   const [customMeal, setCustomMeal] = useState('');
   const [customAllergy, setCustomAllergy] = useState('');
@@ -106,6 +107,68 @@ export default function ClaudeWeekPlanModal({
   const [generatedPlan, setGeneratedPlan] = useState<NutritionPlanApiResponse | null>(null);
   const [openPrepMealKeys, setOpenPrepMealKeys] = useState<Record<string, boolean>>({});
   const [isBuilding, setIsBuilding] = useState(false);
+
+  useEffect(() => {
+    if (!plan?.profile) return;
+    const prof: any = plan.profile;
+    const savedFavs: string[] = [];
+    const savedPrefs: Record<string, 'healthy_for_me' | 'not_healthy_for_me'> = {};
+
+    if (Array.isArray(prof.favorite_foods_details)) {
+      prof.favorite_foods_details.forEach((item: any) => {
+        if (item && item.name) {
+          const name = String(item.name).trim();
+          if (name && !savedFavs.includes(name)) {
+            savedFavs.push(name);
+          }
+          if (item.health_preference === 'healthy_for_me' || item.health_preference === 'not_healthy_for_me') {
+            savedPrefs[name] = item.health_preference;
+          }
+        }
+      });
+    }
+
+    if (prof.favorite_meals_preferences && typeof prof.favorite_meals_preferences === 'object') {
+      Object.entries(prof.favorite_meals_preferences).forEach(([k, v]) => {
+        const name = String(k).trim();
+        if (name && !savedFavs.includes(name)) {
+          savedFavs.push(name);
+        }
+        if (v === 'healthy_for_me' || v === 'not_healthy_for_me') {
+          savedPrefs[name] = v;
+        }
+      });
+    }
+
+    const flatFavs = [
+      ...(Array.isArray(prof.favorite_meals) ? prof.favorite_meals : []),
+      ...(Array.isArray(prof.favorite_meals_json) ? prof.favorite_meals_json : []),
+      ...(prof.favorite_meal ? [prof.favorite_meal] : []),
+    ];
+    flatFavs.forEach((m: any) => {
+      const name = String(m || '').trim();
+      if (name && !savedFavs.includes(name)) {
+        savedFavs.push(name);
+      }
+    });
+
+    if (savedFavs.length > 0) {
+      setSelectedMeals(savedFavs);
+      setMealHealthPreferences(savedPrefs);
+    }
+
+    if (prof.cuisine && typeof prof.cuisine === 'string') {
+      const cuisines = prof.cuisine.split(',').map((c: string) => c.trim()).filter(Boolean);
+      if (cuisines.length > 0) setSelectedCuisines(cuisines);
+    }
+    if (prof.allergies && typeof prof.allergies === 'string') {
+      const allergies = prof.allergies.split(',').map((a: string) => a.trim()).filter(Boolean);
+      if (allergies.length > 0) setSelectedAllergies(allergies);
+    }
+    if (prof.cooking_time_weekday) setCookingTime(String(prof.cooking_time_weekday));
+    if (prof.people_cooking_for) setPeopleCount(String(prof.people_cooking_for));
+    if (prof.weekly_food_budget) setWeeklyBudget(String(prof.weekly_food_budget));
+  }, [plan]);
   const [buildError, setBuildError] = useState('');
   const [progress, setProgress] = useState(0);
   const buildRequest = useRef<AbortController | null>(null);
@@ -232,9 +295,39 @@ export default function ClaudeWeekPlanModal({
   };
 
   const toggleMeal = (m: string) => {
-    setSelectedMeals((prev) =>
-      prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m]
-    );
+    setSelectedMeals((prev) => {
+      if (prev.includes(m)) {
+        setMealHealthPreferences((cur) => {
+          const next = { ...cur };
+          delete next[m];
+          return next;
+        });
+        return prev.filter((x) => x !== m);
+      } else {
+        return [...prev, m];
+      }
+    });
+  };
+
+  const removeMeal = (m: string) => {
+    setSelectedMeals((prev) => prev.filter((x) => x !== m));
+    setMealHealthPreferences((cur) => {
+      const next = { ...cur };
+      delete next[m];
+      return next;
+    });
+  };
+
+  const setMealHealthPreference = (meal: string, preference: 'healthy_for_me' | 'not_healthy_for_me') => {
+    setMealHealthPreferences((cur) => {
+      const next = { ...cur };
+      if (next[meal] === preference) {
+        delete next[meal];
+      } else {
+        next[meal] = preference;
+      }
+      return next;
+    });
   };
 
   const addCustomMeal = () => {
@@ -276,6 +369,19 @@ export default function ClaudeWeekPlanModal({
       .filter(Boolean);
     const favoriteMeals = Array.from(new Set(meals)).slice(0, 8);
 
+    const favoriteFoodsDetails = favoriteMeals.map((name) => ({
+      name,
+      is_favourite: true,
+      health_preference: mealHealthPreferences[name] || 'unspecified',
+    }));
+
+    const favoriteMealsPreferences: Record<string, string> = {};
+    favoriteMeals.forEach((name) => {
+      if (mealHealthPreferences[name]) {
+        favoriteMealsPreferences[name] = mealHealthPreferences[name];
+      }
+    });
+
     setIsBuilding(true);
     setBuildError('');
     try {
@@ -287,6 +393,8 @@ export default function ClaudeWeekPlanModal({
         favorite_meal: favoriteMeals[0],
         favorite_meals: favoriteMeals,
         favorite_meals_json: favoriteMeals,
+        favorite_foods_details: favoriteFoodsDetails,
+        favorite_meals_preferences: favoriteMealsPreferences,
         diet: 'balanced',
         allergies: Array.from(new Set([...selectedAllergies, customAllergy.trim()].filter(Boolean))).join(', '),
         activity_level: 'moderate',
@@ -377,22 +485,7 @@ export default function ClaudeWeekPlanModal({
               {/* 2 · MEALS YOU ALREADY LOVE */}
               <View style={styles.card}>
                 <Text style={styles.cardKicker}>2 · MEALS YOU ALREADY LOVE</Text>
-                <View style={styles.chipsWrap}>
-                  {selectedMeals.map((m) => {
-                    const active = selectedMeals.includes(m);
-                    return (
-                      <Pressable
-                        key={m}
-                        style={[styles.chip, active && styles.chipActive]}
-                        onPress={() => toggleMeal(m)}
-                      >
-                        <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                          {m}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
+
                 <View style={styles.mealInputRow}>
                   <TextInput
                     style={styles.mealInput}
@@ -407,8 +500,91 @@ export default function ClaudeWeekPlanModal({
                     <Text style={styles.addMealBtnText}>Add</Text>
                   </Pressable>
                 </View>
+
+                {/* Popular suggestions if none selected yet */}
+                {selectedMeals.length === 0 ? (
+                  <View style={{ marginTop: 12 }}>
+                    <Text style={styles.favPromptHint}>Popular favourites to pick from:</Text>
+                    <View style={styles.chipsWrap}>
+                      {['Grilled Chicken & Rice', 'Fufu', 'Salmon & Vegetables', 'Pasta Bolognese', 'Waakye'].map((s) => (
+                        <Pressable key={s} style={styles.chip} onPress={() => toggleMeal(s)}>
+                          <Text style={styles.chipText}>+ {s}</Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+                ) : null}
+
+                {/* Render EACH favourite food with Healthy / Not Healthy choice */}
+                {selectedMeals.length > 0 ? (
+                  <View style={styles.favFoodsContainer}>
+                    {selectedMeals.map((m) => {
+                      const pref = mealHealthPreferences[m];
+                      return (
+                        <View key={m} style={styles.favFoodItemCard}>
+                          <View style={styles.favFoodHeader}>
+                            <Text style={styles.favFoodName}>{m}</Text>
+                            <Pressable
+                              hitSlop={10}
+                              onPress={() => removeMeal(m)}
+                              accessibilityRole="button"
+                              accessibilityLabel={`Remove ${m}`}
+                            >
+                              <Ionicons name="close-circle-outline" size={20} color="rgba(247,243,238,0.5)" />
+                            </Pressable>
+                          </View>
+
+                          <Text style={styles.favFoodQuestion}>
+                            {t('Is this food healthy/suitable for you?')}
+                          </Text>
+
+                          <View style={styles.healthChoiceRow}>
+                            <Pressable
+                              style={[
+                                styles.healthChoiceBtn,
+                                pref === 'healthy_for_me' && styles.healthChoiceBtnHealthyActive,
+                              ]}
+                              onPress={() => setMealHealthPreference(m, 'healthy_for_me')}
+                              accessibilityRole="button"
+                              accessibilityLabel={`${m} ${t('Healthy for me')}`}
+                            >
+                              <Text
+                                style={[
+                                  styles.healthChoiceText,
+                                  pref === 'healthy_for_me' && styles.healthChoiceTextActive,
+                                ]}
+                              >
+                                {pref === 'healthy_for_me' ? '✓ ' : ''}{t('Healthy for me')}
+                              </Text>
+                            </Pressable>
+
+                            <Pressable
+                              style={[
+                                styles.healthChoiceBtn,
+                                pref === 'not_healthy_for_me' && styles.healthChoiceBtnNotHealthyActive,
+                              ]}
+                              onPress={() => setMealHealthPreference(m, 'not_healthy_for_me')}
+                              accessibilityRole="button"
+                              accessibilityLabel={`${m} ${t('Not healthy for me')}`}
+                            >
+                              <Text
+                                style={[
+                                  styles.healthChoiceText,
+                                  pref === 'not_healthy_for_me' && styles.healthChoiceTextActive,
+                                ]}
+                              >
+                                {pref === 'not_healthy_for_me' ? '✓ ' : ''}{t('Not healthy for me')}
+                              </Text>
+                            </Pressable>
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+                ) : null}
+
                 <Text style={styles.cardFootnote}>
-                  Add at least three. These are sent to the backend plan generator.
+                  Add your favourites. Marking a favourite as "Not healthy for me" limits it to 1–3 meals/week without removing it completely.
                 </Text>
               </View>
 
@@ -1001,5 +1177,76 @@ const styles = StyleSheet.create({
     color: 'rgba(247, 243, 238, 0.7)',
     lineHeight: 17,
     marginTop: 2,
+  },
+  favFoodsContainer: {
+    marginTop: 12,
+    gap: 10,
+  },
+  favFoodItemCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 12,
+    gap: 8,
+  },
+  favFoodHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  favFoodName: {
+    fontFamily: DMSANS,
+    fontSize: 14,
+    fontWeight: '700',
+    color: IVORY,
+  },
+  favFoodQuestion: {
+    fontFamily: INTER,
+    fontSize: 12,
+    color: 'rgba(247, 243, 238, 0.65)',
+  },
+  healthChoiceRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 2,
+  },
+  healthChoiceBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(247, 243, 238, 0.15)',
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  healthChoiceBtnHealthyActive: {
+    backgroundColor: 'rgba(201, 148, 58, 0.22)',
+    borderColor: GOLD,
+  },
+  healthChoiceBtnNotHealthyActive: {
+    backgroundColor: 'rgba(181, 101, 29, 0.25)',
+    borderColor: COPPER,
+  },
+  healthChoiceText: {
+    fontFamily: DMSANS,
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'rgba(247, 243, 238, 0.75)',
+  },
+  healthChoiceTextActive: {
+    color: IVORY,
+    fontWeight: '700',
+  },
+  favPromptHint: {
+    fontFamily: DMSANS,
+    fontSize: 11,
+    fontWeight: '600',
+    color: 'rgba(247, 243, 238, 0.55)',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });
