@@ -271,3 +271,5 @@ export async function primeMealAnalysisHistory(history: { analyses: MealImageAna
     analyses: Array.isArray(history.analyses) ? history.analyses : [],
   });
 }
+
+export * from './nutritionSummary';

@@ -10,7 +10,12 @@ import {
   TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { createNutritionPlan, NutritionPlanApiResponse, NutritionDayPlan } from '../../lib/nutrition';
+import {
+  createNutritionPlan,
+  NutritionPlanApiResponse,
+  NutritionDayPlan,
+  formatStructuredNutritionSummary,
+} from '../../lib/nutrition';
 import { useLanguage } from '../../lib/i18n';
 
 interface DayPlan {
@@ -122,6 +127,10 @@ export default function ClaudeWeekPlanModal({
     return () => clearInterval(timer);
   }, [isBuilding]);
   const activePlan = generatedPlan || plan || null;
+  const structuredSummary = React.useMemo(() => {
+    return formatStructuredNutritionSummary(activePlan, t);
+  }, [activePlan, t]);
+
   const dayPlans: DayPlan[] = (activePlan?.days || []).map((day) => ({
     day: formatDayName(day.day),
     proteinText: `${proteinForDay(day)} g protein`,
@@ -404,7 +413,7 @@ export default function ClaudeWeekPlanModal({
             <View>
               <Text style={styles.headline}>Your week</Text>
               <Text style={styles.subheadline}>
-                {shortPlanSummary(activePlan?.summary)}
+                {structuredSummary.fullText}
               </Text>
               <View style={styles.summaryPills}>
                 <View style={styles.summaryPill}>

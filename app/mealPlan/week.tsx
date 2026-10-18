@@ -17,6 +17,7 @@ import {
   NutritionPlanApiResponse,
   NutritionDayPlan,
   NutritionMealEntry,
+  formatStructuredNutritionSummary,
 } from '../../lib/nutrition';
 import { useLanguage } from '../../lib/i18n';
 import { Typography, Fonts } from '../../constants/Typography';
@@ -123,6 +124,10 @@ export default function SavedWeekScreen() {
     setExpandedDay((current) => (current === dayKey ? null : dayKey));
   };
 
+  const structuredSummary = useMemo(() => {
+    return formatStructuredNutritionSummary(plan, t);
+  }, [plan, t]);
+
   return (
     <ScrollView
       style={styles.screen}
@@ -144,8 +149,16 @@ export default function SavedWeekScreen() {
 
       <View style={styles.headerBlock}>
         <Text style={styles.title}>{t('Your saved week')}</Text>
-        {plan?.summary ? (
-          <Text style={styles.summaryText}>{plan.summary}</Text>
+        {plan ? (
+          <View style={styles.summaryCard}>
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryDot} />
+              <Text style={styles.summaryPrimaryText}>{structuredSummary.primaryLine}</Text>
+            </View>
+            {structuredSummary.contextLine ? (
+              <Text style={styles.summaryContextText}>{structuredSummary.contextLine}</Text>
+            ) : null}
+          </View>
         ) : null}
       </View>
 
@@ -424,6 +437,41 @@ const styles = StyleSheet.create({
   title: {
     ...Typography.h1,
     color: IVORY,
+  },
+  summaryCard: {
+    backgroundColor: CARD_BG,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: GOLD_BORDER,
+    gap: 6,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  summaryDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: GOLD,
+  },
+  summaryPrimaryText: {
+    fontFamily: Fonts.heading,
+    fontSize: 13.5,
+    color: IVORY,
+    fontWeight: '600',
+    flex: 1,
+    lineHeight: 19,
+  },
+  summaryContextText: {
+    fontFamily: Fonts.body,
+    fontSize: 12.5,
+    color: IVORY_MUTED,
+    lineHeight: 18,
+    paddingLeft: 14,
   },
   summaryText: {
     ...Typography.body,
