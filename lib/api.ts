@@ -2232,15 +2232,44 @@ export async function recordAnalyticsEvent(
   }
 }
 
+export type CoachWorkoutExercisePreview = {
+  exercise_name: string;
+  sets: number;
+  reps: string;
+  weight: string;
+  rest: string;
+  notes: string;
+  type: string;
+};
+
+export type CoachWorkoutDayPreview = {
+  day_name: string;
+  expected_duration: number;
+  equipment: string[];
+  exercises: CoachWorkoutExercisePreview[];
+};
+
+export type CoachWorkoutPlanPreview = {
+  plan_name: string;
+  days_count: number;
+  expected_duration: number;
+  equipment: string[];
+  days: CoachWorkoutDayPreview[];
+  uncertainties?: string[];
+};
+
 export type CoachWorkoutPlanAction = {
-  type: 'home_workout_plan_update';
+  type: 'home_workout_plan_update' | 'custom_workout_import' | string;
   source_prompt: string;
   scope: 'day' | 'full_plan' | string;
   target_days: string[];
   target_minutes?: number | null;
+  day_count?: number;
   summary: string;
   button_label?: string;
+  preview?: CoachWorkoutPlanPreview;
 };
+
 
 export async function streamCoachVictorMessage(
   message: string,

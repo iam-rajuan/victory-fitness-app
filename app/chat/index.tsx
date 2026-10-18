@@ -22,6 +22,7 @@ import {
   clearCoachVictorHistory,
   applyCoachWorkoutPlanAction,
   CoachWorkoutPlanAction,
+  CoachWorkoutPlanPreview,
 } from '../../lib/api';
 import { savePlanBuiltData } from '../../lib/planStorage';
 import { saveLatestStrengthWorkoutPlan } from '../../lib/workout-plans';
@@ -45,13 +46,16 @@ interface ChatMessage {
   };
   contextNote?: string;
   homePlanAction?: {
+    type?: string;
     sourcePrompt: string;
     scope?: string;
     targetDays?: string[];
     targetMinutes?: number | null;
+    dayCount?: number;
     summary?: string;
     buttonLabel?: string;
     status?: 'ready' | 'saving' | 'saved';
+    preview?: CoachWorkoutPlanPreview;
   };
 }
 
@@ -279,6 +283,209 @@ function FormattedCoachMessage({ text }: { text: string }) {
           </Text>
         );
       })}
+    </View>
+  );
+}
+
+function WorkoutPlanActionCard({
+  action,
+  onConfirm,
+  defaultButtonLabel,
+}: {
+  action: NonNullable<ChatMessage['homePlanAction']>;
+  onConfirm: () => void;
+  defaultButtonLabel: string;
+}) {
+  const preview = action.preview;
+  const days = preview?.days || [];
+  const [selectedDayIndex, setSelectedDayIndex] = useState(0);
+
+  if (!preview || days.length === 0) {
+    return (
+      <View style={styles.homePlanActionCard}>
+        <Text style={styles.homePlanActionTitle}>
+          {action.status === 'saved'
+            ? 'Home workout plan updated'
+            : action.summary || 'Ready to update your Home workout plan'}
+        </Text>
+        <Text style={styles.homePlanActionText}>
+          {action.scope === 'day'
+            ? 'This will update the selected day in your active Home workout plan.'
+            : 'This will replace your current Home workout plan with the plan from this chat.'}
+        </Text>
+        <Pressable
+          style={[
+            styles.homePlanActionButton,
+            action.status === 'saved' && styles.homePlanActionButtonSaved,
+            action.status === 'saving' && styles.homePlanActionButtonDisabled,
+          ]}
+          disabled={action.status === 'saving' || action.status === 'saved'}
+          onPress={onConfirm}
+        >
+          {action.status === 'saving' ? (
+            <ActivityIndicator color={OBSIDIAN} size="small" />
+          ) : (
+            <Text style={styles.homePlanActionButtonText}>
+              {action.status === 'saved' ? 'Inserted' : action.buttonLabel || defaultButtonLabel}
+            </Text>
+          )}
+        </Pressable>
+      </View>
+    );
+  }
+
+  const safeIndex = Math.min(selectedDayIndex, days.length - 1);
+  const activeDay = days[safeIndex] || days[0];
+  const duration = activeDay.expected_duration || preview.expected_duration || action.targetMinutes || 90;
+
+  return (
+    <View style={styles.previewContainer}>
+      <View style={styles.previewHeader}>
+        <View style={styles.previewBadgeRow}>
+          <View style={styles.previewPlanBadge}>
+            <Ionicons name="barbell-outline" size={13} color={GOLD} />
+            <Text style={styles.previewPlanBadgeText}>
+              {`${days.length}-DAY ROUTINE PREVIEW`}
+            </Text>
+          </View>
+          <View style={styles.previewDurationBadge}>
+            <Ionicons name="time-outline" size={12} color={IVORY} />
+            <Text style={styles.previewDurationText}>{duration} min / session</Text>
+          </View>
+        </View>
+
+        <Text style={styles.previewTitle}>
+          {preview.plan_name || action.summary || `${days.length}-Day Workout Plan`}
+        </Text>
+
+        {preview.equipment && preview.equipment.length > 0 && (
+          <View style={styles.previewEquipmentRow}>
+            <Text style={styles.previewEquipmentLabel}>Equipment:</Text>
+            {preview.equipment.map((eq, i) => (
+              <View key={i} style={styles.previewEquipmentPill}>
+                <Text style={styles.previewEquipmentPillText}>{eq}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+
+      {preview.uncertainties && preview.uncertainties.length > 0 && (
+        <View style={styles.previewWarningBox}>
+          <Ionicons name="alert-circle-outline" size={16} color="#E0A82E" />
+          <View style={{ flex: 1 }}>
+            {preview.uncertainties.map((u, i) => (
+              <Text key={i} style={styles.previewWarningText}>{u}</Text>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* Day Selector Tabs */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.previewDayTabs}>
+        {days.map((day, idx) => {
+          const isSelected = idx === safeIndex;
+          return (
+            <Pressable
+              key={idx}
+              onPress={() => setSelectedDayIndex(idx)}
+              style={[
+                styles.previewDayTab,
+                isSelected && styles.previewDayTabActive,
+              ]}
+            >
+              <Text style={[styles.previewDayTabText, isSelected && styles.previewDayTabTextActive]}>
+                {`Day ${idx + 1}`}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+
+      {/* Active Day Detail */}
+      <View style={styles.previewDayContent}>
+        <View style={styles.previewDayHeader}>
+          <Text style={styles.previewDayName}>{activeDay.day_name}</Text>
+          <Text style={styles.previewDayMeta}>
+            {activeDay.exercises.length} exercises • {activeDay.expected_duration || duration} min
+          </Text>
+        </View>
+
+        <View style={styles.previewExercisesList}>
+          {activeDay.exercises.map((ex, exIdx) => (
+            <View key={exIdx} style={styles.previewExerciseCard}>
+              <View style={styles.previewExerciseTopRow}>
+                <Text style={styles.previewExerciseName}>{ex.exercise_name}</Text>
+                {ex.type ? (
+                  <View style={styles.previewExerciseTypePill}>
+                    <Text style={styles.previewExerciseTypePillText}>{ex.type}</Text>
+                  </View>
+                ) : null}
+              </View>
+
+              <View style={styles.previewExerciseMetrics}>
+                {ex.weight ? (
+                  <View style={styles.previewMetricTagWeight}>
+                    <Ionicons name="barbell-outline" size={12} color={GOLD} />
+                    <Text style={styles.previewMetricTagWeightText}>{ex.weight}</Text>
+                  </View>
+                ) : null}
+
+                <View style={styles.previewMetricTag}>
+                  <Text style={styles.previewMetricTagText}>
+                    {ex.sets} × {ex.reps}
+                  </Text>
+                </View>
+
+                {ex.rest ? (
+                  <View style={styles.previewMetricTag}>
+                    <Ionicons name="timer-outline" size={11} color="rgba(247,243,238,0.7)" />
+                    <Text style={styles.previewMetricTagText}>{ex.rest}</Text>
+                  </View>
+                ) : null}
+              </View>
+
+              {ex.notes ? (
+                <View style={styles.previewExerciseNotesRow}>
+                  <Ionicons name="information-circle-outline" size={12} color="rgba(247,243,238,0.5)" />
+                  <Text style={styles.previewExerciseNotesText}>{ex.notes}</Text>
+                </View>
+              ) : null}
+            </View>
+          ))}
+        </View>
+      </View>
+
+      {/* Confirmation Button */}
+      <Pressable
+        style={[
+          styles.homePlanActionButton,
+          action.status === 'saved' && styles.homePlanActionButtonSaved,
+          action.status === 'saving' && styles.homePlanActionButtonDisabled,
+          { marginTop: 14 },
+        ]}
+        disabled={action.status === 'saving' || action.status === 'saved'}
+        onPress={onConfirm}
+      >
+        {action.status === 'saving' ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <ActivityIndicator color={OBSIDIAN} size="small" />
+            <Text style={styles.homePlanActionButtonText}>Importing {days.length}-Day Plan…</Text>
+          </View>
+        ) : action.status === 'saved' ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Ionicons name="checkmark-circle" size={16} color={OBSIDIAN} />
+            <Text style={styles.homePlanActionButtonText}>Imported to Home Plan</Text>
+          </View>
+        ) : (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Ionicons name="cloud-download-outline" size={16} color={OBSIDIAN} />
+            <Text style={styles.homePlanActionButtonText}>
+              {action.buttonLabel || `Import ${days.length}-Day Plan to Home`}
+            </Text>
+          </View>
+        )}
+      </Pressable>
     </View>
   );
 }
@@ -521,12 +728,15 @@ export default function ClaudeCoachScreen() {
         text: assistantText,
         homePlanAction: actionForReply
           ? {
+              type: actionForReply.type,
               sourcePrompt: actionForReply.source_prompt,
               scope: actionForReply.scope,
               targetDays: actionForReply.target_days || [],
               targetMinutes: actionForReply.target_minutes ?? null,
+              dayCount: actionForReply.day_count ?? (actionForReply.preview?.days_count ?? undefined),
               summary: actionForReply.summary,
               buttonLabel: actionForReply.button_label,
+              preview: actionForReply.preview,
               status: 'ready',
             }
           : undefined,
@@ -799,37 +1009,11 @@ export default function ClaudeCoachScreen() {
                 ) : null}
 
                 {m.homePlanAction ? (
-                  <View style={styles.homePlanActionCard}>
-                    <Text style={styles.homePlanActionTitle}>
-                      {m.homePlanAction.status === 'saved'
-                        ? 'Home workout plan updated'
-                        : m.homePlanAction.summary || 'Ready to update your Home workout plan'}
-                    </Text>
-                    <Text style={styles.homePlanActionText}>
-                      {m.homePlanAction.scope === 'day'
-                        ? 'This will update the selected day in your active Home workout plan.'
-                        : 'This will replace your current Home workout plan with the plan from this chat.'}
-                    </Text>
-                    <Pressable
-                      style={[
-                        styles.homePlanActionButton,
-                        m.homePlanAction.status === 'saved' && styles.homePlanActionButtonSaved,
-                        m.homePlanAction.status === 'saving' && styles.homePlanActionButtonDisabled,
-                      ]}
-                      disabled={m.homePlanAction.status === 'saving' || m.homePlanAction.status === 'saved'}
-                      onPress={() => void handleInsertHomePlan(m.id, m.homePlanAction!)}
-                    >
-                      {m.homePlanAction.status === 'saving' ? (
-                        <ActivityIndicator color={OBSIDIAN} size="small" />
-                      ) : (
-                        <Text style={styles.homePlanActionButtonText}>
-                          {m.homePlanAction.status === 'saved'
-                            ? 'Inserted'
-                            : m.homePlanAction.buttonLabel || insertButtonLabel(conversationLanguage || currentUser?.preferred_language)}
-                        </Text>
-                      )}
-                    </Pressable>
-                  </View>
+                  <WorkoutPlanActionCard
+                    action={m.homePlanAction}
+                    onConfirm={() => void handleInsertHomePlan(m.id, m.homePlanAction!)}
+                    defaultButtonLabel={insertButtonLabel(conversationLanguage || currentUser?.preferred_language)}
+                  />
                 ) : null}
               </View>
 
@@ -1134,6 +1318,245 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     fontWeight: '800',
     color: OBSIDIAN,
+  },
+  previewContainer: {
+    marginTop: 12,
+    backgroundColor: '#121214',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(201, 148, 58, 0.35)',
+  },
+  previewHeader: {
+    marginBottom: 10,
+  },
+  previewBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  previewPlanBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(201, 148, 58, 0.15)',
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+  previewPlanBadgeText: {
+    fontFamily: MONO,
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: GOLD,
+    letterSpacing: 0.5,
+  },
+  previewDurationBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(247, 243, 238, 0.08)',
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+  previewDurationText: {
+    fontFamily: MONO,
+    fontSize: 11,
+    fontWeight: '600',
+    color: IVORY,
+  },
+  previewTitle: {
+    fontFamily: DMSANS,
+    fontSize: 15.5,
+    fontWeight: '800',
+    color: IVORY,
+    marginTop: 4,
+  },
+  previewEquipmentRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+  },
+  previewEquipmentLabel: {
+    fontFamily: INTER,
+    fontSize: 11.5,
+    color: 'rgba(247, 243, 238, 0.5)',
+  },
+  previewEquipmentPill: {
+    backgroundColor: 'rgba(247, 243, 238, 0.06)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  previewEquipmentPillText: {
+    fontFamily: INTER,
+    fontSize: 11,
+    color: 'rgba(247, 243, 238, 0.8)',
+  },
+  previewWarningBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: 'rgba(224, 168, 46, 0.12)',
+    borderColor: 'rgba(224, 168, 46, 0.4)',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 8,
+    marginBottom: 10,
+  },
+  previewWarningText: {
+    fontFamily: INTER,
+    fontSize: 11.5,
+    lineHeight: 16,
+    color: '#E0A82E',
+  },
+  previewDayTabsScroll: {
+    marginBottom: 10,
+  },
+  previewDayTabs: {
+    flexDirection: 'row',
+    gap: 6,
+    paddingVertical: 2,
+    marginBottom: 8,
+  },
+  previewDayTab: {
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: 'rgba(247, 243, 238, 0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(247, 243, 238, 0.1)',
+  },
+  previewDayTabActive: {
+    backgroundColor: GOLD,
+    borderColor: GOLD,
+  },
+  previewDayTabText: {
+    fontFamily: DMSANS,
+    fontSize: 12,
+    fontWeight: '700',
+    color: 'rgba(247, 243, 238, 0.7)',
+  },
+  previewDayTabTextActive: {
+    color: OBSIDIAN,
+    fontWeight: '800',
+  },
+  previewDayContent: {
+    backgroundColor: 'rgba(247, 243, 238, 0.03)',
+    borderRadius: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(247, 243, 238, 0.06)',
+  },
+  previewDayHeader: {
+    marginBottom: 8,
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(247, 243, 238, 0.06)',
+  },
+  previewDayName: {
+    fontFamily: DMSANS,
+    fontSize: 13.5,
+    fontWeight: '800',
+    color: IVORY,
+  },
+  previewDayMeta: {
+    fontFamily: INTER,
+    fontSize: 11.5,
+    color: 'rgba(247, 243, 238, 0.5)',
+    marginTop: 2,
+  },
+  previewExercisesList: {
+    gap: 6,
+  },
+  previewExerciseCard: {
+    backgroundColor: 'rgba(247, 243, 238, 0.04)',
+    borderRadius: 8,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(247, 243, 238, 0.05)',
+  },
+  previewExerciseTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  previewExerciseName: {
+    fontFamily: DMSANS,
+    fontSize: 13,
+    fontWeight: '700',
+    color: IVORY,
+    flex: 1,
+  },
+  previewExerciseTypePill: {
+    backgroundColor: 'rgba(201, 148, 58, 0.12)',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  previewExerciseTypePillText: {
+    fontFamily: MONO,
+    fontSize: 9.5,
+    color: GOLD,
+    fontWeight: '600',
+  },
+  previewExerciseMetrics: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 6,
+  },
+  previewMetricTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(247, 243, 238, 0.06)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  previewMetricTagText: {
+    fontFamily: MONO,
+    fontSize: 11,
+    fontWeight: '600',
+    color: 'rgba(247, 243, 238, 0.85)',
+  },
+  previewMetricTagWeight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(201, 148, 58, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(201, 148, 58, 0.3)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  previewMetricTagWeightText: {
+    fontFamily: MONO,
+    fontSize: 11,
+    fontWeight: '700',
+    color: GOLD,
+  },
+  previewExerciseNotesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+    paddingTop: 3,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(247, 243, 238, 0.04)',
+  },
+  previewExerciseNotesText: {
+    fontFamily: INTER,
+    fontSize: 10.5,
+    fontStyle: 'italic',
+    color: 'rgba(247, 243, 238, 0.5)',
   },
   contextFootnote: {
     fontFamily: MONO,
