@@ -340,7 +340,7 @@ export default function ClaudeChallengeDirectory({
               <Text style={styles.railCardCategory}>{c.c}</Text>
             </View>
 
-            <Text style={[styles.railCardName, { color: isDark ? IVORY : NAVY }]} numberOfLines={2}>
+            <Text style={[styles.railCardName, { color: isDark ? IVORY : NAVY }]} numberOfLines={1} ellipsizeMode="tail">
               {c.n}
             </Text>
             <Text style={styles.railCardPoints}>{c.p}</Text>
@@ -719,7 +719,8 @@ export default function ClaudeChallengeDirectory({
                       styles.challengeTitle,
                       { color: isDark ? IVORY : NAVY, fontSize: isSlim ? 15 : 16 },
                     ]}
-                    numberOfLines={2}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
                   >
                     {c.n}
                   </Text>

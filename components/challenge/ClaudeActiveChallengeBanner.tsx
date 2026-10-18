@@ -96,7 +96,7 @@ export default function ClaudeActiveChallengeBanner({
           <Text style={styles.pointsBadge}>{pointsText}</Text>
         </View>
 
-        <Text style={[styles.title, { color: isDark ? IVORY : NAVY }]}>{challenge.n}</Text>
+        <Text style={[styles.title, { color: isDark ? IVORY : NAVY }]} numberOfLines={1} ellipsizeMode="tail">{challenge.n}</Text>
 
         {/* Progress Bar */}
         <View
@@ -160,6 +160,8 @@ export default function ClaudeActiveChallengeBanner({
                 styles.checkTitle,
                 { color: isTodayDone ? IVORY : '#0D0D0D' },
               ]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
             >
               {completingToday ? 'Saving...' : checkTitle}
             </Text>
@@ -168,6 +170,8 @@ export default function ClaudeActiveChallengeBanner({
                 styles.checkNote,
                 { color: isTodayDone ? 'rgba(247, 243, 238, 0.7)' : '#2A2218' },
               ]}
+              numberOfLines={2}
+              ellipsizeMode="tail"
             >
               {checkNote}
             </Text>

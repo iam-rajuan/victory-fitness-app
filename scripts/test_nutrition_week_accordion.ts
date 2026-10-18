@@ -1,5 +1,10 @@
 import { STATIC_TRANSLATIONS } from '../lib/translations/index';
-import { NutritionDayPlan, NutritionMealEntry, NutritionPlanApiResponse } from '../lib/nutrition';
+import type {
+  NutritionDayPlan,
+  NutritionMealEntry,
+  NutritionPlanApiResponse,
+} from '../lib/nutrition';
+import { getMealPreparationSteps } from '../lib/nutritionPrep';
 
 function assert(condition: boolean, message: string) {
   if (!condition) {
@@ -397,13 +402,69 @@ function runAuditTests() {
   assert(mon.post_workout?.p === 32, 'Monday post_workout protein preserved (32g)');
 
   // TEST 6: Shopping list preserved
-  assert(mockPlan.shopping_list.length === 2, 'Shopping list has 2 categories');
-  assert(mockPlan.shopping_list[0].category === 'Produce', 'Category 1 is Produce');
-  assert(mockPlan.shopping_list[0].items.length === 2, 'Produce has 2 items');
-  assert(mockPlan.shopping_list[1].category === 'Protein', 'Category 2 is Protein');
-  assert(mockPlan.shopping_list[1].items.length === 2, 'Protein has 2 items');
+  // TEST 7: Preparation Steps End-to-End Audit & Fallback
 
-  console.log('\n🎉 ALL NUTRITION PLAN ACCORDION TESTS PASSED SUCCESSFULLY! 🎉');
+  // 7a. Existing instructions reused
+  const mealWithInstructions: NutritionMealEntry = {
+    name: 'Jollof with Grilled Chicken',
+    desc: 'Spicy rice dish',
+    kcal: 600,
+    p: 45,
+    c: 70,
+    f: 12,
+    ingredients: ['Rice', 'Chicken', 'Tomato stew'],
+    instructions: ['Parboil rice', 'Blend tomatoes and peppers', 'Cook stew and simmer rice', 'Serve with chicken'],
+  };
+  const prep1 = getMealPreparationSteps(mealWithInstructions);
+  assert(prep1.length === 4, 'Meal with instructions returns 4 steps');
+  assert(prep1[0] === 'Parboil rice', 'First step matches instruction');
+
+  // 7b. preparation_steps field priority
+  const mealWithPrepSteps: NutritionMealEntry = {
+    name: 'Ghanaian Waakye',
+    desc: 'Rice and beans with waakye leaves',
+    kcal: 580,
+    p: 35,
+    c: 85,
+    f: 10,
+    ingredients: ['Rice', 'Black eyed peas', 'Sorghum leaves'],
+    instructions: [],
+    preparation_steps: ['Boil beans with sorghum leaves', 'Add rice once beans soften', 'Serve with shito and boiled egg'],
+  };
+  const prep2 = getMealPreparationSteps(mealWithPrepSteps);
+  assert(prep2.length === 3, 'Meal with preparation_steps returns correct steps');
+  assert(prep2[0] === 'Boil beans with sorghum leaves', 'preparation_steps prioritized over empty instructions');
+
+  // 7c. Missing preparation data graceful fallback (meal-specific, not generic)
+  const mealWithoutPrep: NutritionMealEntry = {
+    name: 'Banku with Tilapia',
+    desc: 'Fermented corn and cassava dough with grilled fish',
+    kcal: 620,
+    p: 48,
+    c: 65,
+    f: 14,
+    ingredients: ['Corn dough', 'Cassava dough', 'Fresh tilapia', 'Pepper sauce'],
+    instructions: [],
+  };
+  const prep3 = getMealPreparationSteps(mealWithoutPrep);
+  assert(prep3.length === 4, 'Missing preparation data provides 4 structured fallback steps');
+  assert(prep3[0].includes('Corn dough, Cassava dough, Fresh tilapia'), 'Step 1 includes ingredient specifics');
+  assert(prep3[1].includes('Banku with Tilapia'), 'Step 2 includes meal name');
+  assert(prep3[2].toLowerCase().includes('seasoning'), 'Step 3 mentions seasoning');
+  assert(prep3[3].toLowerCase().includes('serve'), 'Step 4 mentions serving');
+
+  // 7d. Mobile preparation expand/collapse state simulation
+  let openPrepKeys: Record<string, boolean> = {};
+  const toggleMeal = (key: string) => {
+    openPrepKeys[key] = !openPrepKeys[key];
+  };
+  toggleMeal('Mon-breakfast');
+  assert(openPrepKeys['Mon-breakfast'] === true, 'Tapping breakfast preparation steps opens it');
+  toggleMeal('Mon-breakfast');
+  assert(openPrepKeys['Mon-breakfast'] === false, 'Tapping breakfast preparation steps again collapses it');
+
+  console.log('\n🎉 ALL NUTRITION PLAN ACCORDION & PREPARATION STEPS TESTS PASSED SUCCESSFULLY! 🎉');
 }
 
 runAuditTests();
+

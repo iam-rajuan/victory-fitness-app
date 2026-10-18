@@ -518,10 +518,10 @@ export default function MealPlanScreen() {
           <Text style={styles.weekPlanKicker}>
             {t('NUTRITION PLANNER · SIX WEEKS')}
           </Text>
-          <Text style={styles.weekPlanTitle}>
+          <Text style={styles.weekPlanTitle} numberOfLines={1} ellipsizeMode="tail">
             {t('A week of food you actually like')}
           </Text>
-          <Text style={styles.weekPlanSub}>
+          <Text style={styles.weekPlanSub} numberOfLines={2} ellipsizeMode="tail">
             {t('Six questions about the dishes you love, the cuisines you cook, and anything you cannot eat. Then a full week with preparation steps and a shopping list.')}
           </Text>
           <TouchableOpacity

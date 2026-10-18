@@ -18,6 +18,7 @@ import {
   NutritionDayPlan,
   NutritionMealEntry,
   formatStructuredNutritionSummary,
+  getMealPreparationSteps,
 } from '../../lib/nutrition';
 import { useLanguage } from '../../lib/i18n';
 import { Typography, Fonts } from '../../constants/Typography';
@@ -335,6 +336,9 @@ interface MealItemCardProps {
 }
 
 function MealItemCard({ slotLabel, meal, t }: MealItemCardProps) {
+  const [prepExpanded, setPrepExpanded] = useState(true);
+  const steps = getMealPreparationSteps(meal);
+
   return (
     <View style={styles.mealCard}>
       {/* Slot Header */}
@@ -380,11 +384,24 @@ function MealItemCard({ slotLabel, meal, t }: MealItemCardProps) {
       ) : null}
 
       {/* Preparation Steps */}
-      {meal.instructions && meal.instructions.length > 0 ? (
-        <View style={styles.detailSection}>
+      <View style={styles.detailSection}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ expanded: prepExpanded }}
+          accessibilityLabel={`${slotLabel} ${t('Preparation steps')}`}
+          onPress={() => setPrepExpanded(!prepExpanded)}
+          style={styles.detailHeadingRow}
+        >
           <Text style={styles.detailHeading}>{t('Preparation steps')}</Text>
+          <Ionicons
+            name={prepExpanded ? 'chevron-up' : 'chevron-down'}
+            size={16}
+            color={GOLD}
+          />
+        </Pressable>
+        {prepExpanded && steps.length > 0 ? (
           <View style={styles.instructionsList}>
-            {meal.instructions.map((step, idx) => (
+            {steps.map((step, idx) => (
               <View key={`step-${idx}`} style={styles.instructionRow}>
                 <View style={styles.stepBadge}>
                   <Text style={styles.stepBadgeText}>{idx + 1}</Text>
@@ -393,8 +410,8 @@ function MealItemCard({ slotLabel, meal, t }: MealItemCardProps) {
               </View>
             ))}
           </View>
-        </View>
-      ) : null}
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -633,6 +650,12 @@ const styles = StyleSheet.create({
   detailSection: {
     gap: 4,
     paddingTop: 4,
+  },
+  detailHeadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 2,
   },
   detailHeading: {
     fontFamily: Fonts.bodyMedium,

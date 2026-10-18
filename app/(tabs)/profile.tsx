@@ -543,9 +543,9 @@ export default function ProfileScreen() {
                 <Text style={styles.journalPromptKicker}>{t("TODAY'S PROMPT")}</Text>
                 <Text style={styles.journalRunningBadge}>{journalRunningText}</Text>
               </View>
-              <Text style={[styles.journalTitle, { color: colors.text }]}>{journalPrompt}</Text>
+              <Text style={[styles.journalTitle, { color: colors.text }]} numberOfLines={2} ellipsizeMode="tail">{journalPrompt}</Text>
               <View style={styles.journalBottomRow}>
-                <Text style={[styles.journalSub, { color: colors.textSecondary }]}>{t('Two minutes. Nobody else sees it.')}</Text>
+                <Text style={[styles.journalSub, { color: colors.textSecondary }]} numberOfLines={1} ellipsizeMode="tail">{t('Two minutes. Nobody else sees it.')}</Text>
                 <Text style={styles.journalWriteLink}>{t('Write ›')}</Text>
               </View>
             </TouchableOpacity>
@@ -591,8 +591,8 @@ export default function ProfileScreen() {
               onPress={() => setShowDigestModal(true)}
             >
               <View style={styles.digestTextCol}>
-                <Text style={[styles.digestTitle, { color: colors.text }]}>{t('Your week, in your own words')}</Text>
-                <Text style={[styles.digestSub, { color: colors.textSecondary }]}>{t('Monday 08:00 habit and training digest')}</Text>
+                <Text style={[styles.digestTitle, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">{t('Your week, in your own words')}</Text>
+                <Text style={[styles.digestSub, { color: colors.textSecondary }]} numberOfLines={1} ellipsizeMode="tail">{t('Monday 08:00 habit and training digest')}</Text>
               </View>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
@@ -674,8 +674,8 @@ export default function ProfileScreen() {
               activeOpacity={0.7}
               onPress={() => router.push('/profile/settings')}
             >
-              <Text style={[styles.menuTitle, { color: colors.text }]}>{t('Settings')}</Text>
-              <Text style={[styles.menuMeta, { color: colors.textMuted }]}>{t('Habits & mindset')}</Text>
+              <Text style={[styles.menuTitle, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">{t('Settings')}</Text>
+              <Text style={[styles.menuMeta, { color: colors.textMuted }]} numberOfLines={1} ellipsizeMode="tail">{t('Habits & mindset')}</Text>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
 
@@ -684,8 +684,8 @@ export default function ProfileScreen() {
               activeOpacity={0.7}
               onPress={() => router.push('/profile/settings')}
             >
-              <Text style={[styles.menuTitle, { color: colors.text }]}>{t('Appearance')}</Text>
-              <Text style={[styles.menuMeta, { fontFamily: MONO, color: GOLD }]}>
+              <Text style={[styles.menuTitle, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">{t('Appearance')}</Text>
+              <Text style={[styles.menuMeta, { fontFamily: MONO, color: GOLD }]} numberOfLines={1} ellipsizeMode="tail">
                 {isDark ? t('DARK MODE') : t('WHITE MODE')}
               </Text>
               <Text style={styles.chevron}>›</Text>
@@ -696,8 +696,8 @@ export default function ProfileScreen() {
               activeOpacity={0.7}
               onPress={() => router.push('/profile/edit')}
             >
-              <Text style={[styles.menuTitle, { color: colors.text }]}>{t('Edit profile')}</Text>
-              <Text style={[styles.menuMeta, { color: colors.textMuted }]}>{t('Name, photo, targets')}</Text>
+              <Text style={[styles.menuTitle, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">{t('Edit profile')}</Text>
+              <Text style={[styles.menuMeta, { color: colors.textMuted }]} numberOfLines={1} ellipsizeMode="tail">{t('Name, photo, targets')}</Text>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
 
@@ -706,8 +706,8 @@ export default function ProfileScreen() {
               activeOpacity={0.7}
               onPress={() => setShowNotifModal(true)}
             >
-              <Text style={[styles.menuTitle, { color: colors.text }]}>{t('Notifications')}</Text>
-              <Text style={[styles.menuMeta, { fontFamily: MONO, color: colors.textMuted }]}>{notificationMeta}</Text>
+              <Text style={[styles.menuTitle, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">{t('Notifications')}</Text>
+              <Text style={[styles.menuMeta, { fontFamily: MONO, color: colors.textMuted }]} numberOfLines={1} ellipsizeMode="tail">{notificationMeta}</Text>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
 
@@ -716,8 +716,8 @@ export default function ProfileScreen() {
               activeOpacity={0.7}
               onPress={() => setShowLanguageModal(true)}
             >
-              <Text style={[styles.menuTitle, { color: colors.text }]}>{t('Language')}</Text>
-              <Text style={[styles.menuMeta, { fontFamily: MONO, color: GOLD }]}>{languageLabel(language)}</Text>
+              <Text style={[styles.menuTitle, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">{t('Language')}</Text>
+              <Text style={[styles.menuMeta, { fontFamily: MONO, color: GOLD }]} numberOfLines={1} ellipsizeMode="tail">{languageLabel(language)}</Text>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
 
@@ -726,8 +726,8 @@ export default function ProfileScreen() {
               activeOpacity={0.7}
               onPress={() => setShowFeedbackModal(true)}
             >
-              <Text style={[styles.menuTitle, { color: colors.text }]}>{t('Give feedback')}</Text>
-              <Text style={[styles.menuMeta, { color: colors.textMuted }]}>{t('Rate the beta')}</Text>
+              <Text style={[styles.menuTitle, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">{t('Give feedback')}</Text>
+              <Text style={[styles.menuMeta, { color: colors.textMuted }]} numberOfLines={1} ellipsizeMode="tail">{t('Rate the beta')}</Text>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
 
@@ -741,8 +741,8 @@ export default function ProfileScreen() {
                 activeOpacity={0.7}
                 onPress={() => router.push('/profile/support')}
               >
-                <Text style={[styles.menuTitle, { color: colors.text }]}>{t('Help & support')}</Text>
-                <Text style={[styles.menuMeta, { color: colors.textMuted }]}>{t('Replies within a day')}</Text>
+                <Text style={[styles.menuTitle, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">{t('Help & support')}</Text>
+                <Text style={[styles.menuMeta, { color: colors.textMuted }]} numberOfLines={1} ellipsizeMode="tail">{t('Replies within a day')}</Text>
                 <Text style={styles.chevron}>›</Text>
               </TouchableOpacity>
             </RequirementAuditBoundary>
@@ -752,8 +752,8 @@ export default function ProfileScreen() {
               activeOpacity={0.7}
               onPress={() => router.push('/profile/about')}
             >
-              <Text style={[styles.menuTitle, { color: colors.text }]}>{t('About Us')}</Text>
-              <Text style={[styles.menuMeta, { color: colors.textMuted }]}>{t('Mission & coaching ethos')}</Text>
+              <Text style={[styles.menuTitle, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">{t('About Us')}</Text>
+              <Text style={[styles.menuMeta, { color: colors.textMuted }]} numberOfLines={1} ellipsizeMode="tail">{t('Mission & coaching ethos')}</Text>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
 
@@ -762,8 +762,8 @@ export default function ProfileScreen() {
               activeOpacity={0.7}
               onPress={() => router.push('/profile/terms')}
             >
-              <Text style={[styles.menuTitle, { color: colors.text }]}>{t('Terms & conditions')}</Text>
-              <Text style={[styles.menuMeta, { color: colors.textMuted }]}>{t('Usage rules & member agreement')}</Text>
+              <Text style={[styles.menuTitle, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">{t('Terms & conditions')}</Text>
+              <Text style={[styles.menuMeta, { color: colors.textMuted }]} numberOfLines={1} ellipsizeMode="tail">{t('Usage rules & member agreement')}</Text>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
 
@@ -772,8 +772,8 @@ export default function ProfileScreen() {
               activeOpacity={0.7}
               onPress={() => router.push('/profile/privacy')}
             >
-              <Text style={[styles.menuTitle, { color: colors.text }]}>{t('Privacy policy')}</Text>
-              <Text style={[styles.menuMeta, { color: colors.textMuted }]}>{t('Data protection & rights')}</Text>
+              <Text style={[styles.menuTitle, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">{t('Privacy policy')}</Text>
+              <Text style={[styles.menuMeta, { color: colors.textMuted }]} numberOfLines={1} ellipsizeMode="tail">{t('Data protection & rights')}</Text>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
           </View>
@@ -795,8 +795,8 @@ export default function ProfileScreen() {
               onPress={() => setShowApplyModal(true)}
             >
               <View style={styles.applyTextCol}>
-                <Text style={[styles.applyTitle, { color: colors.text }]}>{t('Apply for Inner Circle')}</Text>
-                <Text style={[styles.applySub, { color: colors.textSecondary }]}>
+                <Text style={[styles.applyTitle, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">{t('Apply for Inner Circle')}</Text>
+                <Text style={[styles.applySub, { color: colors.textSecondary }]} numberOfLines={2} ellipsizeMode="tail">
                   {t('Five questions, straight to Victor. Then a call to see whether it fits.')}
                 </Text>
               </View>
@@ -818,11 +818,11 @@ export default function ProfileScreen() {
         >
           <View style={styles.planHeaderRow}>
             <Text style={styles.planKicker}>{t('YOUR PLAN · {tier}', { tier })}</Text>
-            <Text style={[styles.planPrice, { color: colors.textMuted }]}>
+            <Text style={[styles.planPrice, { color: colors.textMuted }]} numberOfLines={1} ellipsizeMode="tail">
               {planPrice}
             </Text>
           </View>
-          <Text style={[styles.planSub, { color: colors.textSecondary }]}>
+          <Text style={[styles.planSub, { color: colors.textSecondary }]} numberOfLines={2} ellipsizeMode="tail">
             {planDescription}
           </Text>
           <TouchableOpacity

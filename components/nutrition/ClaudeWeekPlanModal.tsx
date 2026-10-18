@@ -14,7 +14,9 @@ import {
   createNutritionPlan,
   NutritionPlanApiResponse,
   NutritionDayPlan,
+  NutritionMealEntry,
   formatStructuredNutritionSummary,
+  getMealPreparationSteps,
 } from '../../lib/nutrition';
 import { useLanguage } from '../../lib/i18n';
 
@@ -102,11 +104,96 @@ export default function ClaudeWeekPlanModal({
   const [peopleCount, setPeopleCount] = useState('4');
   const [weeklyBudget, setWeeklyBudget] = useState('€120');
   const [generatedPlan, setGeneratedPlan] = useState<NutritionPlanApiResponse | null>(null);
+  const [openPrepMealKeys, setOpenPrepMealKeys] = useState<Record<string, boolean>>({});
   const [isBuilding, setIsBuilding] = useState(false);
   const [buildError, setBuildError] = useState('');
   const [progress, setProgress] = useState(0);
   const buildRequest = useRef<AbortController | null>(null);
   const scrollRef = useRef<ScrollView>(null);
+
+  const toggleMealPrep = (mealKey: string) => {
+    setOpenPrepMealKeys((prev) => ({
+      ...prev,
+      [mealKey]: !prev[mealKey],
+    }));
+  };
+
+  const handleToggleDayPrep = (dayKey: string, dayPlan: NutritionDayPlan) => {
+    const isCurrentlyExpanded = expandedDayKey === dayKey;
+    if (!isCurrentlyExpanded) {
+      setExpandedDayKey(dayKey);
+      setOpenPrepMealKeys((prev) => ({
+        ...prev,
+        [`${dayKey}-breakfast`]: true,
+        [`${dayKey}-lunch`]: true,
+        [`${dayKey}-dinner`]: true,
+        [`${dayKey}-pre_workout`]: true,
+        [`${dayKey}-post_workout`]: true,
+      }));
+    } else {
+      const anyOpen = Boolean(
+        openPrepMealKeys[`${dayKey}-breakfast`] ||
+        openPrepMealKeys[`${dayKey}-lunch`] ||
+        openPrepMealKeys[`${dayKey}-dinner`] ||
+        openPrepMealKeys[`${dayKey}-pre_workout`] ||
+        openPrepMealKeys[`${dayKey}-post_workout`]
+      );
+      setOpenPrepMealKeys((prev) => ({
+        ...prev,
+        [`${dayKey}-breakfast`]: !anyOpen,
+        [`${dayKey}-lunch`]: !anyOpen,
+        [`${dayKey}-dinner`]: !anyOpen,
+        [`${dayKey}-pre_workout`]: !anyOpen,
+        [`${dayKey}-post_workout`]: !anyOpen,
+      }));
+    }
+  };
+
+  const renderModalMealCard = (
+    slotKey: string,
+    slotLabel: string,
+    meal: NutritionMealEntry | undefined | null,
+    dayKey: string
+  ) => {
+    if (!meal) return null;
+    const mealKey = `${dayKey}-${slotKey}`;
+    const isPrepOpen = Boolean(openPrepMealKeys[mealKey]);
+    const steps = getMealPreparationSteps(meal);
+
+    return (
+      <View style={styles.modalMealCard} key={mealKey}>
+        <Text style={styles.modalMealKicker}>{slotLabel.toUpperCase()}</Text>
+        <Text style={styles.modalMealName} numberOfLines={1} ellipsizeMode="tail">
+          {meal.name}
+        </Text>
+        <Text style={styles.modalMealMacros}>
+          {meal.kcal} kcal · {meal.p}g P · {meal.c}g C · {meal.f}g F
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${slotLabel} ${t('Preparation steps')}`}
+          onPress={() => toggleMealPrep(mealKey)}
+          style={styles.modalMealPrepBtn}
+        >
+          <Text style={styles.modalMealPrepBtnText}>
+            {t('Preparation steps')} {isPrepOpen ? '▴' : '›'}
+          </Text>
+        </Pressable>
+        {isPrepOpen ? (
+          <View style={styles.modalInstructionsList}>
+            {steps.map((step, idx) => (
+              <View key={`step-${idx}`} style={styles.modalInstructionRow}>
+                <View style={styles.modalStepBadge}>
+                  <Text style={styles.modalStepBadgeText}>{idx + 1}</Text>
+                </View>
+                <Text style={styles.modalInstructionText}>{step}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+      </View>
+    );
+  };
   const cancelBuild = () => {
     buildRequest.current?.abort();
     buildRequest.current = null;
@@ -469,75 +556,57 @@ export default function ClaudeWeekPlanModal({
 
                       {isExpanded ? (
                         <View style={styles.expandedDayContent}>
-                          {d.breakfast ? (
-                            <View style={styles.modalMealCard}>
-                              <Text style={styles.modalMealKicker}>{t('Breakfast').toUpperCase()}</Text>
-                              <Text style={styles.modalMealName}>{d.breakfast.name}</Text>
-                              <Text style={styles.modalMealMacros}>
-                                {d.breakfast.kcal} kcal · {d.breakfast.p}g P · {d.breakfast.c}g C · {d.breakfast.f}g F
+                          {/* Day-level prep action commented out - each meal card below has its own dedicated preparation steps toggle
+                          <View style={styles.dayActionRow}>
+                            <Pressable
+                              accessibilityRole="button"
+                              accessibilityLabel={t('Preparation steps')}
+                              onPress={() => handleToggleDayPrep(d.day, d)}
+                              style={styles.prepLinkButton}
+                            >
+                              <Text style={styles.prepLink}>
+                                {t('Preparation steps')}{' '}
+                                {Boolean(
+                                  openPrepMealKeys[`${d.day}-breakfast`] ||
+                                  openPrepMealKeys[`${d.day}-lunch`] ||
+                                  openPrepMealKeys[`${d.day}-dinner`]
+                                )
+                                  ? '▴'
+                                  : '›'}
                               </Text>
-                              {d.breakfast.instructions && d.breakfast.instructions.length > 0 ? (
-                                <Text style={styles.modalMealPrep}>Prep: {d.breakfast.instructions.join(' ')}</Text>
-                              ) : null}
-                            </View>
-                          ) : null}
-                          {d.lunch ? (
-                            <View style={styles.modalMealCard}>
-                              <Text style={styles.modalMealKicker}>{t('Lunch').toUpperCase()}</Text>
-                              <Text style={styles.modalMealName}>{d.lunch.name}</Text>
-                              <Text style={styles.modalMealMacros}>
-                                {d.lunch.kcal} kcal · {d.lunch.p}g P · {d.lunch.c}g C · {d.lunch.f}g F
-                              </Text>
-                              {d.lunch.instructions && d.lunch.instructions.length > 0 ? (
-                                <Text style={styles.modalMealPrep}>Prep: {d.lunch.instructions.join(' ')}</Text>
-                              ) : null}
-                            </View>
-                          ) : null}
-                          {d.pre_workout ? (
-                            <View style={styles.modalMealCard}>
-                              <Text style={styles.modalMealKicker}>{t('Pre-workout snack').toUpperCase()}</Text>
-                              <Text style={styles.modalMealName}>{d.pre_workout.name}</Text>
-                              <Text style={styles.modalMealMacros}>
-                                {d.pre_workout.kcal} kcal · {d.pre_workout.p}g P · {d.pre_workout.c}g C · {d.pre_workout.f}g F
-                              </Text>
-                              {d.pre_workout.instructions && d.pre_workout.instructions.length > 0 ? (
-                                <Text style={styles.modalMealPrep}>Prep: {d.pre_workout.instructions.join(' ')}</Text>
-                              ) : null}
-                            </View>
-                          ) : null}
-                          {d.post_workout ? (
-                            <View style={styles.modalMealCard}>
-                              <Text style={styles.modalMealKicker}>{t('Post-workout snack').toUpperCase()}</Text>
-                              <Text style={styles.modalMealName}>{d.post_workout.name}</Text>
-                              <Text style={styles.modalMealMacros}>
-                                {d.post_workout.kcal} kcal · {d.post_workout.p}g P · {d.post_workout.c}g C · {d.post_workout.f}g F
-                              </Text>
-                              {d.post_workout.instructions && d.post_workout.instructions.length > 0 ? (
-                                <Text style={styles.modalMealPrep}>Prep: {d.post_workout.instructions.join(' ')}</Text>
-                              ) : null}
-                            </View>
-                          ) : null}
-                          {d.dinner ? (
-                            <View style={styles.modalMealCard}>
-                              <Text style={styles.modalMealKicker}>{t('Dinner').toUpperCase()}</Text>
-                              <Text style={styles.modalMealName}>{d.dinner.name}</Text>
-                              <Text style={styles.modalMealMacros}>
-                                {d.dinner.kcal} kcal · {d.dinner.p}g P · {d.dinner.c}g C · {d.dinner.f}g F
-                              </Text>
-                              {d.dinner.instructions && d.dinner.instructions.length > 0 ? (
-                                <Text style={styles.modalMealPrep}>Prep: {d.dinner.instructions.join(' ')}</Text>
-                              ) : null}
-                            </View>
-                          ) : null}
+                            </Pressable>
+                            <Text style={styles.prepTime}>{`${Math.max(
+                              15,
+                              Math.min(45, (d.breakfast?.instructions?.length || 1) * 5 + 20)
+                            )} min total`}</Text>
+                          </View>
+                          */}
+                          {renderModalMealCard('breakfast', t('Breakfast'), d.breakfast, d.day)}
+                          {renderModalMealCard('lunch', t('Lunch'), d.lunch, d.day)}
+                          {renderModalMealCard('pre_workout', t('Pre-workout snack'), d.pre_workout, d.day)}
+                          {renderModalMealCard('post_workout', t('Post-workout snack'), d.post_workout, d.day)}
+                          {renderModalMealCard('dinner', t('Dinner'), d.dinner, d.day)}
                         </View>
                       ) : (
-                        <Pressable onPress={() => setExpandedDayKey(d.day)}>
-                          <Text style={styles.dayMeals}>{mealNamesForDay(d)}</Text>
+                        <View>
+                          <Pressable onPress={() => setExpandedDayKey(d.day)}>
+                            <Text style={styles.dayMeals}>{mealNamesForDay(d)}</Text>
+                          </Pressable>
                           <View style={styles.dayActionRow}>
-                            <Text style={styles.prepLink}>{t('Preparation steps')} ›</Text>
-                            <Text style={styles.prepTime}>{`${Math.max(15, Math.min(45, (d.breakfast?.instructions?.length || 1) * 5 + 20))} min total`}</Text>
+                            <Pressable
+                              accessibilityRole="button"
+                              accessibilityLabel={t('Preparation steps')}
+                              onPress={() => handleToggleDayPrep(d.day, d)}
+                              style={styles.prepLinkButton}
+                            >
+                              <Text style={styles.prepLink}>{t('Preparation steps')} ›</Text>
+                            </Pressable>
+                            <Text style={styles.prepTime}>{`${Math.max(
+                              15,
+                              Math.min(45, (d.breakfast?.instructions?.length || 1) * 5 + 20)
+                            )} min total`}</Text>
                           </View>
-                        </Pressable>
+                        </View>
                       )}
                     </View>
                   );
@@ -873,6 +942,58 @@ const styles = StyleSheet.create({
     fontFamily: MONO,
     fontSize: 11.5,
     color: GOLD,
+  },
+  prepLinkButton: {
+    paddingVertical: 2,
+    paddingRight: 6,
+  },
+  modalMealPrepBtn: {
+    alignSelf: 'flex-start',
+    marginTop: 4,
+    paddingVertical: 4,
+    paddingRight: 8,
+  },
+  modalMealPrepBtnText: {
+    fontFamily: DMSANS,
+    fontSize: 12,
+    fontWeight: '700',
+    color: GOLD,
+  },
+  modalInstructionsList: {
+    marginTop: 8,
+    gap: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(247, 243, 238, 0.08)',
+  },
+  modalInstructionRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  modalStepBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(201, 148, 58, 0.15)',
+    borderWidth: 1,
+    borderColor: GOLD,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  modalStepBadgeText: {
+    fontFamily: DMSANS,
+    fontSize: 11,
+    fontWeight: '700',
+    color: GOLD,
+  },
+  modalInstructionText: {
+    flex: 1,
+    fontFamily: INTER,
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: 'rgba(247, 243, 238, 0.85)',
   },
   modalMealPrep: {
     fontFamily: INTER,

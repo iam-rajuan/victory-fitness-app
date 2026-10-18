@@ -81,12 +81,14 @@ export default function ClaudeAlsoTodayCard({
           )}
 
           <View style={styles.textCol}>
-            <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]}>{duoTitle}</Text>
+            <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]} numberOfLines={1} ellipsizeMode="tail">{duoTitle}</Text>
             <Text
               style={[
                 styles.itemSub,
                 { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
               ]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
             >
               {duoNote}
             </Text>
@@ -108,7 +110,7 @@ export default function ClaudeAlsoTodayCard({
             <View style={[styles.dot, journalWrittenToday ? styles.dotGreen : styles.dotCopperRing]} />
 
             <View style={styles.textCol}>
-              <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]}>
+              <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]} numberOfLines={1} ellipsizeMode="tail">
                 {journalWrittenToday ? t('Done today · tap to read') : t('Daily Journal')}
               </Text>
               <Text
@@ -116,6 +118,8 @@ export default function ClaudeAlsoTodayCard({
                   styles.itemSub,
                   { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
                 ]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
               >
                 {t('Write one line before bed')}
               </Text>
@@ -137,7 +141,7 @@ export default function ClaudeAlsoTodayCard({
           }}
         >
           <View style={styles.textCol}>
-            <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]}>
+            <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]} numberOfLines={1} ellipsizeMode="tail">
               {t('{done} of {target} sessions done', { done: sessionsDoneThisWeek, target: sessionsTargetThisWeek })}
             </Text>
             <Text
@@ -145,6 +149,8 @@ export default function ClaudeAlsoTodayCard({
                 styles.itemSub,
                 { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
               ]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
             >
               {t('Weekly target')}
             </Text>

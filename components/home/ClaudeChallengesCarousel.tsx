@@ -241,7 +241,7 @@ export default function ClaudeChallengesCarousel({
             onPress={() => handleCardPress(c)}
           >
             <View style={styles.cardTopRow}>
-              <Text style={[styles.challengeName, { color: isDark ? IVORY : NAVY }]}>{canonicalizeChallengeTitle(c.n)}</Text>
+              <Text style={[styles.challengeName, { color: isDark ? IVORY : NAVY }]} numberOfLines={1} ellipsizeMode="tail">{canonicalizeChallengeTitle(c.n)}</Text>
               <Text style={styles.rankBadge}>{t(c.rank)}</Text>
             </View>
 
@@ -250,6 +250,8 @@ export default function ClaudeChallengesCarousel({
                 styles.dayProgressText,
                 { color: isDark ? 'rgba(247, 243, 238, 0.6)' : 'rgba(13, 43, 69, 0.55)' },
               ]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
             >
               {t(c.d)}
             </Text>
@@ -266,7 +268,7 @@ export default function ClaudeChallengesCarousel({
               <View style={[styles.progressFill, { width: `${Math.min(100, Math.max(0, c.pct))}%` }]} />
             </View>
 
-            <Text style={[styles.noteText, { color: isDark ? GOLD : '#B5651D' }]}>{t(c.note)}</Text>
+            <Text style={[styles.noteText, { color: isDark ? GOLD : '#B5651D' }]} numberOfLines={1} ellipsizeMode="tail">{t(c.note)}</Text>
           </Pressable>
         ))}
       </ScrollView>

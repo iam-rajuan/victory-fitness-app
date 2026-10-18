@@ -133,8 +133,8 @@ export default function ClaudeHabitsCard({
           activeOpacity={0.85}
           onPress={onUpgrade}
         >
-          <Text style={[styles.upgradeTeaserTitle, { color: colors.text }]}>{t('Identity statement')}</Text>
-          <Text style={[styles.upgradeTeaserSub, { color: colors.textSecondary }]}>
+          <Text style={[styles.upgradeTeaserTitle, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">{t('Identity statement')}</Text>
+          <Text style={[styles.upgradeTeaserSub, { color: colors.textSecondary }]} numberOfLines={2} ellipsizeMode="tail">
             {t('The personal habit field arrives with Gold. Your partner and network count stay on Silver.')}
           </Text>
           <Text style={styles.upgradeLink}>{t('See what Gold adds ›')}</Text>
@@ -171,7 +171,7 @@ export default function ClaudeHabitsCard({
         ]}
       >
         <Text style={[styles.fieldKicker, { color: isDark ? GOLD : '#B5651D' }]}>{t("WHO I'M BECOMING")}</Text>
-        <Text style={[styles.identityStatement, { color: isDark ? IVORY : NAVY }]}>{currentIdentity}</Text>
+        <Text style={[styles.identityStatement, { color: isDark ? IVORY : NAVY }]} numberOfLines={2} ellipsizeMode="tail">{currentIdentity}</Text>
       </View>
 
       {/* ACCOUNTABILITY DUO Card */}
@@ -193,12 +193,14 @@ export default function ClaudeHabitsCard({
         <TouchableOpacity style={styles.itemRow} activeOpacity={0.7} onPress={onOpenDuo}>
           <View style={styles.dotGreen} />
           <View style={styles.itemTextCol}>
-            <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]}>{partnerTitle}</Text>
+            <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]} numberOfLines={1} ellipsizeMode="tail">{partnerTitle}</Text>
             <Text
               style={[
                 styles.itemSub,
                 { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
               ]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
             >
               {partnerNote}
             </Text>

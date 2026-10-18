@@ -11,8 +11,11 @@ export type NutritionMealEntry = {
   f: number;
   ingredients: string[];
   instructions: string[];
+  preparation_steps?: string[];
   timing?: string | null;
 };
+
+export { getMealPreparationSteps } from './nutritionPrep';
 
 export type NutritionDayPlan = {
   day: string;

@@ -36,8 +36,8 @@ export default function ClaudeMealAnalysisCard({
 
           <View style={styles.textCol}>
             <Text style={styles.kicker}>{t('MEAL ANALYSIS')}</Text>
-            <Text style={styles.title}>{t('Photograph it instead of typing it')}</Text>
-            <Text style={styles.sub}>
+            <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">{t('Photograph it instead of typing it')}</Text>
+            <Text style={styles.sub} numberOfLines={2} ellipsizeMode="tail">
               {t('Point your camera at the plate, or upload a photo. You get protein, carbs, fat and calories back — and one sentence on what to do about it.')}
             </Text>
           </View>
