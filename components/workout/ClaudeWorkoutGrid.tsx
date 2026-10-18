@@ -146,7 +146,7 @@ export default function ClaudeWorkoutGrid({
             </View>
 
             <Text style={[styles.workoutName, { color: colors.text }]}>{w.name}</Text>
-            <Text style={[styles.workoutMeta, { color: colors.textMuted }]}>{w.meta}</Text>
+            {/* <Text style={[styles.workoutMeta, { color: colors.textMuted }]}>{w.meta}</Text> */}
           </Pressable>
         ))}
       </View>

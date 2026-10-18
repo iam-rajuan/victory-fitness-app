@@ -239,18 +239,18 @@ export default function TabsLayout() {
           options={{
             tabBarIcon: ({ color, focused }) => (
               <View style={focused ? [styles.activeTab, { padding: activeTabPadding }] : undefined}>
-                <View
-                  style={[
-                    styles.profileBadge,
-                    {
-                      width: profileBadgeSize,
-                      height: profileBadgeSize,
-                      borderRadius: profileBadgeSize / 2,
-                    },
-                  ]}
-                >
-                  {profileImage && !profileImageFailed ? (
-                    Platform.OS === 'web' ? (
+                {profileImage && !profileImageFailed ? (
+                  <View
+                    style={[
+                      styles.profileAvatarContainer,
+                      {
+                        width: profileBadgeSize,
+                        height: profileBadgeSize,
+                        borderRadius: profileBadgeSize / 2,
+                      },
+                    ]}
+                  >
+                    {Platform.OS === 'web' ? (
                       React.createElement('img', {
                         src: profileImage,
                         alt: 'Profile',
@@ -260,11 +260,11 @@ export default function TabsLayout() {
                       })
                     ) : (
                       <Image source={{ uri: profileImage }} style={styles.profileAvatar} onError={() => setProfileImageFailed(true)} />
-                    )
-                  ) : (
-                    <Ionicons name={focused ? 'person' : 'person-outline'} size={tabIconSize} color={color} />
-                  )}
-                </View>
+                    )}
+                  </View>
+                ) : (
+                  <Ionicons name={focused ? 'person' : 'person-outline'} size={tabIconSize} color={color} />
+                )}
               </View>
             ),
           }}
@@ -303,9 +303,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(201, 148, 58, 0.16)',
     borderRadius: 16,
   },
-  profileBadge: {
-    borderWidth: 1.5,
-    borderColor: Colors.copper,
+  profileAvatarContainer: {
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
