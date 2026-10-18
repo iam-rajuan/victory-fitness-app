@@ -2375,6 +2375,7 @@ export async function streamCoachVictorMessage(
 
 export async function applyCoachWorkoutPlanAction(payload: {
   source_prompt: string;
+  generated_reply?: string;
   scope: string;
   target_days?: string[];
   target_minutes?: number | null;

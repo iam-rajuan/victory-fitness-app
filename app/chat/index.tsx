@@ -29,6 +29,7 @@ import { saveLatestStrengthWorkoutPlan } from '../../lib/workout-plans';
 import { normalizeSubscriptionTier } from '../../lib/access';
 import { pushRoute, goBackOrReplace } from '../../lib/navigation';
 import { useLanguage } from '../../lib/i18n';
+import { VictorThinkingIndicator } from '../../components/chat/VictorThinkingIndicator';
 
 interface ChatMessage {
   id: string;
@@ -510,10 +511,14 @@ export default function ClaudeCoachScreen() {
   const [inputText, setInputText] = useState('');
   const [contentHeight, setContentHeight] = useState(38);
   const [sending, setSending] = useState(false);
+  const [streamingText, setStreamingText] = useState('');
   const [conversationLanguage, setConversationLanguage] = useState<string | null>(null);
   const [insertingPlanMessageId, setInsertingPlanMessageId] = useState<string | null>(null);
   const autoPromptHandledRef = useRef(false);
   const scrollViewRef = useRef<ScrollView>(null);
+  const activeStreamCancelRef = useRef<(() => void) | null>(null);
+  const activeStreamResolveRef = useRef<(() => void) | null>(null);
+  const activeRequestRef = useRef<{ cancelled: boolean } | null>(null);
 
   // Auto-reset content height when input is cleared
   useEffect(() => {
@@ -672,6 +677,8 @@ export default function ClaudeCoachScreen() {
   ) => {
     const text = textToSend.trim();
     if (!text || sending) return;
+    const requestState = { cancelled: false };
+    activeRequestRef.current = requestState;
     const requestedLanguage = detectLanguageOverride(text);
     const nextLanguage = requestedLanguage || conversationLanguage || currentUser?.preferred_language || undefined;
     const backendMessage = text;
@@ -688,6 +695,7 @@ export default function ClaudeCoachScreen() {
     setMessages((prev) => [...prev, userMsg]);
     setInputText('');
     setSending(true);
+    setStreamingText('');
 
     setTimeout(() => {
       scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -698,24 +706,43 @@ export default function ClaudeCoachScreen() {
       let assistantText = '';
       let planAction: CoachWorkoutPlanAction | null = null;
       await new Promise<void>(async (resolve) => {
-        await streamCoachVictorMessage(
+        activeStreamResolveRef.current = resolve;
+        const cancelStream = await streamCoachVictorMessage(
           backendMessage,
           (chunk) => {
+            if (requestState.cancelled) return;
             assistantText += chunk;
+            setStreamingText(assistantText);
+            scrollViewRef.current?.scrollToEnd({ animated: false });
           },
           (fullReply, _threadId, action) => {
+            if (requestState.cancelled) {
+              resolve();
+              return;
+            }
             assistantText = fullReply || assistantText;
             planAction = action || null;
             resolve();
           },
           (err) => {
-            console.warn('Coach stream error:', err);
+            if (!requestState.cancelled) {
+              console.warn('Coach stream error:', err);
+            }
             resolve();
-          }
-          ,
+          },
           { languageOverride: nextLanguage }
         );
+        if (requestState.cancelled) {
+          cancelStream();
+          resolve();
+          return;
+        }
+        if (activeRequestRef.current === requestState) {
+          activeStreamCancelRef.current = cancelStream;
+        }
       });
+
+      if (requestState.cancelled) return;
 
       if (!assistantText) {
         assistantText = `I hear you, ${currentUser?.name ? currentUser.name.split(' ')[0] : 'friend'}. Based on your target of ${currentUser?.daily_protein_target || 112} g protein and your training consistency, let's keep showing up. How does that sound?`;
@@ -765,10 +792,16 @@ export default function ClaudeCoachScreen() {
       };
       setMessages((prev) => [...prev, fallbackReply]);
     } finally {
-      setSending(false);
-      setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+      if (activeRequestRef.current === requestState) {
+        activeRequestRef.current = null;
+        activeStreamCancelRef.current = null;
+        activeStreamResolveRef.current = null;
+        setStreamingText('');
+        setSending(false);
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      }
     }
   };
 
@@ -806,7 +839,11 @@ export default function ClaudeCoachScreen() {
     });
   };
 
-  const handleInsertHomePlan = async (messageId: string, action: NonNullable<ChatMessage['homePlanAction']>) => {
+  const handleInsertHomePlan = async (
+    messageId: string,
+    action: NonNullable<ChatMessage['homePlanAction']>,
+    generatedReply: string
+  ) => {
     if (insertingPlanMessageId) return;
     setInsertingPlanMessageId(messageId);
     setMessages((prev) =>
@@ -819,6 +856,7 @@ export default function ClaudeCoachScreen() {
     try {
       const plan = await applyCoachWorkoutPlanAction({
         source_prompt: action.sourcePrompt,
+        generated_reply: generatedReply,
         scope: action.scope || 'full_plan',
         target_days: action.targetDays || [],
         target_minutes: action.targetMinutes ?? null,
@@ -874,6 +912,19 @@ export default function ClaudeCoachScreen() {
     void handleSendText(inputText, shouldAttachPrescription ? buildPrescriptionOptionsFromParams() : undefined);
   };
 
+  const handleCancelGeneration = () => {
+    if (!sending) return;
+    if (activeRequestRef.current) {
+      activeRequestRef.current.cancelled = true;
+    }
+    activeStreamCancelRef.current?.();
+    activeStreamResolveRef.current?.();
+    activeStreamCancelRef.current = null;
+    activeStreamResolveRef.current = null;
+    setStreamingText('');
+    setSending(false);
+  };
+
   // If Silver tier, show the locked paywall teaser per prototype
   if (!hasCoach) {
     return (
@@ -921,51 +972,53 @@ export default function ClaudeCoachScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       {/* Top Bar */}
-      <View style={styles.topBar}>
-        <View>
-          <Text style={styles.coachName}>Your coach</Text>
-          <Text style={[styles.coachStatusText, isPriority && styles.statusPriority]}>
-            {coachStatus}
-          </Text>
-        </View>
-        <View style={styles.topActions}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.newChatButton,
-              pressed && styles.newChatButtonPressed,
-              (sending || historyLoading) && styles.newChatButtonDisabled,
-            ]}
-            onPress={handleClearConversation}
-            disabled={sending || historyLoading}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={t('New chat')}
-          >
-            <Ionicons name="create-outline" size={14} color={GOLD} />
-            <Text style={styles.newChatText}>{t('New chat')}</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => goBackOrReplace(router, '/(tabs)')}
-            hitSlop={10}
-            style={({ pressed }) => [styles.closeBtnPressable, pressed && { opacity: 0.6 }]}
-            accessibilityRole="button"
-            accessibilityLabel="Close"
-          >
-            <Ionicons name="close" size={22} color="rgba(247, 243, 238, 0.6)" />
-          </Pressable>
+      <View style={styles.topBarWrap}>
+        <View style={styles.topBar}>
+          <View>
+            <Text style={styles.coachName}>Your coach</Text>
+            <Text style={[styles.coachStatusText, isPriority && styles.statusPriority]}>
+              {coachStatus}
+            </Text>
+          </View>
+          <View style={styles.topActions}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.newChatButton,
+                pressed && styles.newChatButtonPressed,
+                (sending || historyLoading) && styles.newChatButtonDisabled,
+              ]}
+              onPress={handleClearConversation}
+              disabled={sending || historyLoading}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t('New chat')}
+            >
+              <Ionicons name="create-outline" size={14} color={GOLD} />
+              <Text style={styles.newChatText}>{t('New chat')}</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => goBackOrReplace(router, '/(tabs)')}
+              hitSlop={10}
+              style={({ pressed }) => [styles.closeBtnPressable, pressed && { opacity: 0.6 }]}
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+            >
+              <Ionicons name="close" size={22} color="rgba(247, 243, 238, 0.6)" />
+            </Pressable>
+          </View>
         </View>
       </View>
 
       {/* Messages Thread */}
       <ScrollView
         ref={scrollViewRef}
+        style={styles.threadScrollView}
         contentContainerStyle={styles.threadScroll}
         showsVerticalScrollIndicator={false}
       >
         {historyLoading && !messages.length ? (
-          <View style={styles.typingIndicator}>
-            <ActivityIndicator color={GOLD} size="small" />
-            <Text style={styles.typingText}>Loading your last coach chat...</Text>
+          <View style={[styles.messageWrap, styles.coachMessageWrap]}>
+            <VictorThinkingIndicator text={t('Loading previous chat…')} />
           </View>
         ) : null}
 
@@ -1011,7 +1064,7 @@ export default function ClaudeCoachScreen() {
                 {m.homePlanAction ? (
                   <WorkoutPlanActionCard
                     action={m.homePlanAction}
-                    onConfirm={() => void handleInsertHomePlan(m.id, m.homePlanAction!)}
+                    onConfirm={() => void handleInsertHomePlan(m.id, m.homePlanAction!, m.text)}
                     defaultButtonLabel={insertButtonLabel(conversationLanguage || currentUser?.preferred_language)}
                   />
                 ) : null}
@@ -1025,10 +1078,20 @@ export default function ClaudeCoachScreen() {
           );
         })}
 
-        {sending ? (
-          <View style={styles.typingIndicator}>
-            <ActivityIndicator color={GOLD} size="small" />
-            <Text style={styles.typingText}>Victor is thinking…</Text>
+        {sending && !streamingText ? (
+          <View style={[styles.messageWrap, styles.coachMessageWrap]}>
+            <VictorThinkingIndicator />
+          </View>
+        ) : null}
+
+        {sending && streamingText ? (
+          <View style={[styles.messageWrap, styles.coachMessageWrap]}>
+            <View style={[styles.bubble, styles.coachBubble]}>
+              <FormattedCoachMessage text={streamingText} />
+              <View style={styles.streamingCursorWrap}>
+                <View style={styles.streamingCursor} />
+              </View>
+            </View>
           </View>
         ) : null}
       </ScrollView>
@@ -1077,54 +1140,56 @@ export default function ClaudeCoachScreen() {
       </View>
 
       {/* Input Box */}
-      <View style={styles.inputContainer}>
-        <View style={styles.inputBox}>
-          <TextInput
-            style={[
-              styles.textInput,
-              { height: composerHeight },
-              Platform.select({
-                web: {
-                  outlineStyle: 'none',
-                  outlineWidth: 0,
-                  outlineColor: 'transparent',
-                  borderWidth: 0,
-                  borderColor: 'transparent',
-                  boxShadow: 'none',
-                  resize: 'none',
-                  overflowY: 'auto',
-                } as any,
-              }),
-            ]}
-            placeholder={t('Ask your coach anything…')}
-            placeholderTextColor="rgba(247, 243, 238, 0.45)"
-            value={inputText}
-            onChangeText={setInputText}
-            onKeyPress={handleKeyPress}
-            onContentSizeChange={(e) => {
-              const h = e.nativeEvent?.contentSize?.height;
-              if (h && h > 0) {
-                setContentHeight(h);
-              }
-            }}
-            multiline
-            blurOnSubmit={false}
-            scrollEnabled
-            textAlignVertical="top"
-          />
-          <Pressable
-            style={[styles.sendBtn, (!inputText.trim() || sending) && styles.sendBtnDisabled]}
-            disabled={!inputText.trim() || sending}
-            onPress={handleSubmitInput}
-            accessibilityRole="button"
-            accessibilityLabel={t('Send message')}
-          >
-            {sending ? (
-              <ActivityIndicator size="small" color={OBSIDIAN} />
-            ) : (
-              <View style={styles.sendArrow} />
-            )}
-          </Pressable>
+      <View style={styles.inputWrap}>
+        <View style={styles.inputContainer}>
+          <View style={styles.inputBox}>
+            <TextInput
+              style={[
+                styles.textInput,
+                { height: composerHeight },
+                Platform.select({
+                  web: {
+                    outlineStyle: 'none',
+                    outlineWidth: 0,
+                    outlineColor: 'transparent',
+                    borderWidth: 0,
+                    borderColor: 'transparent',
+                    boxShadow: 'none',
+                    resize: 'none',
+                    overflowY: 'auto',
+                  } as any,
+                }),
+              ]}
+              placeholder={t('Ask your coach anything…')}
+              placeholderTextColor="rgba(247, 243, 238, 0.45)"
+              value={inputText}
+              onChangeText={setInputText}
+              onKeyPress={handleKeyPress}
+              onContentSizeChange={(e) => {
+                const h = e.nativeEvent?.contentSize?.height;
+                if (h && h > 0) {
+                  setContentHeight(h);
+                }
+              }}
+              multiline
+              blurOnSubmit={false}
+              scrollEnabled
+              textAlignVertical="top"
+            />
+            <Pressable
+              style={[styles.sendBtn, !sending && !inputText.trim() && styles.sendBtnDisabled]}
+              disabled={!sending && !inputText.trim()}
+              onPress={sending ? handleCancelGeneration : handleSubmitInput}
+              accessibilityRole="button"
+              accessibilityLabel={sending ? t('Cancel response') : t('Send message')}
+            >
+              {sending ? (
+                <View style={styles.stopIcon} />
+              ) : (
+                <View style={styles.sendArrow} />
+              )}
+            </Pressable>
+          </View>
         </View>
       </View>
     </KeyboardAvoidingView>
@@ -1136,15 +1201,21 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: OBSIDIAN,
   },
+  topBarWrap: {
+    width: '100%',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(247, 243, 238, 0.12)',
+    alignItems: 'center',
+  },
   topBar: {
+    width: '100%',
+    maxWidth: 860,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 14,
     paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(247, 243, 238, 0.12)',
   },
   coachName: {
     fontFamily: DMSANS,
@@ -1201,11 +1272,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  threadScrollView: {
+    flex: 1,
+    width: '100%',
+  },
   threadScroll: {
     paddingHorizontal: 20,
     paddingTop: 18,
     paddingBottom: 14,
     gap: 14,
+    width: '100%',
+    maxWidth: 860,
+    alignSelf: 'center',
   },
   messageWrap: {
     width: '100%',
@@ -1566,6 +1644,18 @@ const styles = StyleSheet.create({
     marginTop: 5,
     paddingLeft: 4,
   },
+  streamingCursorWrap: {
+    marginTop: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  streamingCursor: {
+    width: 6,
+    height: 14,
+    backgroundColor: GOLD,
+    borderRadius: 2,
+    opacity: 0.85,
+  },
   typingIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1581,6 +1671,8 @@ const styles = StyleSheet.create({
   quickPromptsRow: {
     paddingVertical: 8,
     width: '100%',
+    maxWidth: 860,
+    alignSelf: 'center',
   },
   promptsScroll: {
     paddingHorizontal: 20,
@@ -1737,12 +1829,18 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     color: GOLD,
   },
+  inputWrap: {
+    width: '100%',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(247, 243, 238, 0.08)',
+    alignItems: 'center',
+  },
   inputContainer: {
+    width: '100%',
+    maxWidth: 860,
     paddingHorizontal: 20,
     paddingTop: 8,
     paddingBottom: Platform.OS === 'ios' ? 24 : 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(247, 243, 238, 0.08)',
   },
   inputBox: {
     borderWidth: 1.5,
@@ -1795,6 +1893,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 5,
     borderBottomColor: 'transparent',
     marginLeft: 2,
+  },
+  stopIcon: {
+    width: 10,
+    height: 10,
+    borderRadius: 2,
+    backgroundColor: OBSIDIAN,
   },
   // Locked styles for Silver
   lockedContainer: {
