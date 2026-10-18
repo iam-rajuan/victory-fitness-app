@@ -144,11 +144,6 @@ export default function CoachQuickPromptBar({
         </TouchableOpacity>
       </View>
 
-      {Platform.OS === 'web' && prompt.length > 0 && (
-        <Text style={styles.shortcutHint}>
-          {isMac ? '⌘+Enter' : 'Ctrl+Enter'} to send • Enter for new line
-        </Text>
-      )}
 
       {/* 5 Rotating Suggestion Chips */}
       <ScrollView
@@ -252,14 +247,6 @@ const styles = StyleSheet.create({
   },
   sendBtnDisabled: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  shortcutHint: {
-    color: 'rgba(201, 148, 58, 0.75)',
-    fontSize: 11,
-    fontFamily: Fonts.body,
-    marginTop: -6,
-    marginBottom: 10,
-    textAlign: 'center',
   },
   chipsScroll: {
     flexDirection: 'row',

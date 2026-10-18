@@ -655,6 +655,7 @@ export const en: Record<string, string> = {
   "Native phone health bridge": "Native phone health bridge",
   "Needs Permission": "Needs Permission",
   "NEW & POPULAR": "NEW & POPULAR",
+  "New chat": "New chat",
   "Next": "Next",
   "NEXT MILESTONE: 3 DAYS": "NEXT MILESTONE: 3 DAYS",
   "NEXT UP: YOUR WORKOUT": "NEXT UP: YOUR WORKOUT",

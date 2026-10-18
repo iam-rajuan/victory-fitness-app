@@ -12,6 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import {
   fetchCurrentUser,
@@ -672,8 +673,14 @@ export default function ClaudeCoachScreen() {
             <Text style={styles.coachName}>Your coach</Text>
             <Text style={styles.coachStatusText}>AVAILABLE ON GOLD</Text>
           </View>
-          <Pressable onPress={() => goBackOrReplace(router, '/(tabs)')} hitSlop={10}>
-            <Text style={styles.closeBtn}>×</Text>
+          <Pressable
+            onPress={() => goBackOrReplace(router, '/(tabs)')}
+            hitSlop={10}
+            style={({ pressed }) => [styles.closeBtnPressable, pressed && { opacity: 0.6 }]}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+          >
+            <Ionicons name="close" size={22} color="rgba(247, 243, 238, 0.6)" />
           </Pressable>
         </View>
 
@@ -713,15 +720,28 @@ export default function ClaudeCoachScreen() {
         </View>
         <View style={styles.topActions}>
           <Pressable
-            style={styles.newChatButton}
+            style={({ pressed }) => [
+              styles.newChatButton,
+              pressed && styles.newChatButtonPressed,
+              (sending || historyLoading) && styles.newChatButtonDisabled,
+            ]}
             onPress={handleClearConversation}
             disabled={sending || historyLoading}
             hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('New chat')}
           >
-            <Text style={styles.newChatText}>New</Text>
+            <Ionicons name="create-outline" size={14} color={GOLD} />
+            <Text style={styles.newChatText}>{t('New chat')}</Text>
           </Pressable>
-          <Pressable onPress={() => goBackOrReplace(router, '/(tabs)')} hitSlop={10}>
-            <Text style={styles.closeBtn}>×</Text>
+          <Pressable
+            onPress={() => goBackOrReplace(router, '/(tabs)')}
+            hitSlop={10}
+            style={({ pressed }) => [styles.closeBtnPressable, pressed && { opacity: 0.6 }]}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+          >
+            <Ionicons name="close" size={22} color="rgba(247, 243, 238, 0.6)" />
           </Pressable>
         </View>
       </View>
@@ -922,16 +942,6 @@ export default function ClaudeCoachScreen() {
             )}
           </Pressable>
         </View>
-
-        {Platform.OS === 'web' && (
-          <Text style={styles.shortcutHint}>
-            {isMac ? '⌘+Enter' : 'Ctrl+Enter'} to send • Enter for new line
-          </Text>
-        )}
-
-        <Text style={styles.disclaimer}>
-          Your coach never diagnoses, treats, or prescribes. For pain or medical questions it will tell you to see a doctor.
-        </Text>
       </View>
     </KeyboardAvoidingView>
   );
@@ -977,28 +987,35 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   newChatButton: {
-    minHeight: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 10,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(201, 148, 58, 0.45)',
+    borderColor: 'rgba(201, 148, 58, 0.40)',
     paddingHorizontal: 11,
-    backgroundColor: 'rgba(201, 148, 58, 0.08)',
+    paddingVertical: 6,
+    backgroundColor: 'rgba(201, 148, 58, 0.10)',
+    gap: 5,
+  },
+  newChatButtonPressed: {
+    backgroundColor: 'rgba(201, 148, 58, 0.22)',
+    borderColor: 'rgba(201, 148, 58, 0.65)',
+  },
+  newChatButtonDisabled: {
+    opacity: 0.4,
   },
   newChatText: {
-    fontFamily: MONO,
-    fontSize: 10.5,
-    fontWeight: '800',
-    color: GOLD,
-    textTransform: 'uppercase',
-  },
-  closeBtn: {
     fontFamily: DMSANS,
-    fontSize: 22,
-    lineHeight: 24,
-    fontWeight: '500',
-    color: 'rgba(247, 243, 238, 0.45)',
-    paddingHorizontal: 6,
+    fontSize: 12,
+    fontWeight: '700',
+    color: GOLD,
+    letterSpacing: 0.2,
+  },
+  closeBtnPressable: {
+    padding: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   threadScroll: {
     paddingHorizontal: 20,
@@ -1299,8 +1316,8 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     paddingHorizontal: 20,
-    paddingTop: 6,
-    paddingBottom: 32,
+    paddingTop: 8,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 16,
     borderTopWidth: 1,
     borderTopColor: 'rgba(247, 243, 238, 0.08)',
   },
@@ -1355,22 +1372,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 5,
     borderBottomColor: 'transparent',
     marginLeft: 2,
-  },
-  shortcutHint: {
-    fontFamily: DMSANS,
-    fontSize: 11,
-    color: 'rgba(201, 148, 58, 0.75)',
-    marginTop: 6,
-    textAlign: 'center',
-    letterSpacing: 0.3,
-  },
-  disclaimer: {
-    fontFamily: INTER,
-    fontSize: 11.5,
-    lineHeight: 16,
-    color: 'rgba(247, 243, 238, 0.38)',
-    marginTop: 6,
-    textAlign: 'center',
   },
   // Locked styles for Silver
   lockedContainer: {

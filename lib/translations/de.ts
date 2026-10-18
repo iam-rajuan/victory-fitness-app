@@ -662,6 +662,7 @@ export const de: Record<string, string> = {
   "Native phone health bridge": "Native Telefon-Gesundheitsbrücke",
   "Needs Permission": "Berechtigung erforderlich",
   "NEW & POPULAR": "NEU & BELIEBT",
+  "New chat": "Neuer Chat",
   "Next": "Weiter",
   "NEXT MILESTONE: 3 DAYS": "NÄCHSTES ZIEL: 3 TAGE",
   "NEXT UP: YOUR WORKOUT": "ALS NÄCHSTES: DEIN TRAINING",

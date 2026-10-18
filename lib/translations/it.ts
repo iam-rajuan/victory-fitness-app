@@ -16,6 +16,7 @@ export const it: Record<string, string> = {
   "Analyzing food...": "Analisi del cibo...",
   "Any": "Qualsiasi",
   "Ask your coach anything…": "Chiedi qualsiasi cosa al tuo coach…",
+  "New chat": "Nuova chat",
   "Bands": "Elastici",
   "Beginner": "Principiante",
   "Bottle": "Bottiglia",
