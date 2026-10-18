@@ -6,23 +6,71 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 
 const NAVY = '#0D2B45';
 const GOLD = '#C9943A';
 const GOLD_LIGHT = '#E5C378';
 const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
 
-const AnimatedIcon = Animated.createAnimatedComponent(Ionicons);
-
 interface VictorThinkingIndicatorProps {
   text?: string;
 }
 
-export function VictorThinkingIndicator({ text = 'Thinking…' }: VictorThinkingIndicatorProps) {
-  // Sparkle ambient pulse (scale & opacity)
-  const sparkScale = useRef(new Animated.Value(1)).current;
-  const sparkOpacity = useRef(new Animated.Value(0.7)).current;
+/**
+ * Claude-style geometric rounded starburst/asterisk.
+ * Features 3 crossing rounded rays (6 petals spaced 60° apart) with a smooth central hub,
+ * rotating continuously and breathing with organic living intelligence.
+ */
+function ClaudeStarburst({
+  spinAnim,
+  pulseAnim,
+}: {
+  spinAnim: Animated.Value;
+  pulseAnim: Animated.Value;
+}) {
+  const spin = spinAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  const scale = pulseAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.9, 1.1],
+  });
+
+  const opacity = pulseAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.82, 1],
+  });
+
+  return (
+    <Animated.View
+      style={[
+        styles.starburstContainer,
+        {
+          transform: [{ rotate: spin }, { scale }],
+          opacity,
+        },
+      ]}
+    >
+      {/* Ray 1: 0° (vertical) */}
+      <View style={[styles.starburstRay, { backgroundColor: GOLD, transform: [{ rotate: '0deg' }] }]} />
+      {/* Ray 2: 60° */}
+      <View style={[styles.starburstRay, { backgroundColor: GOLD_LIGHT, transform: [{ rotate: '60deg' }] }]} />
+      {/* Ray 3: 120° */}
+      <View style={[styles.starburstRay, { backgroundColor: GOLD, transform: [{ rotate: '120deg' }] }]} />
+      {/* Central smooth hub */}
+      <View style={styles.starburstHub} />
+    </Animated.View>
+  );
+}
+
+export function VictorThinkingIndicator({ text = 'Thinking' }: VictorThinkingIndicatorProps) {
+  // Continuous smooth 360° spin for Claude-style starburst
+  const spinAnim = useRef(new Animated.Value(0)).current;
+
+  // Breathing pulse for starburst scale and opacity
+  const pulseAnim = useRef(new Animated.Value(0)).current;
 
   // 3 kinetic wave dots
   const dot1 = useRef(new Animated.Value(0)).current;
@@ -33,41 +81,35 @@ export function VictorThinkingIndicator({ text = 'Thinking…' }: VictorThinking
   const textOpacity = useRef(new Animated.Value(0.65)).current;
 
   useEffect(() => {
-    // 1. Sparkle smooth breathing pulse
-    const sparkAnimation = Animated.loop(
+    // 1. Continuous silky 360° spin (linear 3200ms)
+    const spinLoop = Animated.loop(
+      Animated.timing(spinAnim, {
+        toValue: 1,
+        duration: 3200,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    );
+
+    // 2. Organic breathing pulse (1200ms in/out)
+    const pulseLoop = Animated.loop(
       Animated.sequence([
-        Animated.parallel([
-          Animated.timing(sparkScale, {
-            toValue: 1.15,
-            duration: 900,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(sparkOpacity, {
-            toValue: 1,
-            duration: 900,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.parallel([
-          Animated.timing(sparkScale, {
-            toValue: 0.95,
-            duration: 900,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(sparkOpacity, {
-            toValue: 0.65,
-            duration: 900,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-        ]),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1200,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0,
+          duration: 1200,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
       ])
     );
 
-    // 2. Kinetic wave animation for the 3 dots
+    // 3. Kinetic wave animation for the 3 trailing pearls
     const createDotAnim = (anim: Animated.Value, delay: number) => {
       return Animated.loop(
         Animated.sequence([
@@ -93,7 +135,7 @@ export function VictorThinkingIndicator({ text = 'Thinking…' }: VictorThinking
     const a2 = createDotAnim(dot2, 130);
     const a3 = createDotAnim(dot3, 260);
 
-    // 3. Gentle text breathing
+    // 4. Gentle text breathing
     const textBreath = Animated.loop(
       Animated.sequence([
         Animated.timing(textOpacity, {
@@ -111,39 +153,34 @@ export function VictorThinkingIndicator({ text = 'Thinking…' }: VictorThinking
       ])
     );
 
-    sparkAnimation.start();
+    spinLoop.start();
+    pulseLoop.start();
     a1.start();
     a2.start();
     a3.start();
     textBreath.start();
 
     return () => {
-      sparkAnimation.stop();
+      spinLoop.stop();
+      pulseLoop.stop();
       a1.stop();
       a2.stop();
       a3.stop();
       textBreath.stop();
     };
-  }, [dot1, dot2, dot3, sparkOpacity, sparkScale, textOpacity]);
+  }, [dot1, dot2, dot3, pulseAnim, spinAnim, textOpacity]);
+
+  // Strip trailing periods or ellipses so we don't display redundant dots before the kinetic wave pearls
+  const displayLabel = (text || 'Thinking').replace(/[.…]+$/, '');
 
   return (
     <View style={styles.bubble}>
-      {/* Precision Gold Sparkle */}
-      <Animated.View
-        style={[
-          styles.sparkWrap,
-          {
-            transform: [{ scale: sparkScale }],
-            opacity: sparkOpacity,
-          },
-        ]}
-      >
-        <AnimatedIcon name="sparkles" size={12} color={GOLD} />
-      </Animated.View>
+      {/* Claude-style rotating geometric starburst */}
+      <ClaudeStarburst spinAnim={spinAnim} pulseAnim={pulseAnim} />
 
       {/* Neat Typography */}
       <Animated.Text style={[styles.text, { opacity: textOpacity }]}>
-        {text}
+        {displayLabel}
       </Animated.Text>
 
       {/* 3 Kinetic Wave Pearls */}
@@ -180,7 +217,7 @@ const styles = StyleSheet.create({
   bubble: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
+    gap: 8,
     backgroundColor: NAVY,
     borderRadius: 14,
     borderBottomLeftRadius: 4,
@@ -190,11 +227,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     alignSelf: 'flex-start',
   },
-  sparkWrap: {
-    width: 14,
-    height: 14,
+  starburstContainer: {
+    width: 15,
+    height: 15,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  starburstRay: {
+    position: 'absolute',
+    width: 2.6,
+    height: 13.5,
+    borderRadius: 1.4,
+    top: 0.75,
+    left: 6.2,
+  },
+  starburstHub: {
+    position: 'absolute',
+    width: 4.8,
+    height: 4.8,
+    borderRadius: 2.4,
+    backgroundColor: GOLD,
+    top: 5.1,
+    left: 5.1,
   },
   text: {
     fontFamily: DMSANS,
