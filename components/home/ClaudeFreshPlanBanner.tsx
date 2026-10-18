@@ -2,6 +2,8 @@ import React from 'react';
 import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { useLanguage } from '../../lib/i18n';
 
+import { formatPlanSummaryLine } from '../workout/ClaudePlanBuildBanner';
+
 interface ClaudeFreshPlanBannerProps {
   visible: boolean;
   line: string;
@@ -24,6 +26,8 @@ export default function ClaudeFreshPlanBanner({
 
   if (!visible) return null;
 
+  const formattedLine = formatPlanSummaryLine(line);
+
   return (
     <View style={styles.container}>
       <View style={styles.card}>
@@ -35,7 +39,7 @@ export default function ClaudeFreshPlanBanner({
         {/* Text Content */}
         <View style={styles.textWrap}>
           <Text style={styles.title}>{t('Your plan is ready — six weeks')}</Text>
-          <Text style={styles.subtitle}>{t(line)}</Text>
+          <Text style={styles.subtitle} numberOfLines={2} ellipsizeMode="tail">{t(formattedLine)}</Text>
         </View>
 
         {/* Dismiss Button */}
