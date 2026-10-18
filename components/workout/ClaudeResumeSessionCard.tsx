@@ -158,19 +158,21 @@ export default function ClaudeResumeSessionCard({
           <View style={styles.textCol}>
             <Text
               style={[styles.title, { color: isDark ? IVORY : NAVY }]}
-              numberOfLines={2}
+              numberOfLines={1}
+              ellipsizeMode="tail"
             >
               {sessionTitle}
             </Text>
-            <Text
+            {/* <Text
               style={[
                 styles.line,
                 { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
               ]}
-              numberOfLines={2}
+              numberOfLines={1}
+              ellipsizeMode="tail"
             >
               {completed ? `Previously completed · ${sessionLine}` : sessionLine}
-            </Text>
+            </Text> */}
           </View>
 
           <Pressable style={styles.resumeBtn} onPress={onResume}>

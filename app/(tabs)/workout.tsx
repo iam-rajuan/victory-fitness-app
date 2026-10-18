@@ -134,6 +134,7 @@ function mapRowWorkout(workout: GridWorkoutItem, badge: string): WorkoutRowItem 
     n: workout.name,
     m: workout.meta,
     t: badge,
+    durationBadge: workout.badge,
     v: workout.vimeoId,
     videoUrl: workout.videoUrl,
     videoSource: workout.videoSource,

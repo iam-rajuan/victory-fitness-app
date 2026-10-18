@@ -42,7 +42,7 @@ export default function ClaudePlanBuildBanner({
       >
         <View style={styles.textCol}>
           <Text style={styles.kicker}>{kicker}</Text>
-          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
           <Text style={styles.note}>{note}</Text>
         </View>
         <Text style={styles.arrow}>›</Text>
