@@ -29,7 +29,7 @@ import {
   updateCurrentUserHydration,
   WorkoutLogItem,
 } from '../../lib/api';
-import { normalizeSubscriptionTier } from '../../lib/access';
+import { canAccessFeature, normalizeSubscriptionTier } from '../../lib/access';
 import { useModuleAccessGuard } from '../../lib/useModuleAccessGuard';
 import { useLanguage } from '../../lib/i18n';
 import { useTheme } from '../../context/ThemeContext';
@@ -397,8 +397,10 @@ export default function HomeScreen() {
 
   const loadHomeData = useCallback(async () => {
     try {
+      const user = await fetchCurrentUser().catch(() => null);
+      if (!user) return;
+
       const [
-        user,
         metrics,
         challengeData,
         latestNutritionPlan,
@@ -411,11 +413,10 @@ export default function HomeScreen() {
         accountabilityData,
         notifications,
       ] = await Promise.all([
-        fetchCurrentUser().catch(() => null),
         fetchCurrentUserBodyMetrics().catch(() => null),
-        fetchChallengeOverviewData({ forceRefresh: true }).catch(() => null),
-        getLatestNutritionPlan({ forceRefresh: true }).catch(() => null),
-        fetchLatestStrengthWorkoutPlan().catch(() => null),
+        canAccessFeature('challenge', user) ? fetchChallengeOverviewData({ forceRefresh: true }).catch(() => null) : Promise.resolve(null),
+        canAccessFeature('mealPlan', user) ? getLatestNutritionPlan({ forceRefresh: true }).catch(() => null) : Promise.resolve(null),
+        canAccessFeature('workoutplan', user) ? fetchLatestStrengthWorkoutPlan().catch(() => null) : Promise.resolve(null),
         fetchWorkoutLogs(1, 50, 'completed').catch(() => null),
         fetchJournalEntries().catch(() => null),
         fetchCurrentUserHydration().catch(() => null),
