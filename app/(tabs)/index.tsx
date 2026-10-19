@@ -1001,13 +1001,7 @@ export default function HomeScreen() {
             if (tier === 'SILVER') {
               pushRoute(router, '/workout-library');
             } else {
-              pushRoute(router, {
-                pathname: '/chat',
-                params: {
-                  initialPrompt: `Help me adjust my current Home workout plan. Today's session is ${workoutTitle}, around ${workoutDurationMinutes} minutes, with ${activeExercises.length || homeLibraryWorkout?.movements?.length || 0} exercises. Use my active Home plan as the starting point.`,
-                  contextNote: 'used your active Home workout plan',
-                },
-              });
+              pushRoute(router, '/chat');
             }
           }}
         />
@@ -1097,13 +1091,7 @@ export default function HomeScreen() {
         }}
         onAdjustWithCoach={() => {
           setPlanDetailVisible(false);
-          pushRoute(router, {
-            pathname: '/chat',
-            params: {
-              initialPrompt: `Help me adjust this session from my current Home workout plan: ${workoutTitle}, ${workoutDurationMinutes} minutes, ${activeExercises.length || detailExercises.length} exercises. Keep the routine compatible with my Home plan card and Start Session flow.`,
-              contextNote: 'used this session and your active Home workout plan',
-            },
-          });
+          pushRoute(router, '/chat');
         }}
       />
 

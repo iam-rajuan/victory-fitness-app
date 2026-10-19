@@ -61,6 +61,18 @@ interface ChatMessage {
   };
 }
 
+interface ChatSendOptions {
+  prescriptionTitle?: string;
+  prescriptionMeta?: string;
+  prescriptionWorkoutId?: string;
+  prescriptionWorkoutTitle?: string;
+  prescriptionVimeoId?: string;
+  prescriptionVideoUrl?: string;
+  prescriptionTag?: string;
+  prescriptionThumbnail?: string;
+  contextNote?: string;
+}
+
 const OBSIDIAN = '#0D0D0D';
 const NAVY = '#0D2B45';
 const GOLD = '#C9943A';
@@ -131,14 +143,6 @@ function planSummaryLineFromPrompt(prompt: string) {
   const minutes = lowered.match(/(\d{1,3})\s*(?:min|minute)/)?.[1];
   const kit = lowered.includes('no equipment') || lowered.includes('bodyweight') ? 'Bodyweight' : lowered.includes('dumbbell') ? 'Dumbbells' : 'Profile kit';
   return `Coach chat plan · ${days || 'your week'} · ${minutes ? `${minutes} min` : 'profile time'} · ${kit}.`;
-}
-
-function insertButtonLabel(language?: string) {
-  if (language === 'de') return 'In Home-Plan einfügen';
-  if (language === 'bn') return 'Home workout plan-এ বসান';
-  if (language === 'hi') return 'Home workout plan में डालें';
-  if (language === 'es') return 'Insertar en Home';
-  return 'insert into my workout plan';
 }
 
 function parseInlineMarkdown(text: string, baseStyle: any, keyPrefix: string) {
@@ -308,49 +312,19 @@ function FormattedCoachMessage({ text }: { text: string }) {
 function WorkoutPlanActionCard({
   action,
   onConfirm,
-  defaultButtonLabel,
 }: {
   action: NonNullable<ChatMessage['homePlanAction']>;
   onConfirm: () => void;
-  defaultButtonLabel: string;
 }) {
   const preview = action.preview;
   const days = preview?.days || [];
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
 
-  if (!preview || days.length === 0) {
-    return (
-      <View style={styles.homePlanActionCard}>
-        <Text style={styles.homePlanActionTitle}>
-          {action.status === 'saved'
-            ? 'Home workout plan updated'
-            : action.summary || 'Ready to update your Home workout plan'}
-        </Text>
-        <Text style={styles.homePlanActionText}>
-          {action.scope === 'day'
-            ? 'This will update the selected day in your active Home workout plan.'
-            : 'This will replace your current Home workout plan with the plan from this chat.'}
-        </Text>
-        <Pressable
-          style={[
-            styles.homePlanActionButton,
-            action.status === 'saved' && styles.homePlanActionButtonSaved,
-            action.status === 'saving' && styles.homePlanActionButtonDisabled,
-          ]}
-          disabled={action.status === 'saving' || action.status === 'saved'}
-          onPress={onConfirm}
-        >
-          {action.status === 'saving' ? (
-            <ActivityIndicator color={OBSIDIAN} size="small" />
-          ) : (
-            <Text style={styles.homePlanActionButtonText}>
-              {action.status === 'saved' ? 'Inserted' : action.buttonLabel || defaultButtonLabel}
-            </Text>
-          )}
-        </Pressable>
-      </View>
-    );
-  }
+  if (
+    !preview ||
+    days.length === 0 ||
+    days.some((day) => !Array.isArray(day.exercises) || day.exercises.length === 0)
+  ) return null;
 
   const safeIndex = Math.min(selectedDayIndex, days.length - 1);
   const activeDay = days[safeIndex] || days[0];
@@ -537,6 +511,10 @@ export default function ClaudeCoachScreen() {
   const activeStreamResolveRef = useRef<(() => void) | null>(null);
   const activeRequestRef = useRef<{ cancelled: boolean } | null>(null);
   const chatHydratedForUserRef = useRef<string | null>(null);
+  const pendingLaunchPromptRef = useRef<{
+    prompt: string;
+    options: ChatSendOptions;
+  } | null>(null);
 
   // Auto-reset content height when input is cleared
   useEffect(() => {
@@ -716,17 +694,7 @@ export default function ClaudeCoachScreen() {
 
   const handleSendText = async (
     textToSend: string,
-    options?: {
-      prescriptionTitle?: string;
-      prescriptionMeta?: string;
-      prescriptionWorkoutId?: string;
-      prescriptionWorkoutTitle?: string;
-      prescriptionVimeoId?: string;
-      prescriptionVideoUrl?: string;
-      prescriptionTag?: string;
-      prescriptionThumbnail?: string;
-      contextNote?: string;
-    }
+    options?: ChatSendOptions
   ) => {
     const text = textToSend.trim();
     if (!text || sending) return;
@@ -860,11 +828,37 @@ export default function ClaudeCoachScreen() {
 
   useEffect(() => {
     const initialPrompt = typeof params.initialPrompt === 'string' ? params.initialPrompt.trim() : '';
-    if (!hasCoach || !currentUser || !initialPrompt || autoPromptHandledRef.current) return;
+    if (!initialPrompt) {
+      autoPromptHandledRef.current = false;
+      return;
+    }
+    if (!hasCoach || !currentUser || autoPromptHandledRef.current) return;
     autoPromptHandledRef.current = true;
+    const prescriptionOptions = buildPrescriptionOptionsFromParams();
+
+    // Route params are launch-only data. Consuming them prevents an old Home
+    // workout prompt from appearing when this chat route is opened again.
+    router.setParams({
+      initialPrompt: undefined,
+      autoSend: undefined,
+      prescriptionTitle: undefined,
+      prescriptionMeta: undefined,
+      prescriptionWorkoutId: undefined,
+      prescriptionWorkoutTitle: undefined,
+      prescriptionVimeoId: undefined,
+      prescriptionVideoUrl: undefined,
+      prescriptionTag: undefined,
+      prescriptionThumbnail: undefined,
+      contextNote: undefined,
+    });
+
     if (params.autoSend === '1') {
-      void handleSendText(initialPrompt, buildPrescriptionOptionsFromParams());
+      void handleSendText(initialPrompt, prescriptionOptions);
     } else {
+      pendingLaunchPromptRef.current = {
+        prompt: initialPrompt,
+        options: prescriptionOptions,
+      };
       setInputText(initialPrompt);
     }
   }, [currentUser, hasCoach, params.autoSend, params.initialPrompt]);
@@ -955,7 +949,9 @@ export default function ClaudeCoachScreen() {
         await AsyncStorage.removeItem(getCoachChatStorageKey(currentUser.id)).catch(() => undefined);
       }
       setMessages([]);
+      setInputText('');
       setConversationLanguage(null);
+      pendingLaunchPromptRef.current = null;
       autoPromptHandledRef.current = false;
     } catch {
       Alert.alert('Could not clear chat', 'Please try again in a moment.');
@@ -963,9 +959,12 @@ export default function ClaudeCoachScreen() {
   };
 
   const handleSubmitInput = () => {
-    const initialPrompt = typeof params.initialPrompt === 'string' ? params.initialPrompt.trim() : '';
-    const shouldAttachPrescription = Boolean(initialPrompt && inputText.trim() === initialPrompt);
-    void handleSendText(inputText, shouldAttachPrescription ? buildPrescriptionOptionsFromParams() : undefined);
+    const pendingLaunchPrompt = pendingLaunchPromptRef.current;
+    const shouldAttachPrescription = Boolean(
+      pendingLaunchPrompt && inputText.trim() === pendingLaunchPrompt.prompt
+    );
+    pendingLaunchPromptRef.current = null;
+    void handleSendText(inputText, shouldAttachPrescription ? pendingLaunchPrompt?.options : undefined);
   };
 
   const handleCancelGeneration = () => {
@@ -1121,7 +1120,6 @@ export default function ClaudeCoachScreen() {
                   <WorkoutPlanActionCard
                     action={m.homePlanAction}
                     onConfirm={() => void handleInsertHomePlan(m.id, m.homePlanAction!, m.text)}
-                    defaultButtonLabel={insertButtonLabel(conversationLanguage || currentUser?.preferred_language)}
                   />
                 ) : null}
               </View>
