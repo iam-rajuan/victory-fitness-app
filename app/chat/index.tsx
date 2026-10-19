@@ -374,7 +374,7 @@ function WorkoutPlanActionCard({
       )}
 
       {/* Day Selector Tabs */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.previewDayTabs}>
+      <View style={styles.previewDayTabs}>
         {days.map((day, idx) => {
           const isSelected = idx === safeIndex;
           return (
@@ -392,7 +392,7 @@ function WorkoutPlanActionCard({
             </Pressable>
           );
         })}
-      </ScrollView>
+      </View>
 
       {/* Active Day Detail */}
       <View style={styles.previewDayContent}>
@@ -1464,13 +1464,18 @@ const styles = StyleSheet.create({
   },
   previewBadgeRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
+    columnGap: 6,
+    rowGap: 6,
     marginBottom: 6,
   },
   previewPlanBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 1,
+    maxWidth: '100%',
     gap: 5,
     backgroundColor: 'rgba(201, 148, 58, 0.15)',
     paddingVertical: 3,
@@ -1483,10 +1488,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: GOLD,
     letterSpacing: 0.5,
+    flexShrink: 1,
   },
   previewDurationBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 0,
     gap: 4,
     backgroundColor: 'rgba(247, 243, 238, 0.08)',
     paddingVertical: 3,
@@ -1498,6 +1505,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: IVORY,
+    flexShrink: 0,
   },
   previewTitle: {
     fontFamily: DMSANS,
@@ -1551,17 +1559,21 @@ const styles = StyleSheet.create({
   },
   previewDayTabs: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6,
     paddingVertical: 2,
     marginBottom: 8,
   },
   previewDayTab: {
+    minWidth: 54,
+    flexGrow: 1,
     paddingVertical: 5,
     paddingHorizontal: 12,
     borderRadius: 8,
     backgroundColor: 'rgba(247, 243, 238, 0.06)',
     borderWidth: 1,
     borderColor: 'rgba(247, 243, 238, 0.1)',
+    alignItems: 'center',
   },
   previewDayTabActive: {
     backgroundColor: GOLD,
@@ -1624,12 +1636,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: IVORY,
     flex: 1,
+    minWidth: 0,
+    paddingRight: 8,
   },
   previewExerciseTypePill: {
     backgroundColor: 'rgba(201, 148, 58, 0.12)',
     paddingHorizontal: 5,
     paddingVertical: 1,
     borderRadius: 4,
+    flexShrink: 0,
   },
   previewExerciseTypePillText: {
     fontFamily: MONO,
