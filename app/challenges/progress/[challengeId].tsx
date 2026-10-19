@@ -71,6 +71,9 @@ type ChallengePlanProgressResponse = {
   viewer_progress_days_completed: number;
   viewer_points_earned: number;
   viewer_plan_progress: ChallengePlanDayProgress[];
+  current_day_number?: number | null;
+  completed_today?: boolean;
+  next_day_unlock_at?: string | null;
 };
 
 type ChallengeProgressThread = {
@@ -92,6 +95,9 @@ type ChallengeProgressThread = {
   viewer_points_earned: number;
   viewer_plan_progress: ChallengePlanDayProgress[];
   started_at?: string;
+  current_day_number?: number | null;
+  completed_today?: boolean;
+  next_day_unlock_at?: string | null;
 };
 
 type CompletionConfirmState = {
@@ -570,9 +576,12 @@ export default function ChallengeProgressScreen() {
   }, [dayProgressMap, thread]);
 
   const currentCalendarDay = useMemo(() => {
+    if (thread?.current_day_number) {
+      return thread.current_day_number;
+    }
     const totalDays = thread?.duration_days || thread?.plan_days.length || 1;
     return getChallengeCurrentCalendarDay(thread?.started_at, totalDays, currentPlanDayNumber || 1);
-  }, [thread?.started_at, currentPlanDayNumber, thread?.duration_days, thread?.plan_days.length]);
+  }, [thread?.current_day_number, thread?.started_at, currentPlanDayNumber, thread?.duration_days, thread?.plan_days.length]);
 
   const hasConfiguredPlanDays = (thread?.plan_days.length || 0) > 0;
 
@@ -663,11 +672,11 @@ export default function ChallengeProgressScreen() {
         progressByDay.set(dayProgress.day_number, dayProgress);
       }
       const nextIncompleteDay = response.plan_days.find((day) => !progressByDay.get(day.day_number)?.completed);
-      const calendarDayNumber = getChallengeCurrentCalendarDay(
-        response.started_at,
-        response.duration_days || response.plan_days.length || 1,
-        nextIncompleteDay?.day_number || 1,
-      );
+      const calendarDayNumber = response.current_day_number || getChallengeCurrentCalendarDay(
+          response.started_at,
+          response.duration_days || response.plan_days.length || 1,
+          nextIncompleteDay?.day_number || 1,
+        );
       if (response?.title) {
         registerCanonicalChallengeTitle(response.title);
       }
@@ -726,6 +735,9 @@ export default function ChallengeProgressScreen() {
         viewer_progress_days_completed: response.viewer_progress_days_completed,
         viewer_points_earned: response.viewer_points_earned,
         viewer_plan_progress: Array.isArray(response.viewer_plan_progress) ? response.viewer_plan_progress : [],
+        current_day_number: response.current_day_number ?? current.current_day_number,
+        completed_today: response.completed_today ?? current.completed_today,
+        next_day_unlock_at: response.next_day_unlock_at ?? current.next_day_unlock_at,
       };
     });
   }, [celebrationAnimation, thread, unitPointMap]);
@@ -1252,6 +1264,15 @@ export default function ChallengeProgressScreen() {
               </View>
             ) : null}
 
+            {canUpdateProgress && thread.completed_today && currentCalendarDay < thread.duration_days ? (
+              <View style={styles.statusNotice}>
+                <Text style={styles.statusNoticeText}>
+                  Day {currentCalendarDay} is complete. Day {currentCalendarDay + 1} unlocks on the next calendar day
+                  {thread.next_day_unlock_at ? ` (${new Date(thread.next_day_unlock_at).toLocaleString()})` : ''}.
+                </Text>
+              </View>
+            ) : null}
+
             <View style={styles.legendCard}>
               <Text style={styles.legendTitle}>Daily Progress</Text>
               <Text style={styles.legendText}>Tap a day row or the arrow to open its sections. Using the section button will mark that full day complete for your progress.</Text>
@@ -1264,6 +1285,7 @@ export default function ChallengeProgressScreen() {
                 const isExpanded = Boolean(expandedDays[day.day_number]);
                 const isCurrentDay = currentCalendarDay === day.day_number && !dayProgress?.completed;
                 const isMissed = !dayProgress?.completed && !isCurrentDay && day.day_number < currentCalendarDay;
+                const canUpdateDay = canUpdateProgress && day.day_number === currentCalendarDay;
                 const progressFraction = getDayProgressFraction(day, dayProgress);
                 const dayPoints = getDayPoints(day, unitPointMap);
                 const completedExerciseIds = Array.isArray(dayProgress?.completed_exercise_ids) ? dayProgress.completed_exercise_ids : [];
@@ -1406,7 +1428,7 @@ export default function ChallengeProgressScreen() {
                                   ) : null}
                                 </View>
                                 <View style={styles.sectionActions}>
-                                  {canUpdateProgress ? (
+                                  {canUpdateDay ? (
                                     <TouchableOpacity
                                       style={[
                                         styles.exerciseCheckButton,
@@ -1455,7 +1477,7 @@ export default function ChallengeProgressScreen() {
                                             <Text style={styles.exerciseType}>{(section.title || 'EXERCISE').toUpperCase()}</Text>
                                             <Text style={styles.exerciseSubCardTitle}>{exercise.name}</Text>
                                           </View>
-                                          {canUpdateProgress ? (
+                                          {canUpdateDay ? (
                                             <TouchableOpacity
                                               style={[
                                                 styles.exerciseCheckButton,
@@ -1521,7 +1543,7 @@ export default function ChallengeProgressScreen() {
                         })}
 
                         {/* Full-width Day Completion CTA Button */}
-                        {canUpdateProgress ? (
+                        {canUpdateDay ? (
                           <TouchableOpacity
                             style={[
                               styles.completeSessionBtn,

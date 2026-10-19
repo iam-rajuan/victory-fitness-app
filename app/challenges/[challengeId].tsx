@@ -104,6 +104,7 @@ type ChallengeDetail = {
   current_day_number: number | null;
   can_complete_today: boolean;
   completed_today: boolean;
+  next_day_unlock_at?: string | null;
   messages: ChallengeChatMessage[];
   started_at?: string;
 };
@@ -657,6 +658,12 @@ export default function ChallengeDetailScreen() {
                           {currentCalendarDay ? (
                             <Text style={styles.membershipDayHint}>
                               {t('Day')} {currentCalendarDay} {t('of')} {totalDaysCount}
+                            </Text>
+                          ) : null}
+                          {detail.completed_today && currentCalendarDay && currentCalendarDay < totalDaysCount ? (
+                            <Text style={styles.membershipDayHint}>
+                              {t('Day')} {currentCalendarDay + 1} {t('unlocks on the next calendar day')}
+                              {detail.next_day_unlock_at ? ` (${new Date(detail.next_day_unlock_at).toLocaleString()})` : ''}.
                             </Text>
                           ) : null}
                         </View>
