@@ -2268,6 +2268,8 @@ export type CoachWorkoutPlanAction = {
   summary: string;
   button_label?: string;
   preview?: CoachWorkoutPlanPreview;
+  draft_id?: string;
+  draft_version?: number;
 };
 
 
@@ -2380,6 +2382,8 @@ export async function applyCoachWorkoutPlanAction(payload: {
   target_days?: string[];
   target_minutes?: number | null;
   summary?: string;
+  draft_id?: string;
+  draft_version?: number;
 }) {
   const plan = await apiRequest<import('./workout-plans').StrengthPlanResponse>('/ai/coach-victor/workout-plan-action/apply', {
     method: 'POST',
@@ -2395,6 +2399,7 @@ export type CoachVictorHistoryMessage = {
   role: 'user' | 'assistant';
   content: string;
   created_at: string;
+  plan_action?: CoachWorkoutPlanAction | null;
 };
 
 export async function fetchCoachVictorHistory(options: { skipResponseCache?: boolean } = {}) {

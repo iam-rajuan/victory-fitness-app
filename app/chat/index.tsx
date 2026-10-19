@@ -58,6 +58,8 @@ interface ChatMessage {
     buttonLabel?: string;
     status?: 'ready' | 'saving' | 'saved';
     preview?: CoachWorkoutPlanPreview;
+    draftId?: string;
+    draftVersion?: number;
   };
 }
 
@@ -658,6 +660,22 @@ export default function ClaudeCoachScreen() {
             sender: item.role === 'user' ? 'user' : 'coach',
             text: item.content,
             contextNote: item.role === 'assistant' ? 'from your last coach conversation' : undefined,
+            homePlanAction: item.role === 'assistant' && item.plan_action
+              ? {
+                  type: item.plan_action.type,
+                  sourcePrompt: item.plan_action.source_prompt,
+                  scope: item.plan_action.scope,
+                  targetDays: item.plan_action.target_days || [],
+                  targetMinutes: item.plan_action.target_minutes ?? null,
+                  dayCount: item.plan_action.day_count,
+                  summary: item.plan_action.summary,
+                  buttonLabel: item.plan_action.button_label,
+                  preview: item.plan_action.preview,
+                  draftId: item.plan_action.draft_id,
+                  draftVersion: item.plan_action.draft_version,
+                  status: 'ready' as const,
+                }
+              : undefined,
           } satisfies ChatMessage));
 
         // Local messages retain rich plan cards; server history remains the
@@ -785,6 +803,8 @@ export default function ClaudeCoachScreen() {
               summary: actionForReply.summary,
               buttonLabel: actionForReply.button_label,
               preview: actionForReply.preview,
+              draftId: actionForReply.draft_id,
+              draftVersion: actionForReply.draft_version,
               status: 'ready',
             }
           : undefined,
@@ -908,6 +928,8 @@ export default function ClaudeCoachScreen() {
         target_days: action.targetDays || [],
         target_minutes: action.targetMinutes ?? null,
         summary: action.summary || '',
+        draft_id: action.draftId,
+        draft_version: action.draftVersion,
       });
       await saveLatestStrengthWorkoutPlan(plan);
       await savePlanBuiltData({
