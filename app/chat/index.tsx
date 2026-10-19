@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../../constants/Colors';
 import {
   fetchCurrentUser,
@@ -77,6 +78,22 @@ const QUICK_PROMPTS = [
   'What should I eat before training?',
   'Swap dinner from my week plan.',
 ];
+
+const COACH_CHAT_STORAGE_PREFIX = 'victory:coach-chat:v1';
+
+function getCoachChatStorageKey(userId: string) {
+  return `${COACH_CHAT_STORAGE_PREFIX}:${userId}`;
+}
+
+function isStoredChatMessage(value: unknown): value is ChatMessage {
+  if (!value || typeof value !== 'object') return false;
+  const message = value as Partial<ChatMessage>;
+  return (
+    typeof message.id === 'string' &&
+    (message.sender === 'user' || message.sender === 'coach') &&
+    typeof message.text === 'string'
+  );
+}
 
 const LANGUAGE_ALIASES: Record<string, string> = {
   english: 'en',
@@ -519,6 +536,7 @@ export default function ClaudeCoachScreen() {
   const activeStreamCancelRef = useRef<(() => void) | null>(null);
   const activeStreamResolveRef = useRef<(() => void) | null>(null);
   const activeRequestRef = useRef<{ cancelled: boolean } | null>(null);
+  const chatHydratedForUserRef = useRef<string | null>(null);
 
   // Auto-reset content height when input is cleared
   useEffect(() => {
@@ -630,13 +648,31 @@ export default function ClaudeCoachScreen() {
     : 'UNLIMITED · REPLIES IN ~2S';
 
   useEffect(() => {
-    if (!hasCoach) return;
+    if (!hasCoach || !currentUser?.id) return;
     let cancelled = false;
+    const userId = currentUser.id;
+    const storageKey = getCoachChatStorageKey(userId);
     setHistoryLoading(true);
-    fetchCoachVictorHistory({ skipResponseCache: true })
-      .then((history) => {
+
+    void (async () => {
+      let locallyStoredMessages: ChatMessage[] = [];
+      try {
+        const stored = await AsyncStorage.getItem(storageKey);
+        const parsed = stored ? JSON.parse(stored) : [];
+        if (Array.isArray(parsed)) {
+          locallyStoredMessages = parsed.filter(isStoredChatMessage).slice(-40);
+          if (!cancelled && locallyStoredMessages.length) {
+            setMessages(locallyStoredMessages);
+          }
+        }
+      } catch {
+        // A damaged local cache must not block server history.
+      }
+
+      try {
+        const history = await fetchCoachVictorHistory({ skipResponseCache: true });
         if (cancelled || !Array.isArray(history.messages)) return;
-        const loadedMessages = history.messages
+        const serverMessages = history.messages
           .filter((item) => item.role === 'user' || item.role === 'assistant')
           .slice(-40)
           .map((item) => ({
@@ -645,21 +681,38 @@ export default function ClaudeCoachScreen() {
             text: item.content,
             contextNote: item.role === 'assistant' ? 'from your last coach conversation' : undefined,
           } satisfies ChatMessage));
-        setMessages(loadedMessages);
-        setTimeout(() => {
-          scrollViewRef.current?.scrollToEnd({ animated: false });
-        }, 120);
-      })
-      .catch(() => {
-        // History should never block a fresh coaching conversation.
-      })
-      .finally(() => {
-        if (!cancelled) setHistoryLoading(false);
-      });
+
+        // Local messages retain rich plan cards; server history remains the
+        // fallback for a new device or a cleared local cache.
+        if (!locallyStoredMessages.length && serverMessages.length) {
+          setMessages(serverMessages);
+        }
+      } catch {
+        // The locally stored conversation remains available offline.
+      } finally {
+        if (!cancelled) {
+          chatHydratedForUserRef.current = userId;
+          setHistoryLoading(false);
+          setTimeout(() => {
+            scrollViewRef.current?.scrollToEnd({ animated: false });
+          }, 120);
+        }
+      }
+    })();
+
     return () => {
       cancelled = true;
     };
-  }, [hasCoach]);
+  }, [currentUser?.id, hasCoach]);
+
+  useEffect(() => {
+    const userId = currentUser?.id;
+    if (!userId || chatHydratedForUserRef.current !== userId) return;
+    void AsyncStorage.setItem(
+      getCoachChatStorageKey(userId),
+      JSON.stringify(messages.slice(-40))
+    ).catch(() => undefined);
+  }, [currentUser?.id, messages]);
 
   const handleSendText = async (
     textToSend: string,
@@ -898,6 +951,9 @@ export default function ClaudeCoachScreen() {
     if (sending || historyLoading) return;
     try {
       await clearCoachVictorHistory();
+      if (currentUser?.id) {
+        await AsyncStorage.removeItem(getCoachChatStorageKey(currentUser.id)).catch(() => undefined);
+      }
       setMessages([]);
       setConversationLanguage(null);
       autoPromptHandledRef.current = false;
