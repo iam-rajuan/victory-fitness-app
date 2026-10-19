@@ -9,6 +9,8 @@ import {
   Platform,
 } from 'react-native';
 import CrossPlatformWebView from '../CrossPlatformWebView';
+import { useLanguage } from '../../lib/i18n';
+import { canonicalizeFitnessText } from '../../lib/workoutTerminology';
 
 export interface WorkoutDetailExercise {
   n: string;
@@ -34,7 +36,6 @@ const GOLD = '#C9943A';
 const COPPER = '#B5651D';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: 'Clash Display', default: 'ClashDisplay-Bold' });
 const DMSANS = Platform.select({ web: 'DM Sans', default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: 'Inter', default: 'Inter-Regular' });
 const MONO = Platform.select({ web: 'JetBrains Mono', default: 'JetBrainsMono-Bold' });
@@ -51,6 +52,7 @@ export default function ClaudeWorkoutDetailModal({
   completed = false,
   exercises = [],
 }: ClaudeWorkoutDetailModalProps) {
+  const { t } = useLanguage();
   const resolvedVideoUrl = videoUrl || (vimeoId ? `https://player.vimeo.com/video/${encodeURIComponent(vimeoId)}?title=0&byline=0&portrait=0&playsinline=1&dnt=1` : '');
 
   return (
@@ -85,7 +87,7 @@ export default function ClaudeWorkoutDetailModal({
 
             {/* Back button */}
             <Pressable style={styles.backBtn} onPress={onClose} hitSlop={12}>
-              <Text style={styles.backBtnText}>← Workout</Text>
+              <Text style={styles.backBtnText}>← {t('Back')}</Text>
             </Pressable>
 
             {/* Bottom info row */}
@@ -97,23 +99,23 @@ export default function ClaudeWorkoutDetailModal({
             <Text style={styles.kicker}>{kicker}</Text>
             {completed ? (
               <View style={styles.completedNotice}>
-                <Text style={styles.completedNoticeText}>Previously completed</Text>
-                <Text style={styles.completedNoticeSub}>You can repeat this workout anytime.</Text>
+                <Text style={styles.completedNoticeText}>{t('Previously completed')}</Text>
+                <Text style={styles.completedNoticeSub}>{t('You can repeat this workout anytime.')}</Text>
               </View>
             ) : null}
-            <Text style={styles.title}>{workoutTitle}</Text>
+            <Text style={styles.title}>{canonicalizeFitnessText(workoutTitle)}</Text>
             <Text style={styles.description}>{description}</Text>
 
             {/* 3. Action Buttons Row */}
             <View style={styles.actionsRow}>
               <Pressable style={styles.startBtn} onPress={onStartWorkout}>
-                <Text style={styles.startBtnText}>{completed ? 'Start again' : 'Start workout'}</Text>
+                <Text style={styles.startBtnText}>{completed ? t('Start again') : t('Start workout')}</Text>
               </Pressable>
             </View>
 
             {/* 4. Movements List */}
             <Text style={styles.movementsTitle}>
-              {exercises.length > 0 ? `THE ${exercises.length} MOVEMENTS` : 'MOVEMENTS'}
+              {exercises.length > 0 ? `${t('THE')} ${exercises.length} ${t('MOVEMENTS')}` : t('MOVEMENTS')}
             </Text>
             <View style={styles.movementsList}>
               {exercises.length > 0 ? (
@@ -122,14 +124,14 @@ export default function ClaudeWorkoutDetailModal({
                     <View style={styles.movementThumb}>
                       <View style={styles.movementPlayArrow} />
                     </View>
-                    <Text style={styles.movementName}>{e.n}</Text>
+                    <Text style={styles.movementName}>{canonicalizeFitnessText(e.n)}</Text>
                     <Text style={styles.movementSets}>{e.s}</Text>
                   </View>
                 ))
               ) : (
                 <View style={styles.emptyMovementRow}>
                   <Text style={styles.emptyMovementText}>
-                    No movements have been added for this workout yet.
+                    {t('No movements have been added for this workout yet.')}
                   </Text>
                 </View>
               )}
@@ -235,10 +237,11 @@ const styles = StyleSheet.create({
     color: 'rgba(247, 243, 238, 0.68)',
   },
   title: {
-    fontFamily: CLASH,
-    fontSize: 30,
-    lineHeight: 32.5,
+    fontFamily: DMSANS,
+    fontSize: 26,
+    lineHeight: 32,
     fontWeight: '600',
+    letterSpacing: -0.3,
     color: IVORY,
     marginBottom: 12,
   },

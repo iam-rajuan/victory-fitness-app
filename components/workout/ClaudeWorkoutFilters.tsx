@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { StyleSheet, Text, View, TextInput, Pressable, Platform } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../lib/i18n';
+import { canonicalizeFitnessText } from '../../lib/workoutTerminology';
 import { WORKOUT_PURPOSE_FILTER_OPTIONS } from '../../constants/WorkoutCategories';
 
 interface ClaudeWorkoutFiltersProps {
@@ -17,6 +19,8 @@ interface ClaudeWorkoutFiltersProps {
   onSelectKit: (k: string) => void;
   resultCountText?: string;
   onResetFilters?: () => void;
+  isExpanded?: boolean;
+  onToggleExpanded?: () => void;
 }
 
 const GOLD = '#C9943A';
@@ -24,7 +28,6 @@ const GOLD_LIGHT = '#F5CF87';
 const OBSIDIAN = '#0D0D0D';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: 'Clash Display', default: 'ClashDisplay-Bold' });
 const DMSANS = Platform.select({ web: 'DM Sans', default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: 'Inter', default: 'Inter-Regular' });
 const MONO = Platform.select({ web: 'JetBrains Mono', default: 'JetBrainsMono-Bold' });
@@ -59,10 +62,27 @@ export default function ClaudeWorkoutFilters({
   onSelectKit,
   resultCountText,
   onResetFilters,
+  isExpanded: propIsExpanded,
+  onToggleExpanded: propOnToggleExpanded,
 }: ClaudeWorkoutFiltersProps) {
   const { isDark } = useTheme();
   const { t, language } = useLanguage();
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [internalExpanded, setInternalExpanded] = useState(false);
+  const isExpanded = propIsExpanded !== undefined ? propIsExpanded : internalExpanded;
+
+  const handleToggleExpanded = () => {
+    if (propOnToggleExpanded) {
+      propOnToggleExpanded();
+    } else {
+      setInternalExpanded((prev) => !prev);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      setInternalExpanded(false);
+    }, [])
+  );
 
   const activePurposes = selectedPurpose.filter((p) => p !== 'All');
   const activeFiltersCount =
@@ -80,10 +100,13 @@ export default function ClaudeWorkoutFilters({
   };
 
   const getCategoryLabel = (cat: string) => {
-    if (cat === 'Sport in Schwangerschaft') {
-      return language === 'de' ? 'Schwangerschaft' : 'Prenatal';
+    if (cat === 'Sport in Schwangerschaft' || cat === 'Prenatal') {
+      return 'Prenatal';
     }
-    return t(cat);
+    if (cat === 'All') {
+      return t('All');
+    }
+    return canonicalizeFitnessText(cat);
   };
 
   const isDurationActive = (dur: string) => {
@@ -143,6 +166,11 @@ export default function ClaudeWorkoutFilters({
         <View style={styles.filterControlLeft}>
           <Text style={styles.filterKicker}>{t('FILTERS')}</Text>
           {activeFiltersCount > 0 ? (
+            <View style={styles.activeCounterBadge}>
+              <Text style={styles.activeCounterBadgeText}>{activeFiltersCount}</Text>
+            </View>
+          ) : null}
+          {activeFiltersCount > 0 ? (
             <Pressable onPress={handleReset} hitSlop={8} style={styles.resetBtn}>
               <Text style={styles.resetBtnText}>{t('Reset all')}</Text>
             </Pressable>
@@ -151,7 +179,7 @@ export default function ClaudeWorkoutFilters({
 
         <Pressable
           style={styles.toggleExpandBtn}
-          onPress={() => setIsExpanded((prev) => !prev)}
+          onPress={handleToggleExpanded}
           hitSlop={8}
         >
           <Text style={styles.toggleExpandText}>
@@ -445,9 +473,11 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sectionTitle: {
-    fontFamily: CLASH,
+    fontFamily: DMSANS,
     fontSize: 18,
+    lineHeight: 24,
     fontWeight: '600',
+    letterSpacing: -0.2,
     color: IVORY,
   },
   activeCounterBadge: {

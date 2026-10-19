@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
@@ -26,7 +26,22 @@ export default function CoachQuickPromptBar({
   const router = useRouter();
   const { t } = useLanguage();
   const [prompt, setPrompt] = useState('');
+  const [contentHeight, setContentHeight] = useState(36);
   const [rotatingIndex, setRotatingIndex] = useState(0);
+
+  // Auto-reset content height when prompt is cleared
+  React.useEffect(() => {
+    if (!prompt) {
+      setContentHeight(36);
+    }
+  }, [prompt]);
+
+  const composerHeight = Math.min(120, Math.max(36, contentHeight));
+
+  const isMac = React.useMemo(() => {
+    if (Platform.OS !== 'web' || typeof navigator === 'undefined') return false;
+    return /Mac|iPod|iPhone|iPad/.test(navigator.platform) || /Macintosh/.test(navigator.userAgent);
+  }, []);
 
   // Rotate through the 5 suggestion chips every 3.5s
   React.useEffect(() => {
@@ -48,8 +63,26 @@ export default function CoachQuickPromptBar({
     setPrompt('');
     router.push({
       pathname: '/chat',
-      params: { initialPrompt: queryText },
+      params: { initialPrompt: queryText, autoSend: '1' },
     } as any);
+  };
+
+  const handleKeyPress = (e: any) => {
+    const key = e.nativeEvent?.key || e.key;
+    if (key === 'Enter') {
+      const isCtrlOrCmd = Boolean(
+        e.nativeEvent?.ctrlKey ||
+        e.nativeEvent?.metaKey ||
+        e.ctrlKey ||
+        e.metaKey
+      );
+      if (isCtrlOrCmd) {
+        if (e.preventDefault) e.preventDefault();
+        if (e.nativeEvent?.preventDefault) e.nativeEvent.preventDefault();
+        handleSend();
+      }
+      // Plain Enter naturally creates a newline in multiline mode
+    }
   };
 
   return (
@@ -71,19 +104,46 @@ export default function CoachQuickPromptBar({
           onChangeText={setPrompt}
           placeholder={`${t('Ask your coach anything')} (e.g. "${t(SUGGESTION_CHIPS[rotatingIndex])}")...`}
           placeholderTextColor="rgba(255, 255, 255, 0.4)"
-          style={styles.input}
-          onSubmitEditing={() => handleSend()}
-          returnKeyType="send"
+          style={[
+            styles.input,
+            { height: composerHeight },
+            Platform.select({
+              web: {
+                outlineStyle: 'none',
+                outlineWidth: 0,
+                outlineColor: 'transparent',
+                borderWidth: 0,
+                borderColor: 'transparent',
+                boxShadow: 'none',
+                resize: 'none',
+                overflowY: 'auto',
+              } as any,
+            }),
+          ]}
+          onKeyPress={handleKeyPress}
+          onContentSizeChange={(e) => {
+            const h = e.nativeEvent?.contentSize?.height;
+            if (h && h > 0) {
+              setContentHeight(h);
+            }
+          }}
+          multiline
+          blurOnSubmit={false}
+          scrollEnabled
+          textAlignVertical="top"
         />
         <TouchableOpacity
           style={[styles.sendBtn, !prompt.trim() && styles.sendBtnDisabled]}
           onPress={() => handleSend()}
           disabled={!prompt.trim()}
           activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel={t('Send message')}
         >
           <Ionicons name="arrow-up" size={18} color={prompt.trim() ? Colors.obsidian : 'rgba(255,255,255,0.4)'} />
         </TouchableOpacity>
       </View>
+
 
       {/* 5 Rotating Suggestion Chips */}
       <ScrollView
@@ -155,21 +215,24 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     backgroundColor: 'rgba(255, 255, 255, 0.06)',
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(181, 101, 29, 0.30)',
     paddingHorizontal: 14,
-    paddingVertical: 4,
+    paddingVertical: 6,
     marginBottom: 12,
   },
   input: {
     flex: 1,
     color: Colors.ivory,
     fontSize: 14,
+    lineHeight: 20,
     fontFamily: Fonts.body,
-    paddingVertical: 10,
+    paddingVertical: 6,
+    minHeight: 36,
+    maxHeight: 120,
     outlineStyle: 'none' as any,
   },
   sendBtn: {
@@ -180,6 +243,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8,
+    marginBottom: 2,
   },
   sendBtnDisabled: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',

@@ -21,7 +21,6 @@ const OBSIDIAN = '#0D0D0D';
 const GOLD = '#C9943A';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: 'Clash Display', default: 'ClashDisplay-Bold' });
 const DMSANS = Platform.select({ web: 'DM Sans', default: 'DMSans-SemiBold' });
 const MONO = Platform.select({ web: 'JetBrains Mono', default: 'JetBrainsMono-Bold' });
 
@@ -159,19 +158,21 @@ export default function ClaudeResumeSessionCard({
           <View style={styles.textCol}>
             <Text
               style={[styles.title, { color: isDark ? IVORY : NAVY }]}
-              numberOfLines={2}
+              numberOfLines={1}
+              ellipsizeMode="tail"
             >
               {sessionTitle}
             </Text>
-            <Text
+            {/* <Text
               style={[
                 styles.line,
                 { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
               ]}
-              numberOfLines={2}
+              numberOfLines={1}
+              ellipsizeMode="tail"
             >
               {completed ? `Previously completed · ${sessionLine}` : sessionLine}
-            </Text>
+            </Text> */}
           </View>
 
           <Pressable style={styles.resumeBtn} onPress={onResume}>
@@ -299,7 +300,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   title: {
-    fontFamily: CLASH,
+    fontFamily: DMSANS,
     fontSize: 15.5,
     lineHeight: 20,
     fontWeight: '600',

@@ -142,6 +142,18 @@ let apiLanguage: string | undefined;
 const getResponseCache = new Map<string, { expiresAt: number; data: unknown }>();
 const getResponsePromises = new Map<string, Promise<unknown>>();
 
+export function invalidateApiCache(pathPrefix?: string) {
+  if (!pathPrefix) {
+    getResponseCache.clear();
+    return;
+  }
+  for (const key of getResponseCache.keys()) {
+    if (key.startsWith(pathPrefix)) {
+      getResponseCache.delete(key);
+    }
+  }
+}
+
 export function buildApiWebSocketUrl(path: string, params?: Record<string, string>) {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   const webSocketOrigin =
@@ -1096,20 +1108,55 @@ export type AppNotification = {
   read: boolean;
 };
 
-export async function fetchAppNotifications() {
-  const response = await apiRequest<{ items: AppNotification[] }>('/me/notifications');
+export async function fetchAppNotifications(options?: { skipResponseCache?: boolean }) {
+  const response = await apiRequest<{ items: AppNotification[] }>('/me/notifications', {
+    skipResponseCache: options?.skipResponseCache,
+  });
   return response.items || [];
 }
 
 export async function deleteAppNotification(notificationId: string) {
+  invalidateApiCache('/me/notifications');
   return apiRequest<{ deleted: boolean }>(`/me/notifications/${encodeURIComponent(notificationId)}`, {
     method: 'DELETE',
+    skipResponseCache: true,
+  });
+}
+
+export async function deleteAppNotificationsBatch(payload: { ids?: string[]; clear_all?: boolean }) {
+  invalidateApiCache('/me/notifications');
+  return apiRequest<{ deleted: boolean; count: number }>('/me/notifications/delete-batch', {
+    method: 'POST',
+    body: {
+      ids: payload.ids ?? [],
+      clear_all: Boolean(payload.clear_all),
+    },
+    skipResponseCache: true,
+  });
+}
+
+export async function clearAllAppNotifications() {
+  invalidateApiCache('/me/notifications');
+  return apiRequest<{ deleted: boolean; count: number }>('/me/notifications/all', {
+    method: 'DELETE',
+    skipResponseCache: true,
   });
 }
 
 export async function markAppNotificationRead(notificationId: string) {
+  invalidateApiCache('/me/notifications');
   return apiRequest<{ read: boolean }>(`/me/notifications/${encodeURIComponent(notificationId)}/read`, {
     method: 'PATCH',
+    skipResponseCache: true,
+  });
+}
+
+export async function markAllAppNotificationsRead(payload?: { ids?: string[] }) {
+  invalidateApiCache('/me/notifications');
+  return apiRequest<{ read: boolean; count: number }>('/me/notifications/read-all', {
+    method: 'PATCH',
+    body: payload?.ids ? { ids: payload.ids } : undefined,
+    skipResponseCache: true,
   });
 }
 
@@ -1156,6 +1203,18 @@ export async function fetchDismissedActivityNotifications() {
 export async function deleteActivityNotification(notificationId: string) {
   return apiRequest<{ deleted: boolean }>(`/me/activity-notifications/${encodeURIComponent(notificationId)}`, {
     method: 'DELETE',
+    skipResponseCache: true,
+  });
+}
+
+export async function deleteActivityNotificationsBatch(payload: { ids: string[] }) {
+  return apiRequest<{ deleted: boolean; count: number }>('/me/activity-notifications/delete-batch', {
+    method: 'POST',
+    body: {
+      ids: payload.ids ?? [],
+      clear_all: false,
+    },
+    skipResponseCache: true,
   });
 }
 
@@ -1451,8 +1510,8 @@ export async function createWorkoutLog(payload: {
   movements?: Array<Record<string, unknown>>;
   status: string;
   market?: string;
-}): Promise<{ id: string; status: string; workout_id?: string; title?: string }> {
-  return apiRequest<{ id: string; status: string; workout_id?: string; title?: string }>('/workout-logs', {
+}): Promise<WorkoutLogItem> {
+  return apiRequest<WorkoutLogItem>('/workout-logs', {
     method: 'POST',
     body: payload,
   });
@@ -2173,15 +2232,46 @@ export async function recordAnalyticsEvent(
   }
 }
 
+export type CoachWorkoutExercisePreview = {
+  exercise_name: string;
+  sets: number;
+  reps: string;
+  weight: string;
+  rest: string;
+  notes: string;
+  type: string;
+};
+
+export type CoachWorkoutDayPreview = {
+  day_name: string;
+  expected_duration: number;
+  equipment: string[];
+  exercises: CoachWorkoutExercisePreview[];
+};
+
+export type CoachWorkoutPlanPreview = {
+  plan_name: string;
+  days_count: number;
+  expected_duration: number;
+  equipment: string[];
+  days: CoachWorkoutDayPreview[];
+  uncertainties?: string[];
+};
+
 export type CoachWorkoutPlanAction = {
-  type: 'home_workout_plan_update';
+  type: 'home_workout_plan_update' | 'custom_workout_import' | string;
   source_prompt: string;
   scope: 'day' | 'full_plan' | string;
   target_days: string[];
   target_minutes?: number | null;
+  day_count?: number;
   summary: string;
   button_label?: string;
+  preview?: CoachWorkoutPlanPreview;
+  draft_id?: string;
+  draft_version?: number;
 };
+
 
 export async function streamCoachVictorMessage(
   message: string,
@@ -2287,10 +2377,13 @@ export async function streamCoachVictorMessage(
 
 export async function applyCoachWorkoutPlanAction(payload: {
   source_prompt: string;
+  generated_reply?: string;
   scope: string;
   target_days?: string[];
   target_minutes?: number | null;
   summary?: string;
+  draft_id?: string;
+  draft_version?: number;
 }) {
   const plan = await apiRequest<import('./workout-plans').StrengthPlanResponse>('/ai/coach-victor/workout-plan-action/apply', {
     method: 'POST',
@@ -2306,6 +2399,7 @@ export type CoachVictorHistoryMessage = {
   role: 'user' | 'assistant';
   content: string;
   created_at: string;
+  plan_action?: CoachWorkoutPlanAction | null;
 };
 
 export async function fetchCoachVictorHistory(options: { skipResponseCache?: boolean } = {}) {

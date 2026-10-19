@@ -13,7 +13,6 @@ const COPPER = '#B5651D';
 const OBSIDIAN = '#0D0D0D';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
 const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 
@@ -37,8 +36,8 @@ export default function ClaudeMealAnalysisCard({
 
           <View style={styles.textCol}>
             <Text style={styles.kicker}>{t('MEAL ANALYSIS')}</Text>
-            <Text style={styles.title}>{t('Photograph it instead of typing it')}</Text>
-            <Text style={styles.sub}>
+            <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">{t('Photograph it instead of typing it')}</Text>
+            <Text style={styles.sub} numberOfLines={2} ellipsizeMode="tail">
               {t('Point your camera at the plate, or upload a photo. You get protein, carbs, fat and calories back — and one sentence on what to do about it.')}
             </Text>
           </View>
@@ -137,9 +136,9 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   title: {
-    fontFamily: CLASH,
-    fontSize: 16,
-    lineHeight: 21,
+    fontFamily: DMSANS,
+    fontSize: 16.5,
+    lineHeight: 22,
     fontWeight: '600',
     color: IVORY,
     letterSpacing: -0.2,

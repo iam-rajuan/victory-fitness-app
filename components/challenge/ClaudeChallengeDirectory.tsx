@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
 import {
   StyleSheet,
   Text,
@@ -42,6 +43,12 @@ interface ClaudeChallengeDirectoryProps {
   isLoading?: boolean;
   onSelectChallenge: (challenge: ChallengeItem) => void;
   onOpenInviteGuest: () => void;
+  selectedDay?: string;
+  onSelectDay?: (day: string) => void;
+  selectedCat?: string;
+  onSelectCat?: (cat: string) => void;
+  isFiltersExpanded?: boolean;
+  onToggleFiltersExpanded?: () => void;
 }
 
 const NAVY = '#0D2B45';
@@ -50,7 +57,6 @@ const GOLD_LIGHT = '#F5CF87';
 const COPPER = '#B5651D';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
 const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
@@ -186,6 +192,12 @@ export default function ClaudeChallengeDirectory({
   isLoading = false,
   onSelectChallenge,
   onOpenInviteGuest,
+  selectedDay: propSelectedDay,
+  onSelectDay: propOnSelectDay,
+  selectedCat: propSelectedCat,
+  onSelectCat: propOnSelectCat,
+  isFiltersExpanded: propIsFiltersExpanded,
+  onToggleFiltersExpanded: propOnToggleFiltersExpanded,
 }: ClaudeChallengeDirectoryProps) {
   const { colors, isDark } = useTheme();
   const { t } = useLanguage();
@@ -195,9 +207,29 @@ export default function ClaudeChallengeDirectory({
   const isUltraSlim = windowWidth > 0 && windowWidth < 330;
   const hPad = isSlim ? 14 : 20;
 
-  const [selectedDay, setSelectedDay] = useState('All');
-  const [selectedCat, setSelectedCat] = useState('All');
-  const [isFiltersExpanded, setIsFiltersExpanded] = useState(true);
+  const [internalDay, setInternalDay] = useState('All');
+  const [internalCat, setInternalCat] = useState('All');
+  const [internalFiltersExpanded, setInternalFiltersExpanded] = useState(false);
+
+  const selectedDay = propSelectedDay !== undefined ? propSelectedDay : internalDay;
+  const setSelectedDay = propOnSelectDay || setInternalDay;
+  const selectedCat = propSelectedCat !== undefined ? propSelectedCat : internalCat;
+  const setSelectedCat = propOnSelectCat || setInternalCat;
+  const isFiltersExpanded = propIsFiltersExpanded !== undefined ? propIsFiltersExpanded : internalFiltersExpanded;
+
+  const handleToggleExpanded = () => {
+    if (propOnToggleFiltersExpanded) {
+      propOnToggleFiltersExpanded();
+    } else {
+      setInternalFiltersExpanded((prev) => !prev);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      setInternalFiltersExpanded(false);
+    }, [])
+  );
 
   const activeFiltersCount = (selectedDay !== 'All' ? 1 : 0) + (selectedCat !== 'All' ? 1 : 0);
 
@@ -308,7 +340,7 @@ export default function ClaudeChallengeDirectory({
               <Text style={styles.railCardCategory}>{c.c}</Text>
             </View>
 
-            <Text style={[styles.railCardName, { color: isDark ? IVORY : NAVY }]} numberOfLines={2}>
+            <Text style={[styles.railCardName, { color: isDark ? IVORY : NAVY }]} numberOfLines={1} ellipsizeMode="tail">
               {c.n}
             </Text>
             <Text style={styles.railCardPoints}>{c.p}</Text>
@@ -358,7 +390,7 @@ export default function ClaudeChallengeDirectory({
 
           <TouchableOpacity
             style={styles.toggleExpandBtn}
-            onPress={() => setIsFiltersExpanded((prev) => !prev)}
+            onPress={handleToggleExpanded}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Text style={styles.toggleExpandText}>
@@ -687,7 +719,8 @@ export default function ClaudeChallengeDirectory({
                       styles.challengeTitle,
                       { color: isDark ? IVORY : NAVY, fontSize: isSlim ? 15 : 16 },
                     ]}
-                    numberOfLines={2}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
                   >
                     {c.n}
                   </Text>
@@ -814,9 +847,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   railTitle: {
-    fontFamily: CLASH,
+    fontFamily: DMSANS,
     fontSize: 17,
+    lineHeight: 22,
     fontWeight: '600',
+    letterSpacing: -0.2,
     color: IVORY,
   },
   railAllLink: {
@@ -859,7 +894,7 @@ const styles = StyleSheet.create({
     color: COPPER,
   },
   railCardName: {
-    fontFamily: CLASH,
+    fontFamily: DMSANS,
     fontSize: 15,
     lineHeight: 18,
     fontWeight: '600',
@@ -1148,9 +1183,11 @@ const styles = StyleSheet.create({
     padding: 18,
   },
   emptyTitle: {
-    fontFamily: CLASH,
+    fontFamily: DMSANS,
     fontSize: 17,
+    lineHeight: 22,
     fontWeight: '600',
+    letterSpacing: -0.2,
     color: IVORY,
   },
   emptyBody: {

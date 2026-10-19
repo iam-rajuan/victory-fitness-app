@@ -17,6 +17,7 @@ export interface WorkoutRowItem {
   n: string;
   m: string;
   t: string;
+  durationBadge?: string;
   v?: string;
   videoUrl?: string;
   videoSource?: string;
@@ -51,7 +52,6 @@ const OBSIDIAN = '#0D0D0D';
 const GOLD = '#C9943A';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: 'Clash Display', default: 'ClashDisplay-Bold' });
 const DMSANS = Platform.select({ web: 'DM Sans', default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: 'Inter', default: 'Inter-Regular' });
 const MONO = Platform.select({ web: 'JetBrains Mono', default: 'JetBrainsMono-Bold' });
@@ -232,7 +232,7 @@ export default function ClaudeWorkoutRowCarousel({
                 <Text style={styles.programTag}>{p.t}</Text>
 
                 <View style={styles.programBottomInfo}>
-                  <Text style={styles.programName}>{p.n}</Text>
+                  <Text style={styles.programName} numberOfLines={1} ellipsizeMode="tail">{p.n}</Text>
                   <Text style={styles.programMeta}>{p.m}</Text>
                 </View>
               </View>
@@ -303,10 +303,13 @@ export default function ClaudeWorkoutRowCarousel({
                   </View>
                 ) : null}
                 {w.completed ? <Text style={styles.completedBadge}>✓ Done</Text> : null}
-                {isImageLoaded(w.thumbnail) ? <Text style={styles.workoutBadge}>{w.t}</Text> : null}
+                {isImageLoaded(w.thumbnail) && w.t ? <Text style={styles.workoutBadge}>{w.t}</Text> : null}
+                {(isImageLoaded(w.thumbnail) || (!w.thumbnail && w.videoUrl)) && (w.durationBadge || w.item?.badge) ? (
+                  <Text style={styles.durationBadge}>{w.durationBadge || w.item?.badge}</Text>
+                ) : null}
               </View>
-              <Text style={styles.workoutName}>{w.n}</Text>
-              <Text style={styles.workoutMeta}>{w.m}</Text>
+              <Text style={styles.workoutName} numberOfLines={1} ellipsizeMode="tail">{w.n}</Text>
+              {/* <Text style={styles.workoutMeta}>{w.m}</Text> */}
             </Pressable>
           ))}
       </ScrollView>
@@ -330,9 +333,11 @@ const styles = StyleSheet.create({
     paddingRight: 10,
   },
   title: {
-    fontFamily: CLASH,
+    fontFamily: DMSANS,
     fontSize: 17,
+    lineHeight: 22,
     fontWeight: '600',
+    letterSpacing: -0.2,
     color: IVORY,
   },
   subtitle: {
@@ -405,9 +410,9 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   programName: {
-    fontFamily: CLASH,
+    fontFamily: DMSANS,
     fontSize: 16,
-    lineHeight: 19,
+    lineHeight: 20,
     fontWeight: '600',
     color: IVORY,
   },
@@ -480,6 +485,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
     overflow: 'hidden',
     textTransform: 'uppercase',
+  },
+  durationBadge: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    fontFamily: MONO,
+    fontSize: 9.5,
+    fontWeight: '700',
+    color: IVORY,
+    backgroundColor: 'rgba(13, 13, 13, 0.78)',
+    borderRadius: 3,
+    paddingVertical: 2,
+    paddingHorizontal: 5,
   },
   completedBadge: {
     position: 'absolute',

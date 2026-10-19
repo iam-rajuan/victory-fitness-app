@@ -31,10 +31,8 @@ const COPPER = '#B5651D';
 const GREEN = '#1A7A4A';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'Inter-Regular' });
 
 export default function ClaudeHabitsCard({
   identity = 'Set the person you are becoming.',
@@ -135,11 +133,11 @@ export default function ClaudeHabitsCard({
           activeOpacity={0.85}
           onPress={onUpgrade}
         >
-          <Text style={[styles.upgradeTeaserTitle, { color: colors.text }]}>Identity statement, unlock and trigger</Text>
-          <Text style={[styles.upgradeTeaserSub, { color: colors.textSecondary }]}>
-            The three personal habit fields arrive with Gold. Your partner and network count stay on Silver.
+          <Text style={[styles.upgradeTeaserTitle, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">{t('Identity statement')}</Text>
+          <Text style={[styles.upgradeTeaserSub, { color: colors.textSecondary }]} numberOfLines={2} ellipsizeMode="tail">
+            {t('The personal habit field arrives with Gold. Your partner and network count stay on Silver.')}
           </Text>
-          <Text style={styles.upgradeLink}>See what Gold adds ›</Text>
+          <Text style={styles.upgradeLink}>{t('See what Gold adds ›')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -150,7 +148,7 @@ export default function ClaudeHabitsCard({
       <View style={styles.sectionHeaderRow}>
         <Text style={[styles.sectionKicker, { color: colors.textMuted }]}>{t('MY HABITS')}</Text>
         <TouchableOpacity onPress={() => setEditing(true)} activeOpacity={0.7}>
-          <Text style={styles.editLink}>{t('Edit fields')}</Text>
+          <Text style={styles.editLink}>{t('Edit field')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -173,13 +171,13 @@ export default function ClaudeHabitsCard({
         ]}
       >
         <Text style={[styles.fieldKicker, { color: isDark ? GOLD : '#B5651D' }]}>{t("WHO I'M BECOMING")}</Text>
-        <Text style={[styles.identityStatement, { color: isDark ? IVORY : NAVY }]}>{currentIdentity}</Text>
+        <Text style={[styles.identityStatement, { color: isDark ? IVORY : NAVY }]} numberOfLines={2} ellipsizeMode="tail">{currentIdentity}</Text>
       </View>
 
-      {/* Unlock, Trigger, and Duo Cards matching lines 1192-1196 */}
+      {/* ACCOUNTABILITY DUO Card */}
       <View
         style={[
-          styles.habitsBlock,
+          styles.duoCard,
           {
             backgroundColor: isDark ? NAVY : '#FFFFFF',
             borderWidth: isDark ? 0 : 1,
@@ -192,46 +190,17 @@ export default function ClaudeHabitsCard({
           },
         ]}
       >
-        {/* UNLOCK */}
-        <View
-          style={[
-            styles.habitRow,
-            { borderBottomColor: isDark ? 'rgba(247, 243, 238, 0.1)' : 'rgba(13, 43, 69, 0.08)' },
-          ]}
-        >
-          <Text style={[styles.fieldKicker, { color: isDark ? GOLD : '#B5651D' }]}>{t('MY UNLOCK')}</Text>
-          <Text style={[styles.habitValue, { color: isDark ? IVORY : NAVY }]}>{currentUnlock}</Text>
-        </View>
-
-        {/* TRIGGER + Trigger usage counter matching line 1194 */}
-        <View
-          style={[
-            styles.habitRow,
-            { borderBottomColor: isDark ? 'rgba(247, 243, 238, 0.1)' : 'rgba(13, 43, 69, 0.08)' },
-          ]}
-        >
-          <Text style={[styles.fieldKicker, { color: isDark ? GOLD : '#B5651D' }]}>{t('MY TRIGGER')}</Text>
-          <Text style={[styles.habitValue, { color: isDark ? IVORY : NAVY }]}>{currentTrigger}</Text>
-          <Text
-            style={[
-              styles.triggerUsageText,
-              { color: isDark ? 'rgba(247, 243, 238, 0.5)' : 'rgba(13, 43, 69, 0.55)' },
-            ]}
-          >
-            {triggerUsage}
-          </Text>
-        </View>
-
-        {/* ACCOUNTABILITY DUO ROW */}
-        <TouchableOpacity style={styles.duoRow} activeOpacity={0.7} onPress={onOpenDuo}>
+        <TouchableOpacity style={styles.itemRow} activeOpacity={0.7} onPress={onOpenDuo}>
           <View style={styles.dotGreen} />
           <View style={styles.itemTextCol}>
-            <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]}>{partnerTitle}</Text>
+            <Text style={[styles.itemTitle, { color: isDark ? IVORY : NAVY }]} numberOfLines={1} ellipsizeMode="tail">{partnerTitle}</Text>
             <Text
               style={[
                 styles.itemSub,
                 { color: isDark ? 'rgba(247, 243, 238, 0.55)' : 'rgba(13, 43, 69, 0.55)' },
               ]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
             >
               {partnerNote}
             </Text>
@@ -247,7 +216,7 @@ export default function ClaudeHabitsCard({
             <TouchableOpacity onPress={() => setEditing(false)} activeOpacity={0.7}>
               <Text style={[styles.modalCancel, { color: colors.textMuted }]}>Cancel</Text>
             </TouchableOpacity>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Edit Habit Fields</Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Edit Habit Field</Text>
             <TouchableOpacity onPress={handleSave} activeOpacity={0.7} disabled={saving}>
               <Text style={styles.modalSave}>{saving ? 'Saving...' : 'Save'}</Text>
             </TouchableOpacity>
@@ -268,44 +237,6 @@ export default function ClaudeHabitsCard({
                 ]}
                 value={currentIdentity}
                 onChangeText={setCurrentIdentity}
-                multiline
-                numberOfLines={2}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>MY UNLOCK (REWARD ONLY WHILE TRAINING)</Text>
-              <TextInput
-                style={[
-                  styles.modalInput,
-                  {
-                    backgroundColor: isDark ? NAVY : '#FFFFFF',
-                    color: colors.text,
-                    borderColor: colors.cardBorder,
-                    borderWidth: isDark ? 0 : 1,
-                  },
-                ]}
-                value={currentUnlock}
-                onChangeText={setCurrentUnlock}
-                multiline
-                numberOfLines={2}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>MY TRIGGER (ANCHOR HABIT)</Text>
-              <TextInput
-                style={[
-                  styles.modalInput,
-                  {
-                    backgroundColor: isDark ? NAVY : '#FFFFFF',
-                    color: colors.text,
-                    borderColor: colors.cardBorder,
-                    borderWidth: isDark ? 0 : 1,
-                  },
-                ]}
-                value={currentTrigger}
-                onChangeText={setCurrentTrigger}
                 multiline
                 numberOfLines={2}
               />
@@ -346,7 +277,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     paddingVertical: 18,
     paddingHorizontal: 20,
-    marginBottom: 8,
+    marginBottom: 10,
     borderLeftWidth: 4,
     borderLeftColor: COPPER,
   },
@@ -359,47 +290,18 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   identityStatement: {
-    fontFamily: CLASH,
-    fontSize: 19,
-    lineHeight: 26,
-    fontWeight: '600',
-    color: IVORY,
-  },
-  habitsBlock: {
-    backgroundColor: NAVY,
-    borderRadius: 18,
-    overflow: 'hidden',
-  },
-  habitRow: {
-    paddingVertical: 15,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(247, 243, 238, 0.1)',
-  },
-  habitValue: {
     fontFamily: DMSANS,
-    fontSize: 15,
-    lineHeight: 21,
+    fontSize: 18,
+    lineHeight: 25,
+    fontWeight: '600',
+    letterSpacing: -0.2,
     color: IVORY,
-  },
-  triggerUsageText: {
-    fontFamily: MONO,
-    fontSize: 12,
-    color: 'rgba(247, 243, 238, 0.5)',
-    marginTop: 5,
-  },
-  duoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 15,
-    paddingHorizontal: 16,
   },
   duoCard: {
     backgroundColor: NAVY,
     borderRadius: 18,
     overflow: 'hidden',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   itemRow: {
     flexDirection: 'row',

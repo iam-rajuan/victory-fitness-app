@@ -37,7 +37,6 @@ export default function TabsLayout() {
   const isCompactWidth = width < 380;
   const tabBarHeight = isCompactWidth ? 60 : 64;
   const tabIconSize = isCompactWidth ? 22 : 24;
-  const activeTabPadding = isCompactWidth ? 7 : 8;
   const profileBadgeSize = isCompactWidth ? 30 : 32;
 
   useEffect(() => {
@@ -159,8 +158,9 @@ export default function TabsLayout() {
           name="index"
           options={{
             tabBarIcon: ({ color, focused }) => (
-              <View style={focused ? [styles.activeTab, { padding: activeTabPadding }] : undefined}>
+              <View style={styles.tabItem}>
                 <Ionicons name={focused ? 'home' : 'home-outline'} size={tabIconSize} color={color} />
+                <View style={[styles.activeIndicator, { backgroundColor: colors.primary }, !focused && styles.indicatorHidden]} />
               </View>
             ),
           }}
@@ -169,8 +169,9 @@ export default function TabsLayout() {
           name="workout"
           options={{
             tabBarIcon: ({ color, focused }) => (
-              <View style={focused ? [styles.activeTab, { padding: activeTabPadding }] : undefined}>
+              <View style={styles.tabItem}>
                 <Ionicons name={focused ? 'barbell' : 'barbell-outline'} size={tabIconSize} color={color} />
+                <View style={[styles.activeIndicator, { backgroundColor: colors.primary }, !focused && styles.indicatorHidden]} />
               </View>
             ),
           }}
@@ -188,8 +189,9 @@ export default function TabsLayout() {
           name="challenge"
           options={{
             tabBarIcon: ({ color, focused }) => (
-              <View style={focused ? [styles.activeTab, { padding: activeTabPadding }] : undefined}>
+              <View style={styles.tabItem}>
                 <Ionicons name={focused ? 'trophy' : 'trophy-outline'} size={tabIconSize} color={color} />
+                <View style={[styles.activeIndicator, { backgroundColor: colors.primary }, !focused && styles.indicatorHidden]} />
               </View>
             ),
           }}
@@ -207,8 +209,9 @@ export default function TabsLayout() {
           name="mealPlan"
           options={{
             tabBarIcon: ({ color, focused }) => (
-              <View style={focused ? [styles.activeTab, { padding: activeTabPadding }] : undefined}>
+              <View style={styles.tabItem}>
                 <Ionicons name={focused ? 'restaurant' : 'restaurant-outline'} size={tabIconSize} color={color} />
+                <View style={[styles.activeIndicator, { backgroundColor: colors.primary }, !focused && styles.indicatorHidden]} />
               </View>
             ),
           }}
@@ -226,19 +229,19 @@ export default function TabsLayout() {
           name="profile"
           options={{
             tabBarIcon: ({ color, focused }) => (
-              <View style={focused ? [styles.activeTab, { padding: activeTabPadding }] : undefined}>
-                <View
-                  style={[
-                    styles.profileBadge,
-                    {
-                      width: profileBadgeSize,
-                      height: profileBadgeSize,
-                      borderRadius: profileBadgeSize / 2,
-                    },
-                  ]}
-                >
-                  {profileImage && !profileImageFailed ? (
-                    Platform.OS === 'web' ? (
+              <View style={styles.tabItem}>
+                {profileImage && !profileImageFailed ? (
+                  <View
+                    style={[
+                      styles.profileAvatarContainer,
+                      {
+                        width: profileBadgeSize,
+                        height: profileBadgeSize,
+                        borderRadius: profileBadgeSize / 2,
+                      },
+                    ]}
+                  >
+                    {Platform.OS === 'web' ? (
                       React.createElement('img', {
                         src: profileImage,
                         alt: 'Profile',
@@ -248,11 +251,12 @@ export default function TabsLayout() {
                       })
                     ) : (
                       <Image source={{ uri: profileImage }} style={styles.profileAvatar} onError={() => setProfileImageFailed(true)} />
-                    )
-                  ) : (
-                    <Ionicons name={focused ? 'person' : 'person-outline'} size={tabIconSize} color={color} />
-                  )}
-                </View>
+                    )}
+                  </View>
+                ) : (
+                  <Ionicons name={focused ? 'person' : 'person-outline'} size={tabIconSize} color={color} />
+                )}
+                <View style={[styles.activeIndicator, { backgroundColor: colors.primary }, !focused && styles.indicatorHidden]} />
               </View>
             ),
           }}
@@ -287,13 +291,27 @@ const styles = StyleSheet.create({
     zIndex: 1000,
     elevation: 1000,
   },
-  activeTab: {
-    backgroundColor: 'rgba(201, 148, 58, 0.16)',
-    borderRadius: 16,
+  tabItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 40,
+    minWidth: 44,
   },
-  profileBadge: {
-    borderWidth: 1.5,
-    borderColor: Colors.copper,
+  activeIndicator: {
+    width: 16,
+    height: 3,
+    borderRadius: 1.5,
+    marginTop: 4,
+    shadowColor: Colors.gold,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.45,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  indicatorHidden: {
+    opacity: 0,
+  },
+  profileAvatarContainer: {
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',

@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { pushRoute } from '../../lib/navigation';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../lib/i18n';
+import { canonicalizeChallengeTitle, registerCanonicalChallengeTitle } from '../../lib/challengeTerminology';
 
 export interface ChallengeItem {
   id?: string;
@@ -34,8 +35,7 @@ const NAVY = '#0D2B45';
 const GOLD = '#C9943A';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'ClashDisplay-Bold' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'DMSans-Medium' });
+const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
@@ -56,6 +56,14 @@ export default function ClaudeChallengesCarousel({
   const hasDragged = useRef(false);
 
   const list = Array.isArray(challenges) ? challenges : [];
+
+  useEffect(() => {
+    if (Array.isArray(challenges)) {
+      challenges.forEach((c) => {
+        if (c?.n) registerCanonicalChallengeTitle(c.n);
+      });
+    }
+  }, [challenges]);
 
   const screenWidth = Dimensions.get('window').width;
   const defaultWidth = Math.min(600, screenWidth);
@@ -233,7 +241,7 @@ export default function ClaudeChallengesCarousel({
             onPress={() => handleCardPress(c)}
           >
             <View style={styles.cardTopRow}>
-              <Text style={[styles.challengeName, { color: isDark ? IVORY : NAVY }]}>{t(c.n)}</Text>
+              <Text style={[styles.challengeName, { color: isDark ? IVORY : NAVY }]} numberOfLines={1} ellipsizeMode="tail">{canonicalizeChallengeTitle(c.n)}</Text>
               <Text style={styles.rankBadge}>{t(c.rank)}</Text>
             </View>
 
@@ -242,6 +250,8 @@ export default function ClaudeChallengesCarousel({
                 styles.dayProgressText,
                 { color: isDark ? 'rgba(247, 243, 238, 0.6)' : 'rgba(13, 43, 69, 0.55)' },
               ]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
             >
               {t(c.d)}
             </Text>
@@ -258,7 +268,7 @@ export default function ClaudeChallengesCarousel({
               <View style={[styles.progressFill, { width: `${Math.min(100, Math.max(0, c.pct))}%` }]} />
             </View>
 
-            <Text style={[styles.noteText, { color: isDark ? GOLD : '#B5651D' }]}>{t(c.note)}</Text>
+            <Text style={[styles.noteText, { color: isDark ? GOLD : '#B5651D' }]} numberOfLines={1} ellipsizeMode="tail">{t(c.note)}</Text>
           </Pressable>
         ))}
       </ScrollView>
@@ -359,9 +369,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   challengeName: {
-    fontFamily: CLASH,
-    fontSize: 18,
+    fontFamily: DMSANS,
+    fontSize: 17,
+    lineHeight: 22,
     fontWeight: '600',
+    letterSpacing: -0.2,
     color: IVORY,
   },
   rankBadge: {

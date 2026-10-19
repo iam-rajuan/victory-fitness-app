@@ -9,6 +9,7 @@ import { fetchChallengeOverviewData, CHALLENGE_OVERVIEW_CACHE_KEY } from '../../
 import { getCachedResourceSnapshot } from '../../lib/resourceCache';
 import { useLanguage } from '../../lib/i18n';
 import { pushRoute } from '../../lib/navigation';
+import { registerCanonicalChallengeTitle, canonicalizeChallengeTitle } from '../../lib/challengeTerminology';
 
 type ActiveChallenge = {
   id: string;
@@ -89,7 +90,7 @@ function ChallengeCard({
       {thumbnail ? <Image source={{ uri: thumbnail }} style={styles.challengeLibraryImage} resizeMode="contain" /> : null}
       <View style={styles.challengeLibraryCardHeader}>
         <View style={styles.challengeLibraryTitleWrap}>
-          <Text style={styles.challengeLibraryTitle}>{title}</Text>
+          <Text style={styles.challengeLibraryTitle}>{canonicalizeChallengeTitle(title)}</Text>
         </View>
         <View style={styles.challengeLibraryPointsBadge}>
           <Text style={styles.challengeLibraryPointsText}>+{points} {t('Points')}</Text>
@@ -368,10 +369,13 @@ export default function ChallengesSection({ refreshToken = 0 }: { refreshToken?:
       onSecondaryPress: () => pushRoute(routerRef.current, `/challenges/chat/${challenge.challenge_id}` as any),
     }));
 
+    activeChallenges.forEach((c) => { if (c.title) registerCanonicalChallengeTitle(c.title); });
+    readyChallenges.forEach((c) => { if (c.title) registerCanonicalChallengeTitle(c.title); });
+
     const readyCards: HomeChallengeCard[] = readyChallenges.map((challenge) => ({
       id: challenge.id,
       challengeId: challenge.id,
-      title: challenge.title,
+      title: canonicalizeChallengeTitle(challenge.title),
       goalType: challenge.type,
       whatToDo: challenge.description || `${challenge.duration_days} day challenge ready to start.`,
       whyItMatters: challenge.why_it_matters || '',

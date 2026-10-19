@@ -11,8 +11,11 @@ export type NutritionMealEntry = {
   f: number;
   ingredients: string[];
   instructions: string[];
+  preparation_steps?: string[];
   timing?: string | null;
 };
+
+export { getMealPreparationSteps } from './nutritionPrep';
 
 export type NutritionDayPlan = {
   day: string;
@@ -61,7 +64,44 @@ export function calculateProteinTarget(
     }
   }
   const goalStr = String(goal || '').trim().toLowerCase();
-  const multiplier = goalStr === 'g2' || goalStr.includes('muscle') ? 2.0 : 1.6;
+
+  let multiplier = 1.6;
+  // Maintenance / normal: minimum approximately 1.6 g/kg
+  if (
+    goalStr === 'g3' ||
+    goalStr.includes('maintenance') ||
+    goalStr.includes('normal')
+  ) {
+    multiplier = 1.6;
+  }
+  // Weight-reduction goal: approximately 2.2 g/kg according to client requested product logic
+  else if (
+    goalStr === 'g1' ||
+    goalStr.includes('weight reduction') ||
+    goalStr.includes('weight_reduction') ||
+    goalStr.includes('weight loss') ||
+    goalStr.includes('weight_loss') ||
+    goalStr.includes('lose weight') ||
+    goalStr.includes('fat loss') ||
+    goalStr.includes('fat_loss') ||
+    goalStr.includes('cutting') ||
+    goalStr.includes('deficit')
+  ) {
+    multiplier = 2.2;
+  }
+  // Muscle-growth goal: target up to approximately 2.2 g/kg
+  else if (
+    goalStr === 'g2' ||
+    goalStr.includes('muscle') ||
+    goalStr.includes('hypertrophy') ||
+    goalStr.includes('mass') ||
+    goalStr.includes('build')
+  ) {
+    multiplier = 2.2;
+  } else {
+    multiplier = 1.6;
+  }
+
   const target = Math.max(Math.round(weightKg * multiplier), 60);
   return { target, multiplier, weightKg: Math.round(weightKg * 10) / 10 };
 }
@@ -271,3 +311,5 @@ export async function primeMealAnalysisHistory(history: { analyses: MealImageAna
     analyses: Array.isArray(history.analyses) ? history.analyses : [],
   });
 }
+
+export * from './nutritionSummary';

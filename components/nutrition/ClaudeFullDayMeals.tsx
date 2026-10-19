@@ -83,10 +83,10 @@ export default function ClaudeFullDayMeals({ meals, updatingMealKey, onToggleMea
               />
 
               <View style={styles.mealTextCol}>
-                <Text style={[styles.mealName, m.logged && styles.mealNameDone]} numberOfLines={2}>
+                <Text style={[styles.mealName, m.logged && styles.mealNameDone]} numberOfLines={1} ellipsizeMode="tail">
                   {m.name}
                 </Text>
-                <Text style={styles.mealSub} numberOfLines={2}>
+                <Text style={styles.mealSub} numberOfLines={1} ellipsizeMode="tail">
                   {m.sub}
                 </Text>
               </View>
@@ -108,7 +108,7 @@ export default function ClaudeFullDayMeals({ meals, updatingMealKey, onToggleMea
         })}
       </View>
 
-      <Text style={styles.footnote}>
+      <Text style={styles.footnote} numberOfLines={2} ellipsizeMode="tail">
         {t('Every meal of the day is laid out from the start, dinner included — so you can see at 09:00 whether the target is reachable, not at 22:00.')}
       </Text>
     </View>

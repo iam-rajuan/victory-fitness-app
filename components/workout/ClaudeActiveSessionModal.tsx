@@ -7,11 +7,14 @@ import {
   Pressable,
   ScrollView,
   Platform,
+  TextInput,
 } from 'react-native';
 import RequirementAuditBoundary from '../audit/RequirementAuditBoundary';
 import CrossPlatformWebView from '../CrossPlatformWebView';
+import { useLanguage } from '../../lib/i18n';
+import { canonicalizeFitnessText } from '../../lib/workoutTerminology';
 
-interface ActiveExerciseItem {
+export interface ActiveExerciseItem {
   id: string;
   name: string;
   note: string;
@@ -23,7 +26,16 @@ interface ActiveExerciseItem {
   isHold?: boolean;
 }
 
-interface ClaudeActiveSessionModalProps {
+export interface CompletedSessionExercise {
+  id?: string;
+  name: string;
+  s?: string;
+  cardN?: string;
+  setsLogged?: number;
+  targetSets?: number;
+}
+
+export interface ClaudeActiveSessionModalProps {
   visible: boolean;
   onClose: () => void;
   tier?: string;
@@ -33,7 +45,13 @@ interface ClaudeActiveSessionModalProps {
   vimeoId?: string;
   videoUrl?: string;
   showVideo?: boolean;
-  onEndSession: (stats: { minutes: number; setsLogged: number; volumeKg: number; durationSeconds: number }) => void;
+  onEndSession: (stats: {
+    minutes: number;
+    setsLogged: number;
+    volumeKg: number;
+    durationSeconds: number;
+    completedExercises?: CompletedSessionExercise[];
+  }) => void;
 }
 
 function resolveWorkoutEmbedUrl(videoUrl?: string, vimeoId?: string): string {
@@ -65,7 +83,6 @@ const COPPER = '#B5651D';
 const GREEN = '#1A7A4A';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
 const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
@@ -82,15 +99,23 @@ export default function ClaudeActiveSessionModal({
   showVideo = true,
   onEndSession,
 }: ClaudeActiveSessionModalProps) {
+  const { t } = useLanguage();
   const [seconds, setSeconds] = useState(0);
   const [currentExIdx, setCurrentExIdx] = useState(0);
   const [currentSetIdx, setCurrentSetIdx] = useState(0);
   const [loggedSets, setLoggedSets] = useState<Record<string, string>>({});
   const [restRemainingSeconds, setRestRemainingSeconds] = useState(0);
+  const [sessionExercises, setSessionExercises] = useState<ActiveExerciseItem[]>(exercises);
+  const [swapModalVisible, setSwapModalVisible] = useState(false);
+  const [swapDraftName, setSwapDraftName] = useState('');
+
+  useEffect(() => {
+    setSessionExercises(exercises);
+  }, [exercises]);
 
   const resolvedVideoUrl = showVideo ? resolveWorkoutEmbedUrl(videoUrl, vimeoId) : '';
 
-  const currentExercise = exercises[currentExIdx] || null;
+  const currentExercise = sessionExercises[currentExIdx] || null;
   const [weightKg, setWeightKg] = useState(currentExercise?.defaultKg || 0);
   const [reps, setReps] = useState<number | 'max'>(currentExercise?.targetReps || 1);
 
@@ -134,6 +159,31 @@ export default function ClaudeActiveSessionModal({
     ? `${Math.floor(restRemainingSeconds / 60)}:${(restRemainingSeconds % 60).toString().padStart(2, '0')}`
     : currentExercise?.restTime || '--';
 
+  const handleSkipExercise = () => {
+    if (!currentExercise) {
+      handleFinish();
+      return;
+    }
+    setRestRemainingSeconds(0);
+    if (currentExIdx < sessionExercises.length - 1) {
+      setCurrentExIdx((prev) => prev + 1);
+      setCurrentSetIdx(0);
+    } else {
+      handleFinish();
+    }
+  };
+
+  const handleConfirmSwap = (name: string) => {
+    const nextName = name.trim();
+    if (nextName && currentExercise) {
+      setSessionExercises((prev) =>
+        prev.map((item, idx) => (idx === currentExIdx ? { ...item, name: nextName } : item))
+      );
+    }
+    setSwapModalVisible(false);
+    setSwapDraftName('');
+  };
+
   const handleLogSet = () => {
     if (!currentExercise) {
       handleFinish();
@@ -152,7 +202,7 @@ export default function ClaudeActiveSessionModal({
     // If more sets remain in this exercise
     if (currentSetIdx < currentExercise.targetSets - 1) {
       setCurrentSetIdx((prev) => prev + 1);
-    } else if (currentExIdx < exercises.length - 1) {
+    } else if (currentExIdx < sessionExercises.length - 1) {
       // Advance to next exercise
       setCurrentExIdx((prev) => prev + 1);
       setCurrentSetIdx(0);
@@ -187,7 +237,7 @@ export default function ClaudeActiveSessionModal({
 
     if (currentExIdx > 0) {
       const previousExerciseIdx = currentExIdx - 1;
-      const previousExercise = exercises[previousExerciseIdx];
+      const previousExercise = sessionExercises[previousExerciseIdx];
       const previousSetIdx = Math.max((previousExercise?.targetSets || 1) - 1, 0);
       const previousKey = `${previousExerciseIdx}:${previousSetIdx}`;
       const nextLogged = { ...loggedSets };
@@ -206,25 +256,43 @@ export default function ClaudeActiveSessionModal({
       if (!match) return total;
       return total + Number(match[1] || 0) * Number(match[2] || 0);
     }, 0);
+
+    const completedExercisesList: CompletedSessionExercise[] = sessionExercises
+      .map((ex, idx) => {
+        const loggedCount = Object.keys(finalLogged).filter((k) => k.startsWith(`${idx}:`)).length;
+        if (loggedCount === 0) return null;
+        const canonicalName = canonicalizeFitnessText(ex.name);
+        return {
+          id: ex.id,
+          name: canonicalName,
+          s: `${loggedCount} sets`,
+          cardN: canonicalName.trim(),
+          setsLogged: loggedCount,
+          targetSets: ex.targetSets,
+        };
+      })
+      .filter((ex): ex is { id: string; name: string; s: string; cardN: string; setsLogged: number; targetSets: number } => Boolean(ex));
+
     onEndSession({
       minutes: Math.max(1, Math.round(seconds / 60)),
       setsLogged: totalLoggedCount,
       volumeKg: Math.max(0, volume),
       durationSeconds: Math.max(0, seconds),
+      completedExercises: completedExercisesList,
     });
   };
 
   // Button text matching prototype
   const setCtaText =
     !currentExercise
-      ? 'Finish workout'
+      ? t('Finish workout')
       : currentSetIdx >= currentExercise.targetSets - 1
-      ? currentExIdx >= exercises.length - 1
-        ? 'Finish workout'
-        : 'Next exercise'
-      : `Log set ${currentSetIdx + 1}`;
+      ? currentExIdx >= sessionExercises.length - 1
+        ? t('Finish workout')
+        : t('Next exercise')
+      : `${t('Log set')} ${currentSetIdx + 1}`;
 
-  const totalWorkoutSets = exercises.reduce((acc, e) => acc + e.targetSets, 0);
+  const totalWorkoutSets = sessionExercises.reduce((acc, e) => acc + e.targetSets, 0);
   const setsDoneCount = Object.keys(loggedSets).length;
   const progressPct =
     totalWorkoutSets <= 0
@@ -238,16 +306,16 @@ export default function ClaudeActiveSessionModal({
         {/* Top Header */}
         <View style={styles.topBar}>
           <Pressable onPress={onClose} hitSlop={10}>
-            <Text style={styles.pauseBtn}>Pause</Text>
+            <Text style={styles.pauseBtn}>{t('Pause')}</Text>
           </Pressable>
 
           <View style={styles.headerCenter}>
-            <Text style={styles.workoutHeaderTitle}>{workoutTitle.toUpperCase()}</Text>
+            <Text style={styles.workoutHeaderTitle}>{canonicalizeFitnessText(workoutTitle).toUpperCase()}</Text>
             <Text style={styles.headerClock}>{clockString}</Text>
           </View>
 
           <Pressable onPress={() => handleFinish()} hitSlop={10}>
-            <Text style={styles.endBtn}>End</Text>
+            <Text style={styles.endBtn}>{t('End')}</Text>
           </Pressable>
         </View>
 
@@ -289,14 +357,35 @@ export default function ClaudeActiveSessionModal({
 
           {/* Exercise Info matching lines 563-567 */}
           <View style={styles.exerciseHeader}>
-            <Text style={styles.exerciseKicker}>
-              {currentExercise ? `EXERCISE ${currentExIdx + 1} OF ${exercises.length}` : 'NO MOVEMENTS ADDED'}
-            </Text>
+            <View style={styles.exerciseHeaderTopRow}>
+              <Text style={styles.exerciseKicker}>
+                {currentExercise ? `${t('EXERCISE')} ${currentExIdx + 1} ${t('OF')} ${sessionExercises.length}` : t('NO MOVEMENTS ADDED')}
+              </Text>
+              {currentExercise ? (
+                <View style={styles.exerciseActionRow}>
+                  <Pressable
+                    style={styles.exerciseActionBtn}
+                    onPress={() => {
+                      setSwapDraftName(currentExercise.name);
+                      setSwapModalVisible(true);
+                    }}
+                  >
+                    <Text style={styles.exerciseActionBtnText}>{t('Swap')}</Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.exerciseActionBtn}
+                    onPress={handleSkipExercise}
+                  >
+                    <Text style={styles.exerciseActionBtnText}>{t('Skip')}</Text>
+                  </Pressable>
+                </View>
+              ) : null}
+            </View>
             <Text style={styles.exerciseName}>
-              {currentExercise?.name || 'Follow the workout video'}
+              {currentExercise?.name ? canonicalizeFitnessText(currentExercise.name) : t('Follow the workout video')}
             </Text>
             <Text style={styles.exerciseNote}>
-              {currentExercise?.note || 'This workout has no admin-programmed movements yet.'}
+              {currentExercise?.note || t('This workout has no admin-programmed movements yet.')}
             </Text>
           </View>
 
@@ -478,20 +567,70 @@ export default function ClaudeActiveSessionModal({
             onPress={handlePreviousStep}
             disabled={!canGoBack}
           >
-            <Text style={[styles.previousBtnText, !canGoBack && styles.previousBtnTextDisabled]}>Back</Text>
+            <Text style={[styles.previousBtnText, !canGoBack && styles.previousBtnTextDisabled]}>{t('Back')}</Text>
           </Pressable>
 
           <View style={styles.restBox}>
             <Text style={[styles.restTime, restRemainingSeconds > 0 && styles.restTimeActive]}>
               {restClockString}
             </Text>
-            <Text style={styles.restLabel}>REST</Text>
+            <Text style={styles.restLabel}>{t('REST')}</Text>
           </View>
 
           <Pressable style={styles.logSetBtn} onPress={handleLogSet}>
             <Text style={styles.logSetBtnText}>{setCtaText}</Text>
           </Pressable>
         </View>
+
+        {/* Swap Movement Modal */}
+        <Modal
+          visible={swapModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setSwapModalVisible(false)}
+        >
+          <View style={styles.swapModalOverlay}>
+            <View style={styles.swapModalCard}>
+              <Text style={styles.swapModalTitle}>Swap Movement</Text>
+              <Text style={styles.swapModalSubtitle}>
+                Substitute with an alternative exercise for this session:
+              </Text>
+              <TextInput
+                style={styles.swapInput}
+                value={swapDraftName}
+                onChangeText={setSwapDraftName}
+                placeholder="Enter exercise name..."
+                placeholderTextColor="rgba(247, 243, 238, 0.4)"
+                autoFocus
+              />
+              <View style={styles.swapChipsRow}>
+                {['Incline Press', 'Dumbbell Row', 'Goblet Squat', 'Lat Pulldown', 'Push-ups', 'Romanian Deadlift'].map((chip) => (
+                  <Pressable
+                    key={chip}
+                    style={styles.swapChip}
+                    onPress={() => setSwapDraftName(chip)}
+                  >
+                    <Text style={styles.swapChipText}>{chip}</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <View style={styles.swapModalActions}>
+                <Pressable
+                  style={styles.swapCancelBtn}
+                  onPress={() => setSwapModalVisible(false)}
+                >
+                  <Text style={styles.swapCancelBtnText}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.swapSaveBtn}
+                  onPress={() => handleConfirmSwap(swapDraftName)}
+                >
+                  <Text style={styles.swapSaveBtnText}>Confirm Swap</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     </Modal>
   );
@@ -620,6 +759,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 18,
   },
+  exerciseHeaderTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  exerciseActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  exerciseActionBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(201, 148, 58, 0.4)',
+    backgroundColor: 'rgba(201, 148, 58, 0.12)',
+  },
+  exerciseActionBtnText: {
+    fontFamily: DMSANS,
+    fontSize: 11,
+    fontWeight: '700',
+    color: GOLD,
+    letterSpacing: 0.5,
+  },
   exerciseKicker: {
     fontFamily: DMSANS,
     fontSize: 11,
@@ -628,10 +793,11 @@ const styles = StyleSheet.create({
     color: COPPER,
   },
   exerciseName: {
-    fontFamily: CLASH,
-    fontSize: 31,
-    lineHeight: 34,
+    fontFamily: DMSANS,
+    fontSize: 26,
+    lineHeight: 32,
     fontWeight: '600',
+    letterSpacing: -0.3,
     color: IVORY,
     marginTop: 5,
   },
@@ -920,6 +1086,97 @@ const styles = StyleSheet.create({
   logSetBtnText: {
     fontFamily: DMSANS,
     fontSize: 17,
+    fontWeight: '700',
+    color: OBSIDIAN,
+  },
+  swapModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  swapModalCard: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: NAVY,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(201, 148, 58, 0.3)',
+    padding: 22,
+  },
+  swapModalTitle: {
+    fontFamily: DMSANS,
+    fontSize: 20,
+    lineHeight: 26,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+    color: IVORY,
+    marginBottom: 6,
+  },
+  swapModalSubtitle: {
+    fontFamily: INTER,
+    fontSize: 13,
+    color: 'rgba(247, 243, 238, 0.7)',
+    marginBottom: 16,
+    lineHeight: 18,
+  },
+  swapInput: {
+    height: 48,
+    backgroundColor: 'rgba(13, 13, 13, 0.6)',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(247, 243, 238, 0.16)',
+    paddingHorizontal: 14,
+    color: IVORY,
+    fontFamily: DMSANS,
+    fontSize: 15,
+    marginBottom: 14,
+  },
+  swapChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 20,
+  },
+  swapChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(247, 243, 238, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(247, 243, 238, 0.14)',
+  },
+  swapChipText: {
+    fontFamily: DMSANS,
+    fontSize: 12,
+    color: 'rgba(247, 243, 238, 0.85)',
+  },
+  swapModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+  },
+  swapCancelBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  swapCancelBtnText: {
+    fontFamily: DMSANS,
+    fontSize: 14,
+    color: 'rgba(247, 243, 238, 0.6)',
+    fontWeight: '600',
+  },
+  swapSaveBtn: {
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: GOLD,
+  },
+  swapSaveBtnText: {
+    fontFamily: DMSANS,
+    fontSize: 14,
     fontWeight: '700',
     color: OBSIDIAN,
   },

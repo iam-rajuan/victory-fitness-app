@@ -30,10 +30,9 @@ const COPPER = '#B5651D';
 const IVORY = '#F7F3EE';
 const JADE = '#1A7A4A';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'Inter-Regular' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 // Curated high-resolution fitness photography by discipline
 const CATEGORY_IMAGES: Record<string, string> = {
@@ -461,9 +460,10 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontFamily: CLASH,
-    fontWeight: '700',
-    letterSpacing: -0.3,
+    lineHeight: 26,
+    fontFamily: DMSANS,
+    fontWeight: '600',
+    letterSpacing: -0.2,
   },
   countPill: {
     paddingHorizontal: 10,
@@ -488,9 +488,10 @@ const styles = StyleSheet.create({
   },
   heroHeadline: {
     fontSize: 26,
-    fontFamily: CLASH,
-    fontWeight: '700',
-    letterSpacing: -0.5,
+    lineHeight: 32,
+    fontFamily: DMSANS,
+    fontWeight: '600',
+    letterSpacing: -0.3,
     marginBottom: 6,
   },
   heroSubhead: {
@@ -540,8 +541,9 @@ const styles = StyleSheet.create({
   },
   sectionHeading: {
     fontSize: 18,
-    fontFamily: CLASH,
-    fontWeight: '700',
+    lineHeight: 24,
+    fontFamily: DMSANS,
+    fontWeight: '600',
     letterSpacing: -0.2,
   },
   sectionCount: {
@@ -608,10 +610,11 @@ const styles = StyleSheet.create({
   },
   cardCategoryName: {
     color: '#F7F3EE',
-    fontSize: 24,
-    fontFamily: CLASH,
-    fontWeight: '700',
-    letterSpacing: -0.4,
+    fontSize: 22,
+    lineHeight: 28,
+    fontFamily: DMSANS,
+    fontWeight: '600',
+    letterSpacing: -0.3,
     marginBottom: 8,
     textShadowColor: 'rgba(0, 0, 0, 0.65)',
     textShadowOffset: { width: 0, height: 1 },
@@ -668,8 +671,9 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 18,
-    fontFamily: CLASH,
-    fontWeight: '700',
+    lineHeight: 24,
+    fontFamily: DMSANS,
+    fontWeight: '600',
     marginBottom: 6,
   },
   emptySubtitle: {

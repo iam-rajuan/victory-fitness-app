@@ -1,5 +1,6 @@
 import { ApiError, apiRequest } from './api';
 import { fetchCachedResource } from './resourceCache';
+import { registerCanonicalChallengeTitles } from './challengeTerminology';
 export {
   JOURNAL_ENTRIES_CACHE_KEY,
   PRIVACY_POLICY_CACHE_KEY,
@@ -110,11 +111,22 @@ export async function fetchAboutUs() {
 }
 
 export async function fetchChallengeOverviewData(options?: { forceRefresh?: boolean }) {
-  return fetchCachedResource(CHALLENGE_OVERVIEW_CACHE_KEY, async () => {
+  const result = await fetchCachedResource(CHALLENGE_OVERVIEW_CACHE_KEY, async () => {
     return apiRequest<ChallengeOverview>('/challenges/overview', {
       skipResponseCache: options?.forceRefresh,
     });
   }, { maxAgeMs: CHALLENGE_OVERVIEW_CACHE_MAX_AGE_MS, forceRefresh: options?.forceRefresh });
+
+  if (result) {
+    const titles = [
+      ...(result.active_challenges || []),
+      ...(result.ready_to_start || []),
+      ...(result.completed_challenges || []),
+    ].map((c: any) => c.title).filter(Boolean);
+    registerCanonicalChallengeTitles(titles);
+  }
+
+  return result;
 }
 
 export async function fetchCommunityPostsData() {

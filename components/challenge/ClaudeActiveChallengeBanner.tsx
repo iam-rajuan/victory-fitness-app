@@ -25,7 +25,6 @@ const GOLD = '#C9943A';
 const COPPER = '#B5651D';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
 const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
@@ -97,7 +96,7 @@ export default function ClaudeActiveChallengeBanner({
           <Text style={styles.pointsBadge}>{pointsText}</Text>
         </View>
 
-        <Text style={[styles.title, { color: isDark ? IVORY : NAVY }]}>{challenge.n}</Text>
+        <Text style={[styles.title, { color: isDark ? IVORY : NAVY }]} numberOfLines={1} ellipsizeMode="tail">{challenge.n}</Text>
 
         {/* Progress Bar */}
         <View
@@ -161,6 +160,8 @@ export default function ClaudeActiveChallengeBanner({
                 styles.checkTitle,
                 { color: isTodayDone ? IVORY : '#0D0D0D' },
               ]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
             >
               {completingToday ? 'Saving...' : checkTitle}
             </Text>
@@ -169,6 +170,8 @@ export default function ClaudeActiveChallengeBanner({
                 styles.checkNote,
                 { color: isTodayDone ? 'rgba(247, 243, 238, 0.7)' : '#2A2218' },
               ]}
+              numberOfLines={2}
+              ellipsizeMode="tail"
             >
               {checkNote}
             </Text>
@@ -241,9 +244,11 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   title: {
-    fontFamily: CLASH,
+    fontFamily: DMSANS,
     fontSize: 19,
+    lineHeight: 25,
     fontWeight: '600',
+    letterSpacing: -0.2,
     color: IVORY,
     marginBottom: 12,
   },

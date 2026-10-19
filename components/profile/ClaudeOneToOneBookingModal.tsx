@@ -31,10 +31,9 @@ const COPPER = '#B5651D';
 const GREEN = '#5FC48E';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'Inter-Regular' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 function nextSlots(): SlotItem[] {
   const times = [
@@ -262,9 +261,11 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   title: {
-    fontFamily: CLASH,
-    fontSize: 31,
+    fontFamily: DMSANS,
+    fontSize: 26,
+    lineHeight: 32,
     fontWeight: '600',
+    letterSpacing: -0.3,
     color: IVORY,
     marginBottom: 10,
   },

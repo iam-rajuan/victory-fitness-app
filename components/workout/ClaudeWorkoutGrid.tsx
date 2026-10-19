@@ -145,8 +145,10 @@ export default function ClaudeWorkoutGrid({
               {isImageLoaded(w.thumbnail) ? <Text style={styles.badge}>{w.badge}</Text> : null}
             </View>
 
-            <Text style={[styles.workoutName, { color: colors.text }]}>{w.name}</Text>
-            <Text style={[styles.workoutMeta, { color: colors.textMuted }]}>{w.meta}</Text>
+            <Text style={[styles.workoutName, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">
+              {w.name}
+            </Text>
+            {/* <Text style={[styles.workoutMeta, { color: colors.textMuted }]} numberOfLines={1} ellipsizeMode="tail">{w.meta}</Text> */}
           </Pressable>
         ))}
       </View>

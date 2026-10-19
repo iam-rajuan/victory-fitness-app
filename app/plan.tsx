@@ -35,10 +35,9 @@ const IVORY = '#F7F3EE';
 const MUTED = 'rgba(247,243,238,0.58)';
 const BLUE_GRAY = '#8FA8C4';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'Inter-Regular' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 type TierOption = {
   tier: SubscriptionTier;
@@ -470,12 +469,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   title: {
-    fontFamily: CLASH,
-    fontSize: 29,
-    lineHeight: 34,
-    fontWeight: '800',
+    fontFamily: DMSANS,
+    fontSize: 26,
+    lineHeight: 32,
+    fontWeight: '600',
     color: IVORY,
-    letterSpacing: 0,
+    letterSpacing: -0.3,
     maxWidth: 330,
   },
   subtitle: {
@@ -561,10 +560,11 @@ const styles = StyleSheet.create({
   },
   planTitle: {
     flex: 1,
-    fontFamily: CLASH,
+    fontFamily: DMSANS,
     fontSize: 18,
-    lineHeight: 22,
-    fontWeight: '800',
+    lineHeight: 24,
+    fontWeight: '600',
+    letterSpacing: -0.2,
     color: IVORY,
   },
   priceRow: {

@@ -9,7 +9,7 @@ import {
   RefreshControl,
   useWindowDimensions,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { apiRequest, fetchCurrentUser, resolveRemoteAssetUrl } from '../../lib/api';
 import { fetchChallengeOverviewData } from '../../lib/screenData';
 import { CHALLENGE_OVERVIEW_CACHE_KEY, CURRENT_USER_CACHE_KEY, getCommunityPostsCacheKey } from '../../lib/cacheKeys';
@@ -24,11 +24,9 @@ import ClaudeInviteModal from '../../components/challenge/ClaudeInviteModal';
 import ClaudeCommunityFeed, { CommunityComment, CommunityPost, CommunityPostDraft } from '../../components/challenge/ClaudeCommunityFeed';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../lib/i18n';
-
+import { registerCanonicalChallengeTitle, canonicalizeChallengeTitle } from '../../lib/challengeTerminology';
+import { Typography } from '../../constants/Typography';
 const OBSIDIAN = '#0D0D0D';
-const IVORY = '#F7F3EE';
-
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
 
 type ChallengeOverviewPayload = {
   active_chats?: Array<{
@@ -81,10 +79,13 @@ function buildChallengeItem(raw: Record<string, any>, status: ChallengeItem['sta
     })
     .filter((item: { i: string; image: string }) => item.i || item.image)
     .slice(0, 4);
+  const rawTitle = String(raw.title || 'Untitled challenge').trim();
+  registerCanonicalChallengeTitle(rawTitle);
+  const challengeTitle = canonicalizeChallengeTitle(rawTitle);
   return {
     id: challengeId,
     challengeId,
-    n: String(raw.title || 'Untitled challenge').trim(),
+    n: challengeTitle,
     d: Math.max(1, Number(raw.duration_days || raw.total_days || 1)),
     c: formatCategory(raw.type || raw.category),
     p: formatPoints(points),
@@ -203,6 +204,16 @@ export default function ChallengeScreen() {
   const [challengeItems, setChallengeItems] = useState<ChallengeItem[]>([]);
   const [activeChallenge, setActiveChallenge] = useState<ChallengeItem | null>(null);
   const [isLoadingChallenges, setIsLoadingChallenges] = useState(true);
+  const [selectedChallengeDay, setSelectedChallengeDay] = useState('All');
+  const [selectedChallengeCat, setSelectedChallengeCat] = useState('All');
+  const [isChallengeFiltersExpanded, setIsChallengeFiltersExpanded] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      setIsChallengeFiltersExpanded(false);
+    }, [])
+  );
+
   const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([]);
   const [communityScope, setCommunityScope] = useState<'auto' | 'tier' | 'all'>('auto');
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -525,6 +536,12 @@ export default function ChallengeScreen() {
             <ClaudeChallengeDirectory
               challenges={challengeItems}
               isLoading={isLoadingChallenges}
+              selectedDay={selectedChallengeDay}
+              onSelectDay={setSelectedChallengeDay}
+              selectedCat={selectedChallengeCat}
+              onSelectCat={setSelectedChallengeCat}
+              isFiltersExpanded={isChallengeFiltersExpanded}
+              onToggleFiltersExpanded={() => setIsChallengeFiltersExpanded((prev) => !prev)}
               onSelectChallenge={handleSelectChallenge}
               onOpenInviteGuest={handleInviteSomeone}
             />
@@ -607,10 +624,8 @@ const styles = StyleSheet.create({
     paddingBottom: 110,
   },
   screenTitle: {
-    fontFamily: CLASH,
-    fontSize: 27,
-    fontWeight: '600',
-    color: IVORY,
+    ...Typography.h1,
+    color: '#F7F3EE',
     paddingTop: 4,
   },
 });

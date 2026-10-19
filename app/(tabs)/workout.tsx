@@ -8,7 +8,7 @@ import {
   Alert,
   Image,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
@@ -134,6 +134,7 @@ function mapRowWorkout(workout: GridWorkoutItem, badge: string): WorkoutRowItem 
     n: workout.name,
     m: workout.meta,
     t: badge,
+    durationBadge: workout.badge,
     v: workout.vimeoId,
     videoUrl: workout.videoUrl,
     videoSource: workout.videoSource,
@@ -268,6 +269,13 @@ export default function WorkoutScreen() {
   const [selectedDifficulty, setSelectedDifficulty] = useState('Any');
   const [selectedDuration, setSelectedDuration] = useState('Any');
   const [selectedKit, setSelectedKit] = useState('Any');
+  const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      setIsFiltersExpanded(false);
+    }, [])
+  );
 
   // Plan Build State
   const [planBuilt, setPlanBuilt] = useState(false);
@@ -516,6 +524,7 @@ export default function WorkoutScreen() {
   }, [selectedWorkout?.movements]);
 
   const [completeInitialStep, setCompleteInitialStep] = useState<'feedback' | 'complete'>('complete');
+  const [sessionCompletedExercises, setSessionCompletedExercises] = useState<Array<{ name: string; s?: string; cardN?: string }>>([]);
 
   // Actions
   const handleStartWorkout = (w: GridWorkoutItem) => {
@@ -586,13 +595,30 @@ export default function WorkoutScreen() {
   };
 
   const handleFinishSession = (
-    stats?: { minutes: number; setsLogged: number; volumeKg: number; durationSeconds?: number },
+    stats?: {
+      minutes: number;
+      setsLogged: number;
+      volumeKg: number;
+      durationSeconds?: number;
+      completedExercises?: Array<{ id?: string; name: string; s?: string; cardN?: string }>;
+    },
     stepMode: 'feedback' | 'complete' = 'complete'
   ) => {
     const nextStats = stats
       ? { ...stats, durationSeconds: Math.max(0, stats.durationSeconds || stats.minutes * 60) }
       : completedStats;
     if (stats) setCompletedStats(nextStats);
+
+    const actualCompleted: Array<{ name: string; s?: string; cardN?: string }> =
+      stats?.completedExercises && stats.completedExercises.length > 0
+        ? stats.completedExercises.map((e) => ({
+            name: e.name,
+            s: e.s || '',
+            cardN: e.cardN || e.name,
+          }))
+        : [];
+    setSessionCompletedExercises(actualCompleted);
+
     if (selectedWorkout?.id) {
       const completedId = selectedWorkout.id;
       completedWorkoutIdsRef.current.add(completedId);
@@ -607,14 +633,10 @@ export default function WorkoutScreen() {
     setActiveSessionVisible(false);
     setCompleteModalVisible(true);
 
-    const movementSummary = selectedExercises.map((exercise, index) => ({
+    const movementSummary = actualCompleted.map((exercise, index) => ({
       order: index,
       name: exercise.name,
-      prescription: exercise.s,
-      targetSets: exercise.targetSets,
-      targetReps: exercise.targetReps,
-      defaultKg: exercise.defaultKg,
-      restSeconds: exercise.restSeconds,
+      prescription: exercise.s || '',
     }));
 
     void createWorkoutLog({
@@ -804,6 +826,8 @@ export default function WorkoutScreen() {
           selectedKit={selectedKit}
           onSelectKit={setSelectedKit}
           resultCountText={resultCountText}
+          isExpanded={isFiltersExpanded}
+          onToggleExpanded={() => setIsFiltersExpanded((prev) => !prev)}
           onResetFilters={() => {
             setSelectedPurposes(['All']);
             setSelectedDifficulty('Any');
@@ -906,7 +930,7 @@ export default function WorkoutScreen() {
         setsLogged={completedStats.setsLogged}
         volumeKg={completedStats.volumeKg}
         streakDays={Math.max(0, Number(currentUser?.streak_days || 0))}
-        exercises={selectedExercises}
+        exercises={sessionCompletedExercises}
         identityStatement={currentUser?.identity_statement || undefined}
         motivationStatement={currentUser?.motivation_statement || undefined}
         userName={currentUser?.name || 'there'}

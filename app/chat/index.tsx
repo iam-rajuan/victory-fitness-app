@@ -12,6 +12,8 @@ import {
   Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../../constants/Colors';
 import {
   fetchCurrentUser,
@@ -21,11 +23,14 @@ import {
   clearCoachVictorHistory,
   applyCoachWorkoutPlanAction,
   CoachWorkoutPlanAction,
+  CoachWorkoutPlanPreview,
 } from '../../lib/api';
 import { savePlanBuiltData } from '../../lib/planStorage';
 import { saveLatestStrengthWorkoutPlan } from '../../lib/workout-plans';
 import { normalizeSubscriptionTier } from '../../lib/access';
 import { pushRoute, goBackOrReplace } from '../../lib/navigation';
+import { useLanguage } from '../../lib/i18n';
+import { VictorThinkingIndicator } from '../../components/chat/VictorThinkingIndicator';
 
 interface ChatMessage {
   id: string;
@@ -43,14 +48,31 @@ interface ChatMessage {
   };
   contextNote?: string;
   homePlanAction?: {
+    type?: string;
     sourcePrompt: string;
     scope?: string;
     targetDays?: string[];
     targetMinutes?: number | null;
+    dayCount?: number;
     summary?: string;
     buttonLabel?: string;
     status?: 'ready' | 'saving' | 'saved';
+    preview?: CoachWorkoutPlanPreview;
+    draftId?: string;
+    draftVersion?: number;
   };
+}
+
+interface ChatSendOptions {
+  prescriptionTitle?: string;
+  prescriptionMeta?: string;
+  prescriptionWorkoutId?: string;
+  prescriptionWorkoutTitle?: string;
+  prescriptionVimeoId?: string;
+  prescriptionVideoUrl?: string;
+  prescriptionTag?: string;
+  prescriptionThumbnail?: string;
+  contextNote?: string;
 }
 
 const OBSIDIAN = '#0D0D0D';
@@ -59,10 +81,9 @@ const GOLD = '#C9943A';
 const GREEN = '#1A7A4A';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'Inter-Regular' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 const QUICK_PROMPTS = [
   'Adjust my current routine',
@@ -71,6 +92,22 @@ const QUICK_PROMPTS = [
   'What should I eat before training?',
   'Swap dinner from my week plan.',
 ];
+
+const COACH_CHAT_STORAGE_PREFIX = 'victory:coach-chat:v1';
+
+function getCoachChatStorageKey(userId: string) {
+  return `${COACH_CHAT_STORAGE_PREFIX}:${userId}`;
+}
+
+function isStoredChatMessage(value: unknown): value is ChatMessage {
+  if (!value || typeof value !== 'object') return false;
+  const message = value as Partial<ChatMessage>;
+  return (
+    typeof message.id === 'string' &&
+    (message.sender === 'user' || message.sender === 'coach') &&
+    typeof message.text === 'string'
+  );
+}
 
 const LANGUAGE_ALIASES: Record<string, string> = {
   english: 'en',
@@ -108,14 +145,6 @@ function planSummaryLineFromPrompt(prompt: string) {
   const minutes = lowered.match(/(\d{1,3})\s*(?:min|minute)/)?.[1];
   const kit = lowered.includes('no equipment') || lowered.includes('bodyweight') ? 'Bodyweight' : lowered.includes('dumbbell') ? 'Dumbbells' : 'Profile kit';
   return `Coach chat plan · ${days || 'your week'} · ${minutes ? `${minutes} min` : 'profile time'} · ${kit}.`;
-}
-
-function insertButtonLabel(language?: string) {
-  if (language === 'de') return 'In Home-Plan einfügen';
-  if (language === 'bn') return 'Home workout plan-এ বসান';
-  if (language === 'hi') return 'Home workout plan में डालें';
-  if (language === 'es') return 'Insertar en Home';
-  return 'insert into my workout plan';
 }
 
 function parseInlineMarkdown(text: string, baseStyle: any, keyPrefix: string) {
@@ -282,6 +311,179 @@ function FormattedCoachMessage({ text }: { text: string }) {
   );
 }
 
+function WorkoutPlanActionCard({
+  action,
+  onConfirm,
+}: {
+  action: NonNullable<ChatMessage['homePlanAction']>;
+  onConfirm: () => void;
+}) {
+  const preview = action.preview;
+  const days = preview?.days || [];
+  const [selectedDayIndex, setSelectedDayIndex] = useState(0);
+
+  if (
+    !preview ||
+    days.length === 0 ||
+    days.some((day) => !Array.isArray(day.exercises) || day.exercises.length === 0)
+  ) return null;
+
+  const safeIndex = Math.min(selectedDayIndex, days.length - 1);
+  const activeDay = days[safeIndex] || days[0];
+  const duration = activeDay.expected_duration || preview.expected_duration || action.targetMinutes || 90;
+
+  return (
+    <View style={styles.previewContainer}>
+      <View style={styles.previewHeader}>
+        <View style={styles.previewBadgeRow}>
+          <View style={styles.previewPlanBadge}>
+            <Ionicons name="barbell-outline" size={13} color={GOLD} />
+            <Text style={styles.previewPlanBadgeText}>
+              {`${days.length}-DAY ROUTINE PREVIEW`}
+            </Text>
+          </View>
+          <View style={styles.previewDurationBadge}>
+            <Ionicons name="time-outline" size={12} color={IVORY} />
+            <Text style={styles.previewDurationText}>{duration} min / session</Text>
+          </View>
+        </View>
+
+        <Text style={styles.previewTitle}>
+          {preview.plan_name || action.summary || `${days.length}-Day Workout Plan`}
+        </Text>
+
+        {preview.equipment && preview.equipment.length > 0 && (
+          <View style={styles.previewEquipmentRow}>
+            <Text style={styles.previewEquipmentLabel}>Equipment:</Text>
+            {preview.equipment.map((eq, i) => (
+              <View key={i} style={styles.previewEquipmentPill}>
+                <Text style={styles.previewEquipmentPillText}>{eq}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+
+      {preview.uncertainties && preview.uncertainties.length > 0 && (
+        <View style={styles.previewWarningBox}>
+          <Ionicons name="alert-circle-outline" size={16} color="#E0A82E" />
+          <View style={{ flex: 1 }}>
+            {preview.uncertainties.map((u, i) => (
+              <Text key={i} style={styles.previewWarningText}>{u}</Text>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* Day Selector Tabs */}
+      <View style={styles.previewDayTabs}>
+        {days.map((day, idx) => {
+          const isSelected = idx === safeIndex;
+          return (
+            <Pressable
+              key={idx}
+              onPress={() => setSelectedDayIndex(idx)}
+              style={[
+                styles.previewDayTab,
+                isSelected && styles.previewDayTabActive,
+              ]}
+            >
+              <Text style={[styles.previewDayTabText, isSelected && styles.previewDayTabTextActive]}>
+                {`Day ${idx + 1}`}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {/* Active Day Detail */}
+      <View style={styles.previewDayContent}>
+        <View style={styles.previewDayHeader}>
+          <Text style={styles.previewDayName}>{activeDay.day_name}</Text>
+          <Text style={styles.previewDayMeta}>
+            {activeDay.exercises.length} exercises • {activeDay.expected_duration || duration} min
+          </Text>
+        </View>
+
+        <View style={styles.previewExercisesList}>
+          {activeDay.exercises.map((ex, exIdx) => (
+            <View key={exIdx} style={styles.previewExerciseCard}>
+              <View style={styles.previewExerciseTopRow}>
+                <Text style={styles.previewExerciseName}>{ex.exercise_name}</Text>
+                {ex.type ? (
+                  <View style={styles.previewExerciseTypePill}>
+                    <Text style={styles.previewExerciseTypePillText}>{ex.type}</Text>
+                  </View>
+                ) : null}
+              </View>
+
+              <View style={styles.previewExerciseMetrics}>
+                {ex.weight ? (
+                  <View style={styles.previewMetricTagWeight}>
+                    <Ionicons name="barbell-outline" size={12} color={GOLD} />
+                    <Text style={styles.previewMetricTagWeightText}>{ex.weight}</Text>
+                  </View>
+                ) : null}
+
+                <View style={styles.previewMetricTag}>
+                  <Text style={styles.previewMetricTagText}>
+                    {ex.sets} × {ex.reps}
+                  </Text>
+                </View>
+
+                {ex.rest ? (
+                  <View style={styles.previewMetricTag}>
+                    <Ionicons name="timer-outline" size={11} color="rgba(247,243,238,0.7)" />
+                    <Text style={styles.previewMetricTagText}>{ex.rest}</Text>
+                  </View>
+                ) : null}
+              </View>
+
+              {ex.notes ? (
+                <View style={styles.previewExerciseNotesRow}>
+                  <Ionicons name="information-circle-outline" size={12} color="rgba(247,243,238,0.5)" />
+                  <Text style={styles.previewExerciseNotesText}>{ex.notes}</Text>
+                </View>
+              ) : null}
+            </View>
+          ))}
+        </View>
+      </View>
+
+      {/* Confirmation Button */}
+      <Pressable
+        style={[
+          styles.homePlanActionButton,
+          action.status === 'saved' && styles.homePlanActionButtonSaved,
+          action.status === 'saving' && styles.homePlanActionButtonDisabled,
+          { marginTop: 14 },
+        ]}
+        disabled={action.status === 'saving' || action.status === 'saved'}
+        onPress={onConfirm}
+      >
+        {action.status === 'saving' ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <ActivityIndicator color={OBSIDIAN} size="small" />
+            <Text style={styles.homePlanActionButtonText}>Importing {days.length}-Day Plan…</Text>
+          </View>
+        ) : action.status === 'saved' ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Ionicons name="checkmark-circle" size={16} color={OBSIDIAN} />
+            <Text style={styles.homePlanActionButtonText}>Imported to Home Plan</Text>
+          </View>
+        ) : (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Ionicons name="cloud-download-outline" size={16} color={OBSIDIAN} />
+            <Text style={styles.homePlanActionButtonText}>
+              {action.buttonLabel || `Import ${days.length}-Day Plan to Home`}
+            </Text>
+          </View>
+        )}
+      </Pressable>
+    </View>
+  );
+}
+
 export default function ClaudeCoachScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{
@@ -297,13 +499,55 @@ export default function ClaudeCoachScreen() {
     prescriptionThumbnail?: string;
     contextNote?: string;
   }>();
+  const { t } = useLanguage();
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [inputText, setInputText] = useState('');
+  const [contentHeight, setContentHeight] = useState(38);
   const [sending, setSending] = useState(false);
+  const [streamingText, setStreamingText] = useState('');
   const [conversationLanguage, setConversationLanguage] = useState<string | null>(null);
   const [insertingPlanMessageId, setInsertingPlanMessageId] = useState<string | null>(null);
   const autoPromptHandledRef = useRef(false);
   const scrollViewRef = useRef<ScrollView>(null);
+  const activeStreamCancelRef = useRef<(() => void) | null>(null);
+  const activeStreamResolveRef = useRef<(() => void) | null>(null);
+  const activeRequestRef = useRef<{ cancelled: boolean } | null>(null);
+  const chatHydratedForUserRef = useRef<string | null>(null);
+  const pendingLaunchPromptRef = useRef<{
+    prompt: string;
+    options: ChatSendOptions;
+  } | null>(null);
+
+  // Auto-reset content height when input is cleared
+  useEffect(() => {
+    if (!inputText) {
+      setContentHeight(38);
+    }
+  }, [inputText]);
+
+  const composerHeight = Math.min(140, Math.max(38, contentHeight));
+
+  const isMac = useMemo(() => {
+    if (Platform.OS !== 'web' || typeof navigator === 'undefined') return false;
+    return /Mac|iPod|iPhone|iPad/.test(navigator.platform) || /Macintosh/.test(navigator.userAgent);
+  }, []);
+
+  const handleKeyPress = (e: any) => {
+    const key = e.nativeEvent?.key || e.key;
+    if (key === 'Enter') {
+      const isCtrlOrCmd = Boolean(
+        e.nativeEvent?.ctrlKey ||
+        e.nativeEvent?.metaKey ||
+        e.ctrlKey ||
+        e.metaKey
+      );
+      if (isCtrlOrCmd) {
+        e.preventDefault?.();
+        handleSubmitInput();
+      }
+      // Plain Enter naturally creates a newline in multiline mode
+    }
+  };
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -384,13 +628,31 @@ export default function ClaudeCoachScreen() {
     : 'UNLIMITED · REPLIES IN ~2S';
 
   useEffect(() => {
-    if (!hasCoach) return;
+    if (!hasCoach || !currentUser?.id) return;
     let cancelled = false;
+    const userId = currentUser.id;
+    const storageKey = getCoachChatStorageKey(userId);
     setHistoryLoading(true);
-    fetchCoachVictorHistory({ skipResponseCache: true })
-      .then((history) => {
+
+    void (async () => {
+      let locallyStoredMessages: ChatMessage[] = [];
+      try {
+        const stored = await AsyncStorage.getItem(storageKey);
+        const parsed = stored ? JSON.parse(stored) : [];
+        if (Array.isArray(parsed)) {
+          locallyStoredMessages = parsed.filter(isStoredChatMessage).slice(-40);
+          if (!cancelled && locallyStoredMessages.length) {
+            setMessages(locallyStoredMessages);
+          }
+        }
+      } catch {
+        // A damaged local cache must not block server history.
+      }
+
+      try {
+        const history = await fetchCoachVictorHistory({ skipResponseCache: true });
         if (cancelled || !Array.isArray(history.messages)) return;
-        const loadedMessages = history.messages
+        const serverMessages = history.messages
           .filter((item) => item.role === 'user' || item.role === 'assistant')
           .slice(-40)
           .map((item) => ({
@@ -398,39 +660,64 @@ export default function ClaudeCoachScreen() {
             sender: item.role === 'user' ? 'user' : 'coach',
             text: item.content,
             contextNote: item.role === 'assistant' ? 'from your last coach conversation' : undefined,
+            homePlanAction: item.role === 'assistant' && item.plan_action
+              ? {
+                  type: item.plan_action.type,
+                  sourcePrompt: item.plan_action.source_prompt,
+                  scope: item.plan_action.scope,
+                  targetDays: item.plan_action.target_days || [],
+                  targetMinutes: item.plan_action.target_minutes ?? null,
+                  dayCount: item.plan_action.day_count,
+                  summary: item.plan_action.summary,
+                  buttonLabel: item.plan_action.button_label,
+                  preview: item.plan_action.preview,
+                  draftId: item.plan_action.draft_id,
+                  draftVersion: item.plan_action.draft_version,
+                  status: 'ready' as const,
+                }
+              : undefined,
           } satisfies ChatMessage));
-        setMessages(loadedMessages);
-        setTimeout(() => {
-          scrollViewRef.current?.scrollToEnd({ animated: false });
-        }, 120);
-      })
-      .catch(() => {
-        // History should never block a fresh coaching conversation.
-      })
-      .finally(() => {
-        if (!cancelled) setHistoryLoading(false);
-      });
+
+        // Local messages retain rich plan cards; server history remains the
+        // fallback for a new device or a cleared local cache.
+        if (!locallyStoredMessages.length && serverMessages.length) {
+          setMessages(serverMessages);
+        }
+      } catch {
+        // The locally stored conversation remains available offline.
+      } finally {
+        if (!cancelled) {
+          chatHydratedForUserRef.current = userId;
+          setHistoryLoading(false);
+          setTimeout(() => {
+            scrollViewRef.current?.scrollToEnd({ animated: false });
+          }, 120);
+        }
+      }
+    })();
+
     return () => {
       cancelled = true;
     };
-  }, [hasCoach]);
+  }, [currentUser?.id, hasCoach]);
+
+  useEffect(() => {
+    const userId = currentUser?.id;
+    if (!userId || chatHydratedForUserRef.current !== userId) return;
+    void AsyncStorage.setItem(
+      getCoachChatStorageKey(userId),
+      JSON.stringify(messages.slice(-40))
+    ).catch(() => undefined);
+  }, [currentUser?.id, messages]);
 
   const handleSendText = async (
     textToSend: string,
-    options?: {
-      prescriptionTitle?: string;
-      prescriptionMeta?: string;
-      prescriptionWorkoutId?: string;
-      prescriptionWorkoutTitle?: string;
-      prescriptionVimeoId?: string;
-      prescriptionVideoUrl?: string;
-      prescriptionTag?: string;
-      prescriptionThumbnail?: string;
-      contextNote?: string;
-    }
+    options?: ChatSendOptions
   ) => {
     const text = textToSend.trim();
     if (!text || sending) return;
+    const requestState = { cancelled: false };
+    activeRequestRef.current = requestState;
     const requestedLanguage = detectLanguageOverride(text);
     const nextLanguage = requestedLanguage || conversationLanguage || currentUser?.preferred_language || undefined;
     const backendMessage = text;
@@ -447,6 +734,7 @@ export default function ClaudeCoachScreen() {
     setMessages((prev) => [...prev, userMsg]);
     setInputText('');
     setSending(true);
+    setStreamingText('');
 
     setTimeout(() => {
       scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -457,24 +745,43 @@ export default function ClaudeCoachScreen() {
       let assistantText = '';
       let planAction: CoachWorkoutPlanAction | null = null;
       await new Promise<void>(async (resolve) => {
-        await streamCoachVictorMessage(
+        activeStreamResolveRef.current = resolve;
+        const cancelStream = await streamCoachVictorMessage(
           backendMessage,
           (chunk) => {
+            if (requestState.cancelled) return;
             assistantText += chunk;
+            setStreamingText(assistantText);
+            scrollViewRef.current?.scrollToEnd({ animated: false });
           },
           (fullReply, _threadId, action) => {
+            if (requestState.cancelled) {
+              resolve();
+              return;
+            }
             assistantText = fullReply || assistantText;
             planAction = action || null;
             resolve();
           },
           (err) => {
-            console.warn('Coach stream error:', err);
+            if (!requestState.cancelled) {
+              console.warn('Coach stream error:', err);
+            }
             resolve();
-          }
-          ,
+          },
           { languageOverride: nextLanguage }
         );
+        if (requestState.cancelled) {
+          cancelStream();
+          resolve();
+          return;
+        }
+        if (activeRequestRef.current === requestState) {
+          activeStreamCancelRef.current = cancelStream;
+        }
       });
+
+      if (requestState.cancelled) return;
 
       if (!assistantText) {
         assistantText = `I hear you, ${currentUser?.name ? currentUser.name.split(' ')[0] : 'friend'}. Based on your target of ${currentUser?.daily_protein_target || 112} g protein and your training consistency, let's keep showing up. How does that sound?`;
@@ -487,12 +794,17 @@ export default function ClaudeCoachScreen() {
         text: assistantText,
         homePlanAction: actionForReply
           ? {
+              type: actionForReply.type,
               sourcePrompt: actionForReply.source_prompt,
               scope: actionForReply.scope,
               targetDays: actionForReply.target_days || [],
               targetMinutes: actionForReply.target_minutes ?? null,
+              dayCount: actionForReply.day_count ?? (actionForReply.preview?.days_count ?? undefined),
               summary: actionForReply.summary,
               buttonLabel: actionForReply.button_label,
+              preview: actionForReply.preview,
+              draftId: actionForReply.draft_id,
+              draftVersion: actionForReply.draft_version,
               status: 'ready',
             }
           : undefined,
@@ -521,19 +833,53 @@ export default function ClaudeCoachScreen() {
       };
       setMessages((prev) => [...prev, fallbackReply]);
     } finally {
-      setSending(false);
-      setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+      if (activeRequestRef.current === requestState) {
+        activeRequestRef.current = null;
+        activeStreamCancelRef.current = null;
+        activeStreamResolveRef.current = null;
+        setStreamingText('');
+        setSending(false);
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      }
     }
   };
 
   useEffect(() => {
     const initialPrompt = typeof params.initialPrompt === 'string' ? params.initialPrompt.trim() : '';
-    if (!hasCoach || !currentUser || !initialPrompt || autoPromptHandledRef.current) return;
+    if (!initialPrompt) {
+      autoPromptHandledRef.current = false;
+      return;
+    }
+    if (!hasCoach || !currentUser || autoPromptHandledRef.current) return;
     autoPromptHandledRef.current = true;
+    const prescriptionOptions = buildPrescriptionOptionsFromParams();
+
+    // Route params are launch-only data. Consuming them prevents an old Home
+    // workout prompt from appearing when this chat route is opened again.
+    router.setParams({
+      initialPrompt: undefined,
+      autoSend: undefined,
+      prescriptionTitle: undefined,
+      prescriptionMeta: undefined,
+      prescriptionWorkoutId: undefined,
+      prescriptionWorkoutTitle: undefined,
+      prescriptionVimeoId: undefined,
+      prescriptionVideoUrl: undefined,
+      prescriptionTag: undefined,
+      prescriptionThumbnail: undefined,
+      contextNote: undefined,
+    });
+
     if (params.autoSend === '1') {
-      void handleSendText(initialPrompt, buildPrescriptionOptionsFromParams());
+      void handleSendText(initialPrompt, prescriptionOptions);
+    } else {
+      pendingLaunchPromptRef.current = {
+        prompt: initialPrompt,
+        options: prescriptionOptions,
+      };
+      setInputText(initialPrompt);
     }
   }, [currentUser, hasCoach, params.autoSend, params.initialPrompt]);
 
@@ -560,7 +906,11 @@ export default function ClaudeCoachScreen() {
     });
   };
 
-  const handleInsertHomePlan = async (messageId: string, action: NonNullable<ChatMessage['homePlanAction']>) => {
+  const handleInsertHomePlan = async (
+    messageId: string,
+    action: NonNullable<ChatMessage['homePlanAction']>,
+    generatedReply: string
+  ) => {
     if (insertingPlanMessageId) return;
     setInsertingPlanMessageId(messageId);
     setMessages((prev) =>
@@ -573,10 +923,13 @@ export default function ClaudeCoachScreen() {
     try {
       const plan = await applyCoachWorkoutPlanAction({
         source_prompt: action.sourcePrompt,
+        generated_reply: generatedReply,
         scope: action.scope || 'full_plan',
         target_days: action.targetDays || [],
         target_minutes: action.targetMinutes ?? null,
         summary: action.summary || '',
+        draft_id: action.draftId,
+        draft_version: action.draftVersion,
       });
       await saveLatestStrengthWorkoutPlan(plan);
       await savePlanBuiltData({
@@ -614,8 +967,13 @@ export default function ClaudeCoachScreen() {
     if (sending || historyLoading) return;
     try {
       await clearCoachVictorHistory();
+      if (currentUser?.id) {
+        await AsyncStorage.removeItem(getCoachChatStorageKey(currentUser.id)).catch(() => undefined);
+      }
       setMessages([]);
+      setInputText('');
       setConversationLanguage(null);
+      pendingLaunchPromptRef.current = null;
       autoPromptHandledRef.current = false;
     } catch {
       Alert.alert('Could not clear chat', 'Please try again in a moment.');
@@ -623,9 +981,25 @@ export default function ClaudeCoachScreen() {
   };
 
   const handleSubmitInput = () => {
-    const initialPrompt = typeof params.initialPrompt === 'string' ? params.initialPrompt.trim() : '';
-    const shouldAttachPrescription = Boolean(initialPrompt && inputText.trim() === initialPrompt);
-    void handleSendText(inputText, shouldAttachPrescription ? buildPrescriptionOptionsFromParams() : undefined);
+    const pendingLaunchPrompt = pendingLaunchPromptRef.current;
+    const shouldAttachPrescription = Boolean(
+      pendingLaunchPrompt && inputText.trim() === pendingLaunchPrompt.prompt
+    );
+    pendingLaunchPromptRef.current = null;
+    void handleSendText(inputText, shouldAttachPrescription ? pendingLaunchPrompt?.options : undefined);
+  };
+
+  const handleCancelGeneration = () => {
+    if (!sending) return;
+    if (activeRequestRef.current) {
+      activeRequestRef.current.cancelled = true;
+    }
+    activeStreamCancelRef.current?.();
+    activeStreamResolveRef.current?.();
+    activeStreamCancelRef.current = null;
+    activeStreamResolveRef.current = null;
+    setStreamingText('');
+    setSending(false);
   };
 
   // If Silver tier, show the locked paywall teaser per prototype
@@ -637,8 +1011,14 @@ export default function ClaudeCoachScreen() {
             <Text style={styles.coachName}>Your coach</Text>
             <Text style={styles.coachStatusText}>AVAILABLE ON GOLD</Text>
           </View>
-          <Pressable onPress={() => goBackOrReplace(router, '/(tabs)')} hitSlop={10}>
-            <Text style={styles.closeBtn}>×</Text>
+          <Pressable
+            onPress={() => goBackOrReplace(router, '/(tabs)')}
+            hitSlop={10}
+            style={({ pressed }) => [styles.closeBtnPressable, pressed && { opacity: 0.6 }]}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+          >
+            <Ionicons name="close" size={22} color="rgba(247, 243, 238, 0.6)" />
           </Pressable>
         </View>
 
@@ -669,38 +1049,53 @@ export default function ClaudeCoachScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       {/* Top Bar */}
-      <View style={styles.topBar}>
-        <View>
-          <Text style={styles.coachName}>Your coach</Text>
-          <Text style={[styles.coachStatusText, isPriority && styles.statusPriority]}>
-            {coachStatus}
-          </Text>
-        </View>
-        <View style={styles.topActions}>
-          <Pressable
-            style={styles.newChatButton}
-            onPress={handleClearConversation}
-            disabled={sending || historyLoading}
-            hitSlop={8}
-          >
-            <Text style={styles.newChatText}>New</Text>
-          </Pressable>
-          <Pressable onPress={() => goBackOrReplace(router, '/(tabs)')} hitSlop={10}>
-            <Text style={styles.closeBtn}>×</Text>
-          </Pressable>
+      <View style={styles.topBarWrap}>
+        <View style={styles.topBar}>
+          <View>
+            <Text style={styles.coachName}>Your coach</Text>
+            <Text style={[styles.coachStatusText, isPriority && styles.statusPriority]}>
+              {coachStatus}
+            </Text>
+          </View>
+          <View style={styles.topActions}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.newChatButton,
+                pressed && styles.newChatButtonPressed,
+                (sending || historyLoading) && styles.newChatButtonDisabled,
+              ]}
+              onPress={handleClearConversation}
+              disabled={sending || historyLoading}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t('New chat')}
+            >
+              <Ionicons name="create-outline" size={14} color={GOLD} />
+              <Text style={styles.newChatText}>{t('New chat')}</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => goBackOrReplace(router, '/(tabs)')}
+              hitSlop={10}
+              style={({ pressed }) => [styles.closeBtnPressable, pressed && { opacity: 0.6 }]}
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+            >
+              <Ionicons name="close" size={22} color="rgba(247, 243, 238, 0.6)" />
+            </Pressable>
+          </View>
         </View>
       </View>
 
       {/* Messages Thread */}
       <ScrollView
         ref={scrollViewRef}
+        style={styles.threadScrollView}
         contentContainerStyle={styles.threadScroll}
         showsVerticalScrollIndicator={false}
       >
         {historyLoading && !messages.length ? (
-          <View style={styles.typingIndicator}>
-            <ActivityIndicator color={GOLD} size="small" />
-            <Text style={styles.typingText}>Loading your last coach chat...</Text>
+          <View style={[styles.messageWrap, styles.coachMessageWrap]}>
+            <VictorThinkingIndicator text={t('Loading previous chat…')} />
           </View>
         ) : null}
 
@@ -744,37 +1139,10 @@ export default function ClaudeCoachScreen() {
                 ) : null}
 
                 {m.homePlanAction ? (
-                  <View style={styles.homePlanActionCard}>
-                    <Text style={styles.homePlanActionTitle}>
-                      {m.homePlanAction.status === 'saved'
-                        ? 'Home workout plan updated'
-                        : m.homePlanAction.summary || 'Ready to update your Home workout plan'}
-                    </Text>
-                    <Text style={styles.homePlanActionText}>
-                      {m.homePlanAction.scope === 'day'
-                        ? 'This will update the selected day in your active Home workout plan.'
-                        : 'This will replace your current Home workout plan with the plan from this chat.'}
-                    </Text>
-                    <Pressable
-                      style={[
-                        styles.homePlanActionButton,
-                        m.homePlanAction.status === 'saved' && styles.homePlanActionButtonSaved,
-                        m.homePlanAction.status === 'saving' && styles.homePlanActionButtonDisabled,
-                      ]}
-                      disabled={m.homePlanAction.status === 'saving' || m.homePlanAction.status === 'saved'}
-                      onPress={() => void handleInsertHomePlan(m.id, m.homePlanAction!)}
-                    >
-                      {m.homePlanAction.status === 'saving' ? (
-                        <ActivityIndicator color={OBSIDIAN} size="small" />
-                      ) : (
-                        <Text style={styles.homePlanActionButtonText}>
-                          {m.homePlanAction.status === 'saved'
-                            ? 'Inserted'
-                            : m.homePlanAction.buttonLabel || insertButtonLabel(conversationLanguage || currentUser?.preferred_language)}
-                        </Text>
-                      )}
-                    </Pressable>
-                  </View>
+                  <WorkoutPlanActionCard
+                    action={m.homePlanAction}
+                    onConfirm={() => void handleInsertHomePlan(m.id, m.homePlanAction!, m.text)}
+                  />
                 ) : null}
               </View>
 
@@ -786,10 +1154,20 @@ export default function ClaudeCoachScreen() {
           );
         })}
 
-        {sending ? (
-          <View style={styles.typingIndicator}>
-            <ActivityIndicator color={GOLD} size="small" />
-            <Text style={styles.typingText}>Victor is thinking…</Text>
+        {sending && !streamingText ? (
+          <View style={[styles.messageWrap, styles.coachMessageWrap]}>
+            <VictorThinkingIndicator />
+          </View>
+        ) : null}
+
+        {sending && streamingText ? (
+          <View style={[styles.messageWrap, styles.coachMessageWrap]}>
+            <View style={[styles.bubble, styles.coachBubble]}>
+              <FormattedCoachMessage text={streamingText} />
+              <View style={styles.streamingCursorWrap}>
+                <View style={styles.streamingCursor} />
+              </View>
+            </View>
           </View>
         ) : null}
       </ScrollView>
@@ -838,41 +1216,57 @@ export default function ClaudeCoachScreen() {
       </View>
 
       {/* Input Box */}
-      <View style={styles.inputContainer}>
-        <View style={styles.inputBox}>
-          <TextInput
-            style={[
-              styles.textInput,
-              Platform.select({
-                web: {
-                  outlineStyle: 'none',
-                  outlineWidth: 0,
-                  outlineColor: 'transparent',
-                  borderWidth: 0,
-                  borderColor: 'transparent',
-                  boxShadow: 'none',
-                } as any,
-              }),
-            ]}
-            placeholder="Ask anything…"
-            placeholderTextColor="rgba(247, 243, 238, 0.45)"
-            value={inputText}
-            onChangeText={setInputText}
-            onSubmitEditing={handleSubmitInput}
-            returnKeyType="send"
-          />
-          <Pressable
-            style={[styles.sendBtn, !inputText.trim() && styles.sendBtnDisabled]}
-            disabled={!inputText.trim() || sending}
-            onPress={handleSubmitInput}
-          >
-            <View style={styles.sendArrow} />
-          </Pressable>
+      <View style={styles.inputWrap}>
+        <View style={styles.inputContainer}>
+          <View style={styles.inputBox}>
+            <TextInput
+              style={[
+                styles.textInput,
+                { height: composerHeight },
+                Platform.select({
+                  web: {
+                    outlineStyle: 'none',
+                    outlineWidth: 0,
+                    outlineColor: 'transparent',
+                    borderWidth: 0,
+                    borderColor: 'transparent',
+                    boxShadow: 'none',
+                    resize: 'none',
+                    overflowY: 'auto',
+                  } as any,
+                }),
+              ]}
+              placeholder={t('Ask your coach anything…')}
+              placeholderTextColor="rgba(247, 243, 238, 0.45)"
+              value={inputText}
+              onChangeText={setInputText}
+              onKeyPress={handleKeyPress}
+              onContentSizeChange={(e) => {
+                const h = e.nativeEvent?.contentSize?.height;
+                if (h && h > 0) {
+                  setContentHeight(h);
+                }
+              }}
+              multiline
+              blurOnSubmit={false}
+              scrollEnabled
+              textAlignVertical="top"
+            />
+            <Pressable
+              style={[styles.sendBtn, !sending && !inputText.trim() && styles.sendBtnDisabled]}
+              disabled={!sending && !inputText.trim()}
+              onPress={sending ? handleCancelGeneration : handleSubmitInput}
+              accessibilityRole="button"
+              accessibilityLabel={sending ? t('Cancel response') : t('Send message')}
+            >
+              {sending ? (
+                <View style={styles.stopIcon} />
+              ) : (
+                <View style={styles.sendArrow} />
+              )}
+            </Pressable>
+          </View>
         </View>
-
-        <Text style={styles.disclaimer}>
-          Your coach never diagnoses, treats, or prescribes. For pain or medical questions it will tell you to see a doctor.
-        </Text>
       </View>
     </KeyboardAvoidingView>
   );
@@ -883,20 +1277,28 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: OBSIDIAN,
   },
+  topBarWrap: {
+    width: '100%',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(247, 243, 238, 0.12)',
+    alignItems: 'center',
+  },
   topBar: {
+    width: '100%',
+    maxWidth: 860,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 14,
     paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(247, 243, 238, 0.12)',
   },
   coachName: {
-    fontFamily: CLASH,
+    fontFamily: DMSANS,
     fontSize: 20,
+    lineHeight: 26,
     fontWeight: '600',
+    letterSpacing: -0.2,
     color: IVORY,
   },
   coachStatusText: {
@@ -916,34 +1318,48 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   newChatButton: {
-    minHeight: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 10,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(201, 148, 58, 0.45)',
+    borderColor: 'rgba(201, 148, 58, 0.40)',
     paddingHorizontal: 11,
-    backgroundColor: 'rgba(201, 148, 58, 0.08)',
+    paddingVertical: 6,
+    backgroundColor: 'rgba(201, 148, 58, 0.10)',
+    gap: 5,
+  },
+  newChatButtonPressed: {
+    backgroundColor: 'rgba(201, 148, 58, 0.22)',
+    borderColor: 'rgba(201, 148, 58, 0.65)',
+  },
+  newChatButtonDisabled: {
+    opacity: 0.4,
   },
   newChatText: {
-    fontFamily: MONO,
-    fontSize: 10.5,
-    fontWeight: '800',
-    color: GOLD,
-    textTransform: 'uppercase',
-  },
-  closeBtn: {
     fontFamily: DMSANS,
-    fontSize: 22,
-    lineHeight: 24,
-    fontWeight: '500',
-    color: 'rgba(247, 243, 238, 0.45)',
-    paddingHorizontal: 6,
+    fontSize: 12,
+    fontWeight: '700',
+    color: GOLD,
+    letterSpacing: 0.2,
+  },
+  closeBtnPressable: {
+    padding: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  threadScrollView: {
+    flex: 1,
+    width: '100%',
   },
   threadScroll: {
     paddingHorizontal: 20,
     paddingTop: 18,
     paddingBottom: 14,
     gap: 14,
+    width: '100%',
+    maxWidth: 860,
+    alignSelf: 'center',
   },
   messageWrap: {
     width: '100%',
@@ -1057,6 +1473,260 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: OBSIDIAN,
   },
+  previewContainer: {
+    marginTop: 12,
+    backgroundColor: '#121214',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(201, 148, 58, 0.35)',
+  },
+  previewHeader: {
+    marginBottom: 10,
+  },
+  previewBadgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    columnGap: 6,
+    rowGap: 6,
+    marginBottom: 6,
+  },
+  previewPlanBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+    maxWidth: '100%',
+    gap: 5,
+    backgroundColor: 'rgba(201, 148, 58, 0.15)',
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+  previewPlanBadgeText: {
+    fontFamily: MONO,
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: GOLD,
+    letterSpacing: 0.5,
+    flexShrink: 1,
+  },
+  previewDurationBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 0,
+    gap: 4,
+    backgroundColor: 'rgba(247, 243, 238, 0.08)',
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+  previewDurationText: {
+    fontFamily: MONO,
+    fontSize: 11,
+    fontWeight: '600',
+    color: IVORY,
+    flexShrink: 0,
+  },
+  previewTitle: {
+    fontFamily: DMSANS,
+    fontSize: 15.5,
+    fontWeight: '800',
+    color: IVORY,
+    marginTop: 4,
+  },
+  previewEquipmentRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+  },
+  previewEquipmentLabel: {
+    fontFamily: INTER,
+    fontSize: 11.5,
+    color: 'rgba(247, 243, 238, 0.5)',
+  },
+  previewEquipmentPill: {
+    backgroundColor: 'rgba(247, 243, 238, 0.06)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  previewEquipmentPillText: {
+    fontFamily: INTER,
+    fontSize: 11,
+    color: 'rgba(247, 243, 238, 0.8)',
+  },
+  previewWarningBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: 'rgba(224, 168, 46, 0.12)',
+    borderColor: 'rgba(224, 168, 46, 0.4)',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 8,
+    marginBottom: 10,
+  },
+  previewWarningText: {
+    fontFamily: INTER,
+    fontSize: 11.5,
+    lineHeight: 16,
+    color: '#E0A82E',
+  },
+  previewDayTabsScroll: {
+    marginBottom: 10,
+  },
+  previewDayTabs: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    paddingVertical: 2,
+    marginBottom: 8,
+  },
+  previewDayTab: {
+    minWidth: 54,
+    flexGrow: 1,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: 'rgba(247, 243, 238, 0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(247, 243, 238, 0.1)',
+    alignItems: 'center',
+  },
+  previewDayTabActive: {
+    backgroundColor: GOLD,
+    borderColor: GOLD,
+  },
+  previewDayTabText: {
+    fontFamily: DMSANS,
+    fontSize: 12,
+    fontWeight: '700',
+    color: 'rgba(247, 243, 238, 0.7)',
+  },
+  previewDayTabTextActive: {
+    color: OBSIDIAN,
+    fontWeight: '800',
+  },
+  previewDayContent: {
+    backgroundColor: 'rgba(247, 243, 238, 0.03)',
+    borderRadius: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(247, 243, 238, 0.06)',
+  },
+  previewDayHeader: {
+    marginBottom: 8,
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(247, 243, 238, 0.06)',
+  },
+  previewDayName: {
+    fontFamily: DMSANS,
+    fontSize: 13.5,
+    fontWeight: '800',
+    color: IVORY,
+  },
+  previewDayMeta: {
+    fontFamily: INTER,
+    fontSize: 11.5,
+    color: 'rgba(247, 243, 238, 0.5)',
+    marginTop: 2,
+  },
+  previewExercisesList: {
+    gap: 6,
+  },
+  previewExerciseCard: {
+    backgroundColor: 'rgba(247, 243, 238, 0.04)',
+    borderRadius: 8,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(247, 243, 238, 0.05)',
+  },
+  previewExerciseTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  previewExerciseName: {
+    fontFamily: DMSANS,
+    fontSize: 13,
+    fontWeight: '700',
+    color: IVORY,
+    flex: 1,
+    minWidth: 0,
+    paddingRight: 8,
+  },
+  previewExerciseTypePill: {
+    backgroundColor: 'rgba(201, 148, 58, 0.12)',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
+    flexShrink: 0,
+  },
+  previewExerciseTypePillText: {
+    fontFamily: MONO,
+    fontSize: 9.5,
+    color: GOLD,
+    fontWeight: '600',
+  },
+  previewExerciseMetrics: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 6,
+  },
+  previewMetricTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(247, 243, 238, 0.06)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  previewMetricTagText: {
+    fontFamily: MONO,
+    fontSize: 11,
+    fontWeight: '600',
+    color: 'rgba(247, 243, 238, 0.85)',
+  },
+  previewMetricTagWeight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(201, 148, 58, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(201, 148, 58, 0.3)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  previewMetricTagWeightText: {
+    fontFamily: MONO,
+    fontSize: 11,
+    fontWeight: '700',
+    color: GOLD,
+  },
+  previewExerciseNotesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+    paddingTop: 3,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(247, 243, 238, 0.04)',
+  },
+  previewExerciseNotesText: {
+    fontFamily: INTER,
+    fontSize: 10.5,
+    fontStyle: 'italic',
+    color: 'rgba(247, 243, 238, 0.5)',
+  },
   contextFootnote: {
     fontFamily: MONO,
     fontSize: 11.5,
@@ -1064,6 +1734,18 @@ const styles = StyleSheet.create({
     color: 'rgba(247, 243, 238, 0.4)',
     marginTop: 5,
     paddingLeft: 4,
+  },
+  streamingCursorWrap: {
+    marginTop: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  streamingCursor: {
+    width: 6,
+    height: 14,
+    backgroundColor: GOLD,
+    borderRadius: 2,
+    opacity: 0.85,
   },
   typingIndicator: {
     flexDirection: 'row',
@@ -1080,6 +1762,8 @@ const styles = StyleSheet.create({
   quickPromptsRow: {
     paddingVertical: 8,
     width: '100%',
+    maxWidth: 860,
+    alignSelf: 'center',
   },
   promptsScroll: {
     paddingHorizontal: 20,
@@ -1106,9 +1790,9 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   coachHeadingText: {
-    fontFamily: CLASH,
+    fontFamily: DMSANS,
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: GOLD,
     lineHeight: 22,
     marginTop: 10,
@@ -1236,12 +1920,18 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     color: GOLD,
   },
-  inputContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 6,
-    paddingBottom: 32,
+  inputWrap: {
+    width: '100%',
     borderTopWidth: 1,
     borderTopColor: 'rgba(247, 243, 238, 0.08)',
+    alignItems: 'center',
+  },
+  inputContainer: {
+    width: '100%',
+    maxWidth: 860,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 16,
   },
   inputBox: {
     borderWidth: 1.5,
@@ -1249,15 +1939,16 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(247, 243, 238, 0.25)',
     borderRadius: 14,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 8,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     backgroundColor: 'rgba(247, 243, 238, 0.02)',
   },
   textInput: {
     flex: 1,
     fontFamily: INTER,
     fontSize: 14,
+    lineHeight: 20,
     color: IVORY,
     paddingVertical: 6,
     paddingHorizontal: 0,
@@ -1267,15 +1958,18 @@ const styles = StyleSheet.create({
     outlineStyle: 'none' as any,
     outlineWidth: 0 as any,
     outlineColor: 'transparent' as any,
+    minHeight: 38,
+    maxHeight: 140,
   },
   sendBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     backgroundColor: GOLD,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8,
+    marginBottom: 2,
   },
   sendBtnDisabled: {
     opacity: 0.4,
@@ -1291,13 +1985,11 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
     marginLeft: 2,
   },
-  disclaimer: {
-    fontFamily: INTER,
-    fontSize: 11.5,
-    lineHeight: 16,
-    color: 'rgba(247, 243, 238, 0.38)',
-    marginTop: 10,
-    textAlign: 'center',
+  stopIcon: {
+    width: 10,
+    height: 10,
+    borderRadius: 2,
+    backgroundColor: OBSIDIAN,
   },
   // Locked styles for Silver
   lockedContainer: {
@@ -1325,9 +2017,11 @@ const styles = StyleSheet.create({
     borderTopWidth: 8,
   },
   lockedTitle: {
-    fontFamily: CLASH,
-    fontSize: 22,
+    fontFamily: DMSANS,
+    fontSize: 20,
+    lineHeight: 26,
     fontWeight: '600',
+    letterSpacing: -0.2,
     color: IVORY,
     textAlign: 'center',
     marginBottom: 10,

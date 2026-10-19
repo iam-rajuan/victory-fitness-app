@@ -12,6 +12,7 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { analyzeMealImage, MealImageAnalysisResponse } from '../../lib/nutrition';
 import { useLanguage } from '../../lib/i18n';
 
@@ -38,7 +39,6 @@ const COPPER = '#B5651D';
 const GREEN = '#1A7A4A';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
 const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
@@ -159,7 +159,7 @@ export default function ClaudeMealAnalysisModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false}>
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         {/* Top Header */}
         <View style={styles.topBar}>
           <Pressable onPress={onClose} hitSlop={10}>
@@ -267,7 +267,7 @@ export default function ClaudeMealAnalysisModal({
             {t('Estimates from a photo, not laboratory numbers. Correct the portion and it learns your plates — and your photos are deleted once the meal is logged.')}
           </Text>
         </ScrollView>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 }
@@ -282,8 +282,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 54,
-    paddingBottom: 14,
+    paddingTop: Platform.select({ web: 10, default: 4 }),
+    paddingBottom: 8,
   },
   backBtn: {
     fontFamily: DMSANS,
@@ -349,10 +349,11 @@ const styles = StyleSheet.create({
     color: 'rgba(247, 243, 238, 0.45)',
   },
   dishTitle: {
-    fontFamily: CLASH,
+    fontFamily: DMSANS,
     fontSize: 26,
-    lineHeight: 30,
+    lineHeight: 32,
     fontWeight: '600',
+    letterSpacing: -0.3,
     color: IVORY,
     marginBottom: 4,
   },

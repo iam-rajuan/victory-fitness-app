@@ -61,6 +61,7 @@ import ClaudeInspirationCard from '../../components/home/ClaudeInspirationCard';
 import ClaudeFreshPlanBanner from '../../components/home/ClaudeFreshPlanBanner';
 import ClaudeTodayWorkoutCard from '../../components/home/ClaudeTodayWorkoutCard';
 import ClaudeChallengesCarousel, { ChallengeItem } from '../../components/home/ClaudeChallengesCarousel';
+import { registerCanonicalChallengeTitle, canonicalizeChallengeTitle } from '../../lib/challengeTerminology';
 import ClaudeFoodTodayCard from '../../components/home/ClaudeFoodTodayCard';
 import ClaudeHydrationCard from '../../components/home/ClaudeHydrationCard';
 import ClaudeCoachBar from '../../components/home/ClaudeCoachBar';
@@ -226,9 +227,11 @@ function mapHomeChallengeItems(challenges: Array<Record<string, any>> = []): Cha
     const currentDay = Math.max(1, totalDays - daysLeft);
     const rawProgress = Number(ch.progress || 0);
     const pct = Math.min(100, Math.max(0, Math.round(rawProgress <= 1 ? rawProgress * 100 : rawProgress)));
+    const rawTitle = ch.title || 'Active Challenge';
+    registerCanonicalChallengeTitle(rawTitle);
     return {
       id: ch.challenge_id || ch.id,
-      n: ch.title || 'Active Challenge',
+      n: canonicalizeChallengeTitle(rawTitle),
       d: `Day ${currentDay} of ${totalDays}`,
       pct,
       rank: ch.points ? `${ch.points} pts` : 'Active',
@@ -269,6 +272,7 @@ export default function HomeScreen() {
     setsLogged: 6,
     volumeKg: 840,
   });
+  const [sessionCompletedExercises, setSessionCompletedExercises] = useState<Array<{ name: string; s?: string; cardN?: string }>>([]);
 
   // Challenge Detail and Cohort Modals
   const [challengeDetailVisible, setChallengeDetailVisible] = useState(false);
@@ -751,8 +755,24 @@ export default function HomeScreen() {
     }
   }, [targetWaterLiters]);
 
-  const handleCompletedHomeSession = useCallback(async (stats: { minutes: number; setsLogged: number; volumeKg: number; durationSeconds: number }) => {
+  const handleCompletedHomeSession = useCallback(async (stats: {
+    minutes: number;
+    setsLogged: number;
+    volumeKg: number;
+    durationSeconds: number;
+    completedExercises?: Array<{ id?: string; name: string; s?: string; cardN?: string }>;
+  }) => {
     setCompletedStats(stats);
+    const actualCompleted: Array<{ name: string; s?: string; cardN?: string }> =
+      stats.completedExercises && stats.completedExercises.length > 0
+        ? stats.completedExercises.map((e) => ({
+            name: e.name,
+            s: e.s || '',
+            cardN: e.cardN || e.name,
+          }))
+        : [];
+    setSessionCompletedExercises(actualCompleted);
+
     try {
       await createWorkoutLog({
         workout_id: strengthPlan?.plan_id ? `${strengthPlan.plan_id}-${strengthDay?.day || 'day'}` : homeLibraryWorkout?.id || 'home-session',
@@ -760,13 +780,10 @@ export default function HomeScreen() {
         duration_seconds: stats.durationSeconds || stats.minutes * 60,
         sets_logged: stats.setsLogged,
         volume_kg: stats.volumeKg,
-        movements: activeExercises.map((exercise: HomeActiveExercise) => ({
-          id: exercise.id,
+        movements: actualCompleted.map((exercise, index) => ({
+          order: index,
           name: exercise.name,
-          sets: exercise.targetSets,
-          reps: exercise.targetReps,
-          rest_seconds: exercise.restSeconds,
-          default_kg: exercise.defaultKg,
+          prescription: exercise.s || '',
         })),
         status: 'completed',
       });
@@ -984,13 +1001,7 @@ export default function HomeScreen() {
             if (tier === 'SILVER') {
               pushRoute(router, '/workout-library');
             } else {
-              pushRoute(router, {
-                pathname: '/chat',
-                params: {
-                  initialPrompt: `Help me adjust my current Home workout plan. Today's session is ${workoutTitle}, around ${workoutDurationMinutes} minutes, with ${activeExercises.length || homeLibraryWorkout?.movements?.length || 0} exercises. Use my active Home plan as the starting point.`,
-                  contextNote: 'used your active Home workout plan',
-                },
-              });
+              pushRoute(router, '/chat');
             }
           }}
         />
@@ -1047,11 +1058,17 @@ export default function HomeScreen() {
         vimeoId={homeLibraryWorkout?.vimeoId || ''}
         onFinishSession={() => {
           setVimeoModalVisible(false);
+          const silverExercises = (homeLibraryWorkout?.movements || []).map((m: any) => ({
+            name: m.name,
+            s: `${m.sets || 1} sets`,
+            cardN: m.name,
+          }));
           void handleCompletedHomeSession({
             minutes: homeLibraryWorkout?.durationMinutes || workoutDurationMinutes,
             setsLogged: homeLibraryWorkout?.movements?.length || 0,
             volumeKg: 0,
             durationSeconds: homeLibraryWorkout?.durationSeconds || workoutDurationMinutes * 60,
+            completedExercises: silverExercises,
           });
         }}
       />
@@ -1074,13 +1091,7 @@ export default function HomeScreen() {
         }}
         onAdjustWithCoach={() => {
           setPlanDetailVisible(false);
-          pushRoute(router, {
-            pathname: '/chat',
-            params: {
-              initialPrompt: `Help me adjust this session from my current Home workout plan: ${workoutTitle}, ${workoutDurationMinutes} minutes, ${activeExercises.length || detailExercises.length} exercises. Keep the routine compatible with my Home plan card and Start Session flow.`,
-              contextNote: 'used this session and your active Home workout plan',
-            },
-          });
+          pushRoute(router, '/chat');
         }}
       />
 
@@ -1111,6 +1122,15 @@ export default function HomeScreen() {
         setsLogged={completedStats.setsLogged}
         volumeKg={completedStats.volumeKg}
         streakDays={streakDays}
+        exercises={
+          sessionCompletedExercises.length > 0
+            ? sessionCompletedExercises
+            : (latestCompletedToday?.movements?.map((m: any) => ({
+                name: String(m.name || m.title || ''),
+                s: String(m.prescription || m.sets || ''),
+                cardN: String(m.name || m.title || '').trim(),
+              })) || [])
+        }
         identityStatement={currentUser?.identity_statement || undefined}
         motivationStatement={currentUser?.motivation_statement || undefined}
         userName={currentUser?.name || ''}

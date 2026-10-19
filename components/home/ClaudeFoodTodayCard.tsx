@@ -124,12 +124,14 @@ export default function ClaudeFoodTodayCard({
                   <View style={styles.goldRingDot} />
                 )}
                 <View style={styles.mealTextCol}>
-                  <Text style={[styles.mealTitle, { color: isDark ? IVORY : NAVY }]}>{t(meal.title)}</Text>
+                  <Text style={[styles.mealTitle, { color: isDark ? IVORY : NAVY }]} numberOfLines={1} ellipsizeMode="tail">{t(meal.title)}</Text>
                   <Text
                     style={[
                       styles.mealSub,
                       { color: isDark ? 'rgba(247, 243, 238, 0.5)' : 'rgba(13, 43, 69, 0.55)' },
                     ]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
                   >
                     {t(meal.subtitle)}
                   </Text>

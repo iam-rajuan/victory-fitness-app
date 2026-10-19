@@ -13,9 +13,51 @@ interface ClaudePlanBuildBannerProps {
 const GOLD = '#C9943A';
 const GREEN = '#1A7A4A';
 const IVORY = '#F7F3EE';
-const CLASH = Platform.select({ web: 'Clash Display', default: 'ClashDisplay-Bold' });
 const DMSANS = Platform.select({ web: 'DM Sans', default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: 'Inter', default: 'Inter-Regular' });
+
+export function formatPlanSummaryLine(text: string): string {
+  const raw = String(text || '').trim();
+  if (!raw) return '';
+  if (raw.length <= 50 && (raw.includes('·') || raw.includes('•') || raw.includes('|'))) {
+    return raw;
+  }
+
+  const daysMatch = raw.match(/(\d+)\s*(?:main\s*)?(?:training\s*)?days/i) || raw.match(/(\d+)\s*sessions?/i);
+  const minsMatch = raw.match(/(?:around|~)?\s*(\d+)\s*min(?:ute)?s?/i);
+
+  let focus = '';
+  const focusMatch = raw.match(/focused on\s+([^,.]+)/i) || raw.match(/(?:using a|with a)\s+([^,.]+?)\s+split/i);
+  if (focusMatch) {
+    focus = focusMatch[1].replace(/plan/i, '').trim();
+  } else {
+    const goalMatch = raw.match(/^([A-Za-z\s]+?)\s+plan/i);
+    if (goalMatch) {
+      focus = goalMatch[1].trim();
+    }
+  }
+
+  const parts: string[] = [];
+  if (focus) {
+    const cleanedFocus = focus.replace(/full-body/i, 'Full Body').trim();
+    parts.push(cleanedFocus);
+  }
+  if (daysMatch) {
+    parts.push(`${daysMatch[1]} days/week`);
+  }
+  if (minsMatch) {
+    parts.push(`~${minsMatch[1]} min`);
+  }
+
+  if (parts.length >= 2) {
+    return parts.join(' · ');
+  }
+
+  return raw
+    .replace(/^([A-Za-z\s]+?)\s+plan focused on\s+/i, '')
+    .replace(/using a\s+[A-Za-z\s-]+\s+split with\s+/i, '')
+    .trim();
+}
 
 export default function ClaudePlanBuildBanner({
   planBuilt = false,
@@ -28,9 +70,10 @@ export default function ClaudePlanBuildBanner({
   const title = hasCoach
     ? (planBuilt ? t('Rebuild your plan') : t('Build a plan around your week'))
     : t('A plan built around your week');
-  const note = hasCoach
-    ? (planBuilt ? planBuiltLine : t('Four questions — goal, days, session length, equipment. Two minutes and you have six weeks.'))
+  const rawNote = hasCoach
+    ? (planBuilt ? formatPlanSummaryLine(planBuiltLine) : t('Four questions — goal, days, session length, equipment. Two minutes and you have six weeks.'))
     : t('Four questions and your coach builds six weeks. Part of Gold.');
+  const note = rawNote;
 
   return (
     <View style={styles.container}>
@@ -43,8 +86,8 @@ export default function ClaudePlanBuildBanner({
       >
         <View style={styles.textCol}>
           <Text style={styles.kicker}>{kicker}</Text>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.note}>{note}</Text>
+          <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
+          <Text style={styles.note} numberOfLines={2} ellipsizeMode="tail">{note}</Text>
         </View>
         <Text style={styles.arrow}>›</Text>
       </Pressable>
@@ -89,9 +132,9 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   title: {
-    fontFamily: CLASH,
-    fontSize: 17,
-    lineHeight: 21,
+    fontFamily: DMSANS,
+    fontSize: 16.5,
+    lineHeight: 22,
     fontWeight: '600',
     color: IVORY,
   },

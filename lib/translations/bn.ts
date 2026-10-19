@@ -118,6 +118,7 @@ export const bn: Record<string, string> = {
   "Arms": "হাত",
   "Arnold": "আর্নল্ড",
   "Ask your coach anything…": "আপনার কোচকে যেকোনো প্রশ্ন করুন…",
+  "New chat": "নতুন চ্যাট",
   "Auto-calculated at 1.6g ×": "স্বয়ংক্রিয়ভাবে ১.৬ গ্রাম × হিসেবে গণনা করা",
   "Auto-calculated at 1.6g × weight_kg": "স্বয়ংক্রিয়ভাবে ১.৬ গ্রাম × ওজন (কেজি) হিসেবে গণনা করা",
   "Auto-updates with weight changes": "ওজন পরিবর্তনের সাথে স্বয়ংক্রিয় আপডেট",

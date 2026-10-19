@@ -8,6 +8,7 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import CrossPlatformWebView from '../CrossPlatformWebView';
 
 interface ChapterItem {
@@ -33,7 +34,6 @@ const NAVY = '#0D2B45';
 const GOLD = '#C9943A';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
 const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
@@ -70,7 +70,7 @@ export default function ClaudeVimeoPlayerModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false}>
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         {/* Top Header */}
         <View style={styles.topBar}>
           <Pressable onPress={onClose} hitSlop={10}>
@@ -171,7 +171,7 @@ export default function ClaudeVimeoPlayerModal({
             <Text style={styles.finishBtnText}>I finished this session</Text>
           </Pressable>
         </View>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 }
@@ -186,8 +186,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 54,
-    paddingBottom: 14,
+    paddingTop: Platform.select({ web: 10, default: 4 }),
+    paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(247, 243, 238, 0.08)',
   },
@@ -294,10 +294,11 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   videoTitle: {
-    fontFamily: CLASH,
+    fontFamily: DMSANS,
     fontSize: 20,
-    lineHeight: 24,
+    lineHeight: 26,
     fontWeight: '600',
+    letterSpacing: -0.2,
     color: IVORY,
   },
   videoDesc: {

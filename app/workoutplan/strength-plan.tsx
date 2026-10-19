@@ -32,6 +32,7 @@ import { apiRequest, createWorkoutLog, fetchCurrentUser } from '../../lib/api';
 import { goBackOrReplace } from '../../lib/navigation';
 import { useModuleAccessGuard } from '../../lib/useModuleAccessGuard';
 import { useLanguage } from '../../lib/i18n';
+import { canonicalizeFitnessText } from '../../lib/workoutTerminology';
 import { formatAppError } from '../../lib/error';
 import ActiveRestTimer from '../../components/workout/ActiveRestTimer';
 import WorkoutCompletionModal from '../../components/workout/WorkoutCompletionModal';
@@ -707,7 +708,7 @@ export default function StrengthPlanDashboard() {
                           <View style={styles.activeSessionHeader}>
                             <View style={styles.activeSessionLeft}>
                               <Text style={styles.activeSessionSubtitle}>{t('ACTIVE SESSION')}</Text>
-                              <Text style={styles.activeSessionTitle}>{selectedPlanDay ? selectedPlanDay.title.toUpperCase() : ''}</Text>
+                              <Text style={styles.activeSessionTitle}>{selectedPlanDay ? canonicalizeFitnessText(selectedPlanDay.title).toUpperCase() : ''}</Text>
                             </View>
                             <View style={styles.activeSessionRight}>
                               <View style={styles.activeTimerControls}>
@@ -861,7 +862,7 @@ export default function StrengthPlanDashboard() {
                                                   activeOpacity={0.7}
                                                   onPress={() => {
                                                     setActiveRestSeconds(parseRestSeconds(ex.rest));
-                                                    setActiveRestExercise(ex.name);
+                                                    setActiveRestExercise(canonicalizeFitnessText(ex.name));
                                                   }}
                                                 >
                                                   <Ionicons name="timer-outline" size={13} color={Colors.gold} />
@@ -978,7 +979,7 @@ export default function StrengthPlanDashboard() {
                                     >
                                       <View style={styles.sectionTitleWrap}>
                                         <Text style={styles.exerciseType}>{t('SECTION')}</Text>
-                                        <Text style={styles.exerciseName}>{section.title}</Text>
+                                        <Text style={styles.exerciseName}>{canonicalizeFitnessText(section.title)}</Text>
                                         <Text style={styles.sectionMetaText}>
                                           {`${sectionCompletedCount}/${section.exercises.length} ${t('exercises')} · ${section.estimated_minutes} ${t('min')}`}
                                         </Text>
@@ -1019,7 +1020,7 @@ export default function StrengthPlanDashboard() {
                                               <View style={styles.exerciseHeader}>
                                                 <View style={{ flex: 1, paddingRight: 8 }}>
                                                   <Text style={styles.exerciseType}>{ex.type.toUpperCase()}</Text>
-                                                  <Text style={styles.exerciseName}>{ex.name}</Text>
+                                                  <Text style={styles.exerciseName}>{canonicalizeFitnessText(ex.name)}</Text>
                                                 </View>
                                                 <TouchableOpacity
                                                   style={[styles.exerciseCheckButton, exerciseCompleted && styles.exerciseCheckButtonCompleted]}

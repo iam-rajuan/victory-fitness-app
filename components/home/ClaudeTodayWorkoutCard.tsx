@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { pushRoute } from '../../lib/navigation';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../lib/i18n';
+import { canonicalizeFitnessText } from '../../lib/workoutTerminology';
 
 interface ClaudeTodayWorkoutCardProps {
   tier: 'SILVER' | 'GOLD' | 'GOLD_BETA' | 'PLATINUM' | 'INNER_CIRCLE' | 'NONE';
@@ -24,7 +25,6 @@ const GOLD = '#C9943A';
 const OBSIDIAN = '#0D0D0D';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: 'Clash Display', default: 'ClashDisplay-Bold' });
 const DMSANS = Platform.select({ web: 'DM Sans', default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: 'Inter', default: 'Inter-Regular' });
 const MONO = Platform.select({ web: 'JetBrains Mono', default: 'JetBrainsMono-Bold' });
@@ -59,7 +59,7 @@ export default function ClaudeTodayWorkoutCard({
     : t('PICKED FOR TODAY · {duration} MIN', { duration: durationMinutes });
   const planAlt = hasCoach ? t('Adjust this plan with your coach') : t('Pick a different video instead');
 
-  const resolvedTitle = hasActivePlan ? t(workoutTitle) : t('Create your 7 day workout plan');
+  const resolvedTitle = hasActivePlan ? canonicalizeFitnessText(workoutTitle) : t('Create your 7 day workout plan');
 
   // Dynamically compute font size to ensure the title always stays on 1 line across screen sizes and languages
   const titleFontSize = useMemo(() => {
@@ -72,19 +72,16 @@ export default function ClaudeTodayWorkoutCard({
   }, [resolvedTitle, windowWidth]);
 
   const formattedEquipment = useMemo(() => {
-    if (!equipment) return t('Bodyweight');
+    if (!equipment) return 'Bodyweight';
     const parts = equipment
       .split(/[,·+]/)
       .map((s) => s.trim())
       .filter(Boolean);
-    if (!parts.length) return t('Bodyweight');
+    if (!parts.length) return 'Bodyweight';
     return parts
-      .map((p) => {
-        const translated = t(p);
-        return translated.charAt(0).toUpperCase() + translated.slice(1).toLowerCase();
-      })
+      .map((p) => canonicalizeFitnessText(p))
       .join(' · ');
-  }, [equipment, t]);
+  }, [equipment]);
 
   const handleStart = () => {
     if (!hasActivePlan) {
@@ -301,13 +298,13 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   title: {
-    fontFamily: CLASH,
+    fontFamily: DMSANS,
     fontSize: 20,
     lineHeight: 25,
     fontWeight: '600',
     color: IVORY,
     marginBottom: 14,
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
     ...Platform.select({
       web: {
         whiteSpace: 'nowrap',
@@ -340,10 +337,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   statVal: {
-    fontFamily: CLASH,
-    fontSize: 20,
+    fontFamily: MONO,
+    fontSize: 19,
     lineHeight: 22,
-    fontWeight: '600',
+    fontWeight: '700',
     color: IVORY,
   },
   equipmentVal: {

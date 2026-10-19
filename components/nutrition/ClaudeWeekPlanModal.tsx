@@ -9,7 +9,17 @@ import {
   Platform,
   TextInput,
 } from 'react-native';
-import { createNutritionPlan, NutritionPlanApiResponse, NutritionDayPlan } from '../../lib/nutrition';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import {
+  createNutritionPlan,
+  NutritionPlanApiResponse,
+  NutritionDayPlan,
+  NutritionMealEntry,
+  formatStructuredNutritionSummary,
+  getMealPreparationSteps,
+} from '../../lib/nutrition';
+import { useLanguage } from '../../lib/i18n';
 
 interface DayPlan {
   day: string;
@@ -33,7 +43,6 @@ const GOLD = '#C9943A';
 const COPPER = '#B5651D';
 const IVORY = '#F7F3EE';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', -apple-system, sans-serif", default: 'ClashDisplay-Bold' });
 const DMSANS = Platform.select({ web: "'DM Sans', -apple-system, sans-serif", default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: "'Inter', -apple-system, sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
@@ -84,9 +93,13 @@ export default function ClaudeWeekPlanModal({
   defaultWeight = 75,
   onPlanUpdated,
 }: ClaudeWeekPlanModalProps) {
+  const { t } = useLanguage();
   const [viewMode, setViewMode] = useState<'questionnaire' | 'weekPlan'>('questionnaire');
+  const [expandedDayKey, setExpandedDayKey] = useState<string | null>(null);
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [selectedMeals, setSelectedMeals] = useState<string[]>([]);
+  const [mealHealthPreferences, setMealHealthPreferences] = useState<Record<string, 'healthy_for_me' | 'not_healthy_for_me'>>({});
+  const [editingMeal, setEditingMeal] = useState<string | null>(null);
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
   const [customMeal, setCustomMeal] = useState('');
   const [customAllergy, setCustomAllergy] = useState('');
@@ -94,11 +107,158 @@ export default function ClaudeWeekPlanModal({
   const [peopleCount, setPeopleCount] = useState('4');
   const [weeklyBudget, setWeeklyBudget] = useState('€120');
   const [generatedPlan, setGeneratedPlan] = useState<NutritionPlanApiResponse | null>(null);
+  const [openPrepMealKeys, setOpenPrepMealKeys] = useState<Record<string, boolean>>({});
   const [isBuilding, setIsBuilding] = useState(false);
+
+  useEffect(() => {
+    if (!plan?.profile) return;
+    const prof: any = plan.profile;
+    const savedFavs: string[] = [];
+    const savedPrefs: Record<string, 'healthy_for_me' | 'not_healthy_for_me'> = {};
+
+    if (Array.isArray(prof.favorite_foods_details)) {
+      prof.favorite_foods_details.forEach((item: any) => {
+        if (item && item.name) {
+          const name = String(item.name).trim();
+          if (name && !savedFavs.includes(name)) {
+            savedFavs.push(name);
+          }
+          if (item.health_preference === 'healthy_for_me' || item.health_preference === 'not_healthy_for_me') {
+            savedPrefs[name] = item.health_preference;
+          }
+        }
+      });
+    }
+
+    if (prof.favorite_meals_preferences && typeof prof.favorite_meals_preferences === 'object') {
+      Object.entries(prof.favorite_meals_preferences).forEach(([k, v]) => {
+        const name = String(k).trim();
+        if (name && !savedFavs.includes(name)) {
+          savedFavs.push(name);
+        }
+        if (v === 'healthy_for_me' || v === 'not_healthy_for_me') {
+          savedPrefs[name] = v;
+        }
+      });
+    }
+
+    const flatFavs = [
+      ...(Array.isArray(prof.favorite_meals) ? prof.favorite_meals : []),
+      ...(Array.isArray(prof.favorite_meals_json) ? prof.favorite_meals_json : []),
+      ...(prof.favorite_meal ? [prof.favorite_meal] : []),
+    ];
+    flatFavs.forEach((m: any) => {
+      const name = String(m || '').trim();
+      if (name && !savedFavs.includes(name)) {
+        savedFavs.push(name);
+      }
+    });
+
+    if (savedFavs.length > 0) {
+      setSelectedMeals(savedFavs);
+      setMealHealthPreferences(savedPrefs);
+    }
+
+    if (prof.cuisine && typeof prof.cuisine === 'string') {
+      const cuisines = prof.cuisine.split(',').map((c: string) => c.trim()).filter(Boolean);
+      if (cuisines.length > 0) setSelectedCuisines(cuisines);
+    }
+    if (prof.allergies && typeof prof.allergies === 'string') {
+      const allergies = prof.allergies.split(',').map((a: string) => a.trim()).filter(Boolean);
+      if (allergies.length > 0) setSelectedAllergies(allergies);
+    }
+    if (prof.cooking_time_weekday) setCookingTime(String(prof.cooking_time_weekday));
+    if (prof.people_cooking_for) setPeopleCount(String(prof.people_cooking_for));
+    if (prof.weekly_food_budget) setWeeklyBudget(String(prof.weekly_food_budget));
+  }, [plan]);
   const [buildError, setBuildError] = useState('');
   const [progress, setProgress] = useState(0);
   const buildRequest = useRef<AbortController | null>(null);
   const scrollRef = useRef<ScrollView>(null);
+
+  const toggleMealPrep = (mealKey: string) => {
+    setOpenPrepMealKeys((prev) => ({
+      ...prev,
+      [mealKey]: !prev[mealKey],
+    }));
+  };
+
+  const handleToggleDayPrep = (dayKey: string, dayPlan: NutritionDayPlan) => {
+    const isCurrentlyExpanded = expandedDayKey === dayKey;
+    if (!isCurrentlyExpanded) {
+      setExpandedDayKey(dayKey);
+      setOpenPrepMealKeys((prev) => ({
+        ...prev,
+        [`${dayKey}-breakfast`]: true,
+        [`${dayKey}-lunch`]: true,
+        [`${dayKey}-dinner`]: true,
+        [`${dayKey}-pre_workout`]: true,
+        [`${dayKey}-post_workout`]: true,
+      }));
+    } else {
+      const anyOpen = Boolean(
+        openPrepMealKeys[`${dayKey}-breakfast`] ||
+        openPrepMealKeys[`${dayKey}-lunch`] ||
+        openPrepMealKeys[`${dayKey}-dinner`] ||
+        openPrepMealKeys[`${dayKey}-pre_workout`] ||
+        openPrepMealKeys[`${dayKey}-post_workout`]
+      );
+      setOpenPrepMealKeys((prev) => ({
+        ...prev,
+        [`${dayKey}-breakfast`]: !anyOpen,
+        [`${dayKey}-lunch`]: !anyOpen,
+        [`${dayKey}-dinner`]: !anyOpen,
+        [`${dayKey}-pre_workout`]: !anyOpen,
+        [`${dayKey}-post_workout`]: !anyOpen,
+      }));
+    }
+  };
+
+  const renderModalMealCard = (
+    slotKey: string,
+    slotLabel: string,
+    meal: NutritionMealEntry | undefined | null,
+    dayKey: string
+  ) => {
+    if (!meal) return null;
+    const mealKey = `${dayKey}-${slotKey}`;
+    const isPrepOpen = Boolean(openPrepMealKeys[mealKey]);
+    const steps = getMealPreparationSteps(meal);
+
+    return (
+      <View style={styles.modalMealCard} key={mealKey}>
+        <Text style={styles.modalMealKicker}>{slotLabel.toUpperCase()}</Text>
+        <Text style={styles.modalMealName} numberOfLines={1} ellipsizeMode="tail">
+          {meal.name}
+        </Text>
+        <Text style={styles.modalMealMacros}>
+          {meal.kcal} kcal · {meal.p}g P · {meal.c}g C · {meal.f}g F
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${slotLabel} ${t('Preparation steps')}`}
+          onPress={() => toggleMealPrep(mealKey)}
+          style={styles.modalMealPrepBtn}
+        >
+          <Text style={styles.modalMealPrepBtnText}>
+            {t('Preparation steps')} {isPrepOpen ? '▴' : '›'}
+          </Text>
+        </Pressable>
+        {isPrepOpen ? (
+          <View style={styles.modalInstructionsList}>
+            {steps.map((step, idx) => (
+              <View key={`step-${idx}`} style={styles.modalInstructionRow}>
+                <View style={styles.modalStepBadge}>
+                  <Text style={styles.modalStepBadgeText}>{idx + 1}</Text>
+                </View>
+                <Text style={styles.modalInstructionText}>{step}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+      </View>
+    );
+  };
   const cancelBuild = () => {
     buildRequest.current?.abort();
     buildRequest.current = null;
@@ -119,6 +279,10 @@ export default function ClaudeWeekPlanModal({
     return () => clearInterval(timer);
   }, [isBuilding]);
   const activePlan = generatedPlan || plan || null;
+  const structuredSummary = React.useMemo(() => {
+    return formatStructuredNutritionSummary(activePlan, t);
+  }, [activePlan, t]);
+
   const dayPlans: DayPlan[] = (activePlan?.days || []).map((day) => ({
     day: formatDayName(day.day),
     proteinText: `${proteinForDay(day)} g protein`,
@@ -133,15 +297,50 @@ export default function ClaudeWeekPlanModal({
   };
 
   const toggleMeal = (m: string) => {
-    setSelectedMeals((prev) =>
-      prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m]
-    );
+    setSelectedMeals((prev) => {
+      if (prev.includes(m)) {
+        setMealHealthPreferences((cur) => {
+          const next = { ...cur };
+          delete next[m];
+          return next;
+        });
+        return prev.filter((x) => x !== m);
+      } else {
+        setEditingMeal(m);
+        return [...prev, m];
+      }
+    });
+  };
+
+  const removeMeal = (m: string) => {
+    setSelectedMeals((prev) => prev.filter((x) => x !== m));
+    setMealHealthPreferences((cur) => {
+      const next = { ...cur };
+      delete next[m];
+      return next;
+    });
+    setEditingMeal((cur) => (cur === m ? null : cur));
+  };
+
+  const setMealHealthPreference = (meal: string, preference: 'healthy_for_me' | 'not_healthy_for_me') => {
+    setMealHealthPreferences((cur) => {
+      const next = { ...cur };
+      next[meal] = preference;
+      return next;
+    });
+    setEditingMeal(null);
   };
 
   const addCustomMeal = () => {
     const meal = customMeal.trim();
     if (!meal) return;
-    setSelectedMeals((prev) => (prev.some((item) => item.toLowerCase() === meal.toLowerCase()) ? prev : [...prev, meal]));
+    setSelectedMeals((prev) => {
+      if (prev.some((item) => item.toLowerCase() === meal.toLowerCase())) {
+        return prev;
+      }
+      setEditingMeal(meal);
+      return [...prev, meal];
+    });
     setCustomMeal('');
   };
 
@@ -177,6 +376,19 @@ export default function ClaudeWeekPlanModal({
       .filter(Boolean);
     const favoriteMeals = Array.from(new Set(meals)).slice(0, 8);
 
+    const favoriteFoodsDetails = favoriteMeals.map((name) => ({
+      name,
+      is_favourite: true,
+      health_preference: mealHealthPreferences[name] || 'unspecified',
+    }));
+
+    const favoriteMealsPreferences: Record<string, string> = {};
+    favoriteMeals.forEach((name) => {
+      if (mealHealthPreferences[name]) {
+        favoriteMealsPreferences[name] = mealHealthPreferences[name];
+      }
+    });
+
     setIsBuilding(true);
     setBuildError('');
     try {
@@ -188,6 +400,8 @@ export default function ClaudeWeekPlanModal({
         favorite_meal: favoriteMeals[0],
         favorite_meals: favoriteMeals,
         favorite_meals_json: favoriteMeals,
+        favorite_foods_details: favoriteFoodsDetails,
+        favorite_meals_preferences: favoriteMealsPreferences,
         diet: 'balanced',
         allergies: Array.from(new Set([...selectedAllergies, customAllergy.trim()].filter(Boolean))).join(', '),
         activity_level: 'moderate',
@@ -214,7 +428,7 @@ export default function ClaudeWeekPlanModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={() => { cancelBuild(); onClose(); }}>
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         {/* Top Header */}
         <View style={styles.topBar}>
           <Pressable onPress={handleBack} hitSlop={10}>
@@ -278,22 +492,7 @@ export default function ClaudeWeekPlanModal({
               {/* 2 · MEALS YOU ALREADY LOVE */}
               <View style={styles.card}>
                 <Text style={styles.cardKicker}>2 · MEALS YOU ALREADY LOVE</Text>
-                <View style={styles.chipsWrap}>
-                  {selectedMeals.map((m) => {
-                    const active = selectedMeals.includes(m);
-                    return (
-                      <Pressable
-                        key={m}
-                        style={[styles.chip, active && styles.chipActive]}
-                        onPress={() => toggleMeal(m)}
-                      >
-                        <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                          {m}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
+
                 <View style={styles.mealInputRow}>
                   <TextInput
                     style={styles.mealInput}
@@ -308,8 +507,231 @@ export default function ClaudeWeekPlanModal({
                     <Text style={styles.addMealBtnText}>Add</Text>
                   </Pressable>
                 </View>
+
+                {/* Popular suggestions: filter out any already selected */}
+                {(() => {
+                  const availableSuggestions = [
+                    'Grilled Chicken & Rice',
+                    'Fufu',
+                    'Salmon & Vegetables',
+                    'Pasta Bolognese',
+                    'Waakye',
+                  ].filter(
+                    (s) => !selectedMeals.some((m) => m.toLowerCase() === s.toLowerCase())
+                  );
+                  if (availableSuggestions.length === 0) return null;
+                  return (
+                    <View style={{ marginTop: 12 }}>
+                      <Text style={styles.favPromptHint}>{t('Quick add:')}</Text>
+                      <View style={styles.chipsWrap}>
+                        {availableSuggestions.map((s) => (
+                          <Pressable key={s} style={styles.chip} onPress={() => toggleMeal(s)}>
+                            <Text style={styles.chipText}>+ {s}</Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    </View>
+                  );
+                })()}
+
+                {/* Render EACH favourite food with streamlined luxury layout */}
+                {selectedMeals.length > 0 ? (
+                  <View style={styles.favFoodsContainer}>
+                    {selectedMeals.map((m) => {
+                      const pref = mealHealthPreferences[m];
+                      const formattedName =
+                        m.trim().length > 0
+                          ? m.trim().charAt(0).toUpperCase() + m.trim().slice(1)
+                          : m;
+                      const isHealthy = pref === 'healthy_for_me';
+                      const isNotHealthy = pref === 'not_healthy_for_me';
+                      const isConfirmed = isHealthy || isNotHealthy;
+                      const isEditing = editingMeal === m || !isConfirmed;
+
+                      return (
+                        <View
+                          key={m}
+                          style={[
+                            styles.favFoodItemCard,
+                            isHealthy && styles.favFoodItemCardHealthy,
+                            isNotHealthy && styles.favFoodItemCardNotHealthy,
+                          ]}
+                        >
+                          {/* Card Main Row: Title & Subtitle on Left, Pill & Delete on Right */}
+                          <View style={styles.favFoodTopRow}>
+                            <View style={styles.favFoodTitleGroup}>
+                              <Text style={styles.favFoodName} numberOfLines={1}>
+                                {formattedName}
+                              </Text>
+                              <Text
+                                style={[
+                                  styles.favFoodMeta,
+                                  isHealthy && styles.favFoodMetaHealthy,
+                                  isNotHealthy && styles.favFoodMetaNotHealthy,
+                                  !isConfirmed && styles.favFoodMetaUnconfirmed,
+                                ]}
+                                numberOfLines={1}
+                              >
+                                {isHealthy
+                                  ? t('Regular · Macro-balanced')
+                                  : isNotHealthy
+                                  ? t('1–3x/wk · Smart moderation')
+                                  : t('Select frequency')}
+                              </Text>
+                            </View>
+
+                            <View style={styles.favFoodRightControls}>
+                              {isConfirmed ? (
+                                <Pressable
+                                  hitSlop={6}
+                                  onPress={() => setEditingMeal(isEditing ? null : m)}
+                                  style={[
+                                    styles.favInteractivePill,
+                                    isHealthy
+                                      ? styles.favInteractivePillHealthy
+                                      : styles.favInteractivePillNotHealthy,
+                                  ]}
+                                  accessibilityRole="button"
+                                  accessibilityLabel={`${m} ${isHealthy ? 'Regular' : '1–3x/wk'}`}
+                                >
+                                  <View
+                                    style={
+                                      isHealthy
+                                        ? styles.statusDotHealthy
+                                        : styles.statusDotNotHealthy
+                                    }
+                                  />
+                                  <Text
+                                    style={
+                                      isHealthy
+                                        ? styles.favPillTextHealthy
+                                        : styles.favPillTextNotHealthy
+                                    }
+                                  >
+                                    {isHealthy ? t('Regular') : t('1–3x/wk')}
+                                  </Text>
+                                  <Ionicons
+                                    name={isEditing ? 'chevron-up' : 'chevron-down'}
+                                    size={11}
+                                    color={isHealthy ? GOLD : COPPER}
+                                  />
+                                </Pressable>
+                              ) : null}
+
+                              <Pressable
+                                hitSlop={10}
+                                onPress={() => removeMeal(m)}
+                                style={({ pressed }) => [
+                                  styles.favRemoveCircleBtn,
+                                  pressed && styles.favRemoveCircleBtnPressed,
+                                ]}
+                                accessibilityRole="button"
+                                accessibilityLabel={`Remove ${m}`}
+                              >
+                                <Ionicons name="close" size={13} color="rgba(247, 243, 238, 0.65)" />
+                              </Pressable>
+                            </View>
+                          </View>
+
+                          {/* When editing or unselected: show high-contrast interactive buttons */}
+                          {isEditing ? (
+                            <View style={styles.favEditChoiceContainer}>
+                              <Text style={styles.favEditPrompt}>{t('Frequency')}</Text>
+                              <View style={styles.favChoiceRow}>
+                                <Pressable
+                                  style={[
+                                    styles.favChoiceBtn,
+                                    isHealthy
+                                      ? styles.favChoiceBtnHealthyActive
+                                      : styles.favChoiceBtnInactive,
+                                  ]}
+                                  onPress={() => setMealHealthPreference(m, 'healthy_for_me')}
+                                  accessibilityRole="button"
+                                  accessibilityLabel={`${m} Regular`}
+                                >
+                                  <Ionicons
+                                    name="restaurant-outline"
+                                    size={13}
+                                    color={isHealthy ? OBSIDIAN : GOLD}
+                                    style={{ marginRight: 6 }}
+                                  />
+                                  <View>
+                                    <Text
+                                      style={[
+                                        styles.favChoiceText,
+                                        isHealthy
+                                          ? styles.favChoiceTextHealthyActive
+                                          : styles.favChoiceTextInactive,
+                                      ]}
+                                    >
+                                      {t('Regular')}
+                                    </Text>
+                                    <Text
+                                      style={[
+                                        styles.favChoiceSubText,
+                                        isHealthy
+                                          ? styles.favChoiceSubHealthyActive
+                                          : styles.favChoiceSubInactive,
+                                      ]}
+                                    >
+                                      {t('Daily rotation')}
+                                    </Text>
+                                  </View>
+                                </Pressable>
+
+                                <Pressable
+                                  style={[
+                                    styles.favChoiceBtn,
+                                    isNotHealthy
+                                      ? styles.favChoiceBtnNotHealthyActive
+                                      : styles.favChoiceBtnInactive,
+                                  ]}
+                                  onPress={() => setMealHealthPreference(m, 'not_healthy_for_me')}
+                                  accessibilityRole="button"
+                                  accessibilityLabel={`${m} 1–3x/wk`}
+                                >
+                                  <Ionicons
+                                    name="shield-outline"
+                                    size={13}
+                                    color={isNotHealthy ? OBSIDIAN : COPPER}
+                                    style={{ marginRight: 6 }}
+                                  />
+                                  <View>
+                                    <Text
+                                      style={[
+                                        styles.favChoiceText,
+                                        isNotHealthy
+                                          ? styles.favChoiceTextNotHealthyActive
+                                          : styles.favChoiceTextInactive,
+                                      ]}
+                                    >
+                                      {t('1–3x / week')}
+                                    </Text>
+                                    <Text
+                                      style={[
+                                        styles.favChoiceSubText,
+                                        isNotHealthy
+                                          ? styles.favChoiceSubNotHealthyActive
+                                          : styles.favChoiceSubInactive,
+                                      ]}
+                                    >
+                                      {t('Smart treat')}
+                                    </Text>
+                                  </View>
+                                </Pressable>
+                              </View>
+                            </View>
+                          ) : null}
+                        </View>
+                      );
+                    })}
+                  </View>
+                ) : null}
+
                 <Text style={styles.cardFootnote}>
-                  Add at least three. These are sent to the backend plan generator.
+                  {t(
+                    'Victor integrates your favourites while keeping weekly calories and macros balanced.'
+                  )}
                 </Text>
               </View>
 
@@ -401,7 +823,7 @@ export default function ClaudeWeekPlanModal({
             <View>
               <Text style={styles.headline}>Your week</Text>
               <Text style={styles.subheadline}>
-                {shortPlanSummary(activePlan?.summary)}
+                {structuredSummary.fullText}
               </Text>
               <View style={styles.summaryPills}>
                 <View style={styles.summaryPill}>
@@ -420,33 +842,102 @@ export default function ClaudeWeekPlanModal({
 
               {/* Days Card */}
               <View style={styles.card}>
-                {(dayPlans.length > 0 ? dayPlans : []).map((d, idx) => (
-                  <View
-                    key={d.day}
-                    style={[
-                      styles.dayBlock,
-                      idx < dayPlans.length - 1 && styles.dayBlockBorder,
-                    ]}
-                  >
-                    <View style={styles.dayTopRow}>
-                      <Text style={styles.dayTitle}>{d.day}</Text>
-                      <Text style={styles.dayProtein}>{d.proteinText}</Text>
-                    </View>
+                {(activePlan?.days || []).map((d, idx) => {
+                  const isExpanded = expandedDayKey === d.day;
+                  const dayName = t(formatDayName(d.day));
+                  const proteinText = `${proteinForDay(d)} g protein`;
+                  const allMeals = [d.breakfast, d.lunch, d.dinner, d.pre_workout, d.post_workout].filter(Boolean);
+                  const totalKcal = allMeals.reduce((sum, m: any) => sum + Math.max(0, Number(m?.kcal || 0)), 0);
 
-                    <Text style={styles.dayMeals}>{d.meals}</Text>
+                  return (
+                    <View
+                      key={d.day}
+                      style={[
+                        styles.dayBlock,
+                        idx < (activePlan?.days?.length || 0) - 1 && styles.dayBlockBorder,
+                      ]}
+                    >
+                      <Pressable
+                        style={styles.dayTopRow}
+                        onPress={() => setExpandedDayKey((prev) => (prev === d.day ? null : d.day))}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${dayName}, ${isExpanded ? t('Collapse day') : t('Expand day')}`}
+                      >
+                        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingRight: 8 }}>
+                          <Text style={styles.dayTitle}>{dayName}</Text>
+                          <Text style={styles.dayProtein}>
+                            {totalKcal > 0 ? `${totalKcal} kcal · ` : ''}
+                            {proteinText}
+                          </Text>
+                        </View>
+                        <Ionicons
+                          name={isExpanded ? 'chevron-down' : 'chevron-forward'}
+                          size={18}
+                          color={isExpanded ? GOLD : 'rgba(247, 243, 238, 0.4)'}
+                        />
+                      </Pressable>
 
-                    <View style={styles.dayActionRow}>
-                      <Text style={styles.prepLink}>Preparation steps ›</Text>
-                      <Text style={styles.prepTime}>{d.prepTime}</Text>
+                      {isExpanded ? (
+                        <View style={styles.expandedDayContent}>
+                          {/* Day-level prep action commented out - each meal card below has its own dedicated preparation steps toggle
+                          <View style={styles.dayActionRow}>
+                            <Pressable
+                              accessibilityRole="button"
+                              accessibilityLabel={t('Preparation steps')}
+                              onPress={() => handleToggleDayPrep(d.day, d)}
+                              style={styles.prepLinkButton}
+                            >
+                              <Text style={styles.prepLink}>
+                                {t('Preparation steps')}{' '}
+                                {Boolean(
+                                  openPrepMealKeys[`${d.day}-breakfast`] ||
+                                  openPrepMealKeys[`${d.day}-lunch`] ||
+                                  openPrepMealKeys[`${d.day}-dinner`]
+                                )
+                                  ? '▴'
+                                  : '›'}
+                              </Text>
+                            </Pressable>
+                            <Text style={styles.prepTime}>{`${Math.max(
+                              15,
+                              Math.min(45, (d.breakfast?.instructions?.length || 1) * 5 + 20)
+                            )} min total`}</Text>
+                          </View>
+                          */}
+                          {renderModalMealCard('breakfast', t('Breakfast'), d.breakfast, d.day)}
+                          {renderModalMealCard('lunch', t('Lunch'), d.lunch, d.day)}
+                          {renderModalMealCard('pre_workout', t('Pre-workout snack'), d.pre_workout, d.day)}
+                          {renderModalMealCard('post_workout', t('Post-workout snack'), d.post_workout, d.day)}
+                          {renderModalMealCard('dinner', t('Dinner'), d.dinner, d.day)}
+                        </View>
+                      ) : (
+                        <View>
+                          <Pressable onPress={() => setExpandedDayKey(d.day)}>
+                            <Text style={styles.dayMeals}>{mealNamesForDay(d)}</Text>
+                          </Pressable>
+                          <View style={styles.dayActionRow}>
+                            <Pressable
+                              accessibilityRole="button"
+                              accessibilityLabel={t('Preparation steps')}
+                              onPress={() => handleToggleDayPrep(d.day, d)}
+                              style={styles.prepLinkButton}
+                            >
+                              <Text style={styles.prepLink}>{t('Preparation steps')} ›</Text>
+                            </Pressable>
+                            <Text style={styles.prepTime}>{`${Math.max(
+                              15,
+                              Math.min(45, (d.breakfast?.instructions?.length || 1) * 5 + 20)
+                            )} min total`}</Text>
+                          </View>
+                        </View>
+                      )}
                     </View>
-                  </View>
-                ))}
+                  );
+                })}
               </View>
-              {dayPlans.length === 0 ? (
+              {(!activePlan?.days || activePlan.days.length === 0) ? (
                 <Text style={styles.moreDaysNote}>No saved plan yet. Go back and build your week.</Text>
               ) : null}
-
-              <Text style={styles.moreDaysNote}>Thursday to Sunday below ⌄</Text>
 
               {/* Bottom Button */}
               <Pressable style={styles.primaryBtn} onPress={onOpenShoppingList}>
@@ -455,7 +946,7 @@ export default function ClaudeWeekPlanModal({
             </View>
           )}
         </ScrollView>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 }
@@ -478,8 +969,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 54,
-    paddingBottom: 14,
+    paddingTop: Platform.select({ web: 10, default: 4 }),
+    paddingBottom: 8,
   },
   backBtn: {
     fontFamily: DMSANS,
@@ -495,27 +986,29 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingTop: 4,
+    paddingBottom: 36,
   },
   headline: {
-    fontFamily: CLASH,
-    fontSize: 30,
-    lineHeight: 33,
+    fontFamily: DMSANS,
+    fontSize: 24,
+    lineHeight: 30,
     fontWeight: '600',
+    letterSpacing: -0.3,
     color: IVORY,
-    marginBottom: 10,
+    marginBottom: 6,
   },
   subheadline: {
     fontFamily: INTER,
-    fontSize: 14.5,
-    lineHeight: 23,
+    fontSize: 14,
+    lineHeight: 20,
     color: 'rgba(247, 243, 238, 0.6)',
-    marginBottom: 14,
+    marginBottom: 10,
   },
   summaryPills: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 14,
+    marginBottom: 10,
   },
   summaryPill: {
     flex: 1,
@@ -605,26 +1098,27 @@ const styles = StyleSheet.create({
   },
   mealInput: {
     flex: 1,
-    minHeight: 42,
+    minHeight: 44,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(247, 243, 238, 0.18)',
-    paddingHorizontal: 12,
+    borderColor: 'rgba(247, 243, 238, 0.16)',
+    backgroundColor: 'rgba(4, 14, 24, 0.45)',
+    paddingHorizontal: 14,
     fontFamily: INTER,
-    fontSize: 13,
+    fontSize: 13.5,
     color: IVORY,
   },
   addMealBtn: {
-    height: 42,
+    height: 44,
     borderRadius: 12,
     backgroundColor: GOLD,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   addMealBtnText: {
     fontFamily: DMSANS,
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: '700',
     color: OBSIDIAN,
   },
@@ -743,5 +1237,285 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: 'rgba(247, 243, 238, 0.45)',
     marginVertical: 14,
+  },
+  expandedDayContent: {
+    marginTop: 10,
+    gap: 10,
+  },
+  modalMealCard: {
+    backgroundColor: '#071826',
+    borderRadius: 10,
+    padding: 12,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  modalMealKicker: {
+    fontFamily: DMSANS,
+    fontSize: 10,
+    fontWeight: '700',
+    color: GOLD,
+    letterSpacing: 1,
+  },
+  modalMealName: {
+    fontFamily: DMSANS,
+    fontSize: 14,
+    fontWeight: '600',
+    color: IVORY,
+  },
+  modalMealMacros: {
+    fontFamily: MONO,
+    fontSize: 11.5,
+    color: GOLD,
+  },
+  prepLinkButton: {
+    paddingVertical: 2,
+    paddingRight: 6,
+  },
+  modalMealPrepBtn: {
+    alignSelf: 'flex-start',
+    marginTop: 4,
+    paddingVertical: 4,
+    paddingRight: 8,
+  },
+  modalMealPrepBtnText: {
+    fontFamily: DMSANS,
+    fontSize: 12,
+    fontWeight: '700',
+    color: GOLD,
+  },
+  modalInstructionsList: {
+    marginTop: 8,
+    gap: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(247, 243, 238, 0.08)',
+  },
+  modalInstructionRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  modalStepBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(201, 148, 58, 0.15)',
+    borderWidth: 1,
+    borderColor: GOLD,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  modalStepBadgeText: {
+    fontFamily: DMSANS,
+    fontSize: 11,
+    fontWeight: '700',
+    color: GOLD,
+  },
+  modalInstructionText: {
+    flex: 1,
+    fontFamily: INTER,
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: 'rgba(247, 243, 238, 0.85)',
+  },
+  modalMealPrep: {
+    fontFamily: INTER,
+    fontSize: 12,
+    color: 'rgba(247, 243, 238, 0.7)',
+    lineHeight: 17,
+    marginTop: 2,
+  },
+  favFoodsContainer: {
+    marginTop: 14,
+    gap: 8,
+  },
+  favFoodItemCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(247, 243, 238, 0.12)',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    gap: 8,
+  },
+  favFoodItemCardHealthy: {
+    borderColor: 'rgba(201, 148, 58, 0.35)',
+    backgroundColor: 'rgba(201, 148, 58, 0.05)',
+  },
+  favFoodItemCardNotHealthy: {
+    borderColor: 'rgba(181, 101, 29, 0.4)',
+    backgroundColor: 'rgba(181, 101, 29, 0.06)',
+  },
+  favFoodTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  favFoodTitleGroup: {
+    flex: 1,
+    paddingRight: 10,
+    justifyContent: 'center',
+  },
+  favFoodName: {
+    fontFamily: DMSANS,
+    fontSize: 15,
+    fontWeight: '700',
+    color: IVORY,
+    textTransform: 'capitalize',
+    letterSpacing: 0.2,
+  },
+  favFoodMeta: {
+    fontFamily: INTER,
+    fontSize: 11.5,
+    letterSpacing: 0.2,
+    marginTop: 2,
+  },
+  favFoodMetaHealthy: {
+    color: 'rgba(201, 148, 58, 0.85)',
+  },
+  favFoodMetaNotHealthy: {
+    color: 'rgba(232, 152, 88, 0.85)',
+  },
+  favFoodMetaUnconfirmed: {
+    color: 'rgba(247, 243, 238, 0.5)',
+  },
+  favFoodRightControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  favInteractivePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 3.5,
+    paddingHorizontal: 8,
+    borderRadius: 99,
+    gap: 4,
+    borderWidth: 1,
+  },
+  favInteractivePillHealthy: {
+    backgroundColor: 'rgba(201, 148, 58, 0.15)',
+    borderColor: 'rgba(201, 148, 58, 0.45)',
+  },
+  favInteractivePillNotHealthy: {
+    backgroundColor: 'rgba(181, 101, 29, 0.18)',
+    borderColor: 'rgba(181, 101, 29, 0.45)',
+  },
+  statusDotHealthy: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: GOLD,
+  },
+  statusDotNotHealthy: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: COPPER,
+  },
+  favPillTextHealthy: {
+    fontFamily: DMSANS,
+    fontSize: 11,
+    fontWeight: '700',
+    color: GOLD,
+    letterSpacing: 0.2,
+  },
+  favPillTextNotHealthy: {
+    fontFamily: DMSANS,
+    fontSize: 11,
+    fontWeight: '700',
+    color: COPPER,
+    letterSpacing: 0.2,
+  },
+  favRemoveCircleBtn: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  favRemoveCircleBtnPressed: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  favEditChoiceContainer: {
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(247, 243, 238, 0.08)',
+    marginTop: 2,
+  },
+  favEditPrompt: {
+    fontFamily: DMSANS,
+    fontSize: 10,
+    fontWeight: '600',
+    color: 'rgba(247, 243, 238, 0.5)',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 6,
+  },
+  favChoiceRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  favChoiceBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  favChoiceBtnInactive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: 'rgba(247, 243, 238, 0.16)',
+  },
+  favChoiceBtnHealthyActive: {
+    backgroundColor: GOLD,
+    borderColor: GOLD,
+  },
+  favChoiceBtnNotHealthyActive: {
+    backgroundColor: COPPER,
+    borderColor: COPPER,
+  },
+  favChoiceText: {
+    fontFamily: DMSANS,
+    fontSize: 12.5,
+    fontWeight: '700',
+  },
+  favChoiceTextInactive: {
+    color: IVORY,
+  },
+  favChoiceTextHealthyActive: {
+    color: OBSIDIAN,
+  },
+  favChoiceTextNotHealthyActive: {
+    color: OBSIDIAN,
+  },
+  favChoiceSubText: {
+    fontFamily: INTER,
+    fontSize: 10,
+    marginTop: 1,
+  },
+  favChoiceSubInactive: {
+    color: 'rgba(247, 243, 238, 0.55)',
+  },
+  favChoiceSubHealthyActive: {
+    color: 'rgba(4, 14, 24, 0.85)',
+  },
+  favChoiceSubNotHealthyActive: {
+    color: 'rgba(4, 14, 24, 0.85)',
+  },
+  favPromptHint: {
+    fontFamily: DMSANS,
+    fontSize: 11,
+    fontWeight: '600',
+    color: 'rgba(247, 243, 238, 0.55)',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });

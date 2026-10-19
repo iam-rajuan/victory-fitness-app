@@ -25,6 +25,7 @@ import { apiRequest, getAuthUser } from '../../lib/api';
 import { ErrorPopupModal } from '../../components/ErrorPopupModal';
 import { formatAppError } from '../../lib/error';
 import { useLanguage } from '../../lib/i18n';
+import { registerCanonicalChallengeTitle } from '../../lib/challengeTerminology';
 import { goBackOrReplace, pushRoute } from '../../lib/navigation';
 import { getCachedResourceSnapshot } from '../../lib/resourceCache';
 import { fetchChallengeDetailData, getChallengeDetailCacheKey } from '../../lib/screenData';
@@ -103,6 +104,7 @@ type ChallengeDetail = {
   current_day_number: number | null;
   can_complete_today: boolean;
   completed_today: boolean;
+  next_day_unlock_at?: string | null;
   messages: ChallengeChatMessage[];
   started_at?: string;
 };
@@ -287,6 +289,9 @@ export default function ChallengeDetailScreen() {
     }
     try {
       const response = await fetchChallengeDetailData<ChallengeDetail>(challengeId);
+      if (response?.title) {
+        registerCanonicalChallengeTitle(response.title);
+      }
       setDetail(response);
     } catch (error) {
       setErrorDialog(formatAppError(error, t('Failed to load challenge details.')));
@@ -653,6 +658,12 @@ export default function ChallengeDetailScreen() {
                           {currentCalendarDay ? (
                             <Text style={styles.membershipDayHint}>
                               {t('Day')} {currentCalendarDay} {t('of')} {totalDaysCount}
+                            </Text>
+                          ) : null}
+                          {detail.completed_today && currentCalendarDay && currentCalendarDay < totalDaysCount ? (
+                            <Text style={styles.membershipDayHint}>
+                              {t('Day')} {currentCalendarDay + 1} {t('unlocks on the next calendar day')}
+                              {detail.next_day_unlock_at ? ` (${new Date(detail.next_day_unlock_at).toLocaleString()})` : ''}.
                             </Text>
                           ) : null}
                         </View>

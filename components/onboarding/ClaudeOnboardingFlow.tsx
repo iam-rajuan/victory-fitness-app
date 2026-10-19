@@ -38,6 +38,7 @@ import {
 import { getPostAuthRoute } from '../../lib/access';
 import { replaceRoute } from '../../lib/navigation';
 import { buildE164PhoneNumber, normalizeDialCode, splitE164PhoneNumber } from '../../lib/phone';
+import { calculateProteinTarget } from '../../lib/nutrition';
 import ClaudeInnerCircleApplyModal from '../profile/ClaudeInnerCircleApplyModal';
 
 export const ONBOARDING_STEP_KEY = '@vf_onboarding_current_step';
@@ -60,10 +61,10 @@ const IVORY = '#F7F3EE';
 const GREEN = '#1A7A4A';
 const BLUE_GRAY = '#8FA8C4';
 
-const CLASH = Platform.select({ web: "'Clash Display', 'DM Sans', sans-serif", default: 'System' });
-const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'System' });
-const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'System' });
-const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'Courier' });
+const CLASH = Platform.select({ web: "'DM Sans', sans-serif", default: 'DMSans-SemiBold' });
+const DMSANS = Platform.select({ web: "'DM Sans', sans-serif", default: 'DMSans-SemiBold' });
+const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'Inter-Regular' });
+const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
 
 const STEPS_META = [
   ['Welcome', '0:00 · install to first tap', 'One promise, three numbers, one language', 'No carousel, no sign-up wall, no permission prompts. A single sentence that names the real problem — showing up on the bad days.'],
@@ -71,7 +72,7 @@ const STEPS_META = [
   ['Question 1 · Why', '0:25', 'The one question that shapes the copy', 'Five honest options, no “other” dumping ground. This answer is never shown as a stat; it becomes the wording of the nudge at 20:30 on a Tuesday.'],
   ['Question 2 · Equipment', '0:50', 'The answer changes a number instantly', 'Four plain places to train — gym, body weight only, CrossFit box, home gym — and home gym opens a second row for what you own. Every tap updates “N workouts are yours” live.'],
   ['Question 3 · Time', '1:15', 'Honesty is easier than ambition', 'The framing — “not the hours you wish you had” — lowers the number people pick, which raises the chance they keep it. The weekly total appears underneath.'],
-  ['Question 4 · Numbers', '1:40', 'The calculation happens in front of them', 'Weight is a stepper, not a keyboard, and the protein target recalculates on every tap with the arithmetic shown (1.6 g × kg). Calories, carbs and water appear in their permanent app colours.'],
+  ['Question 4 · Numbers', '1:40', 'The calculation happens in front of them', 'Weight is a stepper, not a keyboard, and the protein target recalculates on every tap with the arithmetic shown. Calories, carbs and water appear in their permanent app colours.'],
   ['Building', '2:00', 'Four seconds of visible work', 'Long enough to feel considered, short enough not to annoy. Each line ticks green as it resolves and quotes the user\'s own answers back at them. The button only appears at 100%.'],
   ['Plan reveal', '2:10', 'The wow, and it is all their own words', 'A named plan, a first session ready now, the protein target, the workout count from their kit, and the actual week. Nothing generic.'],
   ['Identity', '2:35', 'Asked after the payoff, not before', 'By now the app has given something, so asking for a sentence feels like a fair trade rather than an interrogation. Skippable in one tap, stored verbatim, and shown only after finished sessions.'],
@@ -901,8 +902,9 @@ export default function ClaudeOnboardingFlow({
       : `${totalMins} minutes a week`;
   const weekNote = `${days} sessions of ${mins} minutes. We will never plan a fourth if you said three.`;
 
-  const protein = Math.round(weight * 1.6);
-  const proteinMath = `1.6 g × ${weight} kg. Recalculated whenever your weight moves 2 kg.`;
+  const currentGoalTitle = (selectedGoals.length ? GOALS[selectedGoals[0]]?.[0] : null) || GOALS[goal]?.[0] || '';
+  const { target: protein, multiplier: proteinMultiplier } = calculateProteinTarget(weight, currentGoalTitle);
+  const proteinMath = `${proteinMultiplier.toFixed(1)} g × ${weight} kg. Recalculated whenever your weight moves 2 kg.`;
   const kcal = String(Math.round(weight * 31));
   const carbs = String(Math.round(weight * 3.1));
   const water = (Math.round(weight * 0.035 * 10) / 10).toFixed(1);
