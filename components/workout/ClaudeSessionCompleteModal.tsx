@@ -201,19 +201,19 @@ async function generateStoryCardCanvasAsync(data: {
 
     // WORKOUT COMPLETE
     ctx.fillStyle = 'rgba(247, 243, 238, 0.55)';
-    ctx.font = '600 24px sans-serif';
+    ctx.font = '600 20px sans-serif';
     ctx.fillText('WORKOUT COMPLETE', padX, y);
-    y += 85;
+    y += 65;
 
     // Title: Uppercase, wrapped nicely
     ctx.fillStyle = '#F7F3EE';
-    ctx.font = '800 64px sans-serif';
+    ctx.font = '800 48px sans-serif';
     const titleLines = wrapCanvasText(ctx, data.workoutTitle.toUpperCase(), 1080 - padX * 2);
     for (const line of titleLines) {
       ctx.fillText(line, padX, y);
-      y += 78;
+      y += 60;
     }
-    y += 20;
+    y += 12;
 
     // Orange/copper divider line
     ctx.strokeStyle = 'rgba(181, 101, 29, 0.6)';
@@ -222,37 +222,38 @@ async function generateStoryCardCanvasAsync(data: {
     ctx.moveTo(padX, y);
     ctx.lineTo(1080 - padX, y);
     ctx.stroke();
-    y += 60;
+    y += 44;
 
-    // Exercises: up to 5 with 7px gold bullet dots
-    const displayExercises = data.exercises.slice(0, 5);
+    // Exercises: up to 8-9 with 5px gold bullet dots
+    const maxExercises = data.exercises.length <= 9 ? 9 : 8;
+    const displayExercises = data.exercises.slice(0, maxExercises);
     const maxExerciseWidth = 1080 - padX * 2 - 45;
     for (const ex of displayExercises) {
       ctx.fillStyle = '#C9943A';
       ctx.beginPath();
-      ctx.arc(padX + 8, y - 9, 6, 0, Math.PI * 2);
+      ctx.arc(padX + 8, y - 8, 5, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.fillStyle = 'rgba(247, 243, 238, 0.9)';
-      ctx.font = '600 28px sans-serif';
+      ctx.font = '600 24px sans-serif';
       const label = truncateCanvasText(ctx, ex.cardN, maxExerciseWidth);
-      ctx.fillText(label, padX + 35, y);
-      y += 55;
+      ctx.fillText(label, padX + 32, y);
+      y += 44;
     }
 
-    if (data.exercises.length > 5) {
+    if (data.exercises.length > maxExercises) {
       ctx.fillStyle = 'rgba(247, 243, 238, 0.45)';
-      ctx.font = '500 22px monospace';
-      ctx.fillText(`+${data.exercises.length - 5} MORE MOVEMENTS COMPLETED`, padX + 35, y);
+      ctx.font = '500 20px monospace';
+      ctx.fillText(`+${data.exercises.length - maxExercises} MORE MOVEMENTS COMPLETED`, padX + 32, y);
     } else if (data.exercises.length === 0) {
       ctx.fillStyle = '#C9943A';
       ctx.beginPath();
-      ctx.arc(padX + 8, y - 9, 6, 0, Math.PI * 2);
+      ctx.arc(padX + 8, y - 8, 5, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.fillStyle = 'rgba(247, 243, 238, 0.9)';
-      ctx.font = '600 28px sans-serif';
-      ctx.fillText('FULL SESSION COMPLETED', padX + 35, y);
+      ctx.font = '600 24px sans-serif';
+      ctx.fillText('FULL SESSION COMPLETED', padX + 32, y);
     }
 
     // Bottom metrics section
@@ -996,11 +997,11 @@ export default function ClaudeSessionCompleteModal({
                     {/* Copper/Orange divider line */}
                     <View style={styles.storyOrangeDivider} />
 
-                    {/* Bulleted Exercises with 4px gold dots */}
+                    {/* Bulleted Exercises with gold dots (compact & shows up to 8-9) */}
                     <View style={styles.storyExerciseList}>
                       {completedExercises.length > 0 ? (
                         <>
-                          {completedExercises.slice(0, 5).map((e, idx) => (
+                          {completedExercises.slice(0, completedExercises.length <= 9 ? 9 : 8).map((e, idx) => (
                             <View key={`${e.cardN}-${idx}`} style={styles.storyExerciseItem}>
                               <View style={styles.storyGoldDot} />
                               <Text style={styles.storyExerciseName} numberOfLines={1} ellipsizeMode="tail">
@@ -1008,10 +1009,10 @@ export default function ClaudeSessionCompleteModal({
                               </Text>
                             </View>
                           ))}
-                          {completedExercises.length > 5 ? (
+                          {completedExercises.length > 9 ? (
                             <View style={styles.storyMoreItem}>
                               <Text style={styles.storyMoreText}>
-                                +{completedExercises.length - 5} MORE MOVEMENTS COMPLETED
+                                +{completedExercises.length - 8} MORE MOVEMENTS COMPLETED
                               </Text>
                             </View>
                           ) : null}
@@ -1657,69 +1658,69 @@ const styles = StyleSheet.create({
     height: '44%',
   },
   storyTopSection: {
-    paddingHorizontal: 22,
-    paddingTop: 24,
+    paddingHorizontal: 18,
+    paddingTop: 18,
     position: 'relative',
     zIndex: 2,
   },
   storyLogo: {
-    height: 44,
-    width: 44,
+    height: 34,
+    width: 34,
     alignSelf: 'flex-start',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   storyVictoryRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
     justifyContent: 'space-between',
-    gap: 10,
-    marginBottom: 6,
+    gap: 8,
+    marginBottom: 4,
   },
   storyVictoryLabel: {
     fontFamily: DMSANS,
-    fontSize: 11,
-    letterSpacing: 1.98,
+    fontSize: 10,
+    letterSpacing: 1.8,
     color: GOLD,
   },
   storyDateLabel: {
     fontFamily: MONO,
-    fontSize: 10.5,
-    letterSpacing: 0.63,
+    fontSize: 9.5,
+    letterSpacing: 0.5,
     color: 'rgba(247, 243, 238, 0.5)',
   },
   storyCompleteLabel: {
     fontFamily: DMSANS,
-    fontSize: 11,
-    letterSpacing: 1.98,
+    fontSize: 10,
+    letterSpacing: 1.8,
     color: 'rgba(247, 243, 238, 0.55)',
   },
   storyWorkoutTitle: {
-    marginTop: 10,
+    marginTop: 6,
     fontFamily: DMSANS,
-    fontSize: 26,
-    lineHeight: 30,
+    fontSize: 19,
+    lineHeight: 23,
     fontWeight: '600',
     color: IVORY,
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
     textTransform: 'uppercase',
   },
   storyOrangeDivider: {
     height: 1,
     backgroundColor: 'rgba(181, 101, 29, 0.4)',
-    marginTop: 14,
-    marginBottom: 14,
+    marginTop: 8,
+    marginBottom: 8,
   },
   storyExerciseList: {
-    gap: 7,
+    gap: 4.5,
   },
   storyExerciseItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 9,
+    gap: 7,
   },
   storyGoldDot: {
-    width: 4,
-    height: 4,
+    width: 3.5,
+    height: 3.5,
     borderRadius: 99,
     backgroundColor: GOLD,
     marginTop: 1,
@@ -1727,47 +1728,48 @@ const styles = StyleSheet.create({
   storyExerciseName: {
     flex: 1,
     fontFamily: DMSANS,
-    fontSize: 12.5,
-    letterSpacing: 0.6,
+    fontSize: 11,
+    lineHeight: 15,
+    letterSpacing: 0.3,
     color: 'rgba(247, 243, 238, 0.9)',
   },
   storyMoreItem: {
-    paddingLeft: 13,
-    marginTop: 2,
+    paddingLeft: 10.5,
+    marginTop: 1,
   },
   storyMoreText: {
     fontFamily: MONO,
-    fontSize: 9.5,
-    letterSpacing: 0.8,
+    fontSize: 8.5,
+    letterSpacing: 0.6,
     color: 'rgba(247, 243, 238, 0.45)',
   },
   storyBottomSection: {
-    paddingHorizontal: 22,
-    paddingBottom: 22,
+    paddingHorizontal: 18,
+    paddingBottom: 16,
     position: 'relative',
     zIndex: 2,
   },
   storyMetricsRow: {
     flexDirection: 'row',
-    gap: 16,
-    marginBottom: 16,
+    gap: 12,
+    marginBottom: 10,
   },
   storyMetricCol: {
     flex: 1,
     borderTopWidth: 1,
     borderTopColor: 'rgba(247, 243, 238, 0.16)',
-    paddingTop: 12,
+    paddingTop: 8,
   },
   storyMetricLabel: {
     fontFamily: DMSANS,
-    fontSize: 10,
-    letterSpacing: 1.6,
+    fontSize: 9,
+    letterSpacing: 1.4,
     color: 'rgba(247, 243, 238, 0.5)',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   storyMetricVal: {
     fontFamily: MONO,
-    fontSize: 26,
+    fontSize: 20,
     color: IVORY,
   },
   storyMetricValGold: {
@@ -1775,60 +1777,60 @@ const styles = StyleSheet.create({
   },
   storyMetricValClash: {
     fontFamily: DMSANS,
-    fontSize: 22,
-    lineHeight: 26,
+    fontSize: 17,
+    lineHeight: 21,
     fontWeight: '600',
     color: IVORY,
   },
   storyMetricValMono: {
     fontFamily: MONO,
-    fontSize: 26,
+    fontSize: 20,
     color: IVORY,
   },
   storyCoachBox: {
     borderLeftWidth: 2,
     borderLeftColor: COPPER,
     paddingVertical: 1,
-    paddingLeft: 12,
-    marginBottom: 16,
+    paddingLeft: 10,
+    marginBottom: 10,
   },
   storyCoachKicker: {
     fontFamily: DMSANS,
-    fontSize: 9,
-    letterSpacing: 1.3,
+    fontSize: 8.5,
+    letterSpacing: 1.2,
     color: COPPER,
-    marginBottom: 4,
+    marginBottom: 3,
   },
   storyCoachQuote: {
     fontFamily: INTER,
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 11,
+    lineHeight: 15,
     color: 'rgba(247, 243, 238, 0.85)',
   },
   storyFooterRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
   },
   storyCoachName: {
     fontFamily: DMSANS,
-    fontSize: 14,
-    letterSpacing: 0.8,
+    fontSize: 12.5,
+    letterSpacing: 0.6,
     color: IVORY,
     textTransform: 'uppercase',
   },
   storyAppUrl: {
     fontFamily: MONO,
-    fontSize: 10.5,
-    letterSpacing: 0.8,
+    fontSize: 9.5,
+    letterSpacing: 0.6,
     color: GOLD,
-    marginTop: 3,
+    marginTop: 2,
   },
   storyQrBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: 'rgba(247, 243, 238, 0.25)',
     alignItems: 'center',
