@@ -210,9 +210,11 @@ export async function fetchWorkoutLibrary(query = '') {
   });
 }
 
-export async function fetchHomeWorkoutPlanSummary() {
-  return fetchCachedResource(HOME_WORKOUT_SUMMARY_CACHE_KEY, () =>
-    apiRequest<HomeWorkoutPlanSummary>('/workouts/home-plan-summary')
+export async function fetchHomeWorkoutPlanSummary(options?: { forceRefresh?: boolean }) {
+  return fetchCachedResource(
+    HOME_WORKOUT_SUMMARY_CACHE_KEY,
+    () => apiRequest<HomeWorkoutPlanSummary>('/workouts/home-plan-summary'),
+    { forceRefresh: options?.forceRefresh }
   );
 }
 

@@ -40,7 +40,7 @@ import {
   updateUserWeight,
 } from '../../lib/onboarding';
 import { fetchChallengeOverviewData, fetchJournalEntries } from '../../lib/screenData';
-import { getSavedPlanStatus, dismissFreshPlanBanner } from '../../lib/planStorage';
+import { clearPlanBuiltData, getSavedPlanStatus, dismissFreshPlanBanner } from '../../lib/planStorage';
 import { getLatestNutritionPlan, NutritionPlanApiResponse, updateNutritionMealCompletion } from '../../lib/nutrition';
 import {
   createHomeSevenDayWorkoutPlan,
@@ -53,7 +53,7 @@ import {
 } from '../../lib/workout-plans';
 import { fetchHomeWorkoutPlanSummary, fetchWorkoutLibrary, getWorkoutLibraryCacheKey, hydrateCachedWorkoutLibrary, HomeWorkoutPlanSummary, WorkoutLibraryResponse } from '../../lib/workouts';
 import { CHALLENGE_OVERVIEW_CACHE_KEY, CURRENT_USER_CACHE_KEY, HOME_WORKOUT_SUMMARY_CACHE_KEY, JOURNAL_ENTRIES_CACHE_KEY, NUTRITION_PLAN_LATEST_CACHE_KEY } from '../../lib/cacheKeys';
-import { hydrateCachedResource } from '../../lib/resourceCache';
+import { clearCachedResource, hydrateCachedResource } from '../../lib/resourceCache';
 import { useResourceStore } from '../../lib/stores/resourceStore';
 
 import ClaudeHomeHeader from '../../components/home/ClaudeHomeHeader';
@@ -427,10 +427,13 @@ export default function HomeScreen() {
         fetchJournalEntries().catch(() => null),
         fetchCurrentUserHydration().catch(() => null),
         fetchWorkoutLibrary().catch(() => null),
-        fetchHomeWorkoutPlanSummary().catch(() => null),
+        fetchHomeWorkoutPlanSummary({ forceRefresh: true }).catch(() => null),
         fetchAccountabilityPartner().catch(() => null),
         fetchAppNotifications().catch(() => null),
       ]);
+      const serverPlanState = homePlanSummary
+        ? homePlanSummary.source === 'strength_plan' && homePlanSummary.hasPlan !== false
+        : null;
 
       if (user) {
         setCurrentUser(user);
@@ -448,7 +451,14 @@ export default function HomeScreen() {
       if (workoutLibrary?.featuredWorkout || workoutLibrary?.workouts?.[0]) {
         setHomeLibraryWorkout(workoutLibrary.featuredWorkout || workoutLibrary.workouts?.[0] || null);
       }
-      if (homePlanSummary) setHomeWorkoutSummary(homePlanSummary);
+      if (homePlanSummary) {
+        setHomeWorkoutSummary(homePlanSummary);
+        setPlanBuilt(Boolean(serverPlanState));
+        if (!serverPlanState) {
+          setShowFreshPlan(false);
+          await clearPlanBuiltData();
+        }
+      }
       if (accountabilityData) setAccountabilityPartner(accountabilityData);
       if (Array.isArray(notifications)) {
         setUnreadNotifications(notifications.filter((item: any) => !item.read).length);
@@ -464,7 +474,7 @@ export default function HomeScreen() {
         const durationLabel = day?.est_time || planDuration;
         const summary = latestStrengthPlan.summary || '';
         const equipmentMatch = summary.match(/using\s+(.+?)(?:\.|$)/i);
-        setPlanBuilt(true);
+        if (serverPlanState !== false) setPlanBuilt(true);
         setPlanSummaryLine(
           summary ||
             `${day?.title || 'Your strength session'} · ${parseMinutes(durationLabel, 40)} min · ${exerciseCount} exercises.`
@@ -652,7 +662,8 @@ export default function HomeScreen() {
     return `TODAY · ${workoutDurationMinutes} MIN`;
   }, [homeWorkoutSummary?.dayKicker, strengthDay?.day, workoutDurationMinutes]);
   const planSource = homeWorkoutSummary?.planSource || (strengthPlan ? 'BUILT BY YOUR COACH' : tier !== 'SILVER' ? 'BUILT BY YOUR COACH' : 'TODAY’S WORKOUT');
-  const hasActiveHomePlan = tier === 'SILVER' || homeWorkoutSummary?.hasPlan !== false;
+  const hasConfirmedStrengthPlan = homeWorkoutSummary?.source === 'strength_plan' && homeWorkoutSummary?.hasPlan !== false;
+  const hasActiveHomePlan = tier === 'SILVER' || hasConfirmedStrengthPlan || (!homeWorkoutSummary && Boolean(strengthPlan));
 
   const todayMeals = useMemo<HomeMealItem[]>(() => {
     const today = getNutritionToday(nutritionPlan);
@@ -744,7 +755,8 @@ export default function HomeScreen() {
       setPlanBuilt(true);
       setShowFreshPlan(true);
       setPlanSummaryLine(plan.summary || 'Your 7 day workout plan is ready.');
-      const refreshedSummary = await fetchHomeWorkoutPlanSummary().catch(() => null);
+      await clearCachedResource(HOME_WORKOUT_SUMMARY_CACHE_KEY);
+      const refreshedSummary = await fetchHomeWorkoutPlanSummary({ forceRefresh: true }).catch(() => null);
       if (refreshedSummary) setHomeWorkoutSummary(refreshedSummary);
     } catch {
       Alert.alert('Plan generation failed', 'Unable to create your 7 day workout plan right now. Please try again in a moment.');

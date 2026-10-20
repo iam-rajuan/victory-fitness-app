@@ -72,3 +72,15 @@ export async function dismissFreshPlanBanner(): Promise<void> {
     await AsyncStorage.setItem(SHOW_FRESH_PLAN_KEY, 'false');
   } catch {}
 }
+
+export async function clearPlanBuiltData(): Promise<void> {
+  try {
+    await AsyncStorage.multiRemove([
+      PLAN_BUILT_KEY,
+      PLAN_SUMMARY_KEY,
+      SHOW_FRESH_PLAN_KEY,
+      PLAN_KIT_KEY,
+      PLAN_DURATION_KEY,
+    ]);
+  } catch {}
+}

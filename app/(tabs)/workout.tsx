@@ -42,11 +42,11 @@ import ClaudeSessionCompleteModal from '../../components/workout/ClaudeSessionCo
 import ClaudePlanBuildModal from '../../components/workout/ClaudePlanBuildModal';
 import ClaudeWorkoutDetailModal from '../../components/workout/ClaudeWorkoutDetailModal';
 import { getSavedPlanStatus, savePlanBuiltData } from '../../lib/planStorage';
-import { fetchWorkoutLibrary, getWorkoutLibraryCacheKey, hydrateCachedWorkoutLibrary, WorkoutLibraryCategory, WorkoutLibraryItem, WorkoutLibraryResponse } from '../../lib/workouts';
+import { fetchHomeWorkoutPlanSummary, fetchWorkoutLibrary, getWorkoutLibraryCacheKey, hydrateCachedWorkoutLibrary, WorkoutLibraryCategory, WorkoutLibraryItem, WorkoutLibraryResponse } from '../../lib/workouts';
 import { createHomeSevenDayWorkoutPlan } from '../../lib/workout-plans';
 import { useResourceStore } from '../../lib/stores/resourceStore';
-import { CURRENT_USER_CACHE_KEY } from '../../lib/cacheKeys';
-import { hydrateCachedResource } from '../../lib/resourceCache';
+import { CURRENT_USER_CACHE_KEY, HOME_WORKOUT_SUMMARY_CACHE_KEY } from '../../lib/cacheKeys';
+import { clearCachedResource, hydrateCachedResource } from '../../lib/resourceCache';
 
 const OBSIDIAN = '#0D0D0D';
 const GOLD = '#C9943A';
@@ -700,6 +700,8 @@ export default function WorkoutScreen() {
         days,
         custom_notes: `Plan builder priority: goal=${summary.goal}; days=${days.join(',')}; duration=${minutes || 'not set'} minutes; equipment=${summary.kit}.`,
       });
+      await clearCachedResource(HOME_WORKOUT_SUMMARY_CACHE_KEY);
+      await fetchHomeWorkoutPlanSummary({ forceRefresh: true }).catch(() => null);
       const nextSummary = {
         ...summary,
         line: `${split} · ${days.length} days/week${minutes ? ` · ~${minutes} min` : ''}`,
