@@ -31,7 +31,7 @@ interface ClaudeSessionCompleteModalProps {
   setsLogged?: number;
   volumeKg?: number;
   streakDays?: number;
-  exercises?: Array<{ n?: string; name?: string; s?: string; cardN?: string }>;
+  exercises?: Array<{ n?: string; name?: string; s?: string; cardN?: string; type?: string }>;
   identityStatement?: string;
   motivationStatement?: string;
   coachName?: string;
@@ -426,6 +426,14 @@ export default function ClaudeSessionCompleteModal({
   const userStatement = identityStatement || motivationStatement || 'I am someone who trains even when it is hard.';
   const completedExercises = React.useMemo(() => {
     return exercises
+      // Warm-ups belong in the live session only, never in the saved/shareable result.
+      .filter((exercise) => !/\bwarm[\s-]?up\b/i.test([
+        exercise.name,
+        exercise.n,
+        exercise.s,
+        exercise.cardN,
+        exercise.type,
+      ].filter(Boolean).join(' ')))
       .map((exercise) => {
         const rawName = String(exercise.name || exercise.n || '').trim();
         if (!rawName) return null;

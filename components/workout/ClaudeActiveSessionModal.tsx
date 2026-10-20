@@ -25,6 +25,7 @@ export interface ActiveExerciseItem {
   restTime: string;
   restSeconds: number;
   isHold?: boolean;
+  type?: string;
 }
 
 export interface CompletedSessionExercise {
@@ -34,6 +35,7 @@ export interface CompletedSessionExercise {
   cardN?: string;
   setsLogged?: number;
   targetSets?: number;
+  type?: string;
 }
 
 export interface ClaudeActiveSessionModalProps {
@@ -274,9 +276,10 @@ export default function ClaudeActiveSessionModal({
           cardN: canonicalName.trim(),
           setsLogged: loggedCount,
           targetSets: ex.targetSets,
+          type: ex.type,
         };
       })
-      .filter((ex): ex is { id: string; name: string; s: string; cardN: string; setsLogged: number; targetSets: number } => Boolean(ex));
+      .filter((ex): ex is { id: string; name: string; s: string; cardN: string; setsLogged: number; targetSets: number; type: string | undefined } => Boolean(ex));
 
     onEndSession({
       minutes: Math.max(1, Math.round(seconds / 60)),

@@ -113,6 +113,7 @@ type HomeActiveExercise = {
   restTime: string;
   restSeconds: number;
   isHold?: boolean;
+  type?: string;
 };
 
 function parseMinutes(value: unknown, fallback = 40) {
@@ -214,6 +215,7 @@ function mapPlanExerciseForSession(exercise: StrengthPlanExercise, index: number
     restTime: restSeconds > 0 ? `${restSeconds}s` : '--',
     restSeconds,
     isHold,
+    type: exercise.type,
   };
 }
 
@@ -269,7 +271,7 @@ export default function HomeScreen() {
     setsLogged: 6,
     volumeKg: 840,
   });
-  const [sessionCompletedExercises, setSessionCompletedExercises] = useState<Array<{ name: string; s?: string; cardN?: string }>>([]);
+  const [sessionCompletedExercises, setSessionCompletedExercises] = useState<Array<{ name: string; s?: string; cardN?: string; type?: string }>>([]);
 
   // Challenge Detail and Cohort Modals
   const [challengeDetailVisible, setChallengeDetailVisible] = useState(false);
@@ -774,15 +776,16 @@ export default function HomeScreen() {
     setsLogged: number;
     volumeKg: number;
     durationSeconds: number;
-    completedExercises?: Array<{ id?: string; name: string; s?: string; cardN?: string }>;
+    completedExercises?: Array<{ id?: string; name: string; s?: string; cardN?: string; type?: string }>;
   }) => {
     setCompletedStats(stats);
-    const actualCompleted: Array<{ name: string; s?: string; cardN?: string }> =
+    const actualCompleted: Array<{ name: string; s?: string; cardN?: string; type?: string }> =
       stats.completedExercises && stats.completedExercises.length > 0
         ? stats.completedExercises.map((e) => ({
             name: e.name,
             s: e.s || '',
             cardN: e.cardN || e.name,
+            type: e.type,
           }))
         : [];
     setSessionCompletedExercises(actualCompleted);

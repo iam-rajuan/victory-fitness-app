@@ -529,7 +529,7 @@ export default function WorkoutScreen() {
   }, [selectedWorkout?.movements]);
 
   const [completeInitialStep, setCompleteInitialStep] = useState<'feedback' | 'complete'>('complete');
-  const [sessionCompletedExercises, setSessionCompletedExercises] = useState<Array<{ name: string; s?: string; cardN?: string }>>([]);
+  const [sessionCompletedExercises, setSessionCompletedExercises] = useState<Array<{ name: string; s?: string; cardN?: string; type?: string }>>([]);
 
   // Actions
   const handleStartWorkout = (w: GridWorkoutItem) => {
@@ -605,7 +605,7 @@ export default function WorkoutScreen() {
       setsLogged: number;
       volumeKg: number;
       durationSeconds?: number;
-      completedExercises?: Array<{ id?: string; name: string; s?: string; cardN?: string }>;
+      completedExercises?: Array<{ id?: string; name: string; s?: string; cardN?: string; type?: string }>;
     },
     stepMode: 'feedback' | 'complete' = 'complete'
   ) => {
@@ -614,12 +614,13 @@ export default function WorkoutScreen() {
       : completedStats;
     if (stats) setCompletedStats(nextStats);
 
-    const actualCompleted: Array<{ name: string; s?: string; cardN?: string }> =
+    const actualCompleted: Array<{ name: string; s?: string; cardN?: string; type?: string }> =
       stats?.completedExercises && stats.completedExercises.length > 0
         ? stats.completedExercises.map((e) => ({
             name: e.name,
             s: e.s || '',
             cardN: e.cardN || e.name,
+            type: e.type,
           }))
         : [];
     setSessionCompletedExercises(actualCompleted);
