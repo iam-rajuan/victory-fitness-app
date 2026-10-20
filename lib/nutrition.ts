@@ -46,6 +46,9 @@ export type NutritionPlanApiResponse = {
   meal_completions?: Record<string, Record<string, boolean>>;
   profile?: Record<string, unknown> | null;
   daily_protein_target?: number | null;
+  daily_calorie_target?: number | null;
+  daily_carbs_target?: number | null;
+  daily_fat_target?: number | null;
   protein_per_kg?: number | null;
   baseline_weight?: number | null;
 };
