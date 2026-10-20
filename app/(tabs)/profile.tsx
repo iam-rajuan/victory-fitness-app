@@ -17,6 +17,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   fetchAccountabilityPartner,
   fetchCurrentUser,
+  fetchCurrentUserBodyMetrics,
+  fetchCurrentUserOnboarding,
   fetchHabitConsistency,
   fetchLongevityDashboard,
   fetchNotificationPreferences,
@@ -246,6 +248,18 @@ export default function ProfileScreen() {
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const [feedbackWouldPay, setFeedbackWouldPay] = useState<boolean | null>(null);
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
+  const [metricsData, setMetricsData] = useState<{
+    age: string;
+    height: string;
+    weight: string;
+    weightUnit: string;
+    gender: string;
+    primaryGoal: string;
+    daysPerWeek: string;
+    timePerSession: string;
+    equipmentAccess: string;
+    activityLevel: string;
+  } | null>(null);
   const cachedCurrentUser = useResourceStore((state) => state.resources[CURRENT_USER_CACHE_KEY]?.data as any | undefined);
 
   const applyUserProfile = (userObj: any, notificationPreferences?: any) => {
@@ -315,7 +329,18 @@ export default function ProfileScreen() {
         if (!cancelled && cachedUser) {
           applyUserProfile(cachedUser);
         }
-        const [u, habit, journal, plans, completedLogs, accountability, longevity, notificationPreferences] = await Promise.all([
+        const [
+          u,
+          habit,
+          journal,
+          plans,
+          completedLogs,
+          accountability,
+          longevity,
+          notificationPreferences,
+          onboardingState,
+          bodyMetrics,
+        ] = await Promise.all([
           fetchCurrentUser({ forceRefresh: true }),
           fetchHabitConsistency().catch(() => null),
           fetchJournalEntries().catch(() => null),
@@ -324,10 +349,41 @@ export default function ProfileScreen() {
           fetchAccountabilityPartner().catch(() => null),
           fetchLongevityDashboard().catch(() => null),
           fetchNotificationPreferences().catch(() => null),
+          fetchCurrentUserOnboarding().catch(() => null),
+          fetchCurrentUserBodyMetrics().catch(() => null),
         ]);
         if (cancelled || !u) return;
         const userObj = u as any;
         applyUserProfile(userObj, notificationPreferences);
+
+        const personal = (onboardingState as any)?.personalProfile || {};
+        const anamnese = (onboardingState as any)?.anamnese || {};
+        const loadedAge = String((bodyMetrics as any)?.age || personal?.age || '').trim();
+        const loadedHeight = String((bodyMetrics as any)?.height || personal?.height || '').trim();
+        const loadedWeight = String((bodyMetrics as any)?.weight || personal?.weight || '').trim();
+        const loadedUnit = String(personal?.weightUnit || 'kg').trim();
+        const loadedGender = String((bodyMetrics as any)?.gender || personal?.gender || '').trim();
+        const loadedGoal = String(anamnese?.primaryGoal || (Array.isArray(anamnese?.primaryGoals) ? anamnese.primaryGoals[0] : '') || '').trim();
+        const loadedDays = String(anamnese?.daysPerWeek || '').trim();
+        const loadedTime = String(anamnese?.timePerSession || '').trim();
+        const loadedEquipment = String(anamnese?.equipmentAccess || '').trim();
+        const loadedActivity = String(anamnese?.activityLevel || '').trim();
+
+        if (loadedAge || loadedHeight || loadedWeight || loadedGoal || loadedDays) {
+          setMetricsData({
+            age: loadedAge,
+            height: loadedHeight,
+            weight: loadedWeight,
+            weightUnit: loadedUnit,
+            gender: loadedGender,
+            primaryGoal: loadedGoal,
+            daysPerWeek: loadedDays,
+            timePerSession: loadedTime,
+            equipmentAccess: loadedEquipment,
+            activityLevel: loadedActivity,
+          });
+        }
+
         const workoutItems = Array.isArray((completedLogs as any)?.items) ? (completedLogs as any).items : null;
         if (workoutItems) {
           setTotalSessions(Math.max(0, Number((completedLogs as any)?.total || workoutItems.length || 0)));
@@ -598,6 +654,95 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
         )}
+
+        {/* Body & Fitness Profile Card (Onboarding data) */}
+        <View style={styles.sectionWrap}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={[styles.sectionKicker, { color: colors.copper }]}>{t('BODY & FITNESS PROFILE')}</Text>
+            <TouchableOpacity
+              onPress={() => router.push('/profile/edit')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.sectionEditLink}>{t('Edit ›')}</Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity
+            style={[
+              styles.metricsCard,
+              {
+                backgroundColor: isDark ? NAVY : '#FFFFFF',
+                borderColor: isDark ? 'transparent' : colors.cardBorder,
+                borderWidth: isDark ? 0 : 1,
+              },
+            ]}
+            activeOpacity={0.85}
+            onPress={() => router.push('/profile/edit')}
+          >
+            {/* 4-Metric Grid */}
+            <View style={styles.metricsGrid}>
+              <View style={[styles.metricBox, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(13,43,69,0.03)' }]}>
+                <Text style={styles.metricBoxLabel}>{t('HEIGHT')}</Text>
+                <Text style={[styles.metricBoxValue, { color: colors.text }]}>
+                  {metricsData?.height ? `${metricsData.height} cm` : '—'}
+                </Text>
+              </View>
+              <View style={[styles.metricBox, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(13,43,69,0.03)' }]}>
+                <Text style={styles.metricBoxLabel}>{t('WEIGHT')}</Text>
+                <Text style={[styles.metricBoxValue, { color: colors.text }]}>
+                  {metricsData?.weight ? `${metricsData.weight} ${metricsData.weightUnit || 'kg'}` : '—'}
+                </Text>
+              </View>
+              <View style={[styles.metricBox, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(13,43,69,0.03)' }]}>
+                <Text style={styles.metricBoxLabel}>{t('AGE')}</Text>
+                <Text style={[styles.metricBoxValue, { color: colors.text }]}>
+                  {metricsData?.age ? `${metricsData.age} ${t('yrs')}` : '—'}
+                </Text>
+              </View>
+              <View style={[styles.metricBox, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(13,43,69,0.03)' }]}>
+                <Text style={styles.metricBoxLabel}>{t('GENDER')}</Text>
+                <Text style={[styles.metricBoxValue, { color: colors.text }]} numberOfLines={1}>
+                  {metricsData?.gender || '—'}
+                </Text>
+              </View>
+            </View>
+
+            {/* Goal & Training Detail Rows */}
+            <View style={[styles.metricDivider, { backgroundColor: colors.divider }]} />
+
+            <View style={styles.metricDetailRow}>
+              <View style={styles.metricDetailIconWrap}>
+                <Ionicons name="trophy-outline" size={16} color={GOLD} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.metricDetailLabel}>{t('PRIMARY GOAL')}</Text>
+                <Text style={[styles.metricDetailValue, { color: colors.text }]} numberOfLines={1}>
+                  {metricsData?.primaryGoal || t('Not set')}
+                </Text>
+              </View>
+            </View>
+
+            <View style={[styles.metricDetailRow, { marginTop: 10 }]}>
+              <View style={styles.metricDetailIconWrap}>
+                <Ionicons name="calendar-outline" size={16} color={GOLD} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.metricDetailLabel}>{t('ROUTINE & EQUIPMENT')}</Text>
+                <Text style={[styles.metricDetailValue, { color: colors.text }]} numberOfLines={1}>
+                  {metricsData?.daysPerWeek ? `${metricsData.daysPerWeek} ${t('days/wk')}` : '—'}
+                  {metricsData?.timePerSession ? ` · ${metricsData.timePerSession} min` : ''}
+                  {metricsData?.equipmentAccess ? ` · ${metricsData.equipmentAccess}` : ''}
+                </Text>
+              </View>
+            </View>
+
+            <View style={[styles.metricCardBottomRow, { borderTopColor: colors.divider }]}>
+              <Text style={[styles.metricUpdatePrompt, { color: colors.textSecondary }]}>
+                {t('Tap to update onboarding metrics & goals')}
+              </Text>
+              <Text style={styles.chevron}>›</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
 
         {/* ACCOUNT Menu Section matching lines 1222-1231 */}
         <View style={styles.sectionWrap}>
@@ -1507,5 +1652,95 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
     color: OBSIDIAN,
+  },
+
+  /* Body & Fitness Metrics Card Styles */
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  sectionEditLink: {
+    fontFamily: DMSANS,
+    fontSize: 13,
+    fontWeight: '700',
+    color: GOLD,
+  },
+  metricsCard: {
+    backgroundColor: NAVY,
+    borderRadius: 18,
+    padding: 18,
+    borderLeftWidth: 4,
+    borderLeftColor: COPPER,
+  },
+  metricsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 4,
+  },
+  metricBox: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  metricBoxLabel: {
+    fontFamily: DMSANS,
+    fontSize: 9.5,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    color: COPPER,
+    marginBottom: 4,
+  },
+  metricBoxValue: {
+    fontFamily: MONO,
+    fontSize: 12.5,
+    fontWeight: '700',
+  },
+  metricDivider: {
+    height: 1,
+    marginVertical: 12,
+  },
+  metricDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  metricDetailIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(201, 148, 58, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  metricDetailLabel: {
+    fontFamily: DMSANS,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    color: GOLD,
+  },
+  metricDetailValue: {
+    fontFamily: DMSANS,
+    fontSize: 13.5,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  metricCardBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+  },
+  metricUpdatePrompt: {
+    fontFamily: INTER,
+    fontSize: 12,
   },
 });
