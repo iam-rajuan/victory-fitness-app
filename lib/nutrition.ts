@@ -50,6 +50,22 @@ export type NutritionPlanApiResponse = {
   baseline_weight?: number | null;
 };
 
+export function getNutritionDayForDate(
+  plan: NutritionPlanApiResponse | null | undefined,
+  date: Date = new Date()
+): NutritionDayPlan | null {
+  if (!plan?.days?.length) return null;
+
+  const longDay = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+  const shortDay = longDay.slice(0, 3);
+  return (
+    plan.days.find((day) => {
+      const candidate = String(day.day || '').trim().toLowerCase();
+      return candidate === longDay || candidate === shortDay || candidate.startsWith(longDay) || candidate.startsWith(shortDay);
+    }) || plan.days[0]
+  );
+}
+
 export function calculateProteinTarget(
   weightKgOrLb: number | string | null | undefined,
   goal?: string | null

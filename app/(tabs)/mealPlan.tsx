@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { fetchCurrentUser, fetchCurrentUserBodyMetrics, AuthUser } from '../../lib/api';
 import { normalizeSubscriptionTier, SubscriptionTier } from '../../lib/access';
 import {
@@ -17,6 +17,7 @@ import {
   clearSavedNutritionPlan,
   createNutritionMealLog,
   getLatestNutritionPlan,
+  getNutritionDayForDate,
   getNutritionMealLogs,
   NutritionDayPlan,
   NutritionMealEntry,
@@ -99,7 +100,7 @@ export default function MealPlanScreen() {
     }
   }, [cachedMealLogs, isHydrating]);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     let cancelled = false;
 
     const loadData = async () => {
@@ -107,7 +108,7 @@ export default function MealPlanScreen() {
         const [user, metrics, plan, logsResponse] = await Promise.all([
           fetchCurrentUser().catch(() => null),
           fetchCurrentUserBodyMetrics().catch(() => null),
-          getLatestNutritionPlan().catch(() => null),
+          getLatestNutritionPlan({ forceRefresh: true }).catch(() => null),
           getNutritionMealLogs(todayIsoDate).catch(() => null),
         ]);
 
@@ -144,21 +145,18 @@ export default function MealPlanScreen() {
     return () => {
       cancelled = true;
     };
-  }, [todayIsoDate]);
+  }, [todayIsoDate]));
 
   const tier: SubscriptionTier = useMemo(() => {
     return normalizeSubscriptionTier(currentUser?.subscription_tier);
   }, [currentUser?.subscription_tier]);
 
   const isSilver = tier === 'SILVER' || tier === 'NONE';
-  const todayKey = useMemo(() => {
-    const keys = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    return keys[new Date().getDay()];
-  }, []);
+  const todayKey = useMemo(() => new Date().toLocaleDateString('en-US', { weekday: 'short' }), []);
 
   const todayPlan = useMemo(() => {
-    return nutritionPlan?.days?.find((day) => day.day === todayKey) || nutritionPlan?.days?.[0] || null;
-  }, [nutritionPlan?.days, todayKey]);
+    return getNutritionDayForDate(nutritionPlan);
+  }, [nutritionPlan]);
 
   const mealEntries = useMemo(() => {
     const rows: Array<{ key: string; label: string; meal: NutritionMealEntry | null | undefined }> = [

@@ -484,15 +484,37 @@ export default function ChallengeScreen() {
 
     setCompletingChallengeId(challengeId);
     try {
+      let progress: any;
       if (shouldUndo) {
-        await apiRequest(`/challenges/${encodeURIComponent(challengeId)}/plan/days/${currentDay}/complete`, {
+        progress = await apiRequest(`/challenges/${encodeURIComponent(challengeId)}/plan/days/${currentDay}/complete`, {
           method: 'POST',
           body: { completed: false },
         });
       } else {
-        await apiRequest(`/challenges/${encodeURIComponent(challengeId)}/complete-today`, { method: 'POST' });
+        progress = await apiRequest(`/challenges/${encodeURIComponent(challengeId)}/complete-today`, { method: 'POST' });
       }
-      await loadChallenges({ forceRefresh: true });
+
+      const applyProgress = (item: ChallengeItem | null): ChallengeItem | null => {
+        if (!item || item.challengeId !== challengeId) return item;
+        const total = Math.max(1, Number(item.d || 1));
+        const completedDays = Math.max(0, Math.min(total, Number(progress?.viewer_progress_days_completed || 0)));
+        const completedToday = Boolean(progress?.completed_today);
+        const membershipStatus = String(progress?.viewer_membership_status || 'ACTIVE').toLowerCase();
+        return {
+          ...item,
+          status: membershipStatus === 'completed' ? 'completed' : 'active',
+          progress: completedDays / total,
+          daysLeft: Math.max(0, total - completedDays),
+          currentDayNumber: Number(progress?.current_day_number || item.currentDayNumber || 1),
+          completedToday,
+          completedTodayAt: completedToday ? new Date().toISOString() : '',
+        };
+      };
+
+      setActiveChallenge((current) => applyProgress(current));
+      setChallengeItems((current) => current.map((item) => applyProgress(item) || item));
+      setCompletingChallengeId(null);
+      void loadChallenges({ forceRefresh: true });
     } catch (error: any) {
       Alert.alert('Could not update challenge', error?.message || 'Please try again.');
     } finally {

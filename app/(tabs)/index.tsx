@@ -41,7 +41,7 @@ import {
 } from '../../lib/onboarding';
 import { fetchChallengeOverviewData, fetchJournalEntries } from '../../lib/screenData';
 import { clearPlanBuiltData, getSavedPlanStatus, dismissFreshPlanBanner } from '../../lib/planStorage';
-import { getLatestNutritionPlan, NutritionPlanApiResponse, updateNutritionMealCompletion } from '../../lib/nutrition';
+import { getLatestNutritionPlan, getNutritionDayForDate, NutritionPlanApiResponse, updateNutritionMealCompletion } from '../../lib/nutrition';
 import {
   createHomeSevenDayWorkoutPlan,
   fetchLatestStrengthWorkoutPlan,
@@ -215,15 +215,6 @@ function mapPlanExerciseForSession(exercise: StrengthPlanExercise, index: number
     restSeconds,
     isHold,
   };
-}
-
-function getNutritionToday(plan: NutritionPlanApiResponse | null) {
-  if (!plan?.days?.length) return null;
-  const weekday = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-  return (
-    plan.days.find((day) => String(day.day || '').toLowerCase().includes(weekday)) ||
-    plan.days[0]
-  );
 }
 
 function mapHomeChallengeItems(challenges: Array<Record<string, any>> = []): ChallengeItem[] {
@@ -666,7 +657,7 @@ export default function HomeScreen() {
   const hasActiveHomePlan = tier === 'SILVER' || hasConfirmedStrengthPlan || (!homeWorkoutSummary && Boolean(strengthPlan));
 
   const todayMeals = useMemo<HomeMealItem[]>(() => {
-    const today = getNutritionToday(nutritionPlan);
+    const today = getNutritionDayForDate(nutritionPlan);
     if (!today) return [];
     const completions = nutritionPlan?.meal_completions?.[today.day] || {};
     const rows: HomeMealItem[] = [];
@@ -683,7 +674,7 @@ export default function HomeScreen() {
         title: String(meal.name || `${label} planned`),
         subtitle: `${label} · ${completed ? 'eaten' : meal.timing || 'from your week plan'}`,
         completed,
-        canLog: key === 'dinner',
+        canLog: true,
       });
     });
     return rows;
@@ -717,7 +708,7 @@ export default function HomeScreen() {
   }, []);
 
   const handleToggleHomeMeal = useCallback(async (mealKey: string, completed: boolean) => {
-    const today = getNutritionToday(nutritionPlan);
+    const today = getNutritionDayForDate(nutritionPlan);
     if (!today?.day || updatingMealKey) return;
     setUpdatingMealKey(mealKey);
     try {
