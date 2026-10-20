@@ -571,6 +571,7 @@ export default function MealPlanScreen() {
         }}
         plan={nutritionPlan}
         defaultWeight={userWeight}
+        userLocale={currentUser?.preferred_language}
         onPlanUpdated={setNutritionPlan}
       />
 

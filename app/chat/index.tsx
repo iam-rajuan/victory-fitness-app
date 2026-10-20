@@ -57,6 +57,7 @@ interface ChatMessage {
     summary?: string;
     buttonLabel?: string;
     status?: 'ready' | 'saving' | 'saved';
+    errorMessage?: string;
     preview?: CoachWorkoutPlanPreview;
     draftId?: string;
     draftVersion?: number;
@@ -314,9 +315,11 @@ function FormattedCoachMessage({ text }: { text: string }) {
 function WorkoutPlanActionCard({
   action,
   onConfirm,
+  onViewWorkout,
 }: {
   action: NonNullable<ChatMessage['homePlanAction']>;
   onConfirm: () => void;
+  onViewWorkout: () => void;
 }) {
   const preview = action.preview;
   const days = preview?.days || [];
@@ -451,6 +454,11 @@ function WorkoutPlanActionCard({
       </View>
 
       {/* Confirmation Button */}
+      {action.errorMessage ? (
+        <View style={styles.planActionError} accessibilityRole="alert">
+          <Text style={styles.planActionErrorText}>{action.errorMessage}</Text>
+        </View>
+      ) : null}
       <Pressable
         style={[
           styles.homePlanActionButton,
@@ -458,8 +466,10 @@ function WorkoutPlanActionCard({
           action.status === 'saving' && styles.homePlanActionButtonDisabled,
           { marginTop: 14 },
         ]}
-        disabled={action.status === 'saving' || action.status === 'saved'}
-        onPress={onConfirm}
+        disabled={action.status === 'saving'}
+        onPress={action.status === 'saved' ? onViewWorkout : onConfirm}
+        accessibilityRole="button"
+        accessibilityLabel={action.status === 'saved' ? 'View my workout' : action.buttonLabel || 'Import to my workout plan'}
       >
         {action.status === 'saving' ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -469,7 +479,7 @@ function WorkoutPlanActionCard({
         ) : action.status === 'saved' ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Ionicons name="checkmark-circle" size={16} color={OBSIDIAN} />
-            <Text style={styles.homePlanActionButtonText}>Imported to Home Plan</Text>
+            <Text style={styles.homePlanActionButtonText}>View my workout</Text>
           </View>
         ) : (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -916,7 +926,7 @@ export default function ClaudeCoachScreen() {
     setMessages((prev) =>
       prev.map((message) =>
         message.id === messageId && message.homePlanAction
-          ? { ...message, homePlanAction: { ...message.homePlanAction, status: 'saving' } }
+          ? { ...message, homePlanAction: { ...message.homePlanAction, status: 'saving', errorMessage: undefined } }
           : message
       )
     );
@@ -949,11 +959,19 @@ export default function ClaudeCoachScreen() {
         )
       );
       Alert.alert('Home plan updated', 'This workout plan is now active on your Home screen.');
-    } catch {
+    } catch (error) {
+      console.warn('Coach workout import failed:', error);
       setMessages((prev) =>
         prev.map((message) =>
           message.id === messageId && message.homePlanAction
-            ? { ...message, homePlanAction: { ...message.homePlanAction, status: 'ready' } }
+            ? {
+                ...message,
+                homePlanAction: {
+                  ...message.homePlanAction,
+                  status: 'ready',
+                  errorMessage: "We couldn't add this workout to your plan. Please try again.",
+                },
+              }
             : message
         )
       );
@@ -1142,6 +1160,7 @@ export default function ClaudeCoachScreen() {
                   <WorkoutPlanActionCard
                     action={m.homePlanAction}
                     onConfirm={() => void handleInsertHomePlan(m.id, m.homePlanAction!, m.text)}
+                    onViewWorkout={() => pushRoute(router, '/(tabs)')}
                   />
                 ) : null}
               </View>
@@ -1454,7 +1473,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   homePlanActionButton: {
-    minHeight: 40,
+    minHeight: 48,
     borderRadius: 10,
     backgroundColor: GOLD,
     alignItems: 'center',
@@ -1472,6 +1491,21 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     fontWeight: '800',
     color: OBSIDIAN,
+  },
+  planActionError: {
+    marginTop: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.45)',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  planActionErrorText: {
+    fontFamily: INTER,
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: '#FCA5A5',
   },
   previewContainer: {
     marginTop: 12,

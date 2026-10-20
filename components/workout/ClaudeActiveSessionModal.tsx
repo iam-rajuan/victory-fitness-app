@@ -21,6 +21,7 @@ export interface ActiveExerciseItem {
   targetSets: number;
   targetReps: number | 'max';
   defaultKg: number;
+  loadType?: 'weighted' | 'bodyweight' | 'unspecified';
   restTime: string;
   restSeconds: number;
   isHold?: boolean;
@@ -116,6 +117,8 @@ export default function ClaudeActiveSessionModal({
   const resolvedVideoUrl = showVideo ? resolveWorkoutEmbedUrl(videoUrl, vimeoId) : '';
 
   const currentExercise = sessionExercises[currentExIdx] || null;
+  const currentLoadType = currentExercise?.loadType
+    || (currentExercise?.defaultKg ? 'weighted' : /bodyweight|push[- ]?up|pull[- ]?up|plank|burpee|mountain climber/i.test(`${currentExercise?.name || ''} ${currentExercise?.note || ''}`) ? 'bodyweight' : 'unspecified');
   const [weightKg, setWeightKg] = useState(currentExercise?.defaultKg || 0);
   const [reps, setReps] = useState<number | 'max'>(currentExercise?.targetReps || 1);
 
@@ -191,9 +194,11 @@ export default function ClaudeActiveSessionModal({
     }
 
     const key = `${currentExIdx}:${currentSetIdx}`;
-    const entry = currentExercise.isHold
-      ? 'bodyweight × max'
-      : `${weightKg} kg × ${reps}`;
+    const entry = currentExercise.isHold || currentLoadType === 'bodyweight'
+      ? `bodyweight × ${currentExercise.isHold ? 'max' : reps}`
+      : weightKg > 0
+        ? `${weightKg} kg × ${reps}`
+        : `${reps} reps`;
 
     const newLogged = { ...loggedSets, [key]: entry };
     setLoggedSets(newLogged);
@@ -421,9 +426,11 @@ export default function ClaudeActiveSessionModal({
               const displayVal = doneVal
                 ? doneVal
                 : isLive
-                ? currentExercise.isHold
-                  ? 'bodyweight × max'
-                  : `${weightKg} kg × ${reps}`
+                ? currentExercise.isHold || currentLoadType === 'bodyweight'
+                  ? `bodyweight × ${currentExercise.isHold ? 'max' : reps}`
+                  : weightKg > 0
+                    ? `${weightKg} kg × ${reps}`
+                    : `${reps} reps`
                 : '—';
 
               return (
@@ -488,7 +495,7 @@ export default function ClaudeActiveSessionModal({
               {/* Weight Stepper */}
               <View style={styles.stepperCol}>
                 <Text style={styles.stepperLabel}>WEIGHT</Text>
-                {!currentExercise.isHold ? (
+                {!currentExercise.isHold && currentLoadType !== 'bodyweight' ? (
                   <View style={styles.stepperControls}>
                     <Pressable
                       style={styles.stepBtn}
@@ -498,8 +505,8 @@ export default function ClaudeActiveSessionModal({
                     </Pressable>
 
                     <View style={styles.valWrap}>
-                      <Text style={styles.stepperVal}>{weightKg}</Text>
-                      <Text style={styles.stepperUnit}> kg</Text>
+                      <Text style={styles.stepperVal}>{weightKg > 0 ? weightKg : 'not set'}</Text>
+                      {weightKg > 0 ? <Text style={styles.stepperUnit}> kg</Text> : null}
                     </View>
 
                     <Pressable

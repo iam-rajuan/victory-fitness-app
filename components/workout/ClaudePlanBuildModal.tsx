@@ -52,10 +52,10 @@ const BUILD_STEPS: StepConfig[] = [
     title: 'What are you training for?',
     sub: 'One answer. It decides how the whole plan is shaped, not just today.',
     options: [
-      { title: 'Get stronger', note: 'Progressive load, longer rests, fewer sessions' },
-      { title: 'Lose weight and keep muscle', note: 'Higher volume, shorter rests, protein target enforced' },
-      { title: 'Move without pain', note: 'Mobility first, strength second, nothing explosive' },
-      { title: 'Stay consistent', note: 'Short sessions you will actually finish, four a week' },
+      { title: 'Get stronger', note: 'Progressive load, lower reps and longer rests' },
+      { title: 'Lose weight and keep muscle', note: 'Higher volume, shorter rests and muscle-focused training' },
+      { title: 'Move without pain', note: 'Joint-friendly strength, controlled reps, nothing explosive' },
+      { title: 'Stay consistent', note: 'Straightforward training built around the days you choose' },
     ],
     cta: 'Next',
   },
@@ -80,14 +80,14 @@ const BUILD_STEPS: StepConfig[] = [
       { title: '40 minutes', note: 'The sweet spot for most people' },
       { title: '60 minutes', note: 'Full warm-up, main work and accessories' },
       { title: '90 minutes', note: 'Proper strength work — 4 to 5 sets on the compounds, long rests' },
-      { title: 'It varies', note: 'I will give you a short and a long version of each day' },
+      { title: '45 minutes', note: 'A balanced session when your schedule varies' },
     ],
     cta: 'Next',
   },
   {
     kicker: 'STEP 4 OF 4 · YOUR KIT',
     title: 'What do you actually have?',
-    sub: 'Last question. Then I build six weeks and you can change any of it.',
+    sub: 'Last question. Then I build your training week and you can change any of it.',
     options: [
       { title: 'Full gym', note: 'Barbells, machines, everything' },
       { title: 'Home gym', note: 'Dumbbells, bands, a pull-up bar' },
@@ -218,7 +218,7 @@ export default function ClaudePlanBuildModal({
             <Text style={styles.fineText}>
               {stepIdx === 3
                 ? 'You can change any session afterwards, and the plan adapts when your sleep or recovery moves.'
-                : 'Nothing here is permanent. Your coach re-reads these answers every week.'}
+                : 'These four answers are the priority when your plan is built.'}
             </Text>
           </ScrollView>
 

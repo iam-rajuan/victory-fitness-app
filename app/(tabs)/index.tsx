@@ -109,6 +109,7 @@ type HomeActiveExercise = {
   targetSets: number;
   targetReps: number | 'max';
   defaultKg: number;
+  loadType?: 'weighted' | 'bodyweight' | 'unspecified';
   restTime: string;
   restSeconds: number;
   isHold?: boolean;
@@ -205,6 +206,11 @@ function mapPlanExerciseForSession(exercise: StrengthPlanExercise, index: number
     targetSets: Math.max(1, Number(exercise.sets || 1)),
     targetReps: reps,
     defaultKg: parseNumber(exercise.weight, 0),
+    loadType: /bodyweight|\bbw\b/i.test(String(exercise.weight || ''))
+      ? 'bodyweight'
+      : parseNumber(exercise.weight, 0) > 0
+        ? 'weighted'
+        : 'unspecified',
     restTime: restSeconds > 0 ? `${restSeconds}s` : '--',
     restSeconds,
     isHold,
@@ -606,6 +612,11 @@ export default function HomeScreen() {
           targetSets: Math.max(1, Number(movement.sets || 1)),
           targetReps: reps,
           defaultKg: parseNumber(movement.load, 0),
+          loadType: /bodyweight|\bbw\b/i.test(String(movement.load || movement.equipment || ''))
+            ? 'bodyweight'
+            : parseNumber(movement.load, 0) > 0
+              ? 'weighted'
+              : 'unspecified',
           restTime: restSeconds > 0 ? `${restSeconds}s` : '--',
           restSeconds,
           isHold: reps === 'max',

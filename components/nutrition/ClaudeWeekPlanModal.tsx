@@ -20,6 +20,7 @@ import {
   getMealPreparationSteps,
 } from '../../lib/nutrition';
 import { useLanguage } from '../../lib/i18n';
+import { formatCurrencyAmount, parseBudgetEntry } from '../../lib/currency';
 
 interface DayPlan {
   day: string;
@@ -34,6 +35,7 @@ interface ClaudeWeekPlanModalProps {
   onOpenShoppingList: () => void;
   plan?: NutritionPlanApiResponse | null;
   defaultWeight?: number;
+  userLocale?: string | null;
   onPlanUpdated?: (plan: NutritionPlanApiResponse) => void;
 }
 
@@ -91,6 +93,7 @@ export default function ClaudeWeekPlanModal({
   onOpenShoppingList,
   plan,
   defaultWeight = 75,
+  userLocale,
   onPlanUpdated,
 }: ClaudeWeekPlanModalProps) {
   const { t } = useLanguage();
@@ -103,9 +106,9 @@ export default function ClaudeWeekPlanModal({
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
   const [customMeal, setCustomMeal] = useState('');
   const [customAllergy, setCustomAllergy] = useState('');
-  const [cookingTime, setCookingTime] = useState('30 min');
-  const [peopleCount, setPeopleCount] = useState('4');
-  const [weeklyBudget, setWeeklyBudget] = useState('€120');
+  const [cookingTime, setCookingTime] = useState('');
+  const [peopleCount, setPeopleCount] = useState('');
+  const [weeklyBudget, setWeeklyBudget] = useState('');
   const [generatedPlan, setGeneratedPlan] = useState<NutritionPlanApiResponse | null>(null);
   const [openPrepMealKeys, setOpenPrepMealKeys] = useState<Record<string, boolean>>({});
   const [isBuilding, setIsBuilding] = useState(false);
@@ -167,9 +170,6 @@ export default function ClaudeWeekPlanModal({
       const allergies = prof.allergies.split(',').map((a: string) => a.trim()).filter(Boolean);
       if (allergies.length > 0) setSelectedAllergies(allergies);
     }
-    if (prof.cooking_time_weekday) setCookingTime(String(prof.cooking_time_weekday));
-    if (prof.people_cooking_for) setPeopleCount(String(prof.people_cooking_for));
-    if (prof.weekly_food_budget) setWeeklyBudget(String(prof.weekly_food_budget));
   }, [plan]);
   const [buildError, setBuildError] = useState('');
   const [progress, setProgress] = useState(0);
@@ -265,7 +265,14 @@ export default function ClaudeWeekPlanModal({
     setIsBuilding(false);
   };
   useEffect(() => {
-    if (!visible) cancelBuild();
+    if (visible) {
+      setCookingTime('');
+      setPeopleCount('');
+      setWeeklyBudget('');
+      setBuildError('');
+    } else {
+      cancelBuild();
+    }
     return () => { buildRequest.current?.abort(); buildRequest.current = null; };
   }, [visible]);
   useEffect(() => {
@@ -368,6 +375,11 @@ export default function ClaudeWeekPlanModal({
 
   const handleBuildWeek = async () => {
     if (buildRequest.current) return;
+    const parsedBudget = weeklyBudget.trim() ? parseBudgetEntry(weeklyBudget) : null;
+    if (weeklyBudget.trim() && !parsedBudget) {
+      setBuildError('Include a currency with your budget, for example 120 EUR, 500 GHS, £100, or $150.');
+      return;
+    }
     const controller = new AbortController();
     buildRequest.current = controller;
     setProgress(5);
@@ -408,7 +420,9 @@ export default function ClaudeWeekPlanModal({
         weight: String(defaultWeight),
         cooking_time_weekday: cookingTime.trim(),
         people_cooking_for: peopleCount.trim(),
-        weekly_food_budget: weeklyBudget.trim(),
+        weekly_food_budget: weeklyBudget.trim() || null,
+        weekly_food_budget_amount: parsedBudget ? Number(parsedBudget.amount) : null,
+        weekly_food_budget_currency: parsedBudget?.currency || null,
       }, controller.signal);
       if (controller.signal.aborted || buildRequest.current !== controller) return;
       setProgress(100);
@@ -781,7 +795,7 @@ export default function ClaudeWeekPlanModal({
                     style={styles.paramInput}
                     value={cookingTime}
                     onChangeText={setCookingTime}
-                    placeholder="30 min"
+                    placeholder="e.g. 30 min"
                     placeholderTextColor="rgba(247,243,238,0.38)"
                     returnKeyType="done"
                   />
@@ -792,20 +806,21 @@ export default function ClaudeWeekPlanModal({
                     style={styles.paramInput}
                     value={peopleCount}
                     onChangeText={(value) => setPeopleCount(value.replace(/[^\d]/g, '').slice(0, 2))}
-                    placeholder="4"
+                    placeholder="e.g. 4"
                     placeholderTextColor="rgba(247,243,238,0.38)"
                     keyboardType="number-pad"
                     returnKeyType="done"
                   />
                 </View>
                 <View style={[styles.paramRow, { borderBottomWidth: 0 }]}>
-                  <Text style={styles.paramLabel}>6 · Weekly food budget</Text>
+                  <Text style={styles.paramLabel}>6 · Weekly food budget (any currency)</Text>
                   <TextInput
                     style={styles.paramInput}
                     value={weeklyBudget}
-                    onChangeText={(value) => setWeeklyBudget(value.slice(0, 24))}
-                    placeholder="€120"
+                    onChangeText={setWeeklyBudget}
+                    placeholder="e.g. 120 EUR / 500 GHS / £100"
                     placeholderTextColor="rgba(247,243,238,0.38)"
+                    maxLength={24}
                     returnKeyType="done"
                   />
                 </View>
@@ -828,15 +843,19 @@ export default function ClaudeWeekPlanModal({
               <View style={styles.summaryPills}>
                 <View style={styles.summaryPill}>
                   <Text style={styles.summaryPillLabel}>Cook</Text>
-                  <Text style={styles.summaryPillValue}>{cookingTime || '30 min'}</Text>
+                  <Text style={styles.summaryPillValue}>{cookingTime || 'Not set'}</Text>
                 </View>
                 <View style={styles.summaryPill}>
                   <Text style={styles.summaryPillLabel}>People</Text>
-                  <Text style={styles.summaryPillValue}>{peopleCount || '4'}</Text>
+                  <Text style={styles.summaryPillValue}>{peopleCount || 'Not set'}</Text>
                 </View>
                 <View style={styles.summaryPill}>
                   <Text style={styles.summaryPillLabel}>Budget</Text>
-                  <Text style={styles.summaryPillValue}>{weeklyBudget || '€120'}</Text>
+                  <Text style={styles.summaryPillValue}>
+                    {parseBudgetEntry(weeklyBudget)
+                      ? formatCurrencyAmount(parseBudgetEntry(weeklyBudget)!.amount, parseBudgetEntry(weeklyBudget)!.currency, userLocale)
+                      : weeklyBudget || 'Not set'}
+                  </Text>
                 </View>
               </View>
 

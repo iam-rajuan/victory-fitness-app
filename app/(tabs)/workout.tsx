@@ -516,6 +516,11 @@ export default function WorkoutScreen() {
         targetSets: parsePositiveInt(movement.sets, 1),
         targetReps: /max/i.test(String(movement.reps)) ? 'max' as const : parsePositiveInt(movement.reps, 1),
         defaultKg: parseWeightKg(movement.load),
+        loadType: /bodyweight|\bbw\b/i.test(String(movement.load || movement.equipment || ''))
+          ? 'bodyweight' as const
+          : parseWeightKg(movement.load) > 0
+            ? 'weighted' as const
+            : 'unspecified' as const,
         restTime: formatRestTime(movement.restSeconds),
         restSeconds: Math.max(0, Number(movement.restSeconds || 0)),
         isHold: /hold|max/i.test(`${movement.name} ${movement.reps}`),
@@ -681,24 +686,24 @@ export default function WorkoutScreen() {
       'Dumbbells only': ['Dumbbells'],
       'Nothing at all': ['No equipment'],
     };
-    const goalMap: Record<string, string> = {
-      'Get stronger': 'Pure Strength',
-      'Lose weight and keep muscle': 'Body Recomp',
-      'Move without pain': 'Body Recomp',
-      'Stay consistent': 'Hypertrophy',
-    };
     const days = dayMap[summary.days || ''] || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const minutes = String(summary.duration || '').match(/\d+/)?.[0] || undefined;
+    const split = days.length >= 5 ? 'Push Pull Legs' : days.length === 4 ? 'Upper / Lower' : 'Full Body';
     try {
-      const plan = await createHomeSevenDayWorkoutPlan({
-        goal: goalMap[summary.goal || ''] || summary.goal,
-        split: days.length >= 5 ? 'Push Pull Legs' : days.length === 4 ? 'Upper / Lower' : 'Full Body',
+      await createHomeSevenDayWorkoutPlan({
+        goal: summary.goal,
+        split,
+        muscle_group: 'Full Body',
         duration_minutes: minutes,
         equipment: equipmentMap[summary.kit || ''] || [],
         frequency: String(days.length || 7),
         days,
+        custom_notes: `Plan builder priority: goal=${summary.goal}; days=${days.join(',')}; duration=${minutes || 'not set'} minutes; equipment=${summary.kit}.`,
       });
-      const nextSummary = { ...summary, line: plan.summary || summary.line };
+      const nextSummary = {
+        ...summary,
+        line: `${split} · ${days.length} days/week${minutes ? ` · ~${minutes} min` : ''}`,
+      };
       setPlanBuilt(true);
       setPlanSummaryLine(nextSummary.line);
       await savePlanBuiltData(nextSummary);
