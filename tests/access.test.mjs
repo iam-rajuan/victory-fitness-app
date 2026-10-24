@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { canAccessFeature, getAllowedTabNames, getPostAuthRoute, isSubscriptionActive, isRouteAllowedForPlan } from '../lib/access.ts';
+import { canAccessFeature, getAllowedTabNames, getPostAuthRoute, isSubscriptionActive, isRouteAllowedForPlan, shouldShowExpiredBetaSignOut } from '../lib/access.ts';
 
 const user = { id: 'test-user', onboarding_completed: true, subscription_tier: 'GOLD_BETA', subscription_purchase_source: 'beta_trial' };
 
@@ -37,4 +37,10 @@ test('pending payment retains the access window supported by the backend', () =>
   assert.equal(isSubscriptionActive({ subscription_tier: 'GOLD', subscription_status: 'PENDING_PAYMENT' }), true);
   assert.equal(isSubscriptionActive({ ...user, subscription_status: 'EXPIRED' }), false);
   assert.equal(isSubscriptionActive({ ...user, subscription_purchase_source: 'stripe', subscription_status: 'EXPIRED' }), false);
+});
+
+test('only an inactive previous beta user gets the trapped-session sign-out action', () => {
+  assert.equal(shouldShowExpiredBetaSignOut({ ...user, subscription_status: 'EXPIRED' }), true);
+  assert.equal(shouldShowExpiredBetaSignOut({ ...user, subscription_status: 'ACTIVE' }), false);
+  assert.equal(shouldShowExpiredBetaSignOut({ subscription_tier: 'NONE', subscription_status: 'NONE' }), false);
 });

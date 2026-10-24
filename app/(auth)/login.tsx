@@ -13,7 +13,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  useWindowDimensions,
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -43,15 +42,8 @@ import { pushRoute, replaceRoute } from '../../lib/navigation';
 
 const VF_LOGO = require('../../assets/images/onboarding/vf-logo-white.png');
 
-const WEB_USES = [
-  'Read your plan, the challenge detail and the feed on a bigger screen',
-  'Manage your subscription, your data export and your reminders',
-  'Log sessions on your phone — the two are the same account',
-];
-
 export default function LoginScreen() {
   const router = useRouter();
-  const { width } = useWindowDimensions();
   const { reauth, challenge_id, from } = useLocalSearchParams<{ reauth?: string; challenge_id?: string; from?: string }>();
   const { t, useDefaultLanguage, syncLanguageWithCurrentUser } = useLanguage();
 
@@ -301,8 +293,6 @@ export default function LoginScreen() {
     );
   }
 
-  const isWide = Platform.OS === 'web' && width > 768;
-
   return (
     <View style={styles.root}>
       <ErrorPopupModal
@@ -331,9 +321,7 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Main Layout: 2 Columns on Desktop, Single Column on Mobile */}
-          <View style={[styles.mainLayout, isWide && styles.mainLayoutWide]}>
-            {/* Left Column: Sign In Form */}
+          <View style={styles.mainLayout}>
             <View style={styles.formColumn}>
               <Text style={styles.kicker}>WELCOME BACK</Text>
               <Text style={styles.heading}>Sign in</Text>
@@ -459,23 +447,6 @@ export default function LoginScreen() {
               </View>
             </View>
 
-            {/* Right Column: Signing In On The Web Card (visible on desktop / wide screen) */}
-            {isWide ? (
-              <View style={styles.webColumn}>
-                <View style={styles.webCard}>
-                  <Text style={styles.webKicker}>SIGNING IN ON THE WEB</Text>
-                  <Text style={styles.webDesc}>
-                    The web version is laid out as a phone column — most people log their sessions on a phone, and the two stay in sync.
-                  </Text>
-                  {WEB_USES.map((item, idx) => (
-                    <View key={idx} style={styles.webBulletRow}>
-                      <View style={styles.webBulletDot} />
-                      <Text style={styles.webBulletText}>{item}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            ) : null}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -528,23 +499,11 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     alignItems: 'center',
   },
-  mainLayoutWide: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 40,
-  },
   formColumn: {
     flex: 1,
     maxWidth: 460,
     width: '100%',
   },
-  webColumn: {
-    flex: 1,
-    maxWidth: 420,
-    width: '100%',
-    minWidth: 280,
-  },
-
   // Form Column Typography
   kicker: {
     fontFamily: Fonts.heading,
@@ -790,54 +749,4 @@ const styles = StyleSheet.create({
     ...(Platform.OS === 'web' ? ({ fontFamily: "'DM Sans', sans-serif" } as any) : {}),
   },
 
-  // Web Info Card
-  webCard: {
-    backgroundColor: '#0D2B45',
-    borderRadius: 22,
-    borderLeftWidth: 4,
-    borderLeftColor: '#B5651D',
-    padding: 24,
-  },
-  webKicker: {
-    fontFamily: Fonts.heading,
-    fontSize: 10,
-    letterSpacing: 1.6,
-    fontWeight: '500',
-    color: '#C9943A',
-    marginBottom: 14,
-    textTransform: 'uppercase',
-    ...(Platform.OS === 'web' ? ({ fontFamily: "'DM Sans', sans-serif" } as any) : {}),
-  },
-  webDesc: {
-    fontFamily: Fonts.body,
-    fontSize: 14.5,
-    lineHeight: 23.2,
-    fontWeight: '400',
-    color: '#E3DED6',
-    marginBottom: 16,
-    ...(Platform.OS === 'web' ? ({ fontFamily: "'Inter', sans-serif", textWrap: 'pretty' } as any) : {}),
-  },
-  webBulletRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 11,
-    paddingVertical: 6,
-  },
-  webBulletDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 99,
-    backgroundColor: '#5FC48E',
-    marginTop: 7,
-    flexShrink: 0,
-  },
-  webBulletText: {
-    flex: 1,
-    fontFamily: Fonts.body,
-    fontSize: 14,
-    lineHeight: 21,
-    fontWeight: '400',
-    color: '#E3DED6',
-    ...(Platform.OS === 'web' ? ({ fontFamily: "'Inter', sans-serif" } as any) : {}),
-  },
 });

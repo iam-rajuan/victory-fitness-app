@@ -20,10 +20,11 @@ import {
   createStripeCheckoutSession,
   fetchCurrentUser,
   fetchSubscriptionPlans,
+  logout,
   startPhaseOneBetaSubscription,
   SubscriptionPlan,
 } from '../lib/api';
-import { BillingCycle, PLAN_CARDS, SubscriptionTier } from '../lib/access';
+import { BillingCycle, PLAN_CARDS, shouldShowExpiredBetaSignOut, SubscriptionTier } from '../lib/access';
 import { replaceRoute } from '../lib/navigation';
 import RequirementAuditBoundary from '../components/audit/RequirementAuditBoundary';
 
@@ -126,9 +127,11 @@ export default function PlanSelectionScreen() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [currentTier, setCurrentTier] = useState<SubscriptionTier>('NONE');
   const [betaTrialActive, setBetaTrialActive] = useState(false);
+  const [showExpiredBetaSignOut, setShowExpiredBetaSignOut] = useState(false);
   const [selectedTier, setSelectedTier] = useState<SubscriptionTier>('GOLD_BETA');
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('yearly');
   const [errorMessage, setErrorMessage] = useState('');
@@ -153,6 +156,7 @@ export default function PlanSelectionScreen() {
       const items = Array.isArray(plansResponse?.items) ? plansResponse.items : [];
       setCurrentTier(nextCurrentTier);
       setBetaTrialActive(hasActiveBetaTrial);
+      setShowExpiredBetaSignOut(shouldShowExpiredBetaSignOut(user));
       setPlans(items);
       setSelectedTier(hasActiveBetaTrial ? 'GOLD_BETA' : nextCurrentTier === 'NONE' ? 'GOLD_BETA' : nextCurrentTier);
       return user;
@@ -259,6 +263,17 @@ export default function PlanSelectionScreen() {
       }
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await logout();
+      replaceRoute(router, '/login');
+    } finally {
+      setSigningOut(false);
     }
   };
 
@@ -423,6 +438,23 @@ export default function PlanSelectionScreen() {
               </Text>
             )}
           </TouchableOpacity>
+
+          {showExpiredBetaSignOut ? (
+            <TouchableOpacity
+              style={[styles.signOutButton, signingOut && styles.ctaButtonDisabled]}
+              activeOpacity={0.75}
+              onPress={() => void handleSignOut()}
+              disabled={signingOut}
+              accessibilityRole="button"
+              accessibilityLabel="Sign out"
+            >
+              {signingOut ? (
+                <ActivityIndicator color={IVORY} size="small" />
+              ) : (
+                <Text style={styles.signOutText}>Sign out</Text>
+              )}
+            </TouchableOpacity>
+          ) : null}
         </ScrollView>
       </View>
     </SafeAreaView>
@@ -651,5 +683,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '900',
     color: OBSIDIAN,
+  },
+  signOutButton: {
+    height: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    marginBottom: 12,
+  },
+  signOutText: {
+    fontFamily: DMSANS,
+    fontSize: 14,
+    fontWeight: '700',
+    color: IVORY,
+    textDecorationLine: 'underline',
   },
 });

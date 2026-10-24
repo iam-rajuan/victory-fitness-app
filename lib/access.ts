@@ -222,6 +222,13 @@ export function isSubscriptionActive(user?: Pick<AuthUser, 'is_admin' | 'subscri
   return false;
 }
 
+export function shouldShowExpiredBetaSignOut(
+  user?: Pick<AuthUser, 'subscription_purchase_source' | 'subscription_status'> | null,
+): boolean {
+  return String(user?.subscription_purchase_source ?? '').trim().toLowerCase() === 'beta_trial'
+    && String(user?.subscription_status ?? '').trim().toUpperCase() !== 'ACTIVE';
+}
+
 export function getSubscriptionCard(tier: SubscriptionTier) {
   return PLAN_CARDS.find((card) => card.tier === tier) ?? PLAN_CARDS[0];
 }
