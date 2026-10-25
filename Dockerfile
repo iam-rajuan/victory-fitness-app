@@ -12,7 +12,7 @@ FROM nginx:1.27-alpine
 
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-RUN printf "server {\n  listen 80;\n  server_name _;\n  root /usr/share/nginx/html;\n  index index.html;\n\n  location = /index.html { add_header Cache-Control \"no-store\"; try_files \$uri =404; }\n  location / { try_files \$uri \$uri/ /index.html; }\n  location ~* \\.(?:js|css|png|jpg|jpeg|gif|ico|svg|webp|woff2?)\$ { expires 1y; add_header Cache-Control \"public, immutable\"; try_files \$uri =404; }\n}\n" > /etc/nginx/conf.d/default.conf
+RUN printf "server {\n  listen 80;\n  server_name _;\n  root /usr/share/nginx/html;\n  index index.html;\n\n  location = /manifest.webmanifest { types { application/manifest+json webmanifest; } add_header Cache-Control \"no-cache\"; try_files \$uri =404; }\n  location = /sw.js { add_header Cache-Control \"no-cache, no-store, must-revalidate\"; try_files \$uri =404; }\n  location = /index.html { add_header Cache-Control \"no-store\"; try_files \$uri =404; }\n  location / { try_files \$uri \$uri/ /index.html; }\n  location ~* \\.(?:js|css|png|jpg|jpeg|gif|ico|svg|webp|woff2?)\$ { expires 1y; add_header Cache-Control \"public, immutable\"; try_files \$uri =404; }\n}\n" > /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 

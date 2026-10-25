@@ -25,6 +25,18 @@ const ioniconsFile = fs.existsSync(ioniconsDirectory)
   ? fs.readdirSync(ioniconsDirectory).find((name) => name.startsWith('Ionicons.') && name.endsWith('.ttf'))
   : undefined;
 const ioniconsPreload = ioniconsFile ? `<link rel="preload" href="/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/${ioniconsFile}" as="font" type="font/ttf" crossorigin>` : '';
-html = html.replace('</head>', `${ioniconsPreload}<meta name="theme-color" content="#0D0D0D"><style>html,body{background:#0D0D0D}@keyframes vf-spin{to{transform:rotate(360deg)}}</style></head>`);
+const pwaHead = [
+  '<meta name="theme-color" content="#0D0D0D">',
+  '<meta name="mobile-web-app-capable" content="yes">',
+  '<meta name="apple-mobile-web-app-capable" content="yes">',
+  '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">',
+  '<meta name="apple-mobile-web-app-title" content="Victory Fitness">',
+  '<link rel="manifest" href="/manifest.webmanifest">',
+  '<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">',
+  '<link rel="icon" href="/favicon.ico?v=6" sizes="any">',
+  '<link rel="icon" type="image/png" href="/favicon.png?v=6" sizes="64x64">',
+  '<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(error){console.error("Service worker registration failed",error)})})}</script>',
+].join('');
+html = html.replace('</head>', `${ioniconsPreload}${pwaHead}<style>html,body{background:#0D0D0D}@keyframes vf-spin{to{transform:rotate(360deg)}}</style></head>`);
 fs.writeFileSync(file, html);
 console.log('Added the dependency-free web startup shell.');

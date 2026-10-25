@@ -34,7 +34,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
         <link rel="manifest" href="/manifest.webmanifest" />
         <link rel="icon" href="/favicon.ico?v=5" sizes="any" />
         <link rel="icon" type="image/png" href="/favicon.png?v=5" sizes="64x64" />
-        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <link rel="stylesheet" href="/fonts/fonts.css" />
         <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=clash-display@600,700&amp;display=swap" />
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&amp;family=Inter:wght@400;500&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" />
