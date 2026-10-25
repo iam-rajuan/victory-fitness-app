@@ -14,6 +14,27 @@ function containsAny(message: string, needles: string[]): boolean {
   return needles.some((needle) => lower.includes(needle));
 }
 
+function formatValidationError(message: string): AppErrorDetails {
+  if (containsAny(message, ['email address', 'body","email', "body','email"])) {
+    return {
+      title: 'Check your email',
+      message: 'Enter a valid email address, such as name@example.com.',
+    };
+  }
+
+  if (containsAny(message, ['password'])) {
+    return {
+      title: 'Check your password',
+      message: 'Please check the password requirements and try again.',
+    };
+  }
+
+  return {
+    title: 'Check your information',
+    message: 'Some information is missing or invalid. Review the highlighted fields and try again.',
+  };
+}
+
 export function formatAppError(error: unknown, fallbackMessage = 'Please try again.'): AppErrorDetails {
   const rawMessage =
     error instanceof ApiError
@@ -48,10 +69,7 @@ export function formatAppError(error: unknown, fallbackMessage = 'Please try aga
     }
 
     if (error.status === 422) {
-      return {
-        title: 'Validation Error',
-        message,
-      };
+      return formatValidationError(message);
     }
 
     if (error.status === 503 || containsAny(lower, ['mongodb', 'database', 'atlas'])) {

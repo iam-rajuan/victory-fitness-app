@@ -41,6 +41,7 @@ import { isGermanyDomain, redirectToGermanyDomainPreservingPath, shouldRedirectG
 import { pushRoute, replaceRoute } from '../../lib/navigation';
 
 const VF_LOGO = require('../../assets/images/onboarding/vf-logo-white.png');
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -112,6 +113,15 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     const normalizedEmail = email.trim().toLowerCase();
+
+    if (normalizedEmail && !EMAIL_PATTERN.test(normalizedEmail)) {
+      setFieldErrors({ email: t('Enter a valid email address.') });
+      setErrorDialog({
+        title: t('Check your email'),
+        message: t('Enter a valid email address, such as name@example.com.'),
+      });
+      return;
+    }
 
     if (codeMode) {
       if (!normalizedEmail) {
