@@ -47,6 +47,27 @@ export function formatAppError(error: unknown, fallbackMessage = 'Please try aga
   const lower = message.toLowerCase();
 
   if (error instanceof ApiError) {
+    if (error.status === 403 && containsAny(lower, ['gold beta opens', 'beta opens'])) {
+      return {
+        title: 'Gold Beta opens October 26',
+        message: 'Enrollment opens at 12:00 AM on October 26 in your local timezone. Come back then to activate your access.',
+      };
+    }
+
+    if (error.status === 410 && containsAny(lower, ['beta', 'enrollment window'])) {
+      return {
+        title: 'Gold Beta enrollment has closed',
+        message: 'This Gold Beta campaign is no longer accepting enrollments.',
+      };
+    }
+
+    if (error.status === 409 && containsAny(lower, ['beta', 'capacity'])) {
+      return {
+        title: 'Gold Beta is full',
+        message: 'All 300 beta places have been claimed. Thank you for your interest in Victory Fitness.',
+      };
+    }
+
     if (error.status === 401) {
       return {
         title: 'Authentication Error',

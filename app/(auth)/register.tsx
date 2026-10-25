@@ -20,7 +20,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../../constants/Colors';
 import { Fonts } from '../../constants/Typography';
 import { ErrorPopupModal } from '../../components/ErrorPopupModal';
-import { apiRequest, AuthResponse, clearAuthTokens, setAuthTokens } from '../../lib/api';
+import { apiRequest, AuthResponse, clearAuthTokens, getClientTimeZone, setAuthTokens } from '../../lib/api';
 import { getPostAuthRoute, isAdminRestrictedFromApp } from '../../lib/access';
 import { markBiometricSessionUnlocked, maybeOfferBiometricUnlock } from '../../lib/biometricUnlock';
 import { formatAppError } from '../../lib/error';
@@ -183,6 +183,7 @@ export default function RegisterScreen() {
           country: currentRegion.n,
           country_code: currentRegion.countryCode,
           preferred_language: currentRegion.preferredLanguage,
+          timezone: getClientTimeZone(),
           signup_source: String(source || (params.challenge_id ? 'challenge_invite' : 'organic')).trim().slice(0, 120) || 'organic',
           inviter_id: params.inviter_id,
           invite_id: params.invite_id,

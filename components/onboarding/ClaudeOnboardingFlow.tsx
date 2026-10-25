@@ -39,6 +39,8 @@ import { getPostAuthRoute } from '../../lib/access';
 import { replaceRoute } from '../../lib/navigation';
 import { buildE164PhoneNumber, normalizeDialCode, splitE164PhoneNumber } from '../../lib/phone';
 import { calculateProteinTarget } from '../../lib/nutrition';
+import { formatAppError, type AppErrorDetails } from '../../lib/error';
+import { ErrorPopupModal } from '../ErrorPopupModal';
 import ClaudeInnerCircleApplyModal from '../profile/ClaudeInnerCircleApplyModal';
 
 export const ONBOARDING_STEP_KEY = '@vf_onboarding_current_step';
@@ -352,6 +354,7 @@ export default function ClaudeOnboardingFlow({
   const [dialNumber, setDialNumber] = useState<string>('');
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [showInnerCircleApply, setShowInnerCircleApply] = useState(false);
+  const [accessError, setAccessError] = useState<AppErrorDetails | null>(null);
 
   const isHydratedRef = useRef(false);
 
@@ -1133,6 +1136,8 @@ export default function ClaudeOnboardingFlow({
         try {
           await activateTrialOrSubscription();
           goToStep(11);
+        } catch (error) {
+          setAccessError(formatAppError(error, 'We could not activate your Gold Beta access. Please try again.'));
         } finally {
           setSubmitting(false);
         }
@@ -2215,6 +2220,12 @@ export default function ClaudeOnboardingFlow({
         userName={currentUser?.name || 'Inner Circle'}
         userEmail={currentUser?.email || ''}
         userPhone={currentUser?.contact_number || buildE164PhoneNumber(dialCode, dialNumber)}
+      />
+      <ErrorPopupModal
+        visible={Boolean(accessError)}
+        title={accessError?.title || 'Gold Beta'}
+        message={accessError?.message || ''}
+        onClose={() => setAccessError(null)}
       />
     </View>
   );

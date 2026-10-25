@@ -1532,11 +1532,22 @@ export async function startGoldTrial() {
   return response;
 }
 
+export function getClientTimeZone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  } catch {
+    return 'UTC';
+  }
+}
+
 export async function startPhaseOneBetaSubscription() {
   const user = await apiRequest<AuthUser & { role?: string; is_admin?: boolean; country?: string; country_code?: string | null; contact_number?: string | null; profileImage?: string; onboarding_completed?: boolean }>(
     '/me/trial/phase-one-beta/start',
     {
       method: 'POST',
+      body: {
+        timezone: getClientTimeZone(),
+      },
     }
   );
   authUser = normalizeAuthUser(user);
