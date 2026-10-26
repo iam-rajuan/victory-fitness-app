@@ -294,13 +294,11 @@ const formatNudgeTime = (value: string) => {
 export interface ClaudeOnboardingFlowProps {
   user?: AuthUser | null;
   initialStep?: number;
-  onComplete?: () => void;
 }
 
 export default function ClaudeOnboardingFlow({
   user: initialUser = null,
   initialStep = 2,
-  onComplete,
 }: ClaudeOnboardingFlowProps) {
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -1168,38 +1166,25 @@ export default function ClaudeOnboardingFlow({
       // Ready -> finish onboarding and save all data to user profile
       setSubmitting(true);
       try {
-        await activateTrialOrSubscription();
         await persistOnboardingAnswers(true);
 
-        const updated = await fetchCurrentUser({ forceRefresh: true }).catch(() => null);
-        if (updated) {
-          setCurrentUser(updated);
+        const updated = await fetchCurrentUser({ forceRefresh: true });
+        if (!updated.onboarding_completed) {
+          throw new Error('The server did not confirm onboarding completion.');
         }
+
+        setCurrentUser(updated);
         await AsyncStorage.removeItem(ONBOARDING_STEP_KEY).catch(() => {});
         await AsyncStorage.removeItem(getOnboardingAnswersKey(updated || currentUser)).catch(() => {});
         await AsyncStorage.removeItem(ONBOARDING_ANSWERS_KEY).catch(() => {});
-        if (Platform.OS === 'web' && typeof window !== 'undefined') {
-          try {
-            const url = new URL(window.location.href);
-            url.searchParams.delete('step');
-            window.history.replaceState(null, '', url.pathname);
-          } catch {}
-        }
-        if (onComplete) {
-          onComplete();
-        } else {
-          // Redirect directly to Home
-          replaceRoute(router, '/(tabs)');
-          if (Platform.OS === 'web' && typeof window !== 'undefined') {
-            setTimeout(() => {
-              if (window.location.pathname.includes('/onboarding')) {
-                window.location.href = '/';
-              }
-            }, 300);
-          }
-        }
+
+        replaceRoute(router, getPostAuthRoute(updated));
       } catch (error) {
         console.warn('Failed to complete onboarding', error);
+        setAccessError(formatAppError(
+          error,
+          'We could not confirm that your setup was saved. Your answers are still here—please try again.',
+        ));
       } finally {
         setSubmitting(false);
       }

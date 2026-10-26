@@ -37,7 +37,7 @@ import {
   useGoogleIdTokenAuth,
 } from '../../lib/firebaseGoogleAuth';
 import { useLanguage } from '../../lib/i18n';
-import { isGermanyDomain, redirectToGermanyDomainPreservingPath, shouldRedirectGermanyUserToGermanyDomain } from '../../lib/domainContext';
+import { isGermanyDomain } from '../../lib/domainContext';
 import { pushRoute, replaceRoute } from '../../lib/navigation';
 
 const VF_LOGO = require('../../assets/images/onboarding/vf-logo-white.png');
@@ -76,11 +76,6 @@ export default function LoginScreen() {
             await clearAuthTokens();
             useDefaultLanguage();
             if (!cancelled) setCheckingAuth(false);
-            return;
-          }
-
-          if (await shouldRedirectGermanyUserToGermanyDomain(user)) {
-            redirectToGermanyDomainPreservingPath();
             return;
           }
 
@@ -182,10 +177,6 @@ export default function LoginScreen() {
       }
       await setAuthTokens(auth);
       markBiometricSessionUnlocked();
-      if (await shouldRedirectGermanyUserToGermanyDomain(auth.user)) {
-        redirectToGermanyDomainPreservingPath();
-        return;
-      }
       await syncLanguageWithCurrentUser(auth.user.id);
       void maybeOfferBiometricUnlock(auth.user);
       const pendingChallengeId = challenge_id || (await AsyncStorage.getItem('@pending_challenge_id'));
@@ -230,10 +221,6 @@ export default function LoginScreen() {
 
     await setAuthTokens(auth);
     markBiometricSessionUnlocked();
-    if (await shouldRedirectGermanyUserToGermanyDomain(auth.user)) {
-      redirectToGermanyDomainPreservingPath();
-      return;
-    }
     await syncLanguageWithCurrentUser(auth.user.id);
     void maybeOfferBiometricUnlock(auth.user);
     if (auth.returning_user) {

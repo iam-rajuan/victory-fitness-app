@@ -29,7 +29,7 @@ import { useLanguage } from '../../lib/i18n';
 import { detectCountryFromDeviceLocale } from '../../lib/localeCountry';
 import { pushRoute, replaceRoute } from '../../lib/navigation';
 import { isE164PhoneNumber } from '../../lib/phone';
-import { getInitialRegionForDomainContext, isGermanyDomain, rememberExplicitCountryChoice } from '../../lib/domainContext';
+import { getInitialRegionForDomainContext, isGermanyDomain } from '../../lib/domainContext';
 import {
   ONBOARDING_ANSWERS_KEY,
   ONBOARDING_STEP_KEY,
@@ -167,7 +167,6 @@ export default function RegisterScreen() {
     setLoading(true);
     try {
       await AsyncStorage.multiRemove([ONBOARDING_STEP_KEY, ONBOARDING_ANSWERS_KEY]).catch(() => {});
-      await rememberExplicitCountryChoice(selectedRegion);
       if (params.challenge_id) {
         await AsyncStorage.setItem('@pending_challenge_id', String(params.challenge_id));
       }
@@ -482,7 +481,6 @@ export default function RegisterScreen() {
                       key={k}
                       onPress={() => {
                         setSelectedRegion(k);
-                        void rememberExplicitCountryChoice(k);
                       }}
                       style={[
                         styles.chip,

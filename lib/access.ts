@@ -436,6 +436,18 @@ export function getPostAuthRoute(
   return isSubscriptionActive(user) ? '/(tabs)' : PLAN_PATH;
 }
 
+export function getAuthenticatedPublicRouteTarget(
+  pathname: string,
+  user?: Parameters<typeof getPostAuthRoute>[0],
+): string | null {
+  if (!user || !isPublicRoute(pathname)) {
+    return null;
+  }
+
+  const target = user.onboarding_completed ? getPostAuthRoute(user) : '/onboarding';
+  return pathname === target ? null : target;
+}
+
 export function isRouteAllowedForPlan(
   pathname: string,
   user?: Pick<

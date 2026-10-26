@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -12,7 +12,7 @@ import {
   fetchCurrentUser,
   getAuthTokens,
 } from '../lib/api';
-import { getPostAuthRoute, isSubscriptionActive } from '../lib/access';
+import { getPostAuthRoute } from '../lib/access';
 import { replaceRoute } from '../lib/navigation';
 import ClaudeOnboardingFlow, {
   ONBOARDING_STEP_KEY,
@@ -58,7 +58,7 @@ export default function OnboardingScreen() {
           const user = await fetchCurrentUser({ forceRefresh: true });
           // Completion is server-owned. A stale local step is only progress
           // for an unfinished flow and must never reopen completed onboarding.
-          if (user.onboarding_completed || isSubscriptionActive(user)) {
+          if (user.onboarding_completed) {
             await AsyncStorage.removeItem(ONBOARDING_STEP_KEY);
             await AsyncStorage.removeItem('@vf_onboarding_answers');
             replaceRoute(router, getPostAuthRoute(user));
@@ -102,16 +102,6 @@ export default function OnboardingScreen() {
       <ClaudeOnboardingFlow
         user={authenticatedUser}
         initialStep={resolvedStep}
-        onComplete={() => {
-          replaceRoute(router, '/(tabs)');
-          if (Platform.OS === 'web' && typeof window !== 'undefined') {
-            setTimeout(() => {
-              if (window.location.pathname.includes('/onboarding')) {
-                window.location.href = '/';
-              }
-            }, 300);
-          }
-        }}
       />
     </SafeAreaView>
   );

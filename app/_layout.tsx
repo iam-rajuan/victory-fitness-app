@@ -7,7 +7,7 @@ import { Colors } from '../constants/Colors';
 import { Fonts } from '../constants/Typography';
 import PwaInstallPrompt from '../components/PwaInstallPrompt';
 import { clearAuthTokens, fetchCurrentUser, getAuthUser, getValidAuthTokens, setAuthFailureHandler } from '../lib/api';
-import { getLoginRouteWithReturn, getPostAuthRoute, isAdminRestrictedFromApp, isPublicRoute, isRouteAllowedForPlan, isSubscriptionActive } from '../lib/access';
+import { getAuthenticatedPublicRouteTarget, getLoginRouteWithReturn, getPostAuthRoute, isAdminRestrictedFromApp, isPublicRoute, isRouteAllowedForPlan } from '../lib/access';
 import {
   authenticateWithBiometrics,
   isBiometricSessionUnlocked,
@@ -17,7 +17,6 @@ import {
 import { appendRunLog, formatRunLogMessage } from '../lib/runLog';
 import { LanguageProvider } from '../lib/i18n';
 import { ThemeProvider, useTheme } from '../context/ThemeContext';
-import { redirectToGermanyDomainPreservingPath, shouldRedirectGermanyUserToGermanyDomain } from '../lib/domainContext';
 import { blurActiveElementBeforeNavigation, replaceRoute } from '../lib/navigation';
 import { PushNotificationEvent, registerForPushNotificationsAsync, startForegroundNotificationStream, stopForegroundNotificationStream, subscribeToPushNotifications } from '../lib/pushNotifications';
 import { cleanupLocalWebServiceWorkers } from '../lib/webServiceWorker';
@@ -160,11 +159,6 @@ export default function RootLayout() {
     let cancelled = false;
 
     const guard = async () => {
-      if (isPublicRoute(pathname)) {
-        setCheckingAccess(false);
-        return;
-      }
-
       const verifyBiometricUnlock = async (user: Awaited<ReturnType<typeof getAuthUser>>) => {
         if (!user?.id || isBiometricSessionUnlocked()) {
           return true;
@@ -192,11 +186,6 @@ export default function RootLayout() {
           return false;
         }
 
-        if (await shouldRedirectGermanyUserToGermanyDomain(user)) {
-          redirectToGermanyDomainPreservingPath();
-          return true;
-        }
-
         if (isAdminRestrictedFromApp(user)) {
           await clearAuthTokens();
           if (!isPublicRoute(pathname)) {
@@ -216,13 +205,8 @@ export default function RootLayout() {
         }
 
         if (isPublicRoute(pathname)) {
-          if (pathname === '/onboarding' && !isSubscriptionActive(user)) {
-            setCheckingAccess(false);
-            return false;
-          }
-
-          const target = getPostAuthRoute(user);
-          if (pathname === target) {
+          const target = getAuthenticatedPublicRouteTarget(pathname, user);
+          if (!target) {
             setCheckingAccess(false);
             return false;
           }
