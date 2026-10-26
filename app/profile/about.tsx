@@ -27,6 +27,7 @@ const DMSANS_BOLD = Platform.select({ web: "'DM Sans', sans-serif", default: 'DM
 const DMSANS_SEMI = Platform.select({ web: "'DM Sans', sans-serif", default: 'DMSans-SemiBold' });
 const INTER = Platform.select({ web: "'Inter', sans-serif", default: 'Inter-Regular' });
 const MONO = Platform.select({ web: "'JetBrains Mono', monospace", default: 'JetBrainsMono-Bold' });
+const OFFICIAL_ABOUT_PDF_URL = 'https://app.victoryfitnessapp.com/About-Us.pdf';
 
 function formatDate(value?: string | null) {
   if (!value) return '';
@@ -102,8 +103,8 @@ export default function AboutUsScreen() {
               <LegalContentRenderer
                 htmlContent={about?.html_content}
                 plainText={about?.plain_text}
-                pdfUrl={about?.pdf_url}
-                pdfFilename={about?.pdf_filename}
+                pdfUrl={about?.pdf_url || OFFICIAL_ABOUT_PDF_URL}
+                pdfFilename={about?.pdf_filename || 'Victory Fitness — About Us.pdf'}
               />
             </View>
           </>
