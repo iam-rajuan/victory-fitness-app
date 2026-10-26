@@ -520,8 +520,8 @@ export default function RegisterScreen() {
               </View>
               <Text style={styles.consentText}>
                 {currentRegion.preferredLanguage === 'de'
-                  ? 'Ja, Victory Fitness darf mir E-Mails schicken – mit Infos zu meinem Programm, Trainings- und Gesundheitstipps und persönlichen Angeboten, z. B. zur Mitgliedschaft. Dafür werden meine E-Mail-Adresse und mein Vorname gespeichert. Ich kann das jederzeit widerrufen: über den Abmeldelink in jeder E-Mail oder per Mail an hello@victorakko.com.'
-                  : 'Yes, Victory Fitness may send me emails – with information about my programme, training and health tips, and personal offers, e.g. on membership. For this, my email address and first name are stored. I can withdraw at any time via the unsubscribe link in every email or by writing to hello@victorakko.com.'}
+                  ? 'Ich möchte gelegentlich E-Mails mit Programm-Updates, Trainings- und Gesundheitstipps sowie Angeboten erhalten. Freiwillig; jederzeit über den Abmeldelink widerrufbar.'
+                  : 'Send me occasional emails with programme updates, training and health tips, and offers. Optional; I can unsubscribe at any time.'}
               </Text>
             </Pressable>
 
@@ -531,8 +531,8 @@ export default function RegisterScreen() {
               </View>
               <Text style={styles.consentText}>
                 {currentRegion.preferredLanguage === 'de'
-                  ? 'Ja, Victory Fitness darf mich per WhatsApp kontaktieren – für Erinnerungen, Motivation, persönliche Rückfragen und Angebote. Dafür wird meine Handynummer gespeichert. WhatsApp ist ein Dienst von Meta Platforms Ireland Ltd.; dabei können Daten wie Telefonnummer und Metadaten auch in die USA übertragen werden. Ich kann das jederzeit widerrufen: mit „STOP“ per WhatsApp oder per Mail an hello@victorakko.com.'
-                  : 'Yes, Victory Fitness may contact me via WhatsApp – for reminders, motivation, personal check-ins and offers. For this, my mobile number is stored. WhatsApp is a service of Meta Platforms Ireland Ltd.; data such as my phone number and metadata may also be transferred to the USA. I can withdraw at any time by sending “STOP” via WhatsApp or by writing to hello@victorakko.com.'}
+                  ? 'Kontaktiert mich per WhatsApp mit Erinnerungen, Motivation, Rückfragen und Angeboten. Freiwillig; jederzeit mit „STOP“ widerrufbar. Meta kann Daten in den USA verarbeiten.'
+                  : 'Contact me on WhatsApp with reminders, motivation, check-ins, and offers. Optional; I can withdraw by replying “STOP”. Meta may process data in the USA.'}
               </Text>
             </Pressable>
 
@@ -547,11 +547,11 @@ export default function RegisterScreen() {
 
             <Text style={styles.privacyNotice}>
               {currentRegion.preferredLanguage === 'de'
-                ? 'Verantwortlich: Victor Akko, handelnd für die Akko AI Solutions UG (haftungsbeschränkt) in Gründung, Owiesenstraße 66, 22177 Hamburg, hello@victorakko.com. Sobald die Gesellschaft im Handelsregister eingetragen ist, übernimmt sie die Verantwortung für deine Daten; wir informieren dich vorher. Wir nutzen deine Daten nur für die Zwecke, die du oben angekreuzt hast, und speichern sie, bis du widerrufst oder dein Konto löschst. Deine Einwilligungen sind freiwillig und jederzeit widerrufbar; was bis dahin verarbeitet wurde, bleibt rechtmäßig. Du hast das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit und Beschwerde bei einer Datenschutzbehörde, z. B. dem Hamburgischen Beauftragten für Datenschutz und Informationsfreiheit. '
-                : 'Controller: Victor Akko, acting for Akko AI Solutions UG (haftungsbeschränkt) in formation, Owiesenstraße 66, 22177 Hamburg, Germany, hello@victorakko.com. Once the company is entered in the commercial register, it takes over responsibility for your data; we will inform you beforehand. We use your data only for the purposes you ticked above and keep it until you withdraw or delete your account. Your consents are voluntary and can be withdrawn at any time; processing before withdrawal remains lawful. You have the right to access, rectification, erasure, restriction, data portability and to complain to a data protection authority, e.g. the Hamburg Commissioner for Data Protection and Freedom of Information. '}
+                ? 'Verantwortlich: Victor Akko für die Akko AI Solutions UG (haftungsbeschränkt) i. G., Hamburg. Wir verwenden deine Daten nur für die gewählten Zwecke. Einwilligungen sind freiwillig und jederzeit widerrufbar; deine Datenschutzrechte bleiben unberührt. '
+                : 'Controller: Victor Akko for Akko AI Solutions UG (haftungsbeschränkt) in formation, Hamburg. We use your data only for the purposes you select. Consent is voluntary and can be withdrawn at any time; your data-protection rights remain unaffected. '}
               <Text style={styles.legalLink} onPress={() => Linking.openURL('https://app.victoryfitnessapp.com/AGBs.pdf')}>{currentRegion.preferredLanguage === 'de' ? 'AGB' : 'Terms & Conditions'}</Text>
               {' · '}
-              <Text style={styles.legalLink} onPress={() => Linking.openURL('https://victorakko.com/datenschutz')}>{currentRegion.preferredLanguage === 'de' ? 'Datenschutzerklärung' : 'Privacy Policy'}</Text>
+              <Text style={styles.legalLink} onPress={() => Linking.openURL('https://www.victoryfitnessapp.com/privacy')}>{currentRegion.preferredLanguage === 'de' ? 'Datenschutzerklärung' : 'Privacy Policy'}</Text>
             </Text>
 
             {/* Primary Continue CTA */}
@@ -570,7 +570,9 @@ export default function RegisterScreen() {
 
             {/* Privacy Footnote */}
             <Text style={styles.footnote}>
-              Your data stays in the EU. We never sell it, and you can export or delete everything from your profile in two taps.
+              {currentRegion.preferredLanguage === 'de'
+                ? 'Deine Auswahl kannst du später jederzeit unter Datenschutz & Einwilligungen ändern.'
+                : 'You can change these choices later under Privacy & Consents.'}
             </Text>
 
             {/* Already have an account? Sign in */}
