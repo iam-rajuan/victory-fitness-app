@@ -9,9 +9,11 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { apiRequest } from '../../lib/api';
+import { apiRequest, fetchMyConsents, setMyConsent } from '../../lib/api';
+import { useLanguage } from '../../lib/i18n';
 import { JOURNAL_ENTRIES_CACHE_KEY, JournalEntry } from '../../lib/screenData';
 import { hydrateCachedResource, primeCachedResource } from '../../lib/resourceCache';
 import RequirementAuditBoundary from '../../components/audit/RequirementAuditBoundary';
@@ -63,6 +65,10 @@ function getJournalEntryDayLabel(value?: string | null): string {
 
 export default function JournalScreen() {
   const router = useRouter();
+  const { language } = useLanguage();
+  const consentLanguage = language === 'de' ? 'de' : 'en';
+  const [consentGranted, setConsentGranted] = useState<boolean | null>(null);
+  const [consentSaving, setConsentSaving] = useState(false);
   const [entryText, setEntryText] = useState('');
   const [saving, setSaving] = useState(false);
   const [streakDays, setStreakDays] = useState(0);
@@ -79,6 +85,11 @@ export default function JournalScreen() {
     const loadEntries = async () => {
       setLoadingHistory(true);
       try {
+        const consent = await fetchMyConsents();
+        if (cancelled) return;
+        const granted = Boolean(consent.consents.journal?.granted);
+        setConsentGranted(granted);
+        if (!granted) return;
         const cached = await hydrateCachedResource<{ entries: JournalEntry[] }>(JOURNAL_ENTRIES_CACHE_KEY);
         if (!cancelled && Array.isArray(cached?.entries)) {
           setPastEntries(cached.entries);
@@ -103,6 +114,20 @@ export default function JournalScreen() {
       cancelled = true;
     };
   }, []);
+
+  const updateJournalConsent = async (granted: boolean) => {
+    if (consentSaving) return;
+    setConsentSaving(true);
+    try {
+      await setMyConsent({ consent_id: 'journal', granted, language: consentLanguage, source: 'journal_dialog' });
+      setConsentGranted(granted);
+      if (!granted) handleSkipToday();
+    } catch {
+      Alert.alert('Unable to save your choice', 'Please check your connection and try again.');
+    } finally {
+      setConsentSaving(false);
+    }
+  };
 
   const handleSaveEntry = async () => {
     if (!entryText.trim()) {
@@ -146,9 +171,42 @@ export default function JournalScreen() {
     }
   };
 
+  if (consentGranted === null) {
+    return <View style={[styles.container, styles.consentLoading]}><ActivityIndicator size="large" color={GOLD} /></View>;
+  }
+
   return (
     <RequirementAuditBoundary auditId="APP-EXTRA-011" status="extra" style={{ flex: 1 }}>
       <View style={styles.container}>
+        <Modal visible={consentGranted === false} animationType="slide" presentationStyle="fullScreen">
+          <ScrollView style={styles.consentScreen} contentContainerStyle={styles.consentContent}>
+            <Text style={styles.consentTitle}>{consentLanguage === 'de' ? 'Dein Journal – nur für dich' : 'Your journal – just for you'}</Text>
+            <Text style={styles.consentIntro}>{consentLanguage === 'de'
+              ? 'Hier kannst du Gedanken, Stimmung, Schlaf, Gewicht oder körperliche Beschwerden festhalten. Solche Angaben können Gesundheitsdaten sein – deshalb fragen wir dich ausdrücklich.'
+              : "Here you can record thoughts, mood, sleep, weight or physical complaints. This may be health data – that's why we ask you explicitly."}</Text>
+            {(consentLanguage === 'de' ? [
+              'Deine Einträge sieht nur du. Weder wir noch andere Mitglieder können sie lesen.',
+              'Sie werden verschlüsselt auf Servern in der EU gespeichert.',
+              'Du kannst einzelne Einträge oder das ganze Journal jederzeit löschen. Löschst du dein Konto, wird auch dein Journal gelöscht.',
+            ] : [
+              'Only you can see your entries. Neither we nor other members can read them.',
+              'They are stored encrypted on servers in the EU.',
+              'You can delete single entries or your whole journal at any time. If you delete your account, your journal is deleted too.',
+            ]).map((point) => <Text key={point} style={styles.consentPoint}>• {point}</Text>)}
+            <Text style={styles.consentAi}>{consentLanguage === 'de'
+              ? 'Damit die App dir passende Impulse geben kann, wertet unser KI-System deine Einträge automatisch aus. Dafür können sie an OpenAI (USA) oder Anthropic (USA) übertragen werden und werden nicht zum Training von KI-Modellen genutzt.'
+              : 'So the app can give you relevant prompts, our AI system analyses your entries automatically. For this they may be transferred to OpenAI (USA) or Anthropic (USA) and are not used to train AI models.'}</Text>
+            <Text style={styles.consentLabel}>{consentLanguage === 'de'
+              ? 'Ich willige ausdrücklich ein, dass Victory Fitness meine Journal-Einträge – auch Angaben zu meiner Gesundheit – für diesen Zweck speichert. Das ist freiwillig: Ohne Zustimmung kann ich die App weiter nutzen, nur das Journal nicht. Ich kann jederzeit in den Einstellungen oder per Mail an hello@victorakko.com widerrufen. Das umfasst auch die automatische Auswertung durch das KI-System.'
+              : 'I explicitly consent to Victory Fitness storing my journal entries – including information about my health – for this purpose. This is voluntary: without consent I can still use the app, just not the journal. I can withdraw at any time in the settings or by writing to hello@victorakko.com. This includes automatic analysis by the AI system.'}</Text>
+            <TouchableOpacity style={styles.consentAccept} disabled={consentSaving} onPress={() => updateJournalConsent(true)}>
+              {consentSaving ? <ActivityIndicator color={OBSIDIAN} /> : <Text style={styles.consentAcceptText}>{consentLanguage === 'de' ? 'Journal starten' : 'Start journal'}</Text>}
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.consentDecline} disabled={consentSaving} onPress={() => updateJournalConsent(false)}>
+              <Text style={styles.consentDeclineText}>{consentLanguage === 'de' ? 'Jetzt nicht' : 'Not now'}</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </Modal>
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
@@ -254,6 +312,18 @@ export default function JournalScreen() {
 }
 
 const styles = StyleSheet.create({
+  consentLoading: { alignItems: 'center', justifyContent: 'center' },
+  consentScreen: { flex: 1, backgroundColor: OBSIDIAN },
+  consentContent: { flexGrow: 1, justifyContent: 'center', padding: 24, paddingVertical: 48 },
+  consentTitle: { fontFamily: DMSANS, color: IVORY, fontSize: 28, fontWeight: '800', marginBottom: 16 },
+  consentIntro: { fontFamily: INTER, color: 'rgba(247,243,238,0.82)', fontSize: 16, lineHeight: 24, marginBottom: 18 },
+  consentPoint: { fontFamily: INTER, color: 'rgba(247,243,238,0.78)', fontSize: 14, lineHeight: 22, marginBottom: 8 },
+  consentAi: { fontFamily: INTER, color: '#F2C66D', fontSize: 14, lineHeight: 22, marginTop: 12, marginBottom: 16 },
+  consentLabel: { fontFamily: INTER, color: 'rgba(247,243,238,0.75)', fontSize: 13, lineHeight: 20, marginBottom: 24 },
+  consentAccept: { backgroundColor: GOLD, borderRadius: 14, minHeight: 52, alignItems: 'center', justifyContent: 'center' },
+  consentAcceptText: { color: OBSIDIAN, fontFamily: DMSANS, fontWeight: '800', fontSize: 16 },
+  consentDecline: { minHeight: 48, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  consentDeclineText: { color: 'rgba(247,243,238,0.7)', fontFamily: DMSANS, fontWeight: '700' },
   container: {
     flex: 1,
     backgroundColor: OBSIDIAN,

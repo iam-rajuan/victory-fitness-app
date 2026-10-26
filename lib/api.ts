@@ -305,6 +305,32 @@ export type AuthUser = {
   };
 };
 
+export type ConsentId = 'email' | 'whatsapp' | 'journal';
+export type ConsentStatus = {
+  consent_id: ConsentId;
+  version: string;
+  granted: boolean;
+  language?: 'de' | 'en' | null;
+  timestamp_utc?: string | null;
+};
+
+export async function fetchMyConsents() {
+  return apiRequest<{ consents: Record<ConsentId, ConsentStatus> }>('/me/consents');
+}
+
+export async function setMyConsent(payload: {
+  consent_id: ConsentId;
+  granted: boolean;
+  language: 'de' | 'en';
+  source: 'journal_dialog' | 'app_settings' | 'whatsapp_stop';
+}) {
+  return apiRequest<ConsentStatus>('/me/consents', { method: 'POST', body: payload });
+}
+
+export async function deleteAllJournalEntries() {
+  return apiRequest<void>('/journal/entries', { method: 'DELETE' });
+}
+
 export type BodyMetrics = {
   age: string;
   height: string;

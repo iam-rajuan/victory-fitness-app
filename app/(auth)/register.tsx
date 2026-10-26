@@ -5,6 +5,7 @@ import {
   Dimensions,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -103,7 +104,9 @@ export default function RegisterScreen() {
   const [rawPhone, setRawPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [marketingConsent, setMarketingConsent] = useState(true);
+  const [marketingConsent, setMarketingConsent] = useState(false);
+  const [whatsappConsent, setWhatsappConsent] = useState(false);
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
 
   // Region selection
   const detectedLocale = useMemo(() => detectCountryFromDeviceLocale(), []);
@@ -148,17 +151,17 @@ export default function RegisterScreen() {
     if (!password || password.length < 8) {
       errors.password = 'Password must be at least 8 characters.';
     }
-    if (!marketingConsent) {
-      errors.marketingConsent = 'You must agree to continue.';
+    if (!ageConfirmed) {
+      errors.ageConfirmed = currentRegion.preferredLanguage === 'de'
+        ? 'Bitte bestätige, dass du mindestens 18 Jahre alt bist.'
+        : 'Please confirm that you are at least 18 years old.';
     }
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       setErrorDialog({
         title: 'Information Required',
-        message: errors.marketingConsent && Object.keys(errors).length === 1
-          ? 'Please agree to terms before continuing.'
-          : Object.values(errors)[0] || 'Please complete all fields.',
+        message: Object.values(errors)[0] || 'Please complete all fields.',
       });
       return;
     }
@@ -179,6 +182,8 @@ export default function RegisterScreen() {
           mobile: fullMobile,
           password,
           marketing_consent: marketingConsent,
+          whatsapp_consent: whatsappConsent,
+          age_confirmed: ageConfirmed,
           country: currentRegion.n,
           country_code: currentRegion.countryCode,
           preferred_language: currentRegion.preferredLanguage,
@@ -503,7 +508,7 @@ export default function RegisterScreen() {
               <Text style={styles.regionNote}>{currentRegion.note}</Text>
             </View>
 
-            {/* Marketing & Terms Consent Checkbox */}
+            {/* Optional marketing email consent */}
             <Pressable
               style={styles.consentRow}
               onPress={() => setMarketingConsent((prev) => !prev)}
@@ -514,9 +519,40 @@ export default function RegisterScreen() {
                 {marketingConsent ? <Text style={styles.checkmark}>✓</Text> : null}
               </View>
               <Text style={styles.consentText}>
-                I agree to receive occasional updates about my plan, training tips, and offers. I can opt out anytime.
+                {currentRegion.preferredLanguage === 'de'
+                  ? 'Ja, Victory Fitness darf mir E-Mails schicken – mit Infos zu meinem Programm, Trainings- und Gesundheitstipps und persönlichen Angeboten, z. B. zur Mitgliedschaft. Dafür werden meine E-Mail-Adresse und mein Vorname gespeichert. Ich kann das jederzeit widerrufen: über den Abmeldelink in jeder E-Mail oder per Mail an hello@victorakko.com.'
+                  : 'Yes, Victory Fitness may send me emails – with information about my programme, training and health tips, and personal offers, e.g. on membership. For this, my email address and first name are stored. I can withdraw at any time via the unsubscribe link in every email or by writing to hello@victorakko.com.'}
               </Text>
             </Pressable>
+
+            <Pressable style={styles.consentRow} onPress={() => setWhatsappConsent((prev) => !prev)} accessibilityRole="checkbox" accessibilityState={{ checked: whatsappConsent }}>
+              <View style={[styles.checkbox, whatsappConsent && styles.checkboxChecked]}>
+                {whatsappConsent ? <Text style={styles.checkmark}>✓</Text> : null}
+              </View>
+              <Text style={styles.consentText}>
+                {currentRegion.preferredLanguage === 'de'
+                  ? 'Ja, Victory Fitness darf mich per WhatsApp kontaktieren – für Erinnerungen, Motivation, persönliche Rückfragen und Angebote. Dafür wird meine Handynummer gespeichert. WhatsApp ist ein Dienst von Meta Platforms Ireland Ltd.; dabei können Daten wie Telefonnummer und Metadaten auch in die USA übertragen werden. Ich kann das jederzeit widerrufen: mit „STOP“ per WhatsApp oder per Mail an hello@victorakko.com.'
+                  : 'Yes, Victory Fitness may contact me via WhatsApp – for reminders, motivation, personal check-ins and offers. For this, my mobile number is stored. WhatsApp is a service of Meta Platforms Ireland Ltd.; data such as my phone number and metadata may also be transferred to the USA. I can withdraw at any time by sending “STOP” via WhatsApp or by writing to hello@victorakko.com.'}
+              </Text>
+            </Pressable>
+
+            <Pressable style={styles.consentRow} onPress={() => setAgeConfirmed((prev) => !prev)} accessibilityRole="checkbox" accessibilityState={{ checked: ageConfirmed }}>
+              <View style={[styles.checkbox, ageConfirmed && styles.checkboxChecked, fieldErrors.ageConfirmed && styles.checkboxError]}>
+                {ageConfirmed ? <Text style={styles.checkmark}>✓</Text> : null}
+              </View>
+              <Text style={styles.consentText}>
+                {currentRegion.preferredLanguage === 'de' ? 'Ich bin mindestens 18 Jahre alt. *' : 'I am at least 18 years old. *'}
+              </Text>
+            </Pressable>
+
+            <Text style={styles.privacyNotice}>
+              {currentRegion.preferredLanguage === 'de'
+                ? 'Verantwortlich: Victor Akko, handelnd für die Akko AI Solutions UG (haftungsbeschränkt) in Gründung, Owiesenstraße 66, 22177 Hamburg, hello@victorakko.com. Sobald die Gesellschaft im Handelsregister eingetragen ist, übernimmt sie die Verantwortung für deine Daten; wir informieren dich vorher. Wir nutzen deine Daten nur für die Zwecke, die du oben angekreuzt hast, und speichern sie, bis du widerrufst oder dein Konto löschst. Deine Einwilligungen sind freiwillig und jederzeit widerrufbar; was bis dahin verarbeitet wurde, bleibt rechtmäßig. Du hast das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit und Beschwerde bei einer Datenschutzbehörde, z. B. dem Hamburgischen Beauftragten für Datenschutz und Informationsfreiheit. '
+                : 'Controller: Victor Akko, acting for Akko AI Solutions UG (haftungsbeschränkt) in formation, Owiesenstraße 66, 22177 Hamburg, Germany, hello@victorakko.com. Once the company is entered in the commercial register, it takes over responsibility for your data; we will inform you beforehand. We use your data only for the purposes you ticked above and keep it until you withdraw or delete your account. Your consents are voluntary and can be withdrawn at any time; processing before withdrawal remains lawful. You have the right to access, rectification, erasure, restriction, data portability and to complain to a data protection authority, e.g. the Hamburg Commissioner for Data Protection and Freedom of Information. '}
+              <Text style={styles.legalLink} onPress={() => Linking.openURL('https://app.victoryfitnessapp.com/AGBs.pdf')}>{currentRegion.preferredLanguage === 'de' ? 'AGB' : 'Terms & Conditions'}</Text>
+              {' · '}
+              <Text style={styles.legalLink} onPress={() => Linking.openURL('https://victorakko.com/datenschutz')}>{currentRegion.preferredLanguage === 'de' ? 'Datenschutzerklärung' : 'Privacy Policy'}</Text>
+            </Text>
 
             {/* Primary Continue CTA */}
             <TouchableOpacity
@@ -878,6 +914,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#C9943A',
     borderColor: '#C9943A',
   },
+  checkboxError: { borderColor: '#EF4444' },
+  privacyNotice: { color: 'rgba(247,243,238,0.65)', fontSize: 11, lineHeight: 17, marginBottom: 18 },
+  legalLink: { color: '#C9943A', textDecorationLine: 'underline', fontWeight: '700' },
   checkmark: {
     fontSize: 11,
     fontWeight: '700',

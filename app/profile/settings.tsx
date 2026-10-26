@@ -9,13 +9,15 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Switch,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import { ErrorPopupModal } from '../../components/ErrorPopupModal';
-import { fetchCurrentUser, getAuthUser, updateCurrentUserProfile } from '../../lib/api';
+import { ConsentId, deleteAllJournalEntries, fetchCurrentUser, fetchMyConsents, getAuthUser, setMyConsent, updateCurrentUserProfile } from '../../lib/api';
 import { formatAppError } from '../../lib/error';
 import { goBackOrReplace } from '../../lib/navigation';
 import { useLanguage } from '../../lib/i18n';
@@ -23,7 +25,7 @@ import { useTheme } from '../../context/ThemeContext';
 
 export default function ProfileSettingsScreen() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { theme, setTheme, isDark, colors } = useTheme();
 
   const [loading, setLoading] = useState(true);
@@ -31,6 +33,8 @@ export default function ProfileSettingsScreen() {
   const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
   const [errorDialog, setErrorDialog] = useState<{ title: string; message: string } | null>(null);
   const [canEditGoldHabits, setCanEditGoldHabits] = useState(false);
+  const [consents, setConsents] = useState<Record<ConsentId, boolean>>({ email: false, whatsapp: false, journal: false });
+  const [consentSaving, setConsentSaving] = useState<ConsentId | null>(null);
 
   // Section 20.3: Identity Statement
   const [identityStatement, setIdentityStatement] = useState('');
@@ -76,6 +80,12 @@ export default function ProfileSettingsScreen() {
         const user = await fetchCurrentUser({ forceRefresh: true });
         if (cancelled) return;
         applyUserSettings(user);
+        const consentResponse = await fetchMyConsents();
+        if (!cancelled) setConsents({
+          email: Boolean(consentResponse.consents.email?.granted),
+          whatsapp: Boolean(consentResponse.consents.whatsapp?.granted),
+          journal: Boolean(consentResponse.consents.journal?.granted),
+        });
       } catch (err) {
         if (!cancelled) {
           setErrorDialog(formatAppError(err, t('Unable to load settings.')));
@@ -121,6 +131,44 @@ export default function ProfileSettingsScreen() {
 
   const previewContext = trainingTriggerContext.trim() || 'Kids in bed';
   const previewAction = trainingTriggerAction.trim() || 'open the app and start my workout';
+
+  const handleConsentToggle = async (consentId: ConsentId, granted: boolean) => {
+    if (consentSaving) return false;
+    const previous = consents[consentId];
+    setConsents((current) => ({ ...current, [consentId]: granted }));
+    setConsentSaving(consentId);
+    try {
+      await setMyConsent({ consent_id: consentId, granted, language: language === 'de' ? 'de' : 'en', source: 'app_settings' });
+      return true;
+    } catch (err) {
+      setConsents((current) => ({ ...current, [consentId]: previous }));
+      setErrorDialog(formatAppError(err, t('Unable to update consent.')));
+      return false;
+    } finally {
+      setConsentSaving(null);
+    }
+  };
+
+  const requestConsentToggle = (consentId: ConsentId, granted: boolean) => {
+    if (consentId !== 'journal' || granted) {
+      void handleConsentToggle(consentId, granted);
+      return;
+    }
+    Alert.alert(
+      language === 'de' ? 'Journal-Einwilligung widerrufen?' : 'Withdraw journal consent?',
+      language === 'de' ? 'Möchtest du deine bestehenden Journal-Einträge ebenfalls löschen?' : 'Would you also like to delete your existing journal entries?',
+      [
+        { text: language === 'de' ? 'Abbrechen' : 'Cancel', style: 'cancel' },
+        { text: language === 'de' ? 'Behalten' : 'Keep entries', onPress: () => void handleConsentToggle('journal', false) },
+        { text: language === 'de' ? 'Widerrufen & löschen' : 'Withdraw & delete', style: 'destructive', onPress: async () => {
+          const withdrawn = await handleConsentToggle('journal', false);
+          if (withdrawn) {
+            try { await deleteAllJournalEntries(); } catch (err) { setErrorDialog(formatAppError(err, t('Consent was withdrawn, but journal deletion failed.'))); }
+          }
+        } },
+      ],
+    );
+  };
 
   if (loading) {
     return (
@@ -178,6 +226,35 @@ export default function ProfileSettingsScreen() {
               <Text style={styles.successBannerText}>{saveSuccessMessage}</Text>
             </View>
           )}
+
+          <View style={[styles.card, { backgroundColor: colors.surfaceCard, borderColor: colors.cardBorder }]}>
+            <View style={styles.cardBadgeRow}>
+              <View style={styles.badgeLeftGroup}>
+                <View style={[styles.tierBadge, { backgroundColor: colors.primary }]}>
+                  <Ionicons name="shield-checkmark" size={12} color="#0D0D0D" />
+                  <Text style={[styles.tierBadgeText, { color: '#0D0D0D' }]}>{t('PRIVACY')}</Text>
+                </View>
+              </View>
+            </View>
+            <Text style={[styles.cardHeadline, { color: colors.text }]}>{t('Privacy & Consents')}</Text>
+            <Text style={[styles.cardSubtext, { color: colors.textSecondary }]}>{t('Manage your voluntary communication and health-data consents. Changes take effect immediately.')}</Text>
+            {([
+              ['email', t('Marketing Emails')],
+              ['whatsapp', t('WhatsApp Messages')],
+              ['journal', t('Journal & Health Data Processing')],
+            ] as [ConsentId, string][]).map(([id, label]) => (
+              <View key={id} style={[styles.consentSettingRow, { borderTopColor: colors.divider }]}>
+                <Text style={[styles.consentSettingLabel, { color: colors.text }]}>{label}</Text>
+                <Switch
+                  value={consents[id]}
+                  disabled={Boolean(consentSaving)}
+                  onValueChange={(value) => requestConsentToggle(id, value)}
+                  trackColor={{ false: colors.divider, true: colors.primary }}
+                  thumbColor="#F7F3EE"
+                />
+              </View>
+            ))}
+          </View>
 
           {/* Section: Appearance & Visual Mode */}
           <View style={[styles.card, { backgroundColor: colors.surfaceCard, borderColor: colors.cardBorder }]}>
@@ -593,6 +670,8 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 40,
   },
+  consentSettingRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16, borderTopWidth: StyleSheet.hairlineWidth },
+  consentSettingLabel: { flex: 1, fontSize: 14, fontWeight: '600' },
   successBanner: {
     flexDirection: 'row',
     alignItems: 'center',
