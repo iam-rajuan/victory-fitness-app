@@ -1,4 +1,4 @@
-const CACHE_NAME = 'victory-fitness-v5';
+const CACHE_NAME = 'victory-fitness-v6';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/apple-touch-icon.png', '/icon-192.png', '/icon-512.png'];
 
 importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js');
@@ -61,6 +61,14 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  // Authentication and user data must always come from the network. Caching
+  // same-origin API responses can resurrect stale onboarding/session state and
+  // may expose one user's private response after a local account switch.
+  if (url.pathname === '/api' || url.pathname.startsWith('/api/')) {
+    event.respondWith(fetch(event.request));
     return;
   }
 

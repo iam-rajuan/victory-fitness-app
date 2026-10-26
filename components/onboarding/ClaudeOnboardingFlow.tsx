@@ -1181,10 +1181,17 @@ export default function ClaudeOnboardingFlow({
         replaceRoute(router, getPostAuthRoute(updated));
       } catch (error) {
         console.warn('Failed to complete onboarding', error);
-        setAccessError(formatAppError(
-          error,
-          'We could not confirm that your setup was saved. Your answers are still here—please try again.',
-        ));
+        setAccessError(
+          error instanceof Error && error.message === 'The server did not confirm onboarding completion.'
+            ? {
+                title: 'Almost finished',
+                message: 'We saved your answers but could not refresh your account yet. Please try once more.',
+              }
+            : formatAppError(
+                error,
+                'We could not finish setting up your account. Your answers are still here—please try again.',
+              ),
+        );
       } finally {
         setSubmitting(false);
       }
