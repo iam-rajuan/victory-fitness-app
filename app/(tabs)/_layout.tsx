@@ -87,8 +87,10 @@ export default function TabsLayout() {
           setProfileImageFailed(false);
         }
 
-        // Refresh entitlements before opening tabs or redirecting to plans.
-        const authUser = await fetchCurrentUser({ forceRefresh: true });
+        // RootLayout has already refreshed the server user before entering the
+        // protected tabs. Reuse that fresh cached record instead of blocking
+        // first paint on an identical second /me request.
+        const authUser = await fetchCurrentUser();
         if (cancelled) {
           return;
         }
